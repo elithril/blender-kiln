@@ -99,18 +99,49 @@ Default: **Standard**. Suggest **Turbo** for iteration, **Standard** for final.
 | Mesh degenerate (0 faces)   | Offer retry with different seed or approach change       |
 | API schema mismatch          | Inform user, show Space URL                             |
 
-### nano-banana — Concept Image Generation
+### Concept Art Generation
 
-Tools available:
+Three input modes — ask user which they prefer:
+
+#### 1. Text prompt → Pollinations API (default, free, no key)
+
+```bash
+curl -s -o "{output_folder}/{asset_name}_concept.png" \
+  "https://image.pollinations.ai/prompt/{url_encoded_prompt}?width=1024&height=1024&model=flux&nologo=true&seed={seed}"
+```
+
+- Free, no API key required
+- Model: FLUX (via Pollinations)
+- Rate limit: ~1 request per 10s, retry on HTTP 429
+- To iterate: change the prompt or seed, re-run curl
+- Output: PNG 1024x1024
+
+#### 2. User-provided image (path or drag-and-drop)
+
+- User provides a local file path (e.g. `/path/to/concept.png`)
+- Skip generation entirely, pass directly to Hunyuan3D
+- Validate: file exists, is PNG/JPG/WEBP, readable
+
+#### 3. User-provided image URL
+
+- Download via `curl -s -o "{output_folder}/{asset_name}_concept.png" "{url}"`
+- Then treat as local image (mode 2)
+
+#### 4. nano-banana MCP (optional, if configured)
+
+If nano-banana MCP is available and user prefers it:
 - `generate_image(prompt)` — new image from text
 - `continue_editing(prompt)` — iterate on last image
 - `edit_image(imagePath, prompt)` — modify existing image
 - `get_last_image_info()` — get file path of last image
 
-**Prompt rules:**
-- Object only, transparent background, studio lighting
+Note: requires Gemini API key with billing enabled (free tier has 0 quota for image generation models).
+
+#### Prompt rules (all modes)
+
+- Object only, transparent/white background, studio lighting
 - Never environment/ground/context
-- Character + rigging → T-pose prompt: `"character in T-pose, arms extended horizontally, palms facing down, legs slightly apart, neutral face, transparent background"`
+- Character + rigging → T-pose prompt: `"character in T-pose, arms extended horizontally, palms facing down, legs slightly apart, neutral face, white background"`
 - Accepted formats: PNG (recommended), JPG, WEBP
 - Recommended resolution: 1024x1024 minimum
 

@@ -1,7 +1,7 @@
 ---
 name: blender-kiln
 description: "3D asset production pipeline via Blender MCP — sourcing, AI generation, cleanup, texturing, optimization, export."
-allowed-tools: Bash, Read, Edit, Write, Grep, Glob, WebFetch, WebSearch, mcp__blender__*, mcp__nano-banana__*
+allowed-tools: Bash, Read, Edit, Write, Grep, Glob, WebFetch, WebSearch, mcp__blender__*, mcp__nano-banana__*, mcp__mcpollinations__*
 ---
 
 # blender-kiln — The 3D Asset Forge
@@ -71,10 +71,14 @@ You are a 3D asset production expert. You pilot Blender via MCP to produce clean
 
 **Required:**
 - `blender-mcp` — Blender must be open with MCP server started (port 9876)
-- `nano-banana` — Gemini API key configured
 - `gradio_client` — `pip3 install gradio_client`
 
+**Concept art (built-in, no install needed):**
+- Pollinations API — free, no key, used via curl (default)
+- User-provided image — local path, drag-and-drop, or URL
+
 **Optional:**
+- `nano-banana` MCP — alternative concept art generation via Gemini (requires API key with billing)
 - `gltf-transform` — `npm install -g @gltf-transform/cli`
 - `gltfpack` — `npm install -g gltfpack`
 - `Sketchfab API token` — free account, needed for downloads
@@ -175,17 +179,45 @@ Always explain WHY the recommendation, always let the user choose.
 | **AI Generation (Hunyuan3D)** | organic, realistic, complex | Single mesh, texturing needed after |
 | **Scripted modeling (Blender Python)** | furniture, archi, stylized, low-poly | Separated parts, clean topology, more geometric |
 | **Geometry Nodes (procedural)** | scattering, patterns, parametric | Non-destructive, powerful but complex |
-| **User-provided image → Hunyuan3D** | when user has reference art | Same as AI generation |
-| **Concept AI first (nano-banana)** | when starting from nothing | Generates concept, then AI or scripted |
+| **User-provided image → Hunyuan3D** | when user has reference art (path or URL) | Same as AI generation |
+| **Concept art first** | when starting from nothing | Generates concept image, then AI or scripted |
 
-**Concept AI flow (nano-banana):**
+**Concept art input — 3 modes:**
 
-Auto-reformulate the prompt:
-- Object only, transparent background, studio lighting
+Ask: **"Do you have a reference image, or should I generate a concept from your brief?"**
+
+| Mode | How | Notes |
+|---|---|---|
+| **Text prompt** | Generate via Pollinations API (free, no key) | Default method |
+| **Image path / drag-and-drop** | User provides local file path | Passed directly to Hunyuan3D |
+| **Image URL** | User provides URL, downloaded via curl | Saved locally, then to Hunyuan3D |
+
+If nano-banana MCP is available, offer it as an alternative to Pollinations (supports iterative editing).
+
+**Concept generation via Pollinations (default):**
+
+```bash
+curl -s -o "{output_folder}/{asset_name}_concept.png" \
+  "https://image.pollinations.ai/prompt/{url_encoded_prompt}?width=1024&height=1024&model=flux&nologo=true"
+```
+
+Auto-reformulate the user brief into a generation prompt:
+- Object only, transparent/white background, studio lighting
 - Never environment/ground/context
-- If character + rigging → T-pose: "character in T-pose, arms extended horizontally, palms facing down, legs slightly apart, neutral face, transparent background"
+- If character + rigging → T-pose: "character in T-pose, arms extended horizontally, palms facing down, legs slightly apart, neutral face, white background"
+- Rate limit: ~1 request per 10s. Wait between retries.
 
-Iterate with `continue_editing` until user validates.
+Show the generated image to the user. If not satisfied, re-generate with adjusted prompt or different seed (`&seed=N`).
+
+**Concept generation via nano-banana (optional):**
+
+If nano-banana MCP is configured and available:
+- `generate_image(prompt)` — new image from text
+- `continue_editing(prompt)` — iterate on last image
+- `edit_image(imagePath, prompt)` — modify existing image
+
+Same prompt rules as above. Iterate with `continue_editing` until user validates.
+
 Accepted formats: PNG, JPG, WEBP. Recommended: 1024x1024 minimum.
 
 **AI Generation flow (Hunyuan3D):**
@@ -354,7 +386,7 @@ Files:
 Session: {n} assets completed ({list})
 
 Reusable prompts:
-  nano-banana: "{exact prompt}"
+  Concept art: "{exact prompt}" (via {pollinations|nano-banana|user image})
   Hunyuan3D: steps={s}, seed={seed}, octree={res}, mode={mode}
 ```
 
@@ -390,8 +422,8 @@ Each asset produces `{name}_log.md`:
 - Mode: {mode}
 
 ## Prompts (copy-paste ready)
-- nano-banana concept: "{exact prompt}"
-- nano-banana iterations: ["{edit1}", "{edit2}"]
+- Concept art: "{exact prompt}" (source: {pollinations|nano-banana|user image|user URL})
+- Concept iterations: ["{edit1}", "{edit2}"]
 - Hunyuan3D params: steps={s}, guidance_scale={g}, seed={seed},
   octree_resolution={res}, mode={mode}
 
@@ -445,7 +477,7 @@ Axis conversion at export is automatic.
 | Need | Load |
 |---|---|
 | Marketplace search | `references/sourcing-strategy.md` |
-| AI generation (Hunyuan3D, nano-banana) | `references/ai-generation.md` |
+| AI generation (Hunyuan3D), concept art (Pollinations, nano-banana) | `references/ai-generation.md` |
 | Topology rules, poly budgets | `references/topology-rules.md` |
 | UV, materials, PBR | `references/uv-materials.md` |
 | Texturing white meshes | `references/texturing-strategy.md` |

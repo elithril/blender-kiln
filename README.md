@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="blender-kiln-logo.png" alt="blender-kiln logo" width="200" />
+</p>
+
 # blender-kiln — The 3D Asset Forge
 
 A complete 3D asset production pipeline for Claude Code, powered by Blender MCP.
@@ -6,7 +10,7 @@ From a text brief to an optimized, export-ready GLB — in one session.
 
 ## What it does
 
-Kiln is a Claude Code skill that turns you into a 3D asset production studio. It orchestrates Blender (via MCP), AI generation (Hunyuan3D, Gemini), and marketplace search (PolyHaven, Sketchfab) into a single coherent pipeline.
+Kiln is a Claude Code skill that turns you into a 3D asset production studio. It orchestrates Blender (via MCP), AI generation (Hunyuan3D, Pollinations/FLUX), and marketplace search (PolyHaven, Sketchfab) into a single coherent pipeline.
 
 ```
 [1] CONFIG → [2] BRIEF → [3] SOURCE → [4] IMPORT → [5] CLEANUP → [5b] TEXTURING → [6] OPTIMIZE → [7] EXPORT
@@ -28,7 +32,7 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 ### Key features
 
 - **Multi-method creation**: AI generation (Hunyuan3D 2.x), scripted modeling (Blender Python), geometry nodes, or marketplace sourcing
-- **Concept art generation**: nano-banana (Gemini) for concept iteration before 3D
+- **Concept art input**: text prompt (Pollinations/FLUX), image path, image URL, or nano-banana (optional)
 - **Smart recommendations**: auto-suggests the best creation method based on asset type and style
 - **Material audit**: detects procedural nodes that will be lost on GLTF export, proposes bake workflow
 - **Post-export validation**: 8-point checklist (Babylon.js sandbox, Three.js console, material spot-check)
@@ -54,10 +58,11 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 ### Required
 
 - **Blender 4.x+** with the [Blender MCP](https://github.com/ahujasid/blender-mcp) addon running (port 9876)
-- **nano-banana MCP** with Gemini API key configured (for concept art generation)
 - **gradio_client** — `pip3 install gradio_client` (for Hunyuan3D)
 
 ### Optional
+
+- **nano-banana MCP** — for concept art generation via Gemini (requires API key with billing enabled)
 
 - **gltf-transform** — `npm install -g @gltf-transform/cli` (texture compression, Draco)
 - **gltfpack** — `npm install -g gltfpack` (mesh simplification, LOD generation)
@@ -108,7 +113,7 @@ Copy the `blender-kiln/` folder into your Claude Code skills directory:
 | `references/cli-tools.md` | gltf-transform, gltfpack, LOD workflow, metrics | ~210 |
 | `references/naming-conventions.md` | Blender + GLTF name mapping + file conventions | ~150 |
 | `references/uv-materials.md` | UV unwrapping, PBR channel packing | ~150 |
-| `references/ai-generation.md` | Hunyuan3D 2.x workflow, nano-banana prompts | ~120 |
+| `references/ai-generation.md` | Hunyuan3D 2.x workflow, concept art generation (Pollinations/nano-banana) | ~120 |
 | `references/topology-rules.md` | Poly budgets, quad rules, edge flow | ~90 |
 | `references/sourcing-strategy.md` | PolyHaven + Sketchfab search patterns | ~60 |
 
