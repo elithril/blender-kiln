@@ -1,0 +1,161 @@
+# blender-kiln — The 3D Asset Forge
+
+A complete 3D asset production pipeline for Claude Code, powered by Blender MCP.
+
+From a text brief to an optimized, export-ready GLB — in one session.
+
+## What it does
+
+Kiln is a Claude Code skill that turns you into a 3D asset production studio. It orchestrates Blender (via MCP), AI generation (Hunyuan3D, Gemini), and marketplace search (PolyHaven, Sketchfab) into a single coherent pipeline.
+
+```
+[1] CONFIG → [2] BRIEF → [3] SOURCE → [4] IMPORT → [5] CLEANUP → [5b] TEXTURING → [6] OPTIMIZE → [7] EXPORT
+```
+
+### Pipeline phases
+
+| Phase | What happens |
+|---|---|
+| **CONFIG** | Collect parameters: asset type, style, export target, detail tier |
+| **BRIEF** | Reformulate and confirm understanding |
+| **SOURCE** | Search marketplaces OR create via AI generation / scripted modeling / geometry nodes |
+| **IMPORT** | Import into Blender, verify scale (1 unit = 1m), center origin |
+| **CLEANUP** | Merge doubles, recalc normals, apply transforms, check poly budget |
+| **TEXTURING** | Geometric analysis + PolyHaven PBR, procedural materials, or bake from procedural |
+| **OPTIMIZE** | gltf-transform (resize, WebP, Draco) and/or gltfpack (simplify, LOD) |
+| **EXPORT** | GLB, FBX, USDZ — with validation checklist |
+
+### Key features
+
+- **Multi-method creation**: AI generation (Hunyuan3D 2.x), scripted modeling (Blender Python), geometry nodes, or marketplace sourcing
+- **Concept art generation**: nano-banana (Gemini) for concept iteration before 3D
+- **Smart recommendations**: auto-suggests the best creation method based on asset type and style
+- **Material audit**: detects procedural nodes that will be lost on GLTF export, proposes bake workflow
+- **Post-export validation**: 8-point checklist (Babylon.js sandbox, Three.js console, material spot-check)
+- **Character support**: T-pose enforcement, rigging patterns, bone validation, Blender 5.x bone collections
+- **Multi-asset sessions**: cross-asset coherence (scale, materials, poly budget)
+- **Full logging**: every asset produces a production log with copy-paste prompts
+
+## Commands
+
+| Command | Action |
+|---|---|
+| `/kiln` | Full pipeline (CONFIG → EXPORT) |
+| `/kiln:inspect` | Inspect a 3D file (stats, poly count, materials, bbox) |
+| `/kiln:cleanup` | Cleanup a mesh in Blender |
+| `/kiln:texture` | Texture an untextured mesh |
+| `/kiln:optimize` | Optimize a GLB with gltf-transform/gltfpack |
+| `/kiln:convert` | Convert between formats (GLB↔USDZ↔FBX) |
+| `/kiln:search` | Search PolyHaven/Sketchfab |
+| `/kiln:status` | Show current pipeline state |
+
+## Requirements
+
+### Required
+
+- **Blender 4.x+** with the [Blender MCP](https://github.com/ahujasid/blender-mcp) addon running (port 9876)
+- **nano-banana MCP** with Gemini API key configured (for concept art generation)
+- **gradio_client** — `pip3 install gradio_client` (for Hunyuan3D)
+
+### Optional
+
+- **gltf-transform** — `npm install -g @gltf-transform/cli` (texture compression, Draco)
+- **gltfpack** — `npm install -g gltfpack` (mesh simplification, LOD generation)
+- **Sketchfab API token** — free account, for marketplace downloads
+- **Reality Converter** / **usdzconvert** — USDZ export (macOS)
+
+## Installation
+
+### Claude Code CLI
+
+```bash
+# From the skill marketplace
+npx skills add blender-kiln
+
+# Or manually: clone into your skills directory
+git clone https://github.com/elithril/blender-kiln.git ~/.claude/skills/blender-kiln
+```
+
+### Manual
+
+Copy the `blender-kiln/` folder into your Claude Code skills directory:
+
+```
+~/.claude/skills/blender-kiln/
+├── SKILL.md
+└── references/
+    ├── ai-generation.md
+    ├── characters.md
+    ├── cli-tools.md
+    ├── export-targets.md
+    ├── naming-conventions.md
+    ├── sourcing-strategy.md
+    ├── texturing-strategy.md
+    ├── topology-rules.md
+    ├── uv-materials.md
+    └── validation-checklist.md
+```
+
+## Skill structure
+
+| File | Content | Lines |
+|---|---|---|
+| `SKILL.md` | Main pipeline, iron rules, commands, phases | ~440 |
+| `references/characters.md` | Rigging patterns, anti-patterns, export gotchas, Blender 5.x | ~430 |
+| `references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~340 |
+| `references/validation-checklist.md` | Geometry cleanup + material export audit | ~250 |
+| `references/export-targets.md` | GLB/FBX/USDZ settings, headless CLI, post-export checklist | ~210 |
+| `references/cli-tools.md` | gltf-transform, gltfpack, LOD workflow, metrics | ~210 |
+| `references/naming-conventions.md` | Blender + GLTF name mapping + file conventions | ~150 |
+| `references/uv-materials.md` | UV unwrapping, PBR channel packing | ~150 |
+| `references/ai-generation.md` | Hunyuan3D 2.x workflow, nano-banana prompts | ~120 |
+| `references/topology-rules.md` | Poly budgets, quad rules, edge flow | ~90 |
+| `references/sourcing-strategy.md` | PolyHaven + Sketchfab search patterns | ~60 |
+
+**Total: ~2,450 lines** of production-tested 3D pipeline knowledge.
+
+## Iron rules
+
+The skill enforces 21 rules. Key ones:
+
+1. Always `get_scene_info()` before each phase
+2. Always `get_viewport_screenshot()` after each modification
+3. Never hard-cap poly count — alert if out of range, never block
+4. Never silently destroy — decimate/simplify always interactive
+5. Always keep intermediate files (original, clean, textured, optimized, final, .blend)
+6. Never `export_apply=True` for GLTF — modifiers balloon file size
+7. Always run material export audit before GLTF export
+8. Never use `gltf-transform optimize` — use individual steps
+
+## Output
+
+Two storage modes, configurable at pipeline start:
+
+**Compact (default)** — minimal footprint, .blend is the recovery point:
+```
+generated-assets/
+└── wooden-chair/
+    ├── wooden-chair_original.glb
+    ├── wooden-chair_final.glb
+    ├── wooden-chair.blend
+    └── wooden-chair_log.md
+```
+
+**Full** — all intermediate files for debug/comparison:
+```
+generated-assets/
+└── wooden-chair/
+    ├── wooden-chair_original.glb
+    ├── wooden-chair_clean.glb
+    ├── wooden-chair_textured.glb
+    ├── wooden-chair_optimized.glb
+    ├── wooden-chair_final.glb
+    ├── wooden-chair.blend
+    └── wooden-chair_log.md
+```
+
+At the end of a multi-asset session, Kiln proposes a cleanup of intermediate files with per-asset size breakdown.
+
+## License
+
+MIT

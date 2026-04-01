@@ -1,0 +1,38 @@
+{
+  "name": "blender-kiln",
+  "owner": "elithril",
+  "metadata": {
+    "version": "1.0.0",
+    "license": "MIT",
+    "homepage": "https://github.com/elithril/blender-kiln",
+    "category": "3d-modeling",
+    "tags": [
+      "blender",
+      "3d",
+      "gltf",
+      "glb",
+      "asset-pipeline",
+      "mcp",
+      "three-js",
+      "export",
+      "texturing",
+      "rigging",
+      "optimization"
+    ]
+  },
+  "plugins": [
+    {
+      "name": "blender-kiln",
+      "description": "Complete 3D asset production pipeline — from text brief to optimized GLB. Orchestrates Blender MCP, AI generation (Hunyuan3D), marketplace search (PolyHaven, Sketchfab), texturing, optimization, and multi-format export.",
+      "source": "skills/blender-kiln/SKILL.md",
+      "version": "1.0.0",
+      "skills": [
+        {
+          "name": "blender-kiln",
+          "description": "3D asset production pipeline via Blender MCP — sourcing, AI generation, cleanup, texturing, optimization, export.",
+          "path": "SKILL.md"
+        }
+      ]
+    }
+  ]
+}
