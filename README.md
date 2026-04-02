@@ -56,6 +56,7 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 | `/kiln:status` | Show current pipeline state |
 | `/kiln:setup` | Environment detection + guided setup |
 | `/kiln:models` | List/switch Hunyuan3D models |
+| `/kiln:help` | List all commands and usage |
 
 ## Requirements
 
@@ -117,7 +118,7 @@ Copy the `blender-kiln/` folder into your Claude Code skills directory:
 
 | File | Content | Lines |
 |---|---|---|
-| `SKILL.md` | Main pipeline, iron rules, commands, setup, model management | ~655 |
+| `SKILL.md` | Main pipeline, iron rules, commands, setup, model management | ~800 |
 | `references/characters.md` | Rigging patterns, anti-patterns, export gotchas, Blender 5.x | ~430 |
 | `references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~340 |
 | `references/validation-checklist.md` | Geometry cleanup + material export audit | ~250 |
@@ -129,7 +130,7 @@ Copy the `blender-kiln/` folder into your Claude Code skills directory:
 | `references/topology-rules.md` | Poly budgets, quad rules, edge flow | ~90 |
 | `references/sourcing-strategy.md` | PolyHaven + Sketchfab search patterns | ~60 |
 
-**Total: ~2,900 lines** of production-tested 3D pipeline knowledge.
+**Total: ~3,050 lines** of production-tested 3D pipeline knowledge.
 
 ## Iron rules
 

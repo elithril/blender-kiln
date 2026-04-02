@@ -556,6 +556,150 @@ Reusable prompts:
 
 ---
 
+## Standalone Commands
+
+These commands work independently — no need to run the full pipeline.
+
+### /kiln:inspect
+
+Inspect any 3D file without importing it into the pipeline.
+
+```
+Input: file path (GLB, FBX, USDZ, OBJ, .blend)
+
+Output:
+  File: {path} ({file_size})
+  Format: {format}
+  Faces: {count} ({tris} triangles, {quads} quads, {ngons} ngons)
+  Vertices: {count}
+  Objects: {count} [{names}]
+  Materials: {count} [{names}]
+  Bounding box: {x} × {y} × {z} m
+  Textures: {count} [{resolutions}]
+  Animations: {count or "none"}
+  Rigging: {yes/no — bone count if yes}
+```
+
+Use `execute_blender_code` to import temporarily, read stats via Python API, then undo/delete.
+For GLB: can also use `gltf-transform inspect {path}` if installed.
+
+### /kiln:cleanup
+
+Clean up a mesh already open in Blender (or import one first).
+
+1. `get_scene_info()` — identify what's in the scene
+2. Ask user which object(s) to clean, or "all"
+3. Load `references/validation-checklist.md`
+4. Execute: Merge by Distance → Recalculate Normals → Remove Loose → Degenerate Dissolve → Apply Transforms → Origin to center of base
+5. `get_viewport_screenshot()` after each step
+6. Show before/after stats: "{before} faces → {after} faces, {removed} vertices merged"
+7. If poly count high: propose decimate (always interactive)
+
+### /kiln:texture
+
+Texture an untextured mesh (white mesh from AI generation, or any mesh without materials).
+
+1. `get_scene_info()` — verify mesh exists, check current materials
+2. If mesh has no materials or only default: proceed
+3. If mesh already has materials: "This mesh already has {n} materials. Re-texture anyway? (yes / no / add to existing)"
+4. Load `references/texturing-strategy.md`
+5. Follow the texturing strategies in order:
+   - Geometric analysis + PolyHaven PBR
+   - Procedural Blender materials
+   - Assisted manual texturing
+6. `get_viewport_screenshot()` after applying materials
+
+**Note on monolithic meshes (AI-generated):** the geometric analysis clusters faces by normal direction, position, and curvature. This works on single-object meshes — it will identify zones (e.g. "top faces = seat", "vertical faces = legs") even without object separation. Results may need manual adjustment for complex shapes.
+
+### /kiln:optimize
+
+Optimize a GLB file with CLI tools.
+
+1. Ask for input file path (or use current pipeline asset)
+2. Show current stats: file size, face count, texture sizes
+3. Load `references/cli-tools.md`
+4. Propose options:
+   - `gltf-transform resize` — resize textures (1024, 512, etc.)
+   - `gltf-transform webp` — convert textures to WebP
+   - `gltf-transform draco` — Draco mesh compression
+   - `gltfpack` — mesh simplification + LOD generation
+   - Custom parameters
+5. Execute chosen options sequentially
+6. Show before/after: "{before_size} → {after_size} ({reduction}%)"
+7. "Keep? (yes / no / adjust parameters)"
+
+### /kiln:convert
+
+Convert between 3D formats.
+
+1. Ask for input file path and target format
+2. Supported conversions:
+
+| From | To | Method |
+|---|---|---|
+| GLB → FBX | `execute_blender_code` (import GLB, export FBX) |
+| GLB → USDZ | Reality Converter (macOS) or usdzconvert |
+| FBX → GLB | `execute_blender_code` (import FBX, export GLB) |
+| OBJ → GLB | `execute_blender_code` |
+| .blend → GLB/FBX/USDZ | `execute_blender_code` (export from open scene) |
+
+3. Load `references/export-targets.md` for format-specific settings
+4. Run material export audit before GLTF export (Iron Rule 19)
+5. Show output stats: "Converted: {input} → {output} ({size})"
+
+### /kiln:search
+
+Search 3D asset marketplaces.
+
+1. Ask for search keywords (or use current brief)
+2. Load `references/sourcing-strategy.md`
+3. Search in parallel:
+   - **PolyHaven** — fully free, CC0. Search via API.
+   - **Sketchfab** — filter downloadable + free only (requires API token)
+4. Present results:
+   ```
+   Results for "{query}":
+
+   PolyHaven:
+     1. Wooden Chair — 2.3K faces, CC0 — https://polyhaven.com/a/wooden_chair
+     2. ...
+
+   Sketchfab:
+     6. Medieval Chair — 4.1K faces, CC-BY — https://sketchfab.com/...
+     7. ...
+   ```
+5. User can: pick a number to download, "open 2, 5" to view in browser, refine search, or cancel
+
+### /kiln:help
+
+Display all available commands with descriptions.
+
+```
+blender-kiln — The 3D Asset Forge
+
+Commands:
+  /kiln             Full pipeline (CONFIG → EXPORT)
+  /kiln:inspect     Inspect a 3D file (stats, poly count, materials, bbox)
+  /kiln:cleanup     Cleanup a mesh in Blender
+  /kiln:texture     Texture an untextured mesh
+  /kiln:optimize    Optimize a GLB with gltf-transform/gltfpack
+  /kiln:convert     Convert between formats (GLB↔FBX↔USDZ)
+  /kiln:search      Search PolyHaven/Sketchfab marketplaces
+  /kiln:status      Show current pipeline state
+  /kiln:setup       Environment detection + guided setup
+  /kiln:models      List/switch Hunyuan3D models
+  /kiln:help        This help message
+
+Quick start:
+  1. Run /kiln:setup to check your environment
+  2. Run /kiln to start the full pipeline
+  3. Or use any standalone command directly
+
+Docs: https://github.com/elithril/blender-kiln
+```
+
+---
+
 ## Multi-Asset Sessions
 
 ```
