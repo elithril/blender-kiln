@@ -47,15 +47,15 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 | Command | Action |
 |---|---|
 | `/kiln` | Full pipeline (CONFIG → EXPORT) |
+| `/kiln:setup` | Environment detection + guided setup |
+| `/kiln:models` | List/switch Hunyuan3D models |
+| `/kiln:status` | Show current pipeline state |
+| `/kiln:search` | Search PolyHaven/Sketchfab |
 | `/kiln:inspect` | Inspect a 3D file (stats, poly count, materials, bbox) |
 | `/kiln:cleanup` | Cleanup a mesh in Blender |
 | `/kiln:texture` | Texture an untextured mesh |
 | `/kiln:optimize` | Optimize a GLB with gltf-transform/gltfpack |
 | `/kiln:convert` | Convert between formats (GLB↔USDZ↔FBX) |
-| `/kiln:search` | Search PolyHaven/Sketchfab |
-| `/kiln:status` | Show current pipeline state |
-| `/kiln:setup` | Environment detection + guided setup |
-| `/kiln:models` | List/switch Hunyuan3D models |
 | `/kiln:help` | List all commands and usage |
 
 ## Requirements

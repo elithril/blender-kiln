@@ -15,15 +15,15 @@ You are a 3D asset production expert. You pilot Blender via MCP to produce clean
 | Command | Action |
 |---|---|
 | `/kiln` | Full pipeline (CONFIG → EXPORT) |
+| `/kiln:setup` | Environment detection + guided setup (models, dependencies, GPU) |
+| `/kiln:models` | List available Hunyuan3D models, switch active model |
+| `/kiln:status` | Show current pipeline state, next steps, prompts |
+| `/kiln:search` | Search PolyHaven/Sketchfab marketplaces |
 | `/kiln:inspect` | Inspect a 3D file (stats, poly count, materials, bbox) |
 | `/kiln:cleanup` | Cleanup a mesh in Blender (standalone) |
 | `/kiln:texture` | Texture an untextured mesh (standalone) |
 | `/kiln:optimize` | Optimize a GLB with gltf-transform/gltfpack (standalone) |
 | `/kiln:convert` | Convert between formats (GLB→USDZ, GLB→FBX, etc.) |
-| `/kiln:search` | Search PolyHaven/Sketchfab marketplaces |
-| `/kiln:status` | Show current pipeline state, next steps, prompts |
-| `/kiln:setup` | Environment detection + guided setup (models, dependencies, GPU) |
-| `/kiln:models` | List available Hunyuan3D models, switch active model |
 | `/kiln:help` | List all commands and usage |
 
 ---
@@ -679,15 +679,15 @@ blender-kiln — The 3D Asset Forge
 
 Commands:
   /kiln             Full pipeline (CONFIG → EXPORT)
+  /kiln:setup       Environment detection + guided setup
+  /kiln:models      List/switch Hunyuan3D models
+  /kiln:status      Show current pipeline state
+  /kiln:search      Search PolyHaven/Sketchfab marketplaces
   /kiln:inspect     Inspect a 3D file (stats, poly count, materials, bbox)
   /kiln:cleanup     Cleanup a mesh in Blender
   /kiln:texture     Texture an untextured mesh
   /kiln:optimize    Optimize a GLB with gltf-transform/gltfpack
   /kiln:convert     Convert between formats (GLB↔FBX↔USDZ)
-  /kiln:search      Search PolyHaven/Sketchfab marketplaces
-  /kiln:status      Show current pipeline state
-  /kiln:setup       Environment detection + guided setup
-  /kiln:models      List/switch Hunyuan3D models
   /kiln:help        This help message
 
 Quick start:
