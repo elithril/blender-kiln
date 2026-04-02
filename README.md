@@ -40,6 +40,7 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 - **Post-export validation**: 8-point checklist (Babylon.js sandbox, Three.js console, material spot-check)
 - **Character support**: T-pose enforcement, rigging patterns, bone validation, Blender 5.x bone collections
 - **Multi-asset sessions**: cross-asset coherence (scale, materials, poly budget)
+- **Batch mode**: wizard collects scene/theme/palette upfront, generates a YAML manifest, runner executes autonomously — ideal for overnight production or large asset sets
 - **Full logging**: every asset produces a production log with copy-paste prompts
 
 ## Commands
@@ -47,6 +48,8 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 | Command | Action |
 |---|---|
 | `/kiln` | Full pipeline (CONFIG → EXPORT) |
+| `/kiln:batch` | Batch wizard → manifest → autonomous multi-asset production |
+| `/kiln:batch run` | Execute/resume a batch manifest (`--all`, `--asset <name>`) |
 | `/kiln:setup` | Environment detection + guided setup |
 | `/kiln:models` | List/switch Hunyuan3D models |
 | `/kiln:status` | Show current pipeline state |
@@ -118,7 +121,7 @@ Copy the `blender-kiln/` folder into your Claude Code skills directory:
 
 | File | Content | Lines |
 |---|---|---|
-| `SKILL.md` | Main pipeline, iron rules, commands, setup, model management | ~800 |
+| `SKILL.md` | Main pipeline, iron rules, commands, setup, model management, batch mode | ~1100 |
 | `references/characters.md` | Rigging patterns, anti-patterns, export gotchas, Blender 5.x | ~430 |
 | `references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~340 |
 | `references/validation-checklist.md` | Geometry cleanup + material export audit | ~250 |
@@ -130,11 +133,11 @@ Copy the `blender-kiln/` folder into your Claude Code skills directory:
 | `references/topology-rules.md` | Poly budgets, quad rules, edge flow | ~90 |
 | `references/sourcing-strategy.md` | PolyHaven + Sketchfab search patterns | ~60 |
 
-**Total: ~3,050 lines** of production-tested 3D pipeline knowledge.
+**Total: ~3,350 lines** of production-tested 3D pipeline knowledge.
 
 ## Iron rules
 
-The skill enforces 21 rules. Key ones:
+The skill enforces 26 rules (21 core + 5 batch-specific). Key ones:
 
 1. Always `get_scene_info()` before each phase
 2. Always `get_viewport_screenshot()` after each modification
@@ -170,6 +173,17 @@ generated-assets/
     ├── wooden-chair_final.glb
     ├── wooden-chair.blend
     └── wooden-chair_log.md
+```
+
+**Batch mode** — assets grouped under a batch folder with manifest and report:
+```
+generated-assets/
+└── batch-corporate-office-2026-04-02/
+    ├── batch-manifest.yaml
+    ├── batch-report.md
+    ├── desk/
+    ├── chair/
+    └── keyboard/
 ```
 
 At the end of a multi-asset session, Kiln proposes a cleanup of intermediate files with per-asset size breakdown.
