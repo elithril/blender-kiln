@@ -1,5 +1,5 @@
 ---
-name: blender-kiln
+name: kiln
 description: "3D asset production pipeline via Blender MCP — sourcing, AI generation, cleanup, texturing, optimization, export. Batch mode for autonomous multi-asset production."
 allowed-tools: Bash, Read, Edit, Write, Grep, Glob, WebFetch, WebSearch, mcp__blender__*, mcp__nano-banana__*, mcp__mcpollinations__*
 ---
