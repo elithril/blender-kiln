@@ -1,6 +1,74 @@
 # AI Generation Reference
 
-## HuggingFace Spaces — Hunyuan3D 2.x
+Two backends available for Hunyuan3D. Local is preferred when configured (faster, offline, no queue).
+
+---
+
+## Local Backend — Hunyuan3D-2 Mini
+
+### Requirements
+
+- Python 3.10+
+- Hunyuan3D-2 repo cloned + `hy3dgen` installed
+- Model weights downloaded (~25 GB for all variants)
+- Device: CUDA (full pipeline) / MPS (shape only) / CPU (shape only, slow)
+
+### Available Models
+
+| Model | Params | Speed | Quality | Use case |
+|---|---|---|---|---|
+| `hunyuan3d-dit-v2-mini` | 0.6B | ~16s (CUDA) | Best | Final quality |
+| `hunyuan3d-dit-v2-mini-fast` | 0.6B | ~12s (CUDA) | Good | Good balance |
+| `hunyuan3d-dit-v2-mini-turbo` | 0.6B | ~8s (CUDA) | Preview | Fast iteration |
+
+On MPS/CPU: expect 3-10x slower than CUDA times above.
+
+### Local API Flow
+
+```python
+import torch
+from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline
+from hy3dgen.texgen import Hunyuan3DPaintPipeline  # CUDA only
+
+# Auto-detect device
+device = 'cuda' if torch.cuda.is_available() else ('mps' if torch.backends.mps.is_available() else 'cpu')
+
+# Step 1: Shape generation (works on all devices)
+shape_pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(
+    '{models_path}/Hunyuan3D-2mini',
+    subfolder='hunyuan3d-dit-v2-mini',  # or mini-fast, mini-turbo
+    use_safetensors=True,
+    device=device
+)
+
+mesh = shape_pipeline(image="concept.png")
+mesh.export("output_shape.glb")
+
+# Step 2: Texture generation (CUDA only — skip on MPS/CPU)
+if device == 'cuda':
+    tex_pipeline = Hunyuan3DPaintPipeline.from_pretrained(
+        '{models_path}/Hunyuan3D-2mini',
+        subfolder='hunyuan3d-paint-v2-mini'
+    )
+    textured_mesh = tex_pipeline(mesh, image="concept.png")
+    textured_mesh.export("output_textured.glb")
+else:
+    # No texture — proceed to skill TEXTURING phase
+    pass
+```
+
+### Error Handling (Local)
+
+| Error | Action |
+|---|---|
+| OOM (out of memory) | Ask user: switch to smaller model (turbo), reduce resolution, or fallback to HF Spaces |
+| Model not found | Guide to `/kiln:setup` for download |
+| MPS not supported op | Fallback to CPU for that operation, warn user about speed |
+| Any crash | Ask user: "Switch to HF Spaces for this asset?" — never switch silently |
+
+---
+
+## HF Spaces Backend — Hunyuan3D 2.x
 
 Default Space: `Jbowyer/Hunyuan3D-2.1` (community duplicate, GPU L40S)
 Tested: 2026-04-01, gradio_client 1.3.0

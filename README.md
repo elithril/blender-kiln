@@ -31,7 +31,9 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 
 ### Key features
 
-- **Multi-method creation**: AI generation (Hunyuan3D 2.x), scripted modeling (Blender Python), geometry nodes, or marketplace sourcing
+- **Multi-method creation**: AI generation (Hunyuan3D 2.x — local or cloud), scripted modeling (Blender Python), geometry nodes, or marketplace sourcing
+- **Local AI generation**: run Hunyuan3D-2 Mini on your machine — NVIDIA GPU for full pipeline, Apple Silicon for shape generation
+- **Environment auto-detection**: `/kiln:setup` scans your system and guides installation
 - **Concept art input**: text prompt (Pollinations/FLUX), image path, image URL, or nano-banana (optional)
 - **Smart recommendations**: auto-suggests the best creation method based on asset type and style
 - **Material audit**: detects procedural nodes that will be lost on GLTF export, proposes bake workflow
@@ -52,18 +54,28 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 | `/kiln:convert` | Convert between formats (GLB↔USDZ↔FBX) |
 | `/kiln:search` | Search PolyHaven/Sketchfab |
 | `/kiln:status` | Show current pipeline state |
+| `/kiln:setup` | Environment detection + guided setup |
+| `/kiln:models` | List/switch Hunyuan3D models |
 
 ## Requirements
 
 ### Required
 
 - **Blender 4.x+** with the [Blender MCP](https://github.com/ahujasid/blender-mcp) addon running (port 9876)
-- **gradio_client** — `pip3 install gradio_client` (for Hunyuan3D)
+
+### 3D Generation (choose one or both)
+
+| Backend | Install | GPU needed | Texture gen | Offline |
+|---|---|---|---|---|
+| **HF Spaces** (default) | `pip3 install gradio_client` | No (cloud) | Yes | No |
+| **Local Hunyuan3D** | Run `/kiln:setup` (~25 GB download) | Optional | CUDA only | Yes |
+
+On Mac (Apple Silicon): local shape generation works via MPS, texture generation falls back to skill's Blender-based texturing.
+On Windows + NVIDIA GPU: full pipeline runs locally — shape + texture, zero cloud dependency.
 
 ### Optional
 
-- **nano-banana MCP** — for concept art generation via Gemini (requires API key with billing enabled)
-
+- **nano-banana MCP** — alternative concept art generation via Gemini (requires API key with billing)
 - **gltf-transform** — `npm install -g @gltf-transform/cli` (texture compression, Draco)
 - **gltfpack** — `npm install -g gltfpack` (mesh simplification, LOD generation)
 - **Sketchfab API token** — free account, for marketplace downloads
@@ -105,7 +117,7 @@ Copy the `blender-kiln/` folder into your Claude Code skills directory:
 
 | File | Content | Lines |
 |---|---|---|
-| `SKILL.md` | Main pipeline, iron rules, commands, phases | ~440 |
+| `SKILL.md` | Main pipeline, iron rules, commands, setup, model management | ~655 |
 | `references/characters.md` | Rigging patterns, anti-patterns, export gotchas, Blender 5.x | ~430 |
 | `references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~340 |
 | `references/validation-checklist.md` | Geometry cleanup + material export audit | ~250 |
@@ -113,11 +125,11 @@ Copy the `blender-kiln/` folder into your Claude Code skills directory:
 | `references/cli-tools.md` | gltf-transform, gltfpack, LOD workflow, metrics | ~210 |
 | `references/naming-conventions.md` | Blender + GLTF name mapping + file conventions | ~150 |
 | `references/uv-materials.md` | UV unwrapping, PBR channel packing | ~150 |
-| `references/ai-generation.md` | Hunyuan3D 2.x workflow, concept art generation (Pollinations/nano-banana) | ~120 |
+| `references/ai-generation.md` | Hunyuan3D 2.x (local + cloud), concept art (Pollinations/nano-banana) | ~220 |
 | `references/topology-rules.md` | Poly budgets, quad rules, edge flow | ~90 |
 | `references/sourcing-strategy.md` | PolyHaven + Sketchfab search patterns | ~60 |
 
-**Total: ~2,450 lines** of production-tested 3D pipeline knowledge.
+**Total: ~2,900 lines** of production-tested 3D pipeline knowledge.
 
 ## Iron rules
 

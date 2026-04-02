@@ -22,6 +22,8 @@ You are a 3D asset production expert. You pilot Blender via MCP to produce clean
 | `/kiln:convert` | Convert between formats (GLB→USDZ, GLB→FBX, etc.) |
 | `/kiln:search` | Search PolyHaven/Sketchfab marketplaces |
 | `/kiln:status` | Show current pipeline state, next steps, prompts |
+| `/kiln:setup` | Environment detection + guided setup (models, dependencies, GPU) |
+| `/kiln:models` | List available Hunyuan3D models, switch active model |
 | `/kiln:help` | List all commands and usage |
 
 ---
@@ -71,11 +73,14 @@ You are a 3D asset production expert. You pilot Blender via MCP to produce clean
 
 **Required:**
 - `blender-mcp` — Blender must be open with MCP server started (port 9876)
-- `gradio_client` — `pip3 install gradio_client`
 
 **Concept art (built-in, no install needed):**
 - Pollinations API — free, no key, used via curl (default)
 - User-provided image — local path, drag-and-drop, or URL
+
+**3D Generation (one of):**
+- **HF Spaces** (default) — no install, requires `gradio_client` (`pip3 install gradio_client`)
+- **Local** — requires Hunyuan3D-2 models downloaded locally. Run `/kiln:setup` to install.
 
 **Optional:**
 - `nano-banana` MCP — alternative concept art generation via Gemini (requires API key with billing)
@@ -84,8 +89,148 @@ You are a 3D asset production expert. You pilot Blender via MCP to produce clean
 - `Sketchfab API token` — free account, needed for downloads
 - `Reality Converter` / `usdzconvert` — USDZ export (macOS)
 
-At first launch, verify all dependencies and guide installation for anything missing.
-See the design doc `docs/plans/2026-04-01-blender-asset-pipeline-design.md` for full setup guide.
+At first launch, run automatic environment detection (see `/kiln:setup`). Guide installation for anything missing.
+
+---
+
+## /kiln:setup — Environment Detection & Setup
+
+Run this at first launch or when the user runs `/kiln:setup`.
+
+### Step 1: Auto-detect environment
+
+Scan and report status for each component:
+
+```
+🔍 Environment scan...
+
+Platform:     {macOS / Windows / Linux}
+GPU:          {NVIDIA RTX xxxx (xx GB VRAM) / Apple Silicon (MPS) / No GPU}
+CUDA:         {version / not available}
+
+Blender MCP:  {✅ connected (port 9876) / ❌ not detected}
+Python:       {version, path}
+
+3D Backend:   {✅ Local (Hunyuan3D-2 mini) / ✅ HF Spaces / ❌ not configured}
+  Models:     {list installed models with sizes, or "none"}
+  Device:     {cuda / mps / cpu}
+
+Concept art:  {✅ Pollinations (free) / ✅ nano-banana / ✅ both}
+
+CLI tools:
+  gradio_client:  {✅ installed / ❌ missing}
+  gltf-transform: {✅ installed / ⚠️ optional, not installed}
+  gltfpack:       {✅ installed / ⚠️ optional, not installed}
+
+⚠️ Capabilities based on your setup:
+  Shape generation (mesh):    {✅ local + HF Spaces / ✅ HF Spaces only / ❌}
+  Texture generation (AI):    {✅ local (CUDA) / ⚠️ HF Spaces only / ❌ no CUDA — skill will texture via Blender}
+  Scripted modeling:          {✅ always available via Blender MCP}
+```
+
+**GPU detection commands:**
+- macOS: `system_profiler SPDisplaysDataType`
+- Windows: `nvidia-smi` or `wmic path win32_VideoController get name,adapterram`
+- Linux: `nvidia-smi`
+
+### Step 2: Guided setup (if needed)
+
+Based on scan results, propose actions:
+
+**If no 3D backend configured:**
+> "Choose your 3D generation backend:"
+> 1. **HF Spaces** (recommended to start) — no install, uses cloud GPU
+> 2. **Local Hunyuan3D** — download models, runs on your machine
+> 3. **Both** — local as primary, HF Spaces as fallback
+
+**If user chooses Local:**
+
+```
+Choose model storage location:
+  Default: ~/.hunyuan3d/models/
+  Custom:  [enter path]
+
+Available models:
+  1. hunyuan3d-dit-v2-mini       (0.6B params, ~6 GB VRAM)  — balanced quality
+  2. hunyuan3d-dit-v2-mini-fast  (0.6B params, ~6 GB VRAM)  — faster, slightly lower quality
+  3. hunyuan3d-dit-v2-mini-turbo (0.6B params, ~6 GB VRAM)  — fastest, preview quality
+
+Which models to download? (1,2,3 or "all")
+```
+
+**Installation commands (cross-platform):**
+
+```bash
+# Clone repo
+git clone https://github.com/Tencent/Hunyuan3D-2.git {models_path}/Hunyuan3D-2
+cd {models_path}/Hunyuan3D-2
+
+# Install dependencies
+pip3 install -r requirements.txt
+pip3 install -e .
+
+# Download model weights (via huggingface_hub)
+python3 -c "
+from huggingface_hub import snapshot_download
+snapshot_download('tencent/Hunyuan3D-2mini', local_dir='{models_path}/Hunyuan3D-2mini')
+"
+
+# (CUDA only) Compile texture generation extensions
+# Skip on Mac/no-CUDA — texture will be handled by skill's TEXTURING phase
+cd hy3dgen/texgen/custom_rasterizer && python3 setup.py install && cd ../../..
+cd hy3dgen/texgen/differentiable_renderer && bash compile_mesh_painter.sh && cd ../../..
+```
+
+**Windows-specific notes:**
+- Use backslash paths or forward slashes in Python
+- May need Visual Studio Build Tools for CUDA extension compilation
+- `bash compile_mesh_painter.sh` → use Git Bash or WSL
+
+**Post-install validation:**
+
+```python
+python3 -c "
+import torch
+from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline
+device = 'cuda' if torch.cuda.is_available() else ('mps' if torch.backends.mps.is_available() else 'cpu')
+print(f'Device: {device}')
+pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(
+    '{models_path}/Hunyuan3D-2mini',
+    subfolder='hunyuan3d-dit-v2-mini-turbo',
+    use_safetensors=True,
+    device=device
+)
+print('✅ Shape generation ready')
+"
+```
+
+If validation passes: "✅ Local backend ready. Shape generation on {device}."
+If CUDA not available: "⚠️ No NVIDIA GPU detected. Shape generation will use {mps/cpu} (slower). Texture generation unavailable locally — skill will texture via Blender (phase TEXTURING)."
+
+---
+
+## /kiln:models — Model Management
+
+List and switch between available Hunyuan3D models.
+
+```
+Installed models:
+  1. hunyuan3d-dit-v2-mini       ✅ installed  (6.2 GB)
+  2. hunyuan3d-dit-v2-mini-fast  ❌ not installed
+  3. hunyuan3d-dit-v2-mini-turbo ✅ installed  (6.1 GB)
+
+Active model: hunyuan3d-dit-v2-mini
+Device: mps (Apple Silicon)
+Backend: local
+
+Commands:
+  "switch to turbo"     → change active model
+  "download fast"       → download missing model
+  "switch to HF Spaces" → use cloud backend instead
+  "delete turbo"        → remove model files to free space
+```
+
+User can switch model or backend at any time during a session.
 
 ---
 
@@ -96,6 +241,10 @@ See the design doc `docs/plans/2026-04-01-blender-asset-pipeline-design.md` for 
 ```
 
 ### [1] CONFIG — Collect Parameters
+
+**First launch:** before collecting parameters, run the environment scan from `/kiln:setup` (Step 1 only — auto-detect, no install prompts). Display the summary so the user sees what's available. If critical components are missing (e.g. Blender MCP not connected), warn and offer to run full `/kiln:setup`.
+
+**Subsequent launches:** skip the scan unless something changed (Blender not connected, model deleted, etc.).
 
 Collect these parameters. Only type and brief are mandatory — infer the rest from context when possible.
 
@@ -108,7 +257,9 @@ Collect these parameters. Only type and brief are mandatory — infer the rest f
 | **Visual style** (realistic, stylized, cartoon, low-poly) | realistic | Impacts sourcing + AI prompts |
 | **Mode** (auto / guided) | auto | guided = validation at each step |
 | **Storage** (compact / full) | compact | compact = original + final + .blend + log only |
-| **HF Space URL** | Jbowyer/Hunyuan3D-2.1 | For Hunyuan3D 2.x, overridable |
+| **3D Backend** (local / hf-spaces) | auto-detected | Local if models installed, else HF Spaces |
+| **Hunyuan3D model** | mini | Active model for local backend (see `/kiln:models`) |
+| **HF Space URL** | Jbowyer/Hunyuan3D-2.1 | For HF Spaces backend, overridable |
 | **Auto-open links** | false | Configurable mid-session |
 | **Output folder** (absolute path) | `./generated-assets/` | Confirmed at launch |
 
@@ -224,10 +375,23 @@ Accepted formats: PNG, JPG, WEBP. Recommended: 1024x1024 minimum.
 
 Load `references/ai-generation.md` for full technical details.
 
+Two backends — same pipeline, different execution:
+
+**Local backend:**
+1. Load pipeline from local model files (device auto-detected: cuda > mps > cpu)
+2. Shape generation — image → mesh
+3. Texture generation — if CUDA available, else skip → proceed to [5b] TEXTURING
+4. Preview stats before import
+
+**HF Spaces backend:**
 1. `/shape_generation` — image → mesh (timeout 300s)
 2. `/on_export_click` — export with `export_texture=True`, `reduce_face` per tier
 3. If texture fails → white mesh, proceed to [5b] TEXTURING
 4. Preview stats before import: "Generated: 257K faces, 4.4 MB. Reduced to 3.2K (balanced). Import?"
+
+**Fallback:** if local backend crashes (OOM, error), ask user:
+> "Local generation failed: {error}. Switch to HF Spaces for this asset? (yes / no / retry)"
+Never switch backend silently.
 
 **Scripted modeling flow:**
 
