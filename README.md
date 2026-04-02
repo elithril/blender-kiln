@@ -106,6 +106,7 @@ Copy the `blender-kiln/` folder into your Claude Code skills directory:
 ├── SKILL.md
 └── references/
     ├── ai-generation.md
+    ├── batch-mode.md
     ├── characters.md
     ├── cli-tools.md
     ├── export-targets.md
