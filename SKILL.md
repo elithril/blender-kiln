@@ -102,30 +102,19 @@ Run this at first launch or when the user runs `/kiln:setup`.
 Scan and report status for each component:
 
 ```
-🔍 Environment scan...
+── 🔍 Environment ──────────────────────────
+Platform     {macOS / Windows / Linux} │ {NVIDIA RTX xxxx (xx GB VRAM) / Apple Silicon (MPS) / No GPU}
+Blender MCP  {✅ connected (port 9876) / ❌ not detected}
+Python       {version, path}
 
-Platform:     {macOS / Windows / Linux}
-GPU:          {NVIDIA RTX xxxx (xx GB VRAM) / Apple Silicon (MPS) / No GPU}
-CUDA:         {version / not available}
+── 3D Generation ───────────────────────────
+Backend      {✅ Local (Hunyuan3D-2 mini) / ✅ HF Spaces / ❌ not configured}
+Models       {list installed models with sizes, or "none"}
+Device       {cuda / mps / cpu} │ Texture: {✅ local (CUDA) / ⚠️ HF Spaces only / ⚠️ Blender only (no CUDA)}
 
-Blender MCP:  {✅ connected (port 9876) / ❌ not detected}
-Python:       {version, path}
-
-3D Backend:   {✅ Local (Hunyuan3D-2 mini) / ✅ HF Spaces / ❌ not configured}
-  Models:     {list installed models with sizes, or "none"}
-  Device:     {cuda / mps / cpu}
-
-Concept art:  {✅ Pollinations (free) / ✅ nano-banana / ✅ both}
-
-CLI tools:
-  gradio_client:  {✅ installed / ❌ missing}
-  gltf-transform: {✅ installed / ⚠️ optional, not installed}
-  gltfpack:       {✅ installed / ⚠️ optional, not installed}
-
-⚠️ Capabilities based on your setup:
-  Shape generation (mesh):    {✅ local + HF Spaces / ✅ HF Spaces only / ❌}
-  Texture generation (AI):    {✅ local (CUDA) / ⚠️ HF Spaces only / ❌ no CUDA — skill will texture via Blender}
-  Scripted modeling:          {✅ always available via Blender MCP}
+── Tools ───────────────────────────────────
+gradio_client   {✅ / ❌}  │ gltf-transform  {✅ / ⚠️ optional}
+gltfpack        {✅ / ⚠️}  │ nano-banana     {✅ / ❌}
 ```
 
 **GPU detection commands:**
@@ -214,20 +203,13 @@ If CUDA not available: "⚠️ No NVIDIA GPU detected. Shape generation will use
 List and switch between available Hunyuan3D models.
 
 ```
-Installed models:
-  1. hunyuan3d-dit-v2-mini       ✅ installed  (6.2 GB)
-  2. hunyuan3d-dit-v2-mini-fast  ❌ not installed
-  3. hunyuan3d-dit-v2-mini-turbo ✅ installed  (6.1 GB)
+── 🧠 Models ───────────────────────────────
+  #  │ Model                      │ Status          │ Size
+  1  │ hunyuan3d-dit-v2-mini      │ ✅ active       │ 6.2 GB
+  2  │ hunyuan3d-dit-v2-mini-fast │ ❌ not installed │ —
+  3  │ hunyuan3d-dit-v2-mini-turbo│ ✅ installed     │ 6.1 GB
 
-Active model: hunyuan3d-dit-v2-mini
-Device: mps (Apple Silicon)
-Backend: local
-
-Commands:
-  "switch to turbo"     → change active model
-  "download fast"       → download missing model
-  "switch to HF Spaces" → use cloud backend instead
-  "delete turbo"        → remove model files to free space
+Backend: local (mps) │ "switch to 3" "download 2" "use HF Spaces" "delete 3"
 ```
 
 User can switch model or backend at any time during a session.
@@ -421,8 +403,13 @@ Want to try another Space? (give URL)
 get_scene_info() → import via execute_blender_code → verify world_bounding_box
 → center + normalize scale if needed (1 unit = 1 meter)
 → alert if dimensions seem wrong ("Asset is 0.002m tall. Scale issue?")
-→ preview stats: "Imported: {name}, {faces} faces, bbox {x}x{y}x{z}m"
 → get_viewport_screenshot
+```
+
+**Output format:**
+```
+── ✅ IMPORT ────────────────────────────────
+{name} │ {faces} faces │ {x}×{y}×{z}m │ {file_size}
 ```
 
 For scripted assets: import is implicit (already in Blender).
@@ -441,6 +428,12 @@ Load `references/validation-checklist.md` and execute:
 
 **Auto mode:** non-destructive cleanup runs automatically. Decimate remains interactive.
 **Guided mode:** show each step, wait for validation.
+
+**Output format:**
+```
+── ✅ CLEANUP ───────────────────────────────
+{before} → {after} faces (−{percent}%) │ merged {n} verts │ normals ✅
+```
 
 ### [5b] TEXTURING
 
@@ -466,11 +459,18 @@ Propose options:
 - Custom parameters
 - Skip
 
-After each tool: show before/after (file size, face count). "Keep? (yes / no / adjust)"
+After each tool: show before/after. "Keep? (yes / no / adjust)"
 
 Load `references/cli-tools.md` for commands and parameters.
 
 **Standalone:** `/kiln:optimize` works outside the pipeline.
+
+**Output format:**
+```
+── ✅ OPTIMIZE ──────────────────────────────
+{before_size} → {after_size} (−{percent}%) │ {tools_used}
+Keep? (yes / no / adjust)
+```
 
 ### [7] EXPORT
 
@@ -514,6 +514,13 @@ generated-assets/
 
 Save the .blend file via `execute_blender_code`: `bpy.ops.wm.save_as_mainfile(filepath=...)`.
 
+**Output format:**
+```
+── ✅ EXPORT ────────────────────────────────
+{name}_final.{ext} │ {final_size} │ {final_faces} faces │ {format}
+.blend saved │ log written
+```
+
 **End-of-session cleanup:** At the end of a multi-asset session, propose:
 > "Session complete: {n} assets, {total_size} MB. Cleanup intermediate files? (yes / no / pick per asset)"
 >
@@ -527,32 +534,17 @@ Save the .blend file via `execute_blender_code`: `bpy.ops.wm.save_as_mainfile(fi
 Show current state at any time:
 
 ```
-Asset: {name}
-Config: {target} | {tier} | {style} | {mode}
+── ⚒️ {name} ──────────────────────────────
+{target} │ {tier} │ {style} │ {mode}
 
-Pipeline:
-  [1] CONFIG     ✅
-  [2] BRIEF      ✅  "{brief summary}"
-  [3] CHOIX      ✅  {method chosen} ({recommendation})
-  [4] IMPORT     ✅  {name} — {faces} faces
-  [5] CLEANUP    ✅  {before} → {after} faces
-  [5b] TEXTURING ◀️  IN PROGRESS — {detail}
-  [6] OPTIMIZE   ⬜
-  [7] EXPORT     ⬜
+CONFIG ✅ → BRIEF ✅ → CHOIX ✅ → IMPORT ✅ → CLEANUP ✅ → TEXTURE ◀️ → OPT ⬜ → EXPORT ⬜
 
-Next recommended step: {description}
-
-Files:
-  ├── {name}_original.glb    ({size})
-  ├── {name}_clean.glb       ({size})
-  └── {name}.blend
-
-Session: {n} assets completed ({list})
-
-Reusable prompts:
-  Concept art: "{exact prompt}" (via {pollinations|nano-banana|user image})
-  Hunyuan3D: steps={s}, seed={seed}, octree={res}, mode={mode}
+Stats    {faces} faces │ bbox {x}×{y}×{z}m
+Files    _original.glb ({size}) │ _clean.glb ({size}) │ .blend
+Next     {description}
 ```
+
+Note: "Reusable prompts" (concept art prompt, Hunyuan3D params) are stored in the log file only — not shown in status output.
 
 ---
 
@@ -565,19 +557,11 @@ These commands work independently — no need to run the full pipeline.
 Inspect any 3D file without importing it into the pipeline.
 
 ```
-Input: file path (GLB, FBX, USDZ, OBJ, .blend)
-
-Output:
-  File: {path} ({file_size})
-  Format: {format}
-  Faces: {count} ({tris} triangles, {quads} quads, {ngons} ngons)
-  Vertices: {count}
-  Objects: {count} [{names}]
-  Materials: {count} [{names}]
-  Bounding box: {x} × {y} × {z} m
-  Textures: {count} [{resolutions}]
-  Animations: {count or "none"}
-  Rigging: {yes/no — bone count if yes}
+── 📐 {filename} ({file_size}) ─────────────
+Faces    {count} (tri: {tris} │ quad: {quads} │ ngon: {ngons})    Verts    {count}
+Objects  {count} [{names}]                                         Materials {count} [{names}]
+Bbox     {x} × {y} × {z} m                                        Textures  {count} [{resolutions}]
+Anim     {count or "none"}                                         Rig       {yes/no — bone count}
 ```
 
 Use `execute_blender_code` to import temporarily, read stats via Python API, then undo/delete.
@@ -592,7 +576,11 @@ Clean up a mesh already open in Blender (or import one first).
 3. Load `references/validation-checklist.md`
 4. Execute: Merge by Distance → Recalculate Normals → Remove Loose → Degenerate Dissolve → Apply Transforms → Origin to center of base
 5. `get_viewport_screenshot()` after each step
-6. Show before/after stats: "{before} faces → {after} faces, {removed} vertices merged"
+6. Show before/after stats:
+   ```
+   ── ✅ CLEANUP ───────────────────────────────
+   {before} → {after} faces (−{percent}%) │ merged {n} verts │ normals ✅
+   ```
 7. If poly count high: propose decimate (always interactive)
 
 ### /kiln:texture
@@ -625,8 +613,13 @@ Optimize a GLB file with CLI tools.
    - `gltfpack` — mesh simplification + LOD generation
    - Custom parameters
 5. Execute chosen options sequentially
-6. Show before/after: "{before_size} → {after_size} ({reduction}%)"
-7. "Keep? (yes / no / adjust parameters)"
+6. Show before/after:
+   ```
+   ── ✅ OPTIMIZE ──────────────────────────────
+   {before_size} → {after_size} (−{reduction}%) │ {tools_used}
+   Keep? (yes / no / adjust)
+   ```
+7. User chooses to keep, discard, or adjust parameters
 
 ### /kiln:convert
 
@@ -645,7 +638,11 @@ Convert between 3D formats.
 
 3. Load `references/export-targets.md` for format-specific settings
 4. Run material export audit before GLTF export (Iron Rule 19)
-5. Show output stats: "Converted: {input} → {output} ({size})"
+5. Show output stats:
+   ```
+   ── ✅ CONVERT ───────────────────────────────
+   {input} → {output} │ {size}
+   ```
 
 ### /kiln:search
 
@@ -658,44 +655,36 @@ Search 3D asset marketplaces.
    - **Sketchfab** — filter downloadable + free only (requires API token)
 4. Present results:
    ```
-   Results for "{query}":
+   ── 🔎 "{query}" ─────────────────────────
+    #  │ Source     │ Name            │ Faces │ License │ Link
+    1  │ PolyHaven  │ Wooden Chair    │ 2.3K  │ CC0     │ polyhaven.com/a/...
+    2  │ PolyHaven  │ ...             │ ...   │ CC0     │ ...
+    6  │ Sketchfab  │ Medieval Chair  │ 4.1K  │ CC-BY   │ sketchfab.com/...
+    7  │ Sketchfab  │ ...             │ ...   │ ...     │ ...
 
-   PolyHaven:
-     1. Wooden Chair — 2.3K faces, CC0 — https://polyhaven.com/a/wooden_chair
-     2. ...
-
-   Sketchfab:
-     6. Medieval Chair — 4.1K faces, CC-BY — https://sketchfab.com/...
-     7. ...
+   "pick 1" │ "open 2,6" │ "refine: wooden stool" │ "create instead"
    ```
-5. User can: pick a number to download, "open 2, 5" to view in browser, refine search, or cancel
+5. User can: pick a number to download, open links, refine search, or cancel
 
 ### /kiln:help
 
 Display all available commands with descriptions.
 
 ```
-blender-kiln — The 3D Asset Forge
-
-Commands:
-  /kiln             Full pipeline (CONFIG → EXPORT)
-  /kiln:setup       Environment detection + guided setup
-  /kiln:models      List/switch Hunyuan3D models
-  /kiln:status      Show current pipeline state
-  /kiln:search      Search PolyHaven/Sketchfab marketplaces
-  /kiln:inspect     Inspect a 3D file (stats, poly count, materials, bbox)
-  /kiln:cleanup     Cleanup a mesh in Blender
-  /kiln:texture     Texture an untextured mesh
-  /kiln:optimize    Optimize a GLB with gltf-transform/gltfpack
-  /kiln:convert     Convert between formats (GLB↔FBX↔USDZ)
-  /kiln:help        This help message
-
-Quick start:
-  1. Run /kiln:setup to check your environment
-  2. Run /kiln to start the full pipeline
-  3. Or use any standalone command directly
-
-Docs: https://github.com/elithril/blender-kiln
+── ⚒️ blender-kiln ─────────────────────────
+/kiln              Full pipeline (CONFIG → EXPORT)
+/kiln:setup        Environment detection + setup
+/kiln:models       List/switch Hunyuan3D models
+/kiln:status       Show current pipeline state
+/kiln:search       Search PolyHaven/Sketchfab
+/kiln:inspect      Inspect a 3D file (stats, bbox)
+/kiln:cleanup      Cleanup a mesh in Blender
+/kiln:texture      Texture an untextured mesh
+/kiln:optimize     Optimize a GLB (gltf-transform/gltfpack)
+/kiln:convert      Convert formats (GLB↔FBX↔USDZ)
+/kiln:help         This help message
+─────────────────────────────────────────────
+Quick: /kiln:setup → /kiln
 ```
 
 ---
