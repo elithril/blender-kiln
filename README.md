@@ -68,7 +68,7 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 | Backend | Install | GPU needed | Texture gen | Offline |
 |---|---|---|---|---|
 | **HF Spaces** (default) | `pip3 install gradio_client` | No (cloud) | Yes | No |
-| **Local Hunyuan3D** | Run `/kiln:setup` (~25 GB download) | Optional | CUDA only | Yes |
+| **Local [Hunyuan3D-2](https://github.com/Tencent/Hunyuan3D-2)** | Run `/kiln:setup` (~25 GB download) | Optional | CUDA only | Yes |
 
 On Mac (Apple Silicon): local shape generation works via MPS, texture generation falls back to skill's Blender-based texturing.
 On Windows + NVIDIA GPU: full pipeline runs locally — shape + texture, zero cloud dependency.
