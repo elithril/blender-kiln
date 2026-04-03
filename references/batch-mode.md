@@ -33,11 +33,18 @@ keyboard: clavier mécanique compact
 lamp: lampe de bureau articulée, métal brossé
 ```
 
+Then ask: **"Do you have reference images for any of these assets? (paths, URLs, or 'no')"**
+
+- User can provide one image per asset: local path, URL, or drag-and-drop
+- Format: `asset_name: /path/to/image.png` or `asset_name: https://...`
+- If "no" → concept art will be auto-generated from briefs (Pollinations)
+- Reference images are optional per asset — some assets can have images while others don't
+
 ### Step 3 — Materials
 
 "Define a material palette or let me deduce it from the theme?"
 
-**If "deduce":** propose a palette with human description + technical ref:
+**If "deduce":** propose a palette based on the theme AND any reference images provided in Step 2. Analyze reference images to identify visible materials (wood grain, metal finish, fabric texture, etc.) and incorporate them into the palette proposal. Human description + technical ref:
 ```
 ── Palette proposée ────────────────────────
 wood:    Bois clair vieilli, chaleureux     (polyhaven: wood_cabinet_worn_long)
@@ -83,10 +90,10 @@ Display the full recap:
 ── Manifest généré ─────────────────────────
 Scène: {name} │ {style} │ {tier} │ {target}
 
-  #  Asset     Méthode         Matériaux        Tier
-  1  desk      scripted        wood + metal     balanced
-  2  chair     hunyuan3d       fabric + plastic balanced
-  3  keyboard  marketplace     plastic          lightweight
+  #  Asset     Méthode         Matériaux        Tier        Ref Image
+  1  desk      scripted        wood + metal     balanced    —
+  2  chair     hunyuan3d       fabric + plastic balanced    📷 chair-ref.png
+  3  keyboard  marketplace     plastic          lightweight —
   ...
 
 ⚠️ Estimation : ~{low}K-{high}K tokens (marge ±50%)
@@ -108,6 +115,8 @@ Allow the user to adjust any line before validation. Accept formats like:
 - `"3 → hunyuan3d"` — change method
 - `"5 tier detailed"` — change tier
 - `"2 materials wood + metal"` — change materials
+- `"2 ref /path/to/image.png"` — add/change reference image
+- `"2 ref none"` — remove reference image
 - `"remove 4"` — remove asset from batch
 
 ### Step 5 — Generate Manifest & Launch
@@ -166,10 +175,32 @@ For each asset where `status` is `pending`, `failed`, or `redo` (in manifest ord
 
    [BRIEF] — Use asset.brief from manifest. No user confirmation needed.
 
+   [REF IMAGE] — IF asset.reference_image exists:
+     Download if URL, verify file exists if path.
+     Read/analyze the image to extract visual context (proportions,
+     shape, parts, colors, style). This analysis informs ALL methods below.
+
+   [BRIEF ENRICHMENT] — IF reference image was analyzed:
+     Extract visible details from the image that are NOT already in
+     the brief (e.g. number of legs, drawer, handle shape, curvature).
+     CRITICAL: the user's brief ALWAYS wins over image analysis.
+     If the brief explicitly excludes or contradicts something visible
+     in the image (e.g. "like this but without armrests"), respect the
+     brief — do NOT reintroduce contradicted details from the image.
+     Log the enriched brief in the asset log for traceability.
+
    [CHOIX] — Use asset.method from manifest:
-     - scripted → go to scripted modeling flow
-     - hunyuan3d → generate concept art (Pollinations, auto prompt from brief),
-       then AI generation. Use config.backend.
+     - scripted →
+       IF reference image was analyzed:
+         Use visual analysis to guide Python modeling — match proportions,
+         number of parts, shapes, and structural details from the image.
+       Go to scripted modeling flow.
+     - hunyuan3d →
+       IF reference image was analyzed:
+         Use reference image directly as Hunyuan3D input (skip concept art generation).
+       ELSE:
+         Generate concept art (Pollinations, auto prompt from brief).
+       Then AI generation. Use config.backend.
      - marketplace → search PolyHaven/Sketchfab with brief keywords,
        auto-pick first result matching tier. If no result → status: failed.
      - geometry-nodes → go to geometry nodes flow
@@ -189,6 +220,10 @@ For each asset where `status` is `pending`, `failed`, or `redo` (in manifest ord
        - If source=procedural → create Principled BSDF with params
      Use geometric analysis to assign materials to mesh zones
      (face normals/position clustering).
+     IF reference image was analyzed:
+       Use it to guide material zone assignment — match which material
+       goes where based on visible colors/textures in the image
+       (e.g. wood on top surfaces, metal on legs).
      Skip if asset already has textures (marketplace with textures).
 
    [OPTIMIZE] — Apply config.optimize_preset:
@@ -205,6 +240,14 @@ For each asset where `status` is `pending`, `failed`, or `redo` (in manifest ord
 
 4. Take final viewport screenshot:
    get_viewport_screenshot() → save to {asset-name}/{name}_screenshot.png
+
+4b. IF reference image exists — Visual comparison:
+    Compare the final screenshot against the reference image.
+    Log a short verdict in the asset log (informational, never blocking):
+      - Proportions: OK / differs (e.g. "legs shorter than ref")
+      - Structure: OK / differs (e.g. "missing cross braces visible in ref")
+      - Overall: "close match" / "partial match" / "loose interpretation"
+    This helps the user decide which assets to redo post-batch.
 
 5. Write asset log: {asset-name}/{name}_log.md (standard log format,
    include the batch brief as "Source Brief" section)
@@ -331,6 +374,7 @@ assets:
   - name: desk                        # kebab-case, used for folder + file names
     brief: "Bureau rectangulaire moderne, plateau bois clair, pieds métal tubulaire"
     method: scripted                  # scripted | hunyuan3d | marketplace | geometry-nodes
+    reference_image: null             # optional: local path or URL to reference image
     materials: [wood, metal]          # refs to palette keys
     tier: balanced                    # override config.tier if needed
     status: pending                   # pending | running | done | failed | redo
@@ -360,6 +404,7 @@ Common edits between runs:
 - Change an asset's `status` from `done` to `redo` to re-process it
 - Change `method` to try a different creation approach
 - Adjust `brief` for better results on retry
+- Add/change `reference_image` to provide visual reference
 - Add/remove assets from the list
 - Change `materials` assignments
 - Change `optimize_preset` globally

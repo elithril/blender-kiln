@@ -199,8 +199,12 @@ Alert if mesh exceeds range by >50%. Propose decimate. Never block.
 
 ### [2] BRIEF — Confirm Understanding
 
-Reformulate the brief for confirmation:
-> "OK: medieval wooden chair, stylized, for web (glTF), tier balanced (1.5-5K tris). Good?"
+**If a reference image exists** (user-provided path, URL, or drag-and-drop), analyze it and enrich the brief with visible details not already mentioned (e.g. number of legs, curvature, handle shape, proportions).
+
+**CRITICAL: the user's brief ALWAYS wins over image analysis.** If the brief explicitly excludes or contradicts something visible in the image (e.g. "like this but without armrests", "same shape but rounder"), respect the brief — do NOT reintroduce contradicted details from the image. The image is a starting point; the brief is the final word.
+
+Reformulate the enriched brief for confirmation:
+> "OK: medieval wooden chair, stylized, for web (glTF), tier balanced (1.5-5K tris). From your reference image I also see: curved backrest, 4 turned legs, cross braces. Good?"
 
 ### [3] CHOIX — Marketplace or Create?
 
@@ -252,7 +256,7 @@ Always explain WHY the recommendation, always let the user choose.
 | **AI Generation (Hunyuan3D)** | organic, realistic, complex | Single mesh, texturing needed after |
 | **Scripted modeling (Blender Python)** | furniture, archi, stylized, low-poly | Separated parts, clean topology, more geometric |
 | **Geometry Nodes (procedural)** | scattering, patterns, parametric | Non-destructive, powerful but complex |
-| **User-provided image → Hunyuan3D** | when user has reference art (path or URL) | Same as AI generation |
+| **User-provided image → AI or scripted** | when user has reference art (path or URL) | Image guides any method (see below) |
 | **Concept art first** | when starting from nothing | Generates concept image, then AI or scripted |
 
 **Concept art input — 3 modes:**
@@ -262,8 +266,19 @@ Ask: **"Do you have a reference image, or should I generate a concept from your 
 | Mode | How | Notes |
 |---|---|---|
 | **Text prompt** | Generate via Pollinations API (free, no key) | Default method |
-| **Image path / drag-and-drop** | User provides local file path | Passed directly to Hunyuan3D |
-| **Image URL** | User provides URL, downloaded via curl | Saved locally, then to Hunyuan3D |
+| **Image path / drag-and-drop** | User provides local file path | Used as reference for any method |
+| **Image URL** | User provides URL, downloaded via curl | Saved locally, used as reference |
+
+**Reference image usage per method:**
+
+A user-provided image (or generated concept art) is useful for ALL creation methods, not just Hunyuan3D:
+
+| Method | How the image is used |
+|---|---|
+| **Hunyuan3D** | Passed directly as generation input (image → 3D) |
+| **Scripted modeling** | Analyze image to guide Python modeling — match proportions, number of parts, shapes, structural details, relative sizes |
+| **Geometry Nodes** | Analyze image to inform node parameters — spacing, density, pattern, scale |
+| **Marketplace** | Analyze image to refine search keywords and evaluate result similarity |
 
 If nano-banana MCP is available, offer it as an alternative to Pollinations (supports iterative editing).
 
@@ -383,10 +398,12 @@ Load `references/texturing-strategy.md`.
 
 **Triggered if:** white mesh (AI without texture) or insufficient materials.
 
+**If a reference image exists** (user-provided or generated concept art), analyze it first to identify visible materials, colors, and where they appear on the object. This guides both texture selection and zone assignment below.
+
 **Strategies in order of proposal:**
 
-1. **Geometric analysis + PolyHaven** — analyze face normals/position/curvature, cluster into zones, label visually, search PolyHaven textures per zone, apply PBR materials
-2. **Procedural Blender materials** — for stylized/cartoon/low-poly, Principled BSDF with values only, no image textures
+1. **Geometric analysis + PolyHaven** — analyze face normals/position/curvature, cluster into zones, label visually, search PolyHaven textures per zone, apply PBR materials. If reference image available, use it to match textures to zones (e.g. wood grain visible on top → wood PBR on horizontal faces)
+2. **Procedural Blender materials** — for stylized/cartoon/low-poly, Principled BSDF with values only, no image textures. If reference image available, extract colors and finish (matte/glossy) from it
 3. **Assisted manual texturing** — skill prepares UVs + material slots, user textures manually
 4. **Try another Space** — if current Space doesn't support texture, offer to change URL
 
@@ -687,6 +704,11 @@ Each asset produces `{name}_log.md`:
 - Tier: {tier}
 - Style: {style}
 - Mode: {mode}
+
+## Reference Image
+- Path: {path or URL or "none"}
+- Brief enrichment: [list of details extracted from image, if any]
+- Visual comparison: {verdict — "close match" / "partial match" / "loose interpretation" / "N/A"}
 
 ## Prompts (copy-paste ready)
 - Concept art: "{exact prompt}" (source: {pollinations|nano-banana|user image|user URL})

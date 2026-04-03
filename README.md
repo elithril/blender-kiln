@@ -21,8 +21,8 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 | Phase | What happens |
 |---|---|
 | **CONFIG** | Collect parameters: asset type, style, export target, detail tier |
-| **BRIEF** | Reformulate and confirm understanding |
-| **SOURCE** | Search marketplaces OR create via AI generation / scripted modeling / geometry nodes |
+| **BRIEF** | Reformulate and confirm understanding — enrich with reference image details if provided (user brief always wins over image) |
+| **SOURCE** | Search marketplaces OR create via AI generation / scripted modeling / geometry nodes — reference image guides all methods |
 | **IMPORT** | Import into Blender, verify scale (1 unit = 1m), center origin |
 | **CLEANUP** | Merge doubles, recalc normals, apply transforms, check poly budget |
 | **TEXTURING** | Geometric analysis + PolyHaven PBR, procedural materials, or bake from procedural |
@@ -34,13 +34,14 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 - **Multi-method creation**: AI generation (Hunyuan3D 2.x — local or cloud), scripted modeling (Blender Python), geometry nodes, or marketplace sourcing
 - **Local AI generation**: run Hunyuan3D-2 Mini on your machine — NVIDIA GPU for full pipeline, Apple Silicon for shape generation
 - **Environment auto-detection**: `/kiln:setup` scans your system and guides installation
+- **Reference images**: provide an image per asset (path, URL, or drag-and-drop) — guides all creation methods (AI input, scripted proportions, texture assignment), enriches the brief, and enables post-export visual comparison
 - **Concept art input**: text prompt (Pollinations/FLUX), image path, image URL, or nano-banana (optional)
 - **Smart recommendations**: auto-suggests the best creation method based on asset type and style
 - **Material audit**: detects procedural nodes that will be lost on GLTF export, proposes bake workflow
 - **Post-export validation**: 8-point checklist (Babylon.js sandbox, Three.js console, material spot-check)
 - **Character support**: T-pose enforcement, rigging patterns, bone validation, Blender 5.x bone collections
 - **Multi-asset sessions**: cross-asset coherence (scale, materials, poly budget)
-- **Batch mode**: wizard collects scene/theme/palette upfront, generates a YAML manifest, runner executes autonomously — ideal for overnight production or large asset sets
+- **Batch mode**: wizard collects scene/theme/palette/reference images upfront, generates a YAML manifest, runner executes autonomously — ideal for overnight production or large asset sets
 - **Full logging**: every asset produces a production log with copy-paste prompts
 
 ## Commands
