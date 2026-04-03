@@ -11,7 +11,7 @@ Launch with `/kiln:batch`. The wizard collects all parameters upfront, generates
 Ask these questions one at a time:
 
 1. **Theme/scene:** "Describe the scene or theme for this batch:"
-   → Free text (e.g. "Bureau d'entreprise moderne, open space")
+   → Free text (e.g. "Modern corporate office, open space")
 
 2. **Visual style:** "Visual style?"
    → realistic / stylized / low-poly / cartoon
@@ -27,10 +27,10 @@ Ask these questions one at a time:
 "List the assets (one per line, with a brief description):"
 
 ```
-desk: bureau rectangulaire moderne, plateau bois, pieds métal
-chair: chaise ergonomique, mesh noir
-keyboard: clavier mécanique compact
-lamp: lampe de bureau articulée, métal brossé
+desk: modern rectangular desk, wood top, metal legs
+chair: ergonomic chair, black mesh
+keyboard: compact mechanical keyboard
+lamp: articulated desk lamp, brushed metal
 ```
 
 Then ask: **"Do you have reference images for any of these assets? (paths, URLs, or 'no')"**
@@ -46,13 +46,13 @@ Then ask: **"Do you have reference images for any of these assets? (paths, URLs,
 
 **If "deduce":** propose a palette based on the theme AND any reference images provided in Step 2. Analyze reference images to identify visible materials (wood grain, metal finish, fabric texture, etc.) and incorporate them into the palette proposal. Human description + technical ref:
 ```
-── Palette proposée ────────────────────────
-wood:    Bois clair vieilli, chaleureux     (polyhaven: wood_cabinet_worn_long)
-metal:   Métal noir brossé, semi-mat        (procédural: metallic 1.0, roughness 0.3)
-fabric:  Tissu gris anthracite chiné        (polyhaven: fabric_pattern_05)
-plastic: Plastique noir mat                 (procédural: roughness 0.6, color #2d2d2d)
+── Proposed Palette ────────────────────────
+wood:    Light aged wood, warm tone         (polyhaven: wood_cabinet_worn_long)
+metal:   Brushed black metal, semi-matte    (procedural: metallic 1.0, roughness 0.3)
+fabric:  Dark grey heathered fabric         (polyhaven: fabric_pattern_05)
+plastic: Matte black plastic               (procedural: roughness 0.6, color #2d2d2d)
 ────────────────────────────────────────────
-OK ou modifier ?
+OK or modify?
 ```
 
 **If "I define":** ask material by material — name, description, source (polyhaven ID or procedural params).
@@ -87,21 +87,21 @@ Assign materials from palette per asset based on brief keywords.
 Display the full recap:
 
 ```
-── Manifest généré ─────────────────────────
-Scène: {name} │ {style} │ {tier} │ {target}
+── Generated Manifest ──────────────────────
+Scene: {name} │ {style} │ {tier} │ {target}
 
-  #  Asset     Méthode         Matériaux        Tier        Ref Image
+  #  Asset     Method          Materials        Tier        Ref Image
   1  desk      scripted        wood + metal     balanced    —
   2  chair     hunyuan3d       fabric + plastic balanced    📷 chair-ref.png
   3  keyboard  marketplace     plastic          lightweight —
   ...
 
-⚠️ Estimation : ~{low}K-{high}K tokens (marge ±50%)
-   Retries réseau, complexité matériaux et erreurs peuvent
-   doubler un asset individuel.
+⚠️ Estimate: ~{low}K-{high}K tokens (±50% margin)
+   Network retries, material complexity, and errors can
+   double an individual asset.
 ────────────────────────────────────────────
-Modifier ? (ex: "3 → hunyuan3d", "5 tier detailed")
-Ou : Lancer / Plus tard
+Modify? (e.g. "3 → hunyuan3d", "5 tier detailed")
+Or: Launch / Later
 ```
 
 **Token estimation formula:**
@@ -128,12 +128,12 @@ Create the batch output folder structure.
 ```
 Manifest saved: generated-assets/batch-{name}-{date}/batch-manifest.yaml
 
-  1. Lancer maintenant
-  2. Plus tard (/kiln:batch run <dossier>)
+  1. Launch now
+  2. Later (/kiln:batch run <folder>)
 ```
 
-If "lancer" → immediately start the runner (see /kiln:batch run section below).
-If "plus tard" → done. User launches when ready.
+If "launch" → immediately start the runner (see /kiln:batch run section below).
+If "later" → done. User launches when ready.
 
 ---
 
@@ -189,7 +189,7 @@ For each asset where `status` is `pending`, `failed`, or `redo` (in manifest ord
      brief — do NOT reintroduce contradicted details from the image.
      Log the enriched brief in the asset log for traceability.
 
-   [CHOIX] — Use asset.method from manifest:
+   [SOURCE] — Use asset.method from manifest:
      - scripted →
        IF reference image was analyzed:
          Use visual analysis to guide Python modeling — match proportions,
@@ -208,13 +208,12 @@ For each asset where `status` is `pending`, `failed`, or `redo` (in manifest ord
    [IMPORT] — Standard import. Verify scale (1 unit = 1m).
      Alert in log if dimensions seem wrong (don't block).
 
-   [CLEANUP] — Full auto cleanup:
-     Merge by Distance, Recalculate Normals, Remove Loose,
-     Degenerate Dissolve, Apply Transforms, Origin to center of base.
+   [CLEANUP] — Full auto cleanup per references/validation-checklist.md.
+     Check poly budget against tier from references/topology-rules.md.
      If poly count >50% above tier range → auto-decimate to tier midpoint.
      Log before/after stats.
 
-   [TEXTURING] — Apply materials from palette:
+   [TEXTURING] — Load references/texturing-strategy.md. Apply materials from palette:
      For each material in asset.materials:
        - If source=polyhaven → download and apply PBR textures
        - If source=procedural → create Principled BSDF with params
@@ -230,7 +229,8 @@ For each asset where `status` is `pending`, `failed`, or `redo` (in manifest ord
      - "resize-1k-webp-draco" → gltf-transform resize 1024 → webp → draco
      - "resize-512-webp" → gltf-transform resize 512 → webp
      - "none" → skip
-     - Custom string → parse and apply
+     - Custom string → dash-separated steps, e.g. "resize-512-draco" or "resize-2k-webp".
+       Format: "resize-{size}-{compression}". See references/cli-tools.md for available steps.
      Log before/after file size.
 
    [EXPORT] — Export per config.target format.
@@ -312,14 +312,14 @@ The runner maintains `batch-report.md` in the batch folder, updated after each a
 When all assets are processed, display:
 
 ```
-── Batch terminé ───────────────────────────
+── Batch complete ──────────────────────────
 {done}/{total} ✅ │ {failed} ❌ ({failed_names}) │ ~{duration}
 
-  1. Relancer les {failed} échecs
-  2. Relancer tout le batch
-  3. Relancer un asset spécifique
-  4. Éditer le manifest et relancer
-  5. Terminé
+  1. Retry the {failed} failures
+  2. Rerun entire batch
+  3. Rerun a specific asset
+  4. Edit manifest and rerun
+  5. Done
 ```
 
 **Option 1:** re-run the same manifest (failed/redo assets only)
@@ -343,7 +343,7 @@ The manifest is the source of truth for a batch. Generated by the wizard, update
 batch:
   name: corporate-office              # kebab-case identifier
   created: 2026-04-02T22:30:00        # ISO 8601 (auto-generated)
-  description: "Bureau d'entreprise moderne, open space"
+  description: "Modern corporate office, open space"
 
 config:
   style: realistic                    # realistic | stylized | low-poly | cartoon
@@ -358,11 +358,11 @@ config:
 
 palette:
   wood:
-    description: "Bois clair vieilli, chaleureux"
+    description: "Light aged wood, warm tone"
     source: polyhaven                 # polyhaven | procedural
     id: wood_cabinet_worn_long        # PolyHaven asset ID
   metal:
-    description: "Métal noir brossé, semi-mat"
+    description: "Brushed black metal, semi-matte"
     source: procedural
     params:
       metallic: 1.0
@@ -372,7 +372,7 @@ palette:
 
 assets:
   - name: desk                        # kebab-case, used for folder + file names
-    brief: "Bureau rectangulaire moderne, plateau bois clair, pieds métal tubulaire"
+    brief: "Modern rectangular desk, light wood top, tubular metal legs"
     method: scripted                  # scripted | hunyuan3d | marketplace | geometry-nodes
     reference_image: null             # optional: local path or URL to reference image
     materials: [wood, metal]          # refs to palette keys

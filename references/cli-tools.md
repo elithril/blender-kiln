@@ -38,32 +38,32 @@ Requires Draco WASM decoder on client (~200KB). More aggressive compression than
 
 ### Full Optimization Pipeline
 
-> **⚠️ NE JAMAIS utiliser `gltf-transform optimize`** — cette commande inclut `simplify` qui **détruit la géométrie du mesh** de manière irréversible. Toujours utiliser les étapes individuelles dans l'ordre :
+> **⚠️ NEVER use `gltf-transform optimize`** — this command includes `simplify` which **destroys mesh geometry** irreversibly. Always use individual steps in order:
 
 ```bash
-# 1. Resize textures (max 1K pour web/mobile)
+# 1. Resize textures (max 1K for web/mobile)
 gltf-transform resize input.glb resized.glb --width 1024 --height 1024
 
-# 2. Compression textures WebP (qualité 90 préserve le détail)
+# 2. WebP texture compression (quality 90 preserves detail)
 gltf-transform webp resized.glb webp.glb --quality 90
 
-# 3. Compression mesh Draco (TOUJOURS en dernier — irréversible)
+# 3. Draco mesh compression (ALWAYS last — irreversible)
 gltf-transform draco webp.glb final.glb
 
-# 4. Inspecter le résultat
+# 4. Inspect the result
 gltf-transform inspect final.glb
 ```
 
-### Métriques de Référence
+### Reference Metrics
 
-| Étape | Taille typique | GPU Memory (par texture) |
+| Step | Typical size | GPU Memory (per texture) |
 |---|---|---|
-| Export brut (4K textures) | ~22 MB | ~89 MB |
-| Après resize 1K | ~3.7 MB | ~5.6 MB |
-| Après WebP q90 | ~3.7 MB | ~5.6 MB |
-| Après Draco | ~1 MB | ~5.6 MB |
+| Raw export (4K textures) | ~22 MB | ~89 MB |
+| After 1K resize | ~3.7 MB | ~5.6 MB |
+| After WebP q90 | ~3.7 MB | ~5.6 MB |
+| After Draco | ~1 MB | ~5.6 MB |
 
-> **16x de réduction mémoire GPU** en passant de 4K à 1K. Les GPUs mobiles (Adreno, Mali) bénéficient le plus du downscaling textures.
+> **16x GPU memory reduction** going from 4K to 1K. Mobile GPUs (Adreno, Mali) benefit the most from texture downscaling.
 
 ### Resize Textures
 ```bash
@@ -96,18 +96,18 @@ gltfpack -i input.glb -o output.glb -si 0.5 -sa
 
 ### Generate LODs
 
-LODs (Level of Detail) permettent au runtime de switcher entre des versions plus ou moins détaillées selon la distance caméra. Utilise l'extension `MSFT_lod`.
+LODs (Level of Detail) allow the runtime to switch between more or less detailed versions based on camera distance. Uses the `MSFT_lod` extension.
 
 ```bash
-# Générer 3 niveaux de LOD (100%, 50%, 25% des faces)
+# Generate 3 LOD levels (100%, 50%, 25% of faces)
 gltfpack -i input.glb -o output_lod.glb -si 0.5 -sl 3
 ```
-`-sl 3` = 3 LOD levels. `-si 0.5` = ratio de simplification entre niveaux.
+`-sl 3` = 3 LOD levels. `-si 0.5` = simplification ratio between levels.
 
-**Workflow LOD complet (contrôle fin) :**
+**Full LOD workflow (fine control):**
 
 ```bash
-# 1. LOD0 = original (ou légèrement optimisé)
+# 1. LOD0 = original (or slightly optimized)
 cp input.glb asset_lod0.glb
 
 # 2. LOD1 = 50% faces
@@ -116,26 +116,26 @@ gltfpack -i input.glb -o asset_lod1.glb -si 0.5
 # 3. LOD2 = 25% faces
 gltfpack -i input.glb -o asset_lod2.glb -si 0.25
 
-# 4. LOD3 = 10% faces (silhouette seulement)
+# 4. LOD3 = 10% faces (silhouette only)
 gltfpack -i input.glb -o asset_lod3.glb -si 0.1 -sa
 
-# 5. Inspecter chaque LOD
+# 5. Inspect each LOD
 gltf-transform inspect asset_lod0.glb
 gltf-transform inspect asset_lod1.glb
 gltf-transform inspect asset_lod2.glb
 gltf-transform inspect asset_lod3.glb
 ```
 
-**Budget LOD recommandé :**
+**Recommended LOD budget:**
 
-| LOD | Distance (Three.js) | % faces | Usage |
+| LOD | Distance | % faces | Usage |
 |---|---|---|---|
-| LOD0 | < 5m | 100% | Close-up, hero |
-| LOD1 | 5-15m | 50% | Mid-range |
-| LOD2 | 15-50m | 25% | Background |
-| LOD3 | > 50m | 10% | Far, silhouette only |
+| LOD0 | 0-10m | 100% | Close-up, hero |
+| LOD1 | 10-25m | 50% | Mid-range |
+| LOD2 | 25-50m | 25% | Background |
+| LOD3 | 50-100m | 10% | Far, silhouette only |
 
-> **⚠️** Toujours vérifier visuellement chaque LOD après génération. `-sa` (aggressive) peut créer des artefacts sur les edges marqués.
+> **⚠️** Always visually check each LOD after generation. `-sa` (aggressive) can create artifacts on marked edges.
 
 ### Full Optimization
 ```bash
@@ -187,7 +187,7 @@ usdzconvert input.glb output.usdz
 | Compress geometry (Draco) | gltf-transform | `gltf-transform draco in.glb out.glb` |
 | Simplify mesh (reduce polys) | gltfpack | `gltfpack -si 0.5` |
 | Generate LODs | gltfpack | `gltfpack -si 0.5 -sl 3` |
-| Full optimization | gltfpack only | `gltfpack -tc -si 0.5` (⚠️ NE PAS utiliser `gltf-transform optimize`) |
+| Full optimization | gltfpack only | `gltfpack -tc -si 0.5` (⚠️ DO NOT use `gltf-transform optimize`) |
 | Resize textures | gltf-transform | `gltf-transform resize --width 1024` |
 | Convert to USDZ | usdzconvert | `usdzconvert in.glb out.usdz` |
 
@@ -197,11 +197,11 @@ usdzconvert input.glb output.usdz
 
 After any optimization, show:
 ```
-Avant : 5.2 MB, 12K faces, 3 textures (2048x2048)
-Après : 890 KB, 12K faces, 3 textures (1024x1024, KTX2)
-Réduction : 83%
+Before: 5.2 MB, 12K faces, 3 textures (2048x2048)
+After:  890 KB, 12K faces, 3 textures (1024x1024, KTX2)
+Reduction: 83%
 
-On garde ? (oui / non / ajuster les paramètres)
+Keep this? (yes / no / adjust parameters)
 ```
 
 Always keep the pre-optimization file as backup.

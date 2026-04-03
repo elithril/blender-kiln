@@ -101,7 +101,7 @@ Alert if dimensions are clearly wrong (< 0.01m or > 100m).
 
 ---
 
-## Nommage
+## Naming
 
 Apply naming conventions per `naming-conventions.md`:
 
@@ -138,9 +138,9 @@ for mat in bpy.data.materials:
 
 ---
 
-## Material Export Audit (pré-export GLTF)
+## Material Export Audit (pre-export GLTF)
 
-**Exécuter AVANT tout export GLTF.** Détecte les nœuds procéduraux qui seront **perdus** à l'export.
+**Run BEFORE any GLTF export.** Detects procedural nodes that will be **lost** on export.
 
 ```python
 import bpy, json
@@ -162,23 +162,23 @@ def audit_materials_for_export():
             
             if node.type in PROCEDURAL_NODES:
                 info["warnings"].append(
-                    f"Procedural '{node.name}' ({node.type}) → PERDU à l'export GLTF. Bake en texture d'abord."
+                    f"Procedural '{node.name}' ({node.type}) → LOST on GLTF export. Bake to texture first."
                 )
             
             if node.type == 'VALTORGB':  # Color Ramp
                 info["warnings"].append(
-                    f"Color Ramp '{node.name}' → remapping PERDU à l'export. Roughness/metallic seront flat."
+                    f"Color Ramp '{node.name}' → remapping LOST on export. Roughness/metallic will be flat."
                 )
             
             if node.type == 'TEX_IMAGE' and node.image:
                 w, h = node.image.size[0], node.image.size[1]
                 if w > 2048 or h > 2048:
                     info["warnings"].append(
-                        f"Texture large: {node.image.filepath} ({w}x{h}). Considérer resize à 1024/2048."
+                        f"Large texture: {node.image.filepath} ({w}x{h}). Consider resizing to 1024/2048."
                     )
         
         if not has_principled:
-            info["warnings"].append("Pas de Principled BSDF → résultat export imprévisible.")
+            info["warnings"].append("No Principled BSDF → unpredictable export result.")
         
         if info["warnings"]:
             results.append(info)
@@ -187,25 +187,25 @@ def audit_materials_for_export():
 
 audit = audit_materials_for_export()
 if audit:
-    print("⚠️ AUDIT MATÉRIAUX PRÉ-EXPORT:")
+    print("⚠️ MATERIAL PRE-EXPORT AUDIT:")
     for mat in audit:
         print(f"\n  [{mat['name']}]:")
         for w in mat["warnings"]:
             print(f"    - {w}")
 else:
-    print("✅ Tous les matériaux sont compatibles GLTF.")
+    print("✅ All materials are GLTF compatible.")
 ```
 
-**Nœuds perdus à l'export GLTF :**
+**Nodes lost on GLTF export:**
 
-| Node Blender | Ce qui est perdu | Solution |
+| Blender Node | What is lost | Solution |
 |---|---|---|
-| Noise/Voronoi/Wave/Musgrave → input | Toute la chaîne procédurale | Bake en image texture |
-| Color Ramp sur roughness/metallic | Remapping de valeurs | Bake ou valeurs manuelles |
-| Procedural Bump (Noise → Bump) | Détail du bump | Bake normal map |
-| Mix Shader avec facteur complexe | Logique de blend | Simplifier en single BSDF |
+| Noise/Voronoi/Wave/Musgrave → input | Entire procedural chain | Bake to image texture |
+| Color Ramp on roughness/metallic | Value remapping | Bake or manual values |
+| Procedural Bump (Noise → Bump) | Bump detail | Bake normal map |
+| Mix Shader with complex factor | Blend logic | Simplify to single BSDF |
 
-**Ce qui EST exporté :** valeurs flat roughness/metallic, image textures (sans Color Ramp), baked normal maps, PBR texture sets (baseColor, metallicRoughness, normal).
+**What IS exported:** flat roughness/metallic values, image textures (without Color Ramp), baked normal maps, PBR texture sets (baseColor, metallicRoughness, normal).
 
 ---
 

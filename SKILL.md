@@ -159,7 +159,7 @@ User can switch model or backend at any time during a session.
 ## Pipeline — `/kiln`
 
 ```
-[1] CONFIG → [2] BRIEF → [3] CHOIX → [4] IMPORT → [5] CLEANUP → [5b] TEXTURING → [6] OPTIMIZE → [7] EXPORT
+[1] CONFIG → [2] BRIEF → [3] SOURCE → [4] IMPORT → [5] CLEANUP → [5b] TEXTURING → [6] OPTIMIZE → [7] EXPORT
 ```
 
 ### [1] CONFIG — Collect Parameters
@@ -185,15 +185,7 @@ Collect these parameters. Only type and brief are mandatory — infer the rest f
 | **Auto-open links** | false | Configurable mid-session |
 | **Output folder** (absolute path) | `./generated-assets/` | Confirmed at launch |
 
-**Detail tier ranges:**
-
-| Tier | Hero / character | Prop / furniture | Background |
-|---|---|---|---|
-| lightweight | 3-8K tris | 300-1.5K | 50-300 |
-| balanced | 8-20K tris | 1.5-5K | 300-1.5K |
-| detailed | 20-80K tris | 5-15K | 1.5-5K |
-
-Alert if mesh exceeds range by >50%. Propose decimate. Never block.
+**Detail tier ranges:** see `references/topology-rules.md` § Detail Tiers. Soft ranges — alert if >50% above, never block.
 
 **Scene:** auto-detected via `get_scene_info()` — not asked.
 
@@ -206,7 +198,7 @@ Alert if mesh exceeds range by >50%. Propose decimate. Never block.
 Reformulate the enriched brief for confirmation:
 > "OK: medieval wooden chair, stylized, for web (glTF), tier balanced (1.5-5K tris). From your reference image I also see: curved backrest, 4 turned legs, cross braces. Good?"
 
-### [3] CHOIX — Marketplace or Create?
+### [3] SOURCE — Marketplace or Create?
 
 Ask: **"Search marketplaces or create from scratch?"**
 
@@ -282,53 +274,7 @@ A user-provided image (or generated concept art) is useful for ALL creation meth
 
 If nano-banana MCP is available, offer it as an alternative to Pollinations (supports iterative editing).
 
-**Concept generation via Pollinations (default):**
-
-```bash
-curl -s -o "{output_folder}/{asset_name}_concept.png" \
-  "https://image.pollinations.ai/prompt/{url_encoded_prompt}?width=1024&height=1024&model=flux&nologo=true"
-```
-
-Auto-reformulate the user brief into a generation prompt:
-- Object only, transparent/white background, studio lighting
-- Never environment/ground/context
-- If character + rigging → T-pose: "character in T-pose, arms extended horizontally, palms facing down, legs slightly apart, neutral face, white background"
-- Rate limit: ~1 request per 10s. Wait between retries.
-
-Show the generated image to the user. If not satisfied, re-generate with adjusted prompt or different seed (`&seed=N`).
-
-**Concept generation via nano-banana (optional):**
-
-If nano-banana MCP is configured and available:
-- `generate_image(prompt)` — new image from text
-- `continue_editing(prompt)` — iterate on last image
-- `edit_image(imagePath, prompt)` — modify existing image
-
-Same prompt rules as above. Iterate with `continue_editing` until user validates.
-
-Accepted formats: PNG, JPG, WEBP. Recommended: 1024x1024 minimum.
-
-**AI Generation flow (Hunyuan3D):**
-
-Load `references/ai-generation.md` for full technical details.
-
-Two backends — same pipeline, different execution:
-
-**Local backend:**
-1. Load pipeline from local model files (device auto-detected: cuda > mps > cpu)
-2. Shape generation — image → mesh
-3. Texture generation — if CUDA available, else skip → proceed to [5b] TEXTURING
-4. Preview stats before import
-
-**HF Spaces backend:**
-1. `/shape_generation` — image → mesh (timeout 300s)
-2. `/on_export_click` — export with `export_texture=True`, `reduce_face` per tier
-3. If texture fails → white mesh, proceed to [5b] TEXTURING
-4. Preview stats before import: "Generated: 257K faces, 4.4 MB. Reduced to 3.2K (balanced). Import?"
-
-**Fallback:** if local backend crashes (OOM, error), ask user:
-> "Local generation failed: {error}. Switch to HF Spaces for this asset? (yes / no / retry)"
-Never switch backend silently.
+**Concept art & AI generation:** Load `references/ai-generation.md` for Pollinations commands, nano-banana usage, prompt rules, and Hunyuan3D details.
 
 **Scripted modeling flow:**
 
@@ -342,15 +288,8 @@ Never switch backend silently.
 For assets with repetitive patterns (railings, fences, stone walls, vegetation scattering):
 - Create the node tree via `execute_blender_code` (Python API)
 - Common patterns: Scatter (Distribute Points → Instance on Points), Extrude + Transform, Curve to Mesh
-- **Realize Instances** avant export (GLTF ne supporte pas les instances GN nativement)
-- ⚠️ **Simulation Zone gotchas** : Group Input values ne propagent PAS dans les sim zones (passer via state items), la géométrie freeze après frame 1 (seuls les state items persistent), Set Position requis après sim zone output
-
-**If HuggingFace Space fails:**
-```
-The Space is not responding.
-Check here: https://huggingface.co/spaces/{url}
-Want to try another Space? (give URL)
-```
+- **Realize Instances** before export (GLTF does not support GN instances natively)
+- ⚠️ **Simulation Zone gotchas**: Group Input values do NOT propagate into sim zones (pass via state items), geometry freezes after frame 1 (only state items persist), Set Position required after sim zone output
 
 ### [4] IMPORT
 
@@ -373,22 +312,12 @@ For scripted assets: import is implicit (already in Blender).
 
 Load `references/validation-checklist.md` and execute:
 
-**Geometry:** Merge by Distance (0.0001m), Recalculate Normals, Remove Loose, Degenerate Dissolve, Check manifold if needed.
+Execute the full cleanup sequence from `references/validation-checklist.md` § Execution Order. Check poly budget against tier from `references/topology-rules.md`.
 
-**Transforms:** Apply All Transforms, Origin at center of base.
-
-**Naming:** Rename per `references/naming-conventions.md`, remove orphan data-blocks.
-
-**Poly check:** In range → OK. Out of range (>50%) → **propose decimate with before/after** (always interactive, even in auto mode).
+**Poly check:** Out of range (>50%) → **propose decimate with before/after** (always interactive, even in auto mode).
 
 **Auto mode:** non-destructive cleanup runs automatically. Decimate remains interactive.
 **Guided mode:** show each step, wait for validation.
-
-**Output format:**
-```
-── ✅ CLEANUP ───────────────────────────────
-{before} → {after} faces (−{percent}%) │ merged {n} verts │ normals ✅
-```
 
 ### [5b] TEXTURING
 
@@ -442,48 +371,7 @@ By target:
 
 **Axis conversion** handled automatically (Blender -Y/Z → glTF +Z/Y).
 
-Save in output folder per **storage mode**:
-
-**Compact (default):**
-```
-generated-assets/
-└── {asset-name}/
-    ├── {name}_original.glb          (source, before any modification)
-    ├── {name}_final.{ext}           (export-ready)
-    ├── {name}.blend                 (full Blender project, can recreate all steps)
-    └── {name}_log.md
-```
-
-**Full** (all intermediate files preserved):
-```
-generated-assets/
-└── {asset-name}/
-    ├── {name}_original.glb
-    ├── {name}_clean.glb
-    ├── {name}_textured.glb          (if applicable)
-    ├── {name}_optimized.glb         (if applicable)
-    ├── {name}_final.{ext}
-    ├── {name}.blend
-    └── {name}_log.md
-```
-
-> The .blend file always contains the full history — intermediate GLBs can be re-exported from it at any time. Compact mode is safe.
-
-**Batch mode** (when run from `/kiln:batch run`):
-```
-generated-assets/
-└── batch-{name}-{date}/
-    ├── batch-manifest.yaml
-    ├── batch-report.md
-    └── {asset-name}/
-        ├── {name}_original.glb
-        ├── {name}_final.{ext}
-        ├── {name}.blend
-        ├── {name}_screenshot.png
-        └── {name}_log.md
-```
-
-In batch mode, each asset follows the same compact/full rules but nested inside the batch folder. The manifest and report are at the batch root level.
+Save in output folder per **storage mode** (compact or full). See `references/naming-conventions.md` for folder structure details. The .blend file always contains the full history — compact mode is safe.
 
 Save the .blend file via `execute_blender_code`: `bpy.ops.wm.save_as_mainfile(filepath=...)`.
 
@@ -510,7 +398,7 @@ Show current state at any time:
 ── ⚒️ {name} ──────────────────────────────
 {target} │ {tier} │ {style} │ {mode}
 
-CONFIG ✅ → BRIEF ✅ → CHOIX ✅ → IMPORT ✅ → CLEANUP ✅ → TEXTURE ◀️ → OPT ⬜ → EXPORT ⬜
+CONFIG ✅ → BRIEF ✅ → SOURCE ✅ → IMPORT ✅ → CLEANUP ✅ → TEXTURE ◀️ → OPT ⬜ → EXPORT ⬜
 
 Stats    {faces} faces │ bbox {x}×{y}×{z}m
 Files    _original.glb ({size}) │ _clean.glb ({size}) │ .blend
@@ -546,15 +434,9 @@ Clean up a mesh already open in Blender (or import one first).
 
 1. `get_scene_info()` — identify what's in the scene
 2. Ask user which object(s) to clean, or "all"
-3. Load `references/validation-checklist.md`
-4. Execute: Merge by Distance → Recalculate Normals → Remove Loose → Degenerate Dissolve → Apply Transforms → Origin to center of base
-5. `get_viewport_screenshot()` after each step
-6. Show before/after stats:
-   ```
-   ── ✅ CLEANUP ───────────────────────────────
-   {before} → {after} faces (−{percent}%) │ merged {n} verts │ normals ✅
-   ```
-7. If poly count high: propose decimate (always interactive)
+3. Load `references/validation-checklist.md` — execute full cleanup sequence
+4. `get_viewport_screenshot()` after each step
+5. If poly count high: propose decimate (always interactive)
 
 ### /kiln:texture
 
@@ -641,27 +523,7 @@ Search 3D asset marketplaces.
 
 ### /kiln:help
 
-Display all available commands with descriptions.
-
-```
-── ⚒️ blender-kiln ─────────────────────────
-/kiln              Full pipeline (CONFIG → EXPORT)
-/kiln:batch        Batch wizard → manifest → multi-asset production
-/kiln:batch run    Execute/resume a batch manifest
-/kiln:setup        Environment detection + setup
-/kiln:models       List/switch Hunyuan3D models
-/kiln:status       Show current pipeline state
-/kiln:search       Search PolyHaven/Sketchfab
-/kiln:inspect      Inspect a 3D file (stats, bbox)
-/kiln:cleanup      Cleanup a mesh in Blender
-/kiln:texture      Texture an untextured mesh
-/kiln:optimize     Optimize a GLB (gltf-transform/gltfpack)
-/kiln:convert      Convert formats (GLB↔FBX↔USDZ)
-/kiln:help         This help message
-─────────────────────────────────────────────
-Quick: /kiln:setup → /kiln
-Batch: /kiln:batch → /kiln:batch run
-```
+Display all available commands from the Commands table above.
 
 ---
 
@@ -740,17 +602,7 @@ Each asset produces `{name}_log.md`:
 
 ## Units & Scale
 
-**1 Blender unit = 1 meter.** Always.
-
-| Object | Approximate height |
-|---|---|
-| Adult character | ~1.75m |
-| Chair | ~0.85m |
-| Table | ~0.75m |
-| Door | ~2.10m |
-| Tree | ~5-15m |
-
-After import, verify bounding box. Alert if dimensions seem wrong.
+**1 Blender unit = 1 meter.** Always. See `references/validation-checklist.md` for expected dimensions per object type. Verify bounding box after import.
 
 **Axis orientation in Blender:**
 - Front: **-Y**

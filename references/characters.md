@@ -160,21 +160,21 @@ For Mixamo → custom rig retargeting:
 2. Match rest poses (T-pose to T-pose)
 3. Use Blender's bone mapping or a retargeting addon
 
-### 11. Blender 5.x — Bone Collections (remplace Bone Layers)
+### 10. Blender 5.x — Bone Collections (replaces Bone Layers)
 
-Depuis Blender 4.0+, les bone layers (32 slots numériques) sont remplacés par les **Bone Collections** (nommées, hiérarchiques, illimitées).
+Since Blender 4.0+, bone layers (32 numeric slots) have been replaced by **Bone Collections** (named, hierarchical, unlimited).
 
 ```python
 import bpy
 
 armature = bpy.data.armatures['SK_Character']
 
-# Créer des collections de bones
+# Create bone collections
 deform_col = armature.collections.new(name="DEF")
 ctrl_col = armature.collections.new(name="CTRL") 
 mech_col = armature.collections.new(name="MCH")
 
-# Assigner des bones aux collections (en Edit Mode)
+# Assign bones to collections (in Edit Mode)
 bpy.ops.object.mode_set(mode='EDIT')
 for bone in armature.edit_bones:
     if bone.name.startswith("DEF_"):
@@ -185,44 +185,44 @@ for bone in armature.edit_bones:
         mech_col.assign(bone)
 bpy.ops.object.mode_set(mode='OBJECT')
 
-# Masquer les bones mécanisme dans le viewport
+# Hide mechanism bones in the viewport
 mech_col.is_visible = False
 ```
 
-**Avantage :** Un bone peut appartenir à plusieurs collections. Permet un contrôle fin de la visibilité et de la sélection pour les animateurs.
+**Advantage:** A bone can belong to multiple collections. Allows fine-grained control over visibility and selection for animators.
 
-### 12. Blender 5.x — Layered Actions (Action Slots)
+### 11. Blender 5.x — Layered Actions (Action Slots)
 
-Blender 4.4+ introduit les **Layered Actions** avec un système de slots et layers :
+Blender 4.4+ introduces **Layered Actions** with a slots and layers system:
 
 ```python
 import bpy
 
-# Créer une action avec slots
+# Create an action with slots
 action = bpy.data.actions.new(name="A_Character_Walk")
 
-# Les slots permettent de lier une action à plusieurs objets
-# avec des channels différents par slot
+# Slots allow linking an action to multiple objects
+# with different channels per slot
 armature_obj = bpy.data.objects['SK_Character']
 armature_obj.animation_data_create()
 armature_obj.animation_data.action = action
 ```
 
-> ⚠️ L'API Layered Actions évolue rapidement entre Blender 4.4 et 5.x. Vérifier la version Blender avant d'utiliser ces patterns.
+> ⚠️ The Layered Actions API is evolving rapidly between Blender 4.4 and 5.x. Check the Blender version before using these patterns.
 
-### 13. Mode Switching Gotchas
+### 12. Mode Switching Gotchas
 
-Pièges courants lors des changements de mode (critique pour le scripting de rigs) :
+Common pitfalls when switching modes (critical for rig scripting):
 
-| Piège | Détail | Solution |
+| Pitfall | Detail | Solution |
 |---|---|---|
-| Edit bones ≠ Pose bones | `armature.edit_bones` (Edit Mode) vs `obj.pose.bones` (Pose Mode). Propriétés différentes. | Toujours vérifier le mode actif |
-| Bone roll en Edit Mode only | `edit_bone.roll` n'existe qu'en Edit Mode | Switcher en Edit avant de modifier les rolls |
-| Constraints en Pose Mode | Les constraints se configurent sur `pose_bone.constraints`, pas sur edit_bone | Switcher en Pose Mode |
-| Shape keys en Object Mode | `keyframe_insert` sur les shape keys requiert Object Mode | Vérifier le mode avant keyframing |
-| Données perdues au switch | Certaines opérations pending sont perdues si on switch sans `update()` | `bpy.context.view_layer.update()` après modifications |
+| Edit bones ≠ Pose bones | `armature.edit_bones` (Edit Mode) vs `obj.pose.bones` (Pose Mode). Different properties. | Always check the active mode |
+| Bone roll in Edit Mode only | `edit_bone.roll` only exists in Edit Mode | Switch to Edit before modifying rolls |
+| Constraints in Pose Mode | Constraints are configured on `pose_bone.constraints`, not on edit_bone | Switch to Pose Mode |
+| Shape keys in Object Mode | `keyframe_insert` on shape keys requires Object Mode | Check the mode before keyframing |
+| Data lost on switch | Some pending operations are lost if you switch without `update()` | `bpy.context.view_layer.update()` after modifications |
 
-### 10. Corrective Blend Shapes (Corrective Smooth)
+### 13. Corrective Blend Shapes (Corrective Smooth)
 
 Driven shape keys that activate at extreme joint angles to fix deformation artifacts:
 
@@ -244,18 +244,18 @@ driver.expression = 'max(0, rot - 0.5) * 2'  # Activates past 30°
 
 ## Anti-Patterns
 
-| # | Anti-Pattern | Conséquence | Solution |
+| # | Anti-Pattern | Consequence | Solution |
 |---|---|---|---|
-| 1 | Orientations joints aléatoires | IK imprévisible, retargeting cassé | Convention d'axes cohérente sur toute la chaîne |
-| 2 | Pas de twist bones | Candy wrapper (mesh collapse) | 1-2 twist bones par segment bras/jambe |
-| 3 | Deform bones = control bones | Animateurs cassent le rig | Architecture 3 layers (DEF/CTRL/MCH) |
-| 4 | Root bone au niveau des hanches | Calculs au sol cassés dans les engines | Root à (0,0,0) sur le ground plane |
-| 5 | Modifier vertex order après shape keys | Shape keys silencieusement cassés | Finaliser le mesh AVANT les shape keys |
-| 6 | Plus de 4 influences/vertex (mobile) | Artefacts sur GPU mobile | Limiter et normaliser les weights |
-| 7 | Scale ≠ 1 sur l'armature | Animations déformées à l'export | Apply scale avant de rigger |
-| 8 | Bones sans deform activé qui influencent le mesh | Vertices orphelins | Vérifier le flag deform sur chaque bone |
-| 9 | Noms de bones avec espaces/accents | Problèmes d'export FBX/GLTF | Convention `CamelCase` ou `snake_case` |
-| 10 | Skip de la normalisation des weights | Vertices qui "flottent" | `normalize_all()` après chaque passe de weight painting |
+| 1 | Random joint orientations | Unpredictable IK, broken retargeting | Consistent axis convention across the entire chain |
+| 2 | No twist bones | Candy wrapper (mesh collapse) | 1-2 twist bones per arm/leg segment |
+| 3 | Deform bones = control bones | Animators break the rig | 3-layer architecture (DEF/CTRL/MCH) |
+| 4 | Root bone at hip level | Ground calculations broken in engines | Root at (0,0,0) on the ground plane |
+| 5 | Modifying vertex order after shape keys | Shape keys silently broken | Finalize the mesh BEFORE shape keys |
+| 6 | More than 4 influences/vertex (mobile) | Artifacts on mobile GPU | Limit and normalize weights |
+| 7 | Scale ≠ 1 on the armature | Deformed animations on export | Apply scale before rigging |
+| 8 | Bones without deform enabled that influence the mesh | Orphan vertices | Check the deform flag on each bone |
+| 9 | Bone names with spaces/accents | FBX/GLTF export issues | `CamelCase` or `snake_case` convention |
+| 10 | Skipping weight normalization | Vertices that "float" | `normalize_all()` after each weight painting pass |
 
 ---
 
@@ -263,38 +263,38 @@ driver.expression = 'max(0, rot - 0.5) * 2'  # Activates past 30°
 
 ### 🔴 Critique
 
-**FBX Bind Pose :** Blender n'exporte PAS de bind pose explicite en FBX. Unity/Unreal recalculent depuis la rest pose. Si la rest pose Blender ≠ T-pose → déformation incorrecte dans l'engine.
-- **Fix :** Toujours appliquer la pose comme rest pose AVANT export : `bpy.ops.pose.armature_apply(selected=False)`
+**FBX Bind Pose:** Blender does NOT export an explicit bind pose in FBX. Unity/Unreal recalculate from the rest pose. If the Blender rest pose ≠ T-pose, deformation will be incorrect in the engine.
+- **Fix:** Always apply the pose as rest pose BEFORE export: `bpy.ops.pose.armature_apply(selected=False)`
 
-**Weight Normalization Culling :** Certains engines (Unity) éliminent silencieusement les influences < 0.01. Des vertices avec beaucoup de micro-influences perdent du poids total.
-- **Fix :** Limiter à 4 influences max, normaliser, puis re-vérifier.
+**Weight Normalization Culling:** Some engines (Unity) silently discard influences < 0.01. Vertices with many micro-influences lose total weight.
+- **Fix:** Limit to 4 max influences, normalize, then re-check.
 
-**Joint Limit Export :** Les joint limits Blender (`ik_min_x`, `ik_max_x`) ne s'exportent PAS en GLTF. Seulement partiellement en FBX.
-- **Fix :** Re-créer les limites dans l'engine cible.
+**Joint Limit Export:** Blender joint limits (`ik_min_x`, `ik_max_x`) are NOT exported in GLTF. Only partially in FBX.
+- **Fix:** Recreate the limits in the target engine.
 
 ### 🟠 Important
 
-**Mobile Bone Limits :** Les GPUs mobiles supportent typiquement **75 bones max** par draw call (uniform buffer limit). Au-delà → split automatique du mesh = draw calls supplémentaires = baisse de perf.
-- **Budget recommandé :** 50-65 bones pour mobile, 150+ pour desktop.
+**Mobile Bone Limits:** Mobile GPUs typically support **75 bones max** per draw call (uniform buffer limit). Beyond that, the mesh is automatically split = extra draw calls = performance drop.
+- **Recommended budget:** 50-65 bones for mobile, 150+ for desktop.
 
-**Shoulder Deformation :** Le clavicle seul ne suffit pas. Ajouter un bone `Shoulder` entre clavicle et upper arm, avec un driver partiel (30-50% de la rotation du upper arm).
+**Shoulder Deformation:** The clavicle alone is not enough. Add a `Shoulder` bone between clavicle and upper arm, with a partial driver (30-50% of the upper arm rotation).
 
-**Candy Wrapper :** Se produit quand un segment (forearm) tourne > 90° sans twist bones. Visible surtout sur les forearms et les thighs.
-- **Fix :** Twist bones (voir pattern #2 ci-dessus).
+**Candy Wrapper:** Occurs when a segment (forearm) rotates > 90° without twist bones. Most visible on forearms and thighs.
+- **Fix:** Twist bones (see pattern #2 above).
 
-**Humanoid vs Generic (Unity) :** 
-- **Humanoid** : retargeting automatique Mixamo/mocap, mais force la structure de bones Unity. Requiert des noms de bones mappables.
-- **Generic** : conserve le rig exact, pas de retargeting auto. Mieux pour les créatures non-humanoïdes.
+**Humanoid vs Generic (Unity):** 
+- **Humanoid**: automatic Mixamo/mocap retargeting, but forces Unity's bone structure. Requires mappable bone names.
+- **Generic**: preserves the exact rig, no auto retargeting. Better for non-humanoid creatures.
 
 ### 🟡 Attention
 
-**FBX Axis Conversion :** Blender = Z-up, Unity = Y-up. L'exporteur FBX compense, mais peut créer un nœud racine supplémentaire avec rotation -90°. Vérifier dans l'engine.
+**FBX Axis Conversion:** Blender = Z-up, Unity = Y-up. The FBX exporter compensates, but may create an extra root node with -90° rotation. Verify in the engine.
 
-**Blend Shape Vertex Order :** Si le mesh est modifié APRÈS création des shape keys (merge, delete vertices), les indices de vertex changent → shape keys déformés aléatoirement. **Toujours finaliser la géométrie avant les shape keys.**
+**Blend Shape Vertex Order:** If the mesh is modified AFTER shape key creation (merge, delete vertices), vertex indices change, resulting in randomly deformed shape keys. **Always finalize geometry before shape keys.**
 
-**Animation Compression :** Les engines compressent les animations à l'import. Vérifier que les courbes critiques (root motion, IK targets) ne sont pas sur-compressées. Réduire la tolérance pour ces tracks.
+**Animation Compression:** Engines compress animations on import. Verify that critical curves (root motion, IK targets) are not over-compressed. Reduce tolerance for these tracks.
 
-**Scale dans le Skeleton :** Ne JAMAIS animer le scale des bones sauf pour des effets spéciaux (squash & stretch). Le scale propagé dans la hiérarchie cause des artefacts de shearing.
+**Scale in the Skeleton:** NEVER animate bone scale except for special effects (squash & stretch). Scale propagated through the hierarchy causes shearing artifacts.
 
 ---
 
@@ -346,13 +346,13 @@ def validate_character_rig(armature_obj):
         # Check for unweighted vertices
         unweighted = sum(1 for v in child.data.vertices if len(v.groups) == 0)
         if unweighted > 0:
-            warnings.append(f"🔴 Mesh '{child.name}': {unweighted} vertices sans weight. Resteront en place.")
+            warnings.append(f"🔴 Mesh '{child.name}': {unweighted} vertices without weight. Will remain in place.")
         
         # Check for shape keys + non-applied modifiers
         if child.data.shape_keys and len(child.modifiers) > 0:
             mod_names = [m.name for m in child.modifiers if m.type not in ('ARMATURE', 'CORRECTIVE_SMOOTH')]
             if mod_names:
-                warnings.append(f"🟡 Mesh '{child.name}': shape keys + modifiers non-appliqués ({mod_names}). Appliquer les modifiers d'abord.")
+                warnings.append(f"🟡 Mesh '{child.name}': shape keys + unapplied modifiers ({mod_names}). Apply modifiers first.")
     
     return warnings
 
@@ -368,33 +368,33 @@ def validate_character_rig(armature_obj):
 
 | Tool | Type | Best for | Notes |
 |---|---|---|---|
-| **Mixamo** | Web service (free) | Humanoïdes standard | Upload mesh, auto-rig + 2500 animations. Requiert compte Adobe. |
-| **Rigify** | Blender addon (built-in) | Tous types | Meta-rig configurable, production-ready. Plus de contrôle que Mixamo. |
-| **AccuRIG** (Reallusion) | Desktop app (free) | Humanoïdes détaillés | Meilleur résultat que Mixamo sur les mains/doigts. |
-| **Auto-Rig Pro** | Blender addon (payé ~$40) | Production | Smart retopo + rig + export game-ready. |
+| **Mixamo** | Web service (free) | Standard humanoids | Upload mesh, auto-rig + 2500 animations. Requires Adobe account. |
+| **Rigify** | Blender addon (built-in) | All types | Configurable meta-rig, production-ready. More control than Mixamo. |
+| **AccuRIG** (Reallusion) | Desktop app (free) | Detailed humanoids | Better results than Mixamo on hands/fingers. |
+| **Auto-Rig Pro** | Blender addon (paid ~$40) | Production | Smart retopo + rig + game-ready export. |
 
 ## Retopology Tools
 
 | Tool | Type | Best for |
 |---|---|---|
-| **Quad Remesher** | Blender addon (payé) | Meilleure qualité auto-retopo |
-| **InstantMeshes** | Standalone (gratuit) | Rapide, open-source |
-| **Blender Remesh** | Built-in | Prototypage rapide (voxel remesh) |
-| **OpenSubdiv** | Built-in | Subdivision pour low-poly → high-poly |
+| **Quad Remesher** | Blender addon (paid) | Best quality auto-retopo |
+| **InstantMeshes** | Standalone (free) | Fast, open-source |
+| **Blender Remesh** | Built-in | Quick prototyping (voxel remesh) |
+| **OpenSubdiv** | Built-in | Subdivision for low-poly to high-poly |
 
 ---
 
 ## Kiln Integration
 
-### Dans le pipeline principal
+### In the main pipeline
 
-Phase [5] CLEANUP pour les characters :
+Phase [5] CLEANUP for characters:
 1. Standard cleanup (merge doubles, normals, transforms)
-2. Vérifier T-pose si rigging prévu
-3. Retopology si mesh AI (typiquement trop dense pour rigging)
-4. `validate_character_rig()` si armature présente
+2. Verify T-pose if rigging is planned
+3. Retopology if AI mesh (typically too dense for rigging)
+4. `validate_character_rig()` if armature is present
 
-### Export spécifique characters
+### Character-specific export
 
 ```python
 # Character export settings (GLTF)

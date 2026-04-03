@@ -105,24 +105,24 @@ generated-assets/
 
 ## GLTF Name Mapping
 
-Les noms Blender sont **transformés** à l'export GLTF. Important pour le code runtime qui référence les meshes par nom.
+Blender names are **transformed** on GLTF export. Important for runtime code that references meshes by name.
 
 | Transformation | Blender | GLTF |
 |---|---|---|
-| Espaces → underscores | `RINGS ball L` | `RINGS_ball_L` |
-| Points → supprimés | `Sphere.003` | `Sphere003` |
-| Combiné | `RINGS L.001` | `RINGS_L001` |
-| Espace trailing | `RINGS S ` | `RINGS_S_` |
+| Spaces → underscores | `RINGS ball L` | `RINGS_ball_L` |
+| Dots → removed | `Sphere.003` | `Sphere003` |
+| Combined | `RINGS L.001` | `RINGS_L001` |
+| Trailing space | `RINGS S ` | `RINGS_S_` |
 
-**Règle :** Toujours vérifier les noms dans le GLB exporté (via `gltf-transform inspect`), pas dans Blender, quand le code runtime référence des meshes.
+**Rule:** Always verify names in the exported GLB (via `gltf-transform inspect`), not in Blender, when runtime code references meshes.
 
-**Script de vérification :**
+**Verification script:**
 ```python
 import bpy
 for obj in bpy.data.objects:
     gltf_name = obj.name.replace(" ", "_").replace(".", "")
     if gltf_name != obj.name:
-        print(f"⚠️ '{obj.name}' → '{gltf_name}' dans GLTF")
+        print(f"⚠️ '{obj.name}' → '{gltf_name}' in GLTF")
 ```
 
 ---

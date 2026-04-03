@@ -108,6 +108,7 @@ Copy the `blender-kiln/` folder into your Claude Code skills directory:
 └── references/
     ├── ai-generation.md
     ├── batch-mode.md
+    ├── setup-install.md
     ├── characters.md
     ├── cli-tools.md
     ├── export-targets.md
@@ -123,20 +124,21 @@ Copy the `blender-kiln/` folder into your Claude Code skills directory:
 
 | File | Content | Lines |
 |---|---|---|
-| `SKILL.md` | Main pipeline, iron rules, commands, setup, model management | ~760 |
+| `SKILL.md` | Main pipeline, iron rules, commands, setup, model management | ~630 |
 | `references/characters.md` | Rigging patterns, anti-patterns, export gotchas, Blender 5.x | ~430 |
+| `references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~410 |
 | `references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~340 |
 | `references/validation-checklist.md` | Geometry cleanup + material export audit | ~250 |
+| `references/ai-generation.md` | Hunyuan3D 2.x (local + cloud), concept art (Pollinations/nano-banana) | ~220 |
 | `references/export-targets.md` | GLB/FBX/USDZ settings, headless CLI, post-export checklist | ~210 |
 | `references/cli-tools.md` | gltf-transform, gltfpack, LOD workflow, metrics | ~210 |
+| `references/uv-materials.md` | UV unwrapping, PBR channel packing | ~155 |
 | `references/naming-conventions.md` | Blender + GLTF name mapping + file conventions | ~150 |
-| `references/uv-materials.md` | UV unwrapping, PBR channel packing | ~150 |
-| `references/ai-generation.md` | Hunyuan3D 2.x (local + cloud), concept art (Pollinations/nano-banana) | ~220 |
 | `references/topology-rules.md` | Poly budgets, quad rules, edge flow | ~90 |
-| `references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~365 |
-| `references/sourcing-strategy.md` | PolyHaven + Sketchfab search patterns | ~60 |
+| `references/setup-install.md` | Model selection, install commands, post-install validation | ~65 |
+| `references/sourcing-strategy.md` | PolyHaven + Sketchfab search patterns | ~65 |
 
-**Total: ~3,415 lines** of production-tested 3D pipeline knowledge.
+**Total: ~3,225 lines** of production-tested 3D pipeline knowledge.
 
 ## Iron rules
 
@@ -146,7 +148,7 @@ The skill enforces 26 rules (21 core + 5 batch-specific). Key ones:
 2. Always `get_viewport_screenshot()` after each modification
 3. Never hard-cap poly count — alert if out of range, never block
 4. Never silently destroy — decimate/simplify always interactive
-5. Always keep intermediate files (original, clean, textured, optimized, final, .blend)
+5. Always keep the .blend file — in compact mode, only original + final + .blend + log
 6. Never `export_apply=True` for GLTF — modifiers balloon file size
 7. Always run material export audit before GLTF export
 8. Never use `gltf-transform optimize` — use individual steps

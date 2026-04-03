@@ -38,13 +38,13 @@ bpy.ops.export_scene.gltf(
 )
 ```
 
-> **⚠️ `export_apply=False`** — Les modifiers (Array, Mirror, etc.) sont conservés non-bakés. Les bake à l'export peut faire exploser la taille du fichier. Répliquer les instances au runtime si nécessaire.
+> **⚠️ `export_apply=False`** — Modifiers (Array, Mirror, etc.) are kept unbaked. Baking at export can cause file size to explode. Replicate instances at runtime if needed.
 
-> **⚠️ `export_draco=False`** — Toujours exporter sans Draco d'abord. Re-encoder du Draco existant via gltf-transform corrompt les meshes. Appliquer Draco en dernière étape d'optimisation.
+> **⚠️ `export_draco=False`** — Always export without Draco first. Re-encoding existing Draco via gltf-transform corrupts meshes. Apply Draco as the last optimization step.
 
 ### Fallback: Export Headless CLI
 
-Le serveur MCP peut **timeout sur les exports GLTF** (opération longue). Si l'export via `execute_blender_code` échoue ou timeout, utiliser l'export headless CLI :
+The MCP server can **timeout on GLTF exports** (long-running operation). If the export via `execute_blender_code` fails or times out, use the headless CLI export:
 
 ```bash
 blender \
@@ -68,10 +68,10 @@ print(f'Export complete: {export_path} ({size_mb:.1f} MB)')
 "
 ```
 
-**Quand utiliser le headless CLI :**
-- Export timeout via MCP (scènes lourdes, beaucoup d'animations)
-- Exports batch (multi-format)
-- Toujours quote les chemins avec espaces : `"$HOME/Downloads/blend 3/scene.blend"`
+**When to use the headless CLI:**
+- Export timeout via MCP (heavy scenes, many animations)
+- Batch exports (multi-format)
+- Always quote paths with spaces: `"$HOME/Downloads/blend 3/scene.blend"`
 
 ### Material Rules
 - **Only Principled BSDF** maps 1:1 to glTF PBR
@@ -195,19 +195,19 @@ Before ANY export:
 7. ✅ Textures are power of 2
 8. ✅ No missing textures
 9. ✅ No empty material slots
-10. ✅ Material audit passed — no nœuds procéduraux non-bakés (voir validation-checklist.md)
+10. ✅ Material audit passed — no unbaked procedural nodes (see validation-checklist.md)
 
 ---
 
 ## Post-Export Validation Checklist
 
-After EVERY export, verify before de livrer le GLB :
+After EVERY export, verify before delivering the GLB:
 
-1. ✅ **Taille fichier raisonnable** — GLB brut < 30 MB, optimisé < 5 MB pour le web. Alerter si dépassé.
-2. ✅ **Inspect gltf-transform** — `gltf-transform inspect final.glb` → vérifier mesh count, texture count, tailles textures, animation count. Pas de duplication inattendue.
-3. ✅ **Test visuel Babylon.js Sandbox** — drag-and-drop sur sandbox.babylonjs.com. Vérifier : mesh visible, textures présentes, animations jouées, pas de matériaux noirs/roses.
-4. ✅ **Pas d'erreurs console Three.js** — charger dans un test GLTFLoader minimal. Erreurs courantes : `Unknown extension`, textures manquantes, version Draco incompatible.
-5. ✅ **Spot-check matériaux** — 3-5 matériaux : roughness, metalness, base color visuellement corrects. Comparer avec le viewport Blender.
-6. ✅ **Spot-check animations** — si animé, vérifier qu'au moins une animation joue. Frame count attendu.
-7. ✅ **Mapping noms vérifié** — si le code runtime référence des noms de mesh, confirmer la correspondance (voir naming-conventions.md § GLTF Name Mapping).
-8. ✅ **Pas de textures manquantes** — vérifier l'onglet Network dans Babylon.js. Aucun 404. Toutes les textures packées dans le GLB.
+1. ✅ **Reasonable file size** — Raw GLB < 30 MB, optimized < 5 MB for web. Alert if exceeded.
+2. ✅ **Inspect gltf-transform** — `gltf-transform inspect final.glb` → check mesh count, texture count, texture sizes, animation count. No unexpected duplication.
+3. ✅ **Visual test Babylon.js Sandbox** — drag-and-drop onto sandbox.babylonjs.com. Verify: mesh visible, textures present, animations playing, no black/pink materials.
+4. ✅ **No Three.js console errors** — load in a minimal GLTFLoader test. Common errors: `Unknown extension`, missing textures, incompatible Draco version.
+5. ✅ **Spot-check materials** — 3-5 materials: roughness, metalness, base color visually correct. Compare with the Blender viewport.
+6. ✅ **Spot-check animations** — if animated, verify at least one animation plays. Expected frame count.
+7. ✅ **Name mapping verified** — if runtime code references mesh names, confirm the mapping (see naming-conventions.md § GLTF Name Mapping).
+8. ✅ **No missing textures** — check the Network tab in Babylon.js. No 404s. All textures packed in the GLB.

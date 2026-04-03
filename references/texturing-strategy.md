@@ -1,5 +1,7 @@
 # Texturing Strategy Reference
 
+> Cross-reference: `references/uv-materials.md` for UV unwrapping, PBR channel packing, and the `create_pbr_material()` helper.
+
 ## When This Applies
 - Mesh is white/untextured (AI generation without texture)
 - Materials are insufficient or missing
@@ -127,7 +129,7 @@ No image textures, just values. Fast, lightweight, style-consistent.
 
 ### Shader Recipes (Principled BSDF)
 
-Recettes prêtes à l'emploi pour les matériaux courants. Toutes basées sur Principled BSDF pour compatibilité GLTF export.
+Ready-to-use recipes for common materials. All based on Principled BSDF for GLTF export compatibility.
 
 #### Metal
 ```python
@@ -138,7 +140,7 @@ bsdf.inputs["Base Color"].default_value = (1.0, 0.766, 0.336, 1.0)  # gold tint
 bsdf.inputs["Metallic"].default_value = 1.0
 bsdf.inputs["Roughness"].default_value = 0.2  # 0.1=mirror, 0.4=brushed
 ```
-Variations : argent `(0.972, 0.960, 0.915)`, cuivre `(0.955, 0.637, 0.538)`, fer `(0.560, 0.570, 0.580)`.
+Variations: silver `(0.972, 0.960, 0.915)`, copper `(0.955, 0.637, 0.538)`, iron `(0.560, 0.570, 0.580)`.
 
 #### Glass / Transparent
 ```python
@@ -150,7 +152,7 @@ bsdf.inputs["Transmission Weight"].default_value = 1.0
 bsdf.inputs["Roughness"].default_value = 0.0   # 0=clear, >0=frosted
 bsdf.inputs["IOR"].default_value = 1.45         # 1.45-1.52 for glass
 ```
-> ⚠️ `Transmission Weight` est le nom Blender 4.x+. Anciennement `Transmission`.
+> ⚠️ `Transmission Weight` is the Blender 4.x+ name. Previously `Transmission`.
 
 #### Skin / Subsurface Scattering
 ```python
@@ -163,8 +165,8 @@ bsdf.inputs["Subsurface Radius"].default_value = (1.0, 0.2, 0.1)  # RGB scatter
 bsdf.inputs["Roughness"].default_value = 0.4
 bsdf.inputs["Metallic"].default_value = 0.0
 ```
-> ⚠️ SSS ne s'exporte PAS en GLTF. Pour le web, bake le résultat visuel en base color texture.
-> En Cycles, utiliser Random Walk pour la meilleure qualité.
+> ⚠️ SSS does NOT export to GLTF. For the web, bake the visual result into a base color texture.
+> In Cycles, use Random Walk for the best quality.
 
 #### Emission / Neon
 ```python
@@ -174,12 +176,12 @@ bsdf = mat.node_tree.nodes.get("Principled BSDF")
 bsdf.inputs["Emission Color"].default_value = (0.0, 0.5, 1.0, 1.0)
 bsdf.inputs["Emission Strength"].default_value = 5.0  # 1-50+
 ```
-> L'émission S'EXPORTE en GLTF (`emissiveFactor` + `emissiveTexture`).
+> Emission DOES export to GLTF (`emissiveFactor` + `emissiveTexture`).
 
-#### Toon / Cel Shading (EEVEE uniquement)
+#### Toon / Cel Shading (EEVEE only)
 ```python
-# ⚠️ Shader to RGB = EEVEE only, NE S'EXPORTE PAS en GLTF
-# Utiliser uniquement pour preview/render Blender, pas pour export web
+# ⚠️ Shader to RGB = EEVEE only, does NOT export to GLTF
+# Use only for Blender preview/render, not for web export
 mat = bpy.data.materials.new(name="M_Toon")
 mat.use_nodes = True
 nodes = mat.node_tree.nodes
@@ -190,7 +192,7 @@ bsdf.inputs["Base Color"].default_value = (0.8, 0.2, 0.2, 1.0)
 s2rgb = nodes.new("ShaderNodeShaderToRGB")
 ramp = nodes.new("ShaderNodeValToRGB")
 ramp.color_ramp.interpolation = 'CONSTANT'
-# 3 bandes : ombre, midtone, lumière
+# 3 bands: shadow, midtone, highlight
 ramp.color_ramp.elements[0].position = 0.3
 ramp.color_ramp.elements[1].position = 0.7
 output = nodes.get("Material Output")
@@ -212,32 +214,32 @@ bsdf.inputs["Sheen Weight"].default_value = 0.5
 bsdf.inputs["Sheen Roughness"].default_value = 0.5
 ```
 
-### Compatibilité Export GLTF des Propriétés Principled BSDF
+### GLTF Export Compatibility of Principled BSDF Properties
 
-| Propriété | Exporté en GLTF ? | Notes |
+| Property | Exported to GLTF? | Notes |
 |---|---|---|
 | Base Color | ✅ | `baseColorFactor` / `baseColorTexture` |
 | Metallic | ✅ | `metallicFactor` |
 | Roughness | ✅ | `roughnessFactor` |
 | Normal Map | ✅ | `normalTexture` |
 | Emission | ✅ | `emissiveFactor` / `emissiveTexture` |
-| Alpha / Transmission | ✅ partiellement | `KHR_materials_transmission` extension |
+| Alpha / Transmission | ✅ partially | `KHR_materials_transmission` extension |
 | IOR | ✅ | `KHR_materials_ior` extension |
-| Subsurface (SSS) | ❌ | Bake en base color |
+| Subsurface (SSS) | ❌ | Bake to base color |
 | Sheen | ✅ | `KHR_materials_sheen` extension |
 | Clearcoat | ✅ | `KHR_materials_clearcoat` extension |
-| Toon (Shader to RGB) | ❌ | EEVEE only, pas exportable |
+| Toon (Shader to RGB) | ❌ | EEVEE only, not exportable |
 
 ## Strategy 2b — Bake Procedural to Image Textures
 
-Pour récupérer les matériaux procéduraux avant export GLTF. Utile quand l'asset a des matériaux Blender riches (Noise, Voronoi, Color Ramp) qui seraient perdus à l'export.
+To capture procedural materials before GLTF export. Useful when the asset has rich Blender materials (Noise, Voronoi, Color Ramp) that would be lost on export.
 
-### Quand utiliser
-- L'audit matériaux pré-export (validation-checklist.md) détecte des nœuds procéduraux
-- L'asset vient de la modélisation scriptée avec des matériaux procéduraux
-- On veut conserver la variation visuelle des procéduraux dans le GLB final
+### When to use
+- The pre-export material audit (validation-checklist.md) detects procedural nodes
+- The asset comes from scripted modeling with procedural materials
+- You want to preserve the visual variation of procedurals in the final GLB
 
-### Workflow de Bake
+### Bake Workflow
 
 ```python
 import bpy, os
@@ -304,11 +306,11 @@ def bake_channel(obj, channel_type, output_path, resolution=1024):
 # bake_channel(obj, 'DIFFUSE', '/tmp/diffuse_baked.png', 1024)
 ```
 
-### Après le bake
-1. Reconnecter les images bakées aux inputs du Principled BSDF
-2. Supprimer les nœuds procéduraux
-3. Re-lancer l'audit matériaux pour confirmer la compatibilité
-4. `get_viewport_screenshot()` pour comparer avant/après visuellement
+### After the bake
+1. Reconnect the baked images to the Principled BSDF inputs
+2. Remove the procedural nodes
+3. Re-run the material audit to confirm compatibility
+4. `get_viewport_screenshot()` to visually compare before/after
 
 ---
 
