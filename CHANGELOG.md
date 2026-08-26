@@ -8,12 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `examples/gallery/` — a reproducible render gallery. Five props (barrel, crate,
-  lantern, anvil, crystal cluster) modelled from scratch by script, cleaned,
-  rendered in headless EEVEE and exported to GLB, with measured optimization
-  numbers: 7,044 tris, 435.1 kB raw, 43.9 kB after dedup/weld/Draco. Run
-  `run_gallery.sh` to regenerate everything.
-- README gallery section and hero image.
+- `examples/gallery/` — a reproducible render gallery. Fifteen props across three
+  themes (forge, sci-fi modular, stylised nature) modelled from scratch by script,
+  cleaned, audited, rendered in headless EEVEE and exported to GLB. Measured:
+  21,879 tris, 1,456 kB raw, 133 kB after dedup/weld/Draco. Run `run_gallery.sh`
+  to regenerate everything, or `THEMES="forge nature" ./run_gallery.sh` for a
+  subset.
+- The gallery scripts now follow the skill's own rules rather than merely claiming
+  to. Added: `SM_PascalCase` object names with matching `_Mesh` data-blocks and
+  `M_Type_Variant` materials (rule 15), poly-budget reporting against the
+  `topology-rules.md` tiers (rule 4), a material export audit before every GLTF
+  export (rule 19), transform application alongside merge and recalc (rule 10),
+  a scale check (rule 14), one output folder per asset with its `.blend`
+  (rules 7 and 16), and a per-asset production log recording licences (rule 17).
+  The README states which rules a headless script cannot honour, and why.
+- README gallery section, per-theme metrics tables, and hero contact sheet.
 
 ## [1.0.0] — 2026-08-26
 

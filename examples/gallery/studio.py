@@ -57,6 +57,52 @@ def mat(name, base, rough=0.5, metal=0.0, emit=None, emit_str=0.0, alpha=1.0, io
     return m
 
 
+def rename(obj, name):
+    """Iron rule 15: PascalCase with an SM_ prefix, and the mesh data-block has
+    to carry the same name plus _Mesh. See references/naming-conventions.md."""
+    obj.name = name
+    obj.data.name = f"{name}_Mesh"
+    return obj
+
+
+# Detail-tier prop budgets from references/topology-rules.md. Soft ranges:
+# iron rule 4 says alert above them, never block.
+POLY_BUDGETS = {"lightweight": (300, 1500), "balanced": (1500, 5000),
+                "detailed": (5000, 15000)}
+
+# Node types GLTF cannot carry. Iron rule 19 wants this audited before export.
+PROCEDURAL_NODES = {
+    'TEX_NOISE', 'TEX_VORONOI', 'TEX_MUSGRAVE', 'TEX_WAVE', 'TEX_MAGIC',
+    'TEX_CHECKER', 'TEX_BRICK', 'TEX_GRADIENT', 'VALTORGB', 'BUMP',
+    'MAPPING', 'MIX_RGB', 'MATH', 'SEPARATE_XYZ', 'COMBINE_XYZ',
+}
+
+
+def poly_budget(tris, tier="balanced", kind="prop"):
+    """Return (status, message). Never raises — the caller reports, it never blocks."""
+    lo, hi = POLY_BUDGETS[tier]
+    if tris < lo:
+        return "under", f"{tris:,} tris is below the {tier} {kind} range ({lo:,}-{hi:,})"
+    if tris <= hi:
+        return "ok", f"{tris:,} tris is within the {tier} {kind} range ({lo:,}-{hi:,})"
+    over = 100.0 * (tris / hi - 1.0)
+    level = "ALERT" if over > 50.0 else "over"
+    return level, (f"{tris:,} tris is {over:.0f}% above the {tier} {kind} ceiling "
+                   f"({hi:,}) — iron rule 4: reported, not blocked")
+
+
+def material_audit(obj):
+    """Iron rule 19: find nodes GLTF will silently drop. Returns {material: [nodes]}."""
+    found = {}
+    for m in obj.data.materials:
+        if not m or not m.use_nodes:
+            continue
+        hits = sorted({n.type for n in m.node_tree.nodes if n.type in PROCEDURAL_NODES})
+        if hits:
+            found[m.name] = hits
+    return found
+
+
 def shade(obj, smooth=True, angle=32.0):
     """Smooth-shade with an angle split, so bevels read soft and facets stay crisp."""
     obj.data.use_auto_smooth = True if hasattr(obj.data, 'use_auto_smooth') else None
@@ -92,9 +138,7 @@ def join(objs, name):
         o.select_set(True)
     bpy.context.view_layer.objects.active = objs[0]
     bpy.ops.object.join()
-    o = bpy.context.object
-    o.name = name
-    return o
+    return rename(bpy.context.object, name)
 
 
 def apply_modifiers(obj):
@@ -129,6 +173,13 @@ def cleanup(obj, merge=0.0004):
     zmin = min((obj.matrix_world @ Vector(c)).z for c in obj.bound_box)
     obj.location.z -= zmin
     bpy.context.view_layer.update()
+    # Iron rule 10: apply transforms before export, alongside merge doubles and
+    # recalculated normals. Leaving the Z offset live means the exporter writes a
+    # node translation instead of baked geometry.
+    bpy.ops.object.select_all(action='DESELECT')
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     return before
 
 

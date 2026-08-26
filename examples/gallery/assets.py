@@ -52,9 +52,10 @@ def barrel():
         prof.append((r0 * (1.0 + bulge * math.sin(math.pi * t) ** 0.62), z))
 
     body = _lathe(prof, segs, jitter=0.014, seed=7, close_top=False)
-    body.data.materials.append(S.mat("wood", S.WOOD, rough=0.72))
+    body.data.materials.append(S.mat("M_Wood_Oak", S.WOOD, rough=0.72))
     S.bevel(body, width=0.006, segments=2, angle=25.0)
 
+    hoop_mat = S.mat("M_Metal_Iron", S.IRON, rough=0.42, metal=0.9)
     parts = [body]
     # Four hoops, as a real barrel carries them: one at each chime, and a pair
     # flanking the bilge. A single hoop at the widest point is invisible — it
@@ -67,20 +68,20 @@ def barrel():
         sol.thickness = 0.016
         sol.offset = 0.0
         S.apply_modifiers(hoop)
-        hoop.data.materials.append(S.mat("iron", S.IRON, rough=0.42, metal=0.9))
+        hoop.data.materials.append(hoop_mat)
         S.bevel(hoop, width=0.004, segments=2, angle=30.0)
         parts.append(hoop)
 
     # Recessed lid, a touch below the rim so the hoop reads as proud of it.
     lid_r = r0 - 0.004
     lid = _lathe([(lid_r, h - 0.055), (lid_r, h - 0.028)], segs)
-    lid.data.materials.append(S.mat("wood_lid", S.WOOD_LT, rough=0.68))
+    lid.data.materials.append(S.mat("M_Wood_Oak_Light", S.WOOD_LT, rough=0.68))
     S.bevel(lid, width=0.005, segments=2, angle=30.0)
     parts.append(lid)
 
     for p in parts:
         S.apply_modifiers(p)
-    o = S.join(parts, "barrel")
+    o = S.join(parts, "SM_Barrel")
     return o
 
 
@@ -120,13 +121,13 @@ def crystal():
                    (0.33, 0.28), (0.21, 0.33)],
                   11, jitter=0.22, seed=3)
     # STONE sits within a hair of the backdrop value and disappears against it.
-    base.data.materials.append(S.mat("rock", S.STONE_LT, rough=0.80))
+    base.data.materials.append(S.mat("M_Stone_Slate", S.STONE_LT, rough=0.80))
     S.bevel(base, width=0.012, segments=2, angle=28.0)
     parts.append(base)
 
     # Opaque on purpose: EEVEE Next does not sort blended surfaces, so alpha < 1
     # makes overlapping shards drop out of the render entirely.
-    glow = S.mat("crystal", S.CRYSTAL, rough=0.18, emit=S.EMBER, emit_str=0.8, ior=1.62)
+    glow = S.mat("M_Crystal_Ember", S.CRYSTAL, rough=0.18, emit=S.EMBER, emit_str=0.8, ior=1.62)
     shards = [
         # (radius, height, x, y, tilt, spin)
         (0.105, 0.62,  0.00,  0.00, 0.05, 0.0),
@@ -146,7 +147,7 @@ def crystal():
 
     for p in parts:
         S.apply_modifiers(p)
-    return S.join(parts, "crystal")
+    return S.join(parts, "SM_CrystalCluster")
 
 
 BUILDERS = {}  # populated at the bottom of this module
@@ -164,9 +165,9 @@ def _box(sx, sy, sz, loc=(0, 0, 0), rot=(0, 0, 0)):
 def crate():
     """Shipping crate: panelled body inside a timber frame, iron corner plates."""
     w, bar = 0.72, 0.055
-    wood = S.mat("crate_wood", S.WOOD, rough=0.74)
-    trim = S.mat("crate_trim", S.WOOD_LT, rough=0.70)
-    iron = S.mat("crate_iron", S.IRON, rough=0.44, metal=0.9)
+    wood = S.mat("M_Wood_Pine", S.WOOD, rough=0.74)
+    trim = S.mat("M_Wood_Pine_Light", S.WOOD_LT, rough=0.70)
+    iron = S.mat("M_Metal_Iron", S.IRON, rough=0.44, metal=0.9)
     parts = []
 
     # Body sits slightly inside the frame so the timbers read as proud of it.
@@ -207,14 +208,14 @@ def crate():
 
     for p in parts:
         S.apply_modifiers(p)
-    return S.join(parts, "crate")
+    return S.join(parts, "SM_Crate")
 
 
 def lantern():
     """Forge lantern: iron cage around an emissive core, tapered cap, ring bail."""
-    iron = S.mat("lant_iron", S.IRON, rough=0.40, metal=0.92)
-    brass = S.mat("lant_brass", S.BRASS, rough=0.32, metal=0.95)
-    core = S.mat("lant_core", S.EMBER, rough=0.30, emit=S.EMBER, emit_str=6.0)
+    iron = S.mat("M_Metal_Iron", S.IRON, rough=0.40, metal=0.92)
+    brass = S.mat("M_Metal_Brass", S.BRASS, rough=0.32, metal=0.95)
+    core = S.mat("M_Emissive_Ember", S.EMBER, rough=0.30, emit=S.EMBER, emit_str=6.0)
     parts = []
 
     base = _lathe([(0.20, 0.0), (0.215, 0.028), (0.185, 0.055), (0.15, 0.075)], 12)
@@ -260,15 +261,15 @@ def lantern():
 
     for p in parts:
         S.apply_modifiers(p)
-    return S.join(parts, "lantern")
+    return S.join(parts, "SM_Lantern")
 
 
 def anvil():
     """Blacksmith's anvil: splayed foot, waisted stem, face with horn and heel."""
     # A wholly-metal object has nothing to reflect in a dark studio, so it
     # collapses to black. Lighter albedo and lower metalness restore the form.
-    iron = S.mat("anvil_iron", S.IRON_LT, rough=0.42, metal=0.50)
-    steel = S.mat("anvil_face", S.STEEL, rough=0.22, metal=0.70)
+    iron = S.mat("M_Metal_Iron_Light", S.IRON_LT, rough=0.42, metal=0.50)
+    steel = S.mat("M_Metal_Steel", S.STEEL, rough=0.22, metal=0.70)
     parts = []
 
     foot = _box(0.42, 0.30, 0.10, (0, 0, 0.05))
@@ -306,7 +307,7 @@ def anvil():
 
     for p in parts:
         S.apply_modifiers(p)
-    return S.join(parts, "anvil")
+    return S.join(parts, "SM_Anvil")
 
 
 BUILDERS.update({"barrel": barrel, "crystal": crystal, "crate": crate,
@@ -324,9 +325,9 @@ SF_WARN   = S.srgb('#D9A22B')
 def container():
     """Cargo container: corrugated flanks, corner castings, barred door end."""
     L, W, H = 0.98, 0.50, 0.54
-    steel = S.mat("cnt_steel", SF_STEEL, rough=0.52, metal=0.55)
-    alu = S.mat("cnt_alu", SF_ALU, rough=0.40, metal=0.70)
-    dark = S.mat("cnt_dark", SF_DARK, rough=0.60, metal=0.40)
+    steel = S.mat("M_Metal_Steel_Hull", SF_STEEL, rough=0.52, metal=0.55)
+    alu = S.mat("M_Metal_Aluminium", SF_ALU, rough=0.40, metal=0.70)
+    dark = S.mat("M_Metal_Steel_Dark", SF_DARK, rough=0.60, metal=0.40)
     parts = []
 
     body = _box(L, W, H, (0, 0, H / 2))
@@ -371,14 +372,14 @@ def container():
 
     for p in parts:
         S.apply_modifiers(p)
-    return S.join(parts, "container")
+    return S.join(parts, "SM_CargoContainer")
 
 
 def canister():
     """Pressurised canister: capsule shell, valve stack, hazard band."""
-    steel = S.mat("can_steel", SF_ALU, rough=0.34, metal=0.78)
-    dark = S.mat("can_dark", SF_DARK, rough=0.52, metal=0.45)
-    warn = S.mat("can_warn", SF_WARN, rough=0.44, metal=0.20)
+    steel = S.mat("M_Metal_Aluminium", SF_ALU, rough=0.34, metal=0.78)
+    dark = S.mat("M_Metal_Steel_Dark", SF_DARK, rough=0.52, metal=0.45)
+    warn = S.mat("M_Paint_HazardYellow", SF_WARN, rough=0.44, metal=0.20)
     parts = []
 
     prof = [(0.0, 0.0), (0.13, 0.02), (0.175, 0.07), (0.19, 0.16),
@@ -418,14 +419,14 @@ def canister():
 
     for p in parts:
         S.apply_modifiers(p)
-    return S.join(parts, "canister")
+    return S.join(parts, "SM_Canister")
 
 
 def relay():
     """Antenna relay: splayed tripod, lattice mast, dish, emitter."""
-    steel = S.mat("rly_steel", SF_STEEL, rough=0.50, metal=0.60)
-    alu = S.mat("rly_alu", SF_ALU, rough=0.36, metal=0.75)
-    glow = S.mat("rly_glow", SF_CYAN, rough=0.30, emit=SF_CYAN, emit_str=5.0)
+    steel = S.mat("M_Metal_Steel_Hull", SF_STEEL, rough=0.50, metal=0.60)
+    alu = S.mat("M_Metal_Aluminium", SF_ALU, rough=0.36, metal=0.75)
+    glow = S.mat("M_Emissive_Cyan", SF_CYAN, rough=0.30, emit=SF_CYAN, emit_str=5.0)
     parts = []
 
     pad = _lathe([(0.26, 0.0), (0.27, 0.022), (0.22, 0.045)], 9, jitter=0.02, seed=5)
@@ -490,15 +491,15 @@ def relay():
 
     for p in parts:
         S.apply_modifiers(p)
-    return S.join(parts, "relay")
+    return S.join(parts, "SM_AntennaRelay")
 
 
 def reactor():
     """Reactor cell: hex housing slotted to show an emissive core."""
-    steel = S.mat("rct_steel", SF_STEEL, rough=0.46, metal=0.62)
-    dark = S.mat("rct_dark", SF_DARK, rough=0.55, metal=0.40)
+    steel = S.mat("M_Metal_Steel_Hull", SF_STEEL, rough=0.46, metal=0.62)
+    dark = S.mat("M_Metal_Steel_Dark", SF_DARK, rough=0.55, metal=0.40)
     # 7.0 clips the core to white and loses the cyan the theme is built on.
-    core_m = S.mat("rct_core", SF_CYAN, rough=0.25, emit=SF_CYAN, emit_str=3.4)
+    core_m = S.mat("M_Emissive_Cyan", SF_CYAN, rough=0.25, emit=SF_CYAN, emit_str=3.4)
     parts = []
 
     base = _lathe([(0.30, 0.0), (0.31, 0.035), (0.27, 0.07)], 6)
@@ -540,14 +541,14 @@ def reactor():
 
     for p in parts:
         S.apply_modifiers(p)
-    return S.join(parts, "reactor")
+    return S.join(parts, "SM_ReactorCell")
 
 
 def hexpad():
     """Hex floor tile: inset panel, bolt heads, glowing seam."""
-    steel = S.mat("hex_steel", SF_STEEL, rough=0.50, metal=0.58)
-    alu = S.mat("hex_alu", SF_ALU, rough=0.38, metal=0.72)
-    glow = S.mat("hex_glow", SF_CYAN, rough=0.28, emit=SF_CYAN, emit_str=3.6)
+    steel = S.mat("M_Metal_Steel_Hull", SF_STEEL, rough=0.50, metal=0.58)
+    alu = S.mat("M_Metal_Aluminium", SF_ALU, rough=0.38, metal=0.72)
+    glow = S.mat("M_Emissive_Cyan", SF_CYAN, rough=0.28, emit=SF_CYAN, emit_str=3.6)
     parts = []
 
     plate = _lathe([(0.48, 0.0), (0.50, 0.020), (0.50, 0.055), (0.47, 0.075)], 6)
@@ -579,7 +580,7 @@ def hexpad():
 
     for p in parts:
         S.apply_modifiers(p)
-    return S.join(parts, "hexpad")
+    return S.join(parts, "SM_HexPad")
 
 
 BUILDERS.update({"container": container, "canister": canister, "relay": relay,
@@ -639,9 +640,9 @@ def _blob(r, squash, loc, seed, rough_amt=0.16, subdiv=2):
 def tree():
     """Stylised tree: tapered trunk, recursive limbs, faceted foliage clumps."""
     rnd = random.Random(23)
-    bark = S.mat("tr_bark", NT_BARK, rough=0.80)
-    leaf = S.mat("tr_leaf", NT_LEAF, rough=0.72)
-    leaf_l = S.mat("tr_leaf_l", NT_LEAF_L, rough=0.70)
+    bark = S.mat("M_Bark_Oak", NT_BARK, rough=0.80)
+    leaf = S.mat("M_Foliage_Green", NT_LEAF, rough=0.72)
+    leaf_l = S.mat("M_Foliage_Green_Light", NT_LEAF_L, rough=0.70)
     parts = []
 
     trunk = _lathe([(0.115, 0.0), (0.088, 0.14), (0.074, 0.36),
@@ -680,40 +681,41 @@ def tree():
 
     for p in parts:
         S.apply_modifiers(p)
-    return S.join(parts, "tree")
+    return S.join(parts, "SM_Tree")
 
 
 def boulder():
     """Erratic boulder: heavily noised icosphere, sheared and sat flat."""
-    rock = S.mat("bd_rock", NT_STONE, rough=0.84)
-    moss_m = S.mat("bd_moss", NT_MOSS, rough=0.88)
+    rock = S.mat("M_Stone_Granite", NT_STONE, rough=0.84)
+    moss_m = S.mat("M_Foliage_Moss", NT_MOSS, rough=0.88)
     parts = []
 
-    b = _blob(0.42, 0.72, (0, 0, 0.30), seed=9, rough_amt=0.26, subdiv=2)
-    # Shear so it leans: a symmetric lump reads as a ball, not as rock.
+    b = _blob(0.38, 0.95, (0, 0, 0.34), seed=9, rough_amt=0.26, subdiv=2)
+    # Shear so it leans: a symmetric lump reads as a ball, not as rock. Keep the
+    # clamp shallow — cutting deep here is what turned this into a pancake.
     for v in b.data.vertices:
-        v.co.x += 0.20 * (v.co.z / 0.30)
-        v.co.z = max(v.co.z, -0.24)   # flatten the bed it sits on
+        v.co.x += 0.13 * (v.co.z / 0.34)
+        v.co.z = max(v.co.z, -0.30)
     b.data.materials.append(rock)
     parts.append(b)
 
-    for i, (x, y, z, r) in enumerate([(0.10, -0.08, 0.56, 0.13),
-                                      (-0.14, 0.11, 0.50, 0.10),
-                                      (0.22, 0.14, 0.44, 0.085)]):
+    for i, (x, y, z, r) in enumerate([(0.08, -0.09, 0.62, 0.14),
+                                      (-0.13, 0.12, 0.55, 0.11),
+                                      (0.20, 0.13, 0.46, 0.09)]):
         m = _blob(r, 0.32, (x, y, z), seed=60 + i, rough_amt=0.30)
         m.data.materials.append(moss_m)
         parts.append(m)
 
     for p in parts:
         S.apply_modifiers(p)
-    return S.join(parts, "boulder")
+    return S.join(parts, "SM_Boulder")
 
 
 def mushrooms():
     """Cluster of five toadstools of graded size on a mossy pad."""
-    cap_m = S.mat("mu_cap", NT_CAP, rough=0.58)
-    stem_m = S.mat("mu_stem", NT_STEM, rough=0.72)
-    moss_m = S.mat("mu_moss", NT_MOSS, rough=0.86)
+    cap_m = S.mat("M_Organic_CapRed", NT_CAP, rough=0.58)
+    stem_m = S.mat("M_Organic_StemCream", NT_STEM, rough=0.72)
+    moss_m = S.mat("M_Foliage_Moss", NT_MOSS, rough=0.86)
     parts = []
 
     pad = _lathe([(0.36, 0.0), (0.38, 0.035), (0.30, 0.065)], 11, jitter=0.16, seed=6)
@@ -745,14 +747,14 @@ def mushrooms():
 
     for p in parts:
         S.apply_modifiers(p)
-    return S.join(parts, "mushrooms")
+    return S.join(parts, "SM_Mushrooms")
 
 
 def stump():
     """Cut stump: flared base, ring-marked top, moss on the north face."""
-    bark = S.mat("st_bark", NT_BARK, rough=0.82)
-    heart = S.mat("st_heart", NT_BARK_L, rough=0.66)
-    moss_m = S.mat("st_moss", NT_MOSS, rough=0.88)
+    bark = S.mat("M_Bark_Oak", NT_BARK, rough=0.82)
+    heart = S.mat("M_Wood_Heartwood", NT_BARK_L, rough=0.66)
+    moss_m = S.mat("M_Foliage_Moss", NT_MOSS, rough=0.88)
     parts = []
 
     body = _lathe([(0.30, 0.0), (0.255, 0.09), (0.235, 0.22), (0.242, 0.34)],
@@ -765,9 +767,10 @@ def stump():
     top.location = (0, 0, 0.335)
     top.data.materials.append(heart)
     parts.append(top)
-    ring = _lathe([(0.110, 0.0), (0.110, 0.006)], 11)
+    # Heartwood centre, NOT bark: in the darker tone it read as a hole.
+    ring = _lathe([(0.085, 0.0), (0.085, 0.005)], 11)
     ring.location = (0, 0, 0.348)
-    ring.data.materials.append(bark)
+    ring.data.materials.append(S.mat("M_Wood_Heartwood_Core", NT_BARK_L, rough=0.58))
     parts.append(ring)
 
     for i in range(6):
@@ -787,13 +790,13 @@ def stump():
 
     for p in parts:
         S.apply_modifiers(p)
-    return S.join(parts, "stump")
+    return S.join(parts, "SM_Stump")
 
 
 def cactus():
     """Barrel cactus with two arms: fluted via the lathe's alternating-rib mode."""
-    green = S.mat("ca_green", NT_CACTUS, rough=0.66)
-    soil = S.mat("ca_soil", NT_STONE_D, rough=0.86)
+    green = S.mat("M_Organic_Cactus", NT_CACTUS, rough=0.66)
+    soil = S.mat("M_Stone_Soil", NT_STONE_D, rough=0.86)
     parts = []
 
     pot = _lathe([(0.26, 0.0), (0.27, 0.03), (0.23, 0.06)], 11, jitter=0.10, seed=2)
@@ -803,27 +806,38 @@ def cactus():
 
     body = _lathe([(0.115, 0.0), (0.145, 0.09), (0.150, 0.52),
                    (0.140, 0.66), (0.100, 0.74), (0.045, 0.78)],
-                  16, rib=0.075)
+                  16, rib=0.14)
     body.location = (0, 0, 0.045)
     body.data.materials.append(green)
     parts.append(body)
 
-    # Two arms: a vertical limb sat on the end of a short elbow.
-    for sgn, z0, ln in ((1, 0.30, 0.26), (-1, 0.42, 0.20)):
-        elbow = _lathe([(0.058, 0.0), (0.055, 0.08), (0.052, 0.15)], 12, rib=0.06)
-        elbow.rotation_euler = (0.0, sgn * 1.32, 0.0)
-        elbow.location = (sgn * 0.12, 0.0, z0)
+    # Two arms, saguaro fashion: out, then up. The elbow must be a clean 90 deg
+    # (_lathe builds along +Z, so Euler Y of pi/2 lays it on +X) — the previous
+    # 1.32 rad left the horizontal run pointing where the vertical limb was not,
+    # so the two pieces never met and the arm read as a floating stub.
+    # Arms rise to near the crown, as a saguaro's do; short limbs read as nubs.
+    # Bearings are chosen, not mirrored on +/-X: studio.frame() views from
+    # azimuth -0.62, so an arm at -X sits squarely behind the body and is lost.
+    for az, z0, ln in ((-0.90, 0.26, 0.44), (1.90, 0.40, 0.30)):
+        reach = 0.15
+        ca, sa = math.cos(az), math.sin(az)
+        elbow = _lathe([(0.064, 0.0), (0.062, reach * 0.6), (0.060, reach)],
+                       12, rib=0.10)
+        # Euler Y of pi/2 lays the lathe's +Z onto +X; Z of `az` then swings it
+        # onto that bearing.
+        elbow.rotation_euler = (0.0, math.pi / 2, az)
+        elbow.location = (0.10 * ca, 0.10 * sa, z0)
         elbow.data.materials.append(green)
         parts.append(elbow)
-        up = _lathe([(0.055, 0.0), (0.052, ln * 0.7), (0.040, ln * 0.92),
-                     (0.018, ln)], 12, rib=0.06)
-        up.location = (sgn * 0.255, 0.0, z0 + 0.03)
+        up = _lathe([(0.060, 0.0), (0.057, ln * 0.7), (0.044, ln * 0.92),
+                     (0.018, ln)], 12, rib=0.10)
+        up.location = ((0.10 + reach) * ca, (0.10 + reach) * sa, z0 - 0.045)
         up.data.materials.append(green)
         parts.append(up)
 
     for p in parts:
         S.apply_modifiers(p)
-    return S.join(parts, "cactus")
+    return S.join(parts, "SM_Cactus")
 
 
 BUILDERS.update({"tree": tree, "boulder": boulder, "mushrooms": mushrooms,
