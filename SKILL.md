@@ -89,6 +89,11 @@ nothing and the user gets no response.
 17. ALWAYS track licenses of all resources used in the log.
 18. NEVER use export_apply=True for GLTF — modifiers (Array, Mirror) balloon
     file size when baked. Replicate instances at runtime instead.
+    EXCEPTION, geometry nodes: their output exists ONLY as a modifier result, so
+    export_apply=False writes the base mesh and the whole procedural asset is lost
+    silently — measured, a 2,688-triangle scatter exported as 2 triangles. Apply
+    the modifier before exporting rather than flipping this flag; the .blend keeps
+    the procedural version (rule 7). See the Geometry Nodes flow in PHASE 3.
 19. ALWAYS run the material export audit (validation-checklist.md) BEFORE any
     GLTF export. Procedural nodes (Noise, Voronoi, Color Ramp) are silently
     lost. Propose bake or warn user.
@@ -440,8 +445,25 @@ If nano-banana MCP is available, offer it as an alternative to Pollinations (sup
 
 For assets with repetitive patterns (railings, fences, stone walls, vegetation scattering):
 - Create the node tree via `execute_blender_code` (Python API)
-- Common patterns: Scatter (Distribute Points → Instance on Points), Extrude + Transform, Curve to Mesh
-- **Realize Instances** before export (GLTF does not support GN instances natively)
+- Common patterns: Scatter (Distribute Points → Instance on Points), Extrude + Transform, Curve to Mesh. All four node types verified present on Blender 5.0.1
+- **Realize Instances** at the end of the tree (GLTF has no concept of GN instances)
+- **Then APPLY the modifier before export.** This is not optional and it is easy to
+  miss, because nothing errors: geometry nodes output exists only as a modifier
+  result, and rule 18 requires `export_apply=False`, so the exporter writes the
+  *base* mesh. Measured on a scatter of 2,688 triangles:
+
+  | Export | Result |
+  |---|---|
+  | `export_apply=False`, modifier live | **2 tris, 1.0 kB** — the whole scatter gone, silently |
+  | `export_apply=True` | 2,688 tris — correct, but violates rule 18 |
+  | **modifier applied, then `export_apply=False`** | **2,688 tris, 208.7 kB — correct and rule 18 holds** |
+
+  ```python
+  bpy.ops.object.modifier_apply(modifier="GN")   # procedural becomes geometry
+  ```
+
+  Keep the .blend with the modifier intact (rule 7) — that is where the
+  procedural version survives. Apply on a copy, or apply after saving.
 - ⚠️ **Simulation Zone gotchas**: Group Input values do NOT propagate into sim zones (pass via state items), geometry freezes after frame 1 (only state items persist), Set Position required after sim zone output
 
 ### [4] IMPORT

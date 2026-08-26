@@ -242,7 +242,11 @@ For each asset where `status` is `pending`, `failed`, or `redo` (in manifest ord
        Then AI generation. Use config.backend.
      - marketplace → search PolyHaven/Sketchfab with brief keywords,
        auto-pick first result matching tier. If no result → status: failed.
-     - geometry-nodes → go to geometry nodes flow
+     - geometry-nodes → go to geometry nodes flow. The runner MUST apply the
+       modifier before export: geometry nodes output is a modifier result, and
+       rule 18's export_apply=False writes the base mesh instead. Measured, a
+       2,688-triangle scatter exported as 2 triangles — with no error, so the
+       batch would record it as done.
 
    [IMPORT] — Standard import. Verify scale (1 unit = 1m).
      Alert in log if dimensions seem wrong (don't block).

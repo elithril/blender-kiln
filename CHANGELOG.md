@@ -6,6 +6,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — geometry nodes, the last untested creation method
+
+- **Iron rule 18 silently destroyed every geometry-nodes asset.** Geometry nodes
+  output exists only as a modifier result, and rule 18 mandates
+  `export_apply=False`, so the exporter writes the *base* mesh. Measured on a
+  2,688-triangle scatter:
+
+  | Export | Result |
+  |---|---|
+  | `export_apply=False`, modifier live | **2 tris, 1.0 kB** |
+  | `export_apply=True` | 2,688 tris, but breaks rule 18 |
+  | modifier applied, then `export_apply=False` | **2,688 tris, 208.7 kB** |
+
+  Nothing errors, so a batch would have recorded the asset as done. Rule 18 now
+  names the exception and the flow says to apply the modifier — which keeps the
+  rule intact, since the `.blend` still holds the procedural version (rule 7).
+- The flow told you to Realize Instances "before export", which is necessary but
+  not sufficient: realizing without applying still exports the base mesh. Both
+  steps are now spelled out, and `references/batch-mode.md` carries the warning for
+  the runner, where the failure would be unattended.
+- Verified that all four prescribed node types still exist on Blender 5.0.1:
+  `DistributePointsOnFaces`, `InstanceOnPoints`, `ObjectInfo`, `RealizeInstances`.
+
 ### Fixed
 
 - Three of the twelve per-file line counts in the README structure table had
