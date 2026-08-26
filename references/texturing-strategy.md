@@ -70,43 +70,36 @@ bm.to_mesh(obj.data)
 Present identified zones and proposed materials. User can adjust.
 
 ### Step 5: PolyHaven Texture Search
-For each zone:
-- `search_polyhaven_assets` with material keywords
+Rule 23 first: `get_polyhaven_status()`. Then, for each zone:
+- `search_polyhaven_assets` with `asset_type='textures'` and material keywords
 - Present ~5 options with links
 - User picks per zone
 
 ### Step 6: Apply Textures
+
+**Use the addon's own tools — do not hand-build the node graph.**
+
+```
+download_polyhaven_asset(asset_id=..., asset_type='textures',
+                         resolution='1k', file_format='jpg')
+    → imports every available map as a material
+    → measured on american_walnut_veneer: AO, arm, Diffuse, Displacement,
+      nor_dx, nor_gl, Rough
+
+set_texture(object_name=..., texture_id=...)
+    → builds the material on the object: 16 nodes, colorspaces already
+      set to Non-Color where they must be
+```
+
+Hand-writing `ShaderNodeTexImage` chains reproduces a fraction of that and gets
+the colorspaces wrong more often than not. Only fall back to it if `set_texture`
+fails.
+
+**Then rename (rule 25).** `set_texture` names the material
+`<texture_id>_material_<object>`, which is not the `M_Type_Variant` convention:
+
 ```python
-import bpy
-
-# Create PBR material from PolyHaven texture
-mat = bpy.data.materials.new(name="M_Wood_Oak")
-mat.use_nodes = True
-nodes = mat.node_tree.nodes
-links = mat.node_tree.links
-
-# Get Principled BSDF
-bsdf = nodes.get("Principled BSDF")
-
-# Add texture nodes for each map
-# Base Color
-tex_color = nodes.new("ShaderNodeTexImage")
-tex_color.image = bpy.data.images.load(albedo_path)
-links.new(tex_color.outputs["Color"], bsdf.inputs["Base Color"])
-
-# Normal Map
-tex_normal = nodes.new("ShaderNodeTexImage")
-tex_normal.image = bpy.data.images.load(normal_path)
-tex_normal.image.colorspace_settings.name = "Non-Color"
-normal_map = nodes.new("ShaderNodeNormalMap")
-links.new(tex_normal.outputs["Color"], normal_map.inputs["Color"])
-links.new(normal_map.outputs["Normal"], bsdf.inputs["Normal"])
-
-# Roughness
-tex_rough = nodes.new("ShaderNodeTexImage")
-tex_rough.image = bpy.data.images.load(roughness_path)
-tex_rough.image.colorspace_settings.name = "Non-Color"
-links.new(tex_rough.outputs["Color"], bsdf.inputs["Roughness"])
+obj.data.materials[0].name = "M_Wood_Walnut"
 ```
 
 ### Step 7: Iterate
@@ -229,6 +222,36 @@ bsdf.inputs["Sheen Roughness"].default_value = 0.5
 | Sheen | ✅ | `KHR_materials_sheen` extension |
 | Clearcoat | ✅ | `KHR_materials_clearcoat` extension |
 | Toon (Shader to RGB) | ❌ | EEVEE only, not exportable |
+
+### GLTF Export Compatibility of TEXTURE MAPS
+
+The table above covers Principled BSDF *properties*. Texture *maps* are a separate
+question, and the PolyHaven workflow in Strategy 1 downloads maps glTF cannot
+carry. Measured end to end on `american_walnut_veneer` — 7 maps downloaded, **3
+survived**:
+
+| Map | Exported to GLTF? | Becomes |
+|---|---|---|
+| Diffuse / albedo | ✅ | `pbrMetallicRoughness.baseColorTexture` |
+| Roughness | ✅ | `pbrMetallicRoughness.metallicRoughnessTexture` |
+| Normal (`nor_gl`) | ✅ | `normalTexture` |
+| **Ambient occlusion** | ❌ | glTF *has* an `occlusionTexture` slot, but Blender only fills it from an ARM-packed arrangement. A standalone AO map is dropped silently |
+| **Displacement / height** | ❌ | glTF has no displacement slot at all. Bake into the normal map or drop it deliberately |
+| **ARM (packed ORM)** | ❌ | Left unused by `set_texture`'s graph |
+| Metallic | ✅ | packed into `metallicRoughnessTexture` |
+
+Watch the exporter's own console output. This warning means information was lost:
+
+```
+WARNING: More than one shader node tex image used for a texture.
+The resulting glTF sampler will behave like the first shader node tex image.
+```
+
+**Rule 19's audit has to work at the map level, not the node level.** Listing
+procedural node types cannot see any of the losses above: `Displacement` is a real
+node that gets silently dropped, and the AO loss is not a node-type problem at all
+— the node is fine, it just never reaches a glTF slot. Compare the maps the
+material *has* against the slots the exported glTF actually *filled*.
 
 ## Strategy 2b — Bake Procedural to Image Textures
 

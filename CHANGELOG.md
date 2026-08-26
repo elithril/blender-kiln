@@ -6,6 +6,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — texturing, exercised against the live PolyHaven API
+
+- **The recommended texturing workflow silently loses over half its texture
+  maps.** Measured end to end on `american_walnut_veneer`: PolyHaven supplies 7
+  maps (AO, ARM, Diffuse, Displacement, nor_dx, nor_gl, Rough) and the exported
+  glTF carries **3** — base colour, roughness and normal. AO is dropped even
+  though glTF has an `occlusionTexture` slot, because Blender only fills it from
+  an ARM-packed arrangement. Displacement has no glTF slot at all. Nothing in
+  the skill said so: `AO`, `occlusion`, `Displacement` and
+  `KHR_texture_transform` had zero mentions across `texturing-strategy.md` and
+  `validation-checklist.md`. The compatibility table there covered Principled
+  BSDF *properties* only, never texture *maps*. A map-level table is now
+  documented alongside it.
+- **Rule 19's audit was checking the wrong level.** `material_audit()` listed
+  procedural node types, which cannot see any of the losses above: it flagged a
+  harmless Mapping node while missing both the dropped Displacement and the
+  dropped AO. It now checks node types *and* image-map roles, and reports the
+  exporter's duplicate-image case. Verified: it names all four real losses on the
+  PolyHaven material, and reports zero findings across the fifteen gallery assets.
+- **Step 6 hand-built the node graph.** It wrote `ShaderNodeTexImage` chains for
+  three maps, while the addon's own `download_polyhaven_asset(asset_type='textures')`
+  plus `set_texture` produce a 16-node material with all seven maps and the
+  colourspaces already correct. `set_texture` had zero mentions in
+  `texturing-strategy.md`. The addon path is now the prescribed one — the same
+  reimplementation problem already fixed for Hunyuan3D generation.
+- `set_texture` names its material `<texture_id>_material_<object>`, which is not
+  the `M_Type_Variant` convention. The strategy now says to rename (rule 25).
+
 ### Fixed — the marketplace path, exercised against the live PolyHaven API
 
 - **IMPORT never renamed anything.** Rule 15 wants `SM_PascalCase` objects with a

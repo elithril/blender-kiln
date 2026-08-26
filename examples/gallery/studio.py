@@ -70,11 +70,23 @@ def rename(obj, name):
 POLY_BUDGETS = {"lightweight": (300, 1500), "balanced": (1500, 5000),
                 "detailed": (5000, 15000)}
 
-# Node types GLTF cannot carry. Iron rule 19 wants this audited before export.
+# Node types GLTF genuinely drops. Deliberately NOT a catch-all: MAPPING becomes
+# KHR_texture_transform when it carries a real transform, and MIX_RGB / MATH are
+# often folded into a factor, so flagging them produces noise. Iron rule 19.
 PROCEDURAL_NODES = {
     'TEX_NOISE', 'TEX_VORONOI', 'TEX_MUSGRAVE', 'TEX_WAVE', 'TEX_MAGIC',
     'TEX_CHECKER', 'TEX_BRICK', 'TEX_GRADIENT', 'VALTORGB', 'BUMP',
-    'MAPPING', 'MIX_RGB', 'MATH', 'SEPARATE_XYZ', 'COMBINE_XYZ',
+    'DISPLACEMENT', 'SHADERTORGB',
+}
+
+# Texture maps glTF has no slot for, or that Blender will not wire into one.
+# Measured against a real PolyHaven material: of 7 maps downloaded, 3 survived.
+LOSSY_MAP_HINTS = {
+    'disp': 'no displacement slot in glTF — bake into the normal map or drop it',
+    'height': 'no displacement slot in glTF',
+    '_ao': 'glTF has occlusionTexture, but Blender only fills it from an '
+           'ARM-packed map; a standalone AO is dropped silently',
+    '_arm': 'packed ORM is left unused unless wired into metallicRoughness',
 }
 
 
@@ -98,14 +110,40 @@ def poly_budget(tris, kind="prop"):
 
 
 def material_audit(obj):
-    """Iron rule 19: find nodes GLTF will silently drop. Returns {material: [nodes]}."""
+    """Iron rule 19: what will GLTF silently drop? Returns {material: [reasons]}.
+
+    Checks BOTH levels, because they miss different things:
+
+    - node level: procedural generators and DISPLACEMENT, which have no glTF
+      equivalent at all;
+    - map level: image textures whose role glTF cannot carry, or that Blender
+      will not wire into the slot that exists. A standalone AO map is the case
+      that matters — the node is perfectly ordinary, so no node-type check can
+      see the loss.
+
+    Node-type detection alone was the original implementation, and on a real
+    PolyHaven material it flagged a harmless Mapping node while missing both the
+    dropped Displacement and the dropped AO.
+    """
     found = {}
     for m in obj.data.materials:
         if not m or not m.use_nodes:
             continue
-        hits = sorted({n.type for n in m.node_tree.nodes if n.type in PROCEDURAL_NODES})
-        if hits:
-            found[m.name] = hits
+        reasons = []
+        for t in sorted({n.type for n in m.node_tree.nodes if n.type in PROCEDURAL_NODES}):
+            reasons.append(f"node {t} — not representable in glTF")
+        images = [n.image.name.lower() for n in m.node_tree.nodes
+                  if n.type == 'TEX_IMAGE' and n.image]
+        for name in images:
+            for hint, why in LOSSY_MAP_HINTS.items():
+                if hint in name:
+                    reasons.append(f"map {name} — {why}")
+        # Several tex-image nodes on one slot: the exporter keeps only the first
+        # and says so in its own console warning.
+        if len(images) != len(set(images)):
+            reasons.append("duplicate image nodes — exporter keeps only the first")
+        if reasons:
+            found[m.name] = reasons
     return found
 
 
