@@ -354,8 +354,10 @@ here, including two renumberings that left a reference pointing at the wrong rul
 re-checks what needed Blender to establish — the documented `bpy` API still exists,
 the Principled sockets the docs name are real, Rigify's deform-bone counts still
 match the tiers PHASE 5c routes on, geometry nodes still need the modifier applied
-before export, and USDZ still exports natively into a conforming archive. Each of
-those was a shipped bug; this notices when a Blender release makes one wrong again.
+before export, and USDZ still exports natively into a conforming archive. It also fails on any
+Blender `DeprecationWarning` reached by the docs or the gallery — its first run
+surfaced `Material.use_nodes`, slated for removal in 6.0. Each check guards a
+shipped bug; this notices when a Blender release makes one wrong again.
 
 ## Iron rules
 

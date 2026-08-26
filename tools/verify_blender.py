@@ -20,6 +20,23 @@ ROOT = Path(__file__).resolve().parent.parent
 failures: list[str] = []
 notes: list[str] = []
 
+# Blender announces removals through DeprecationWarning. The first CI run buried
+# "'Material.use_nodes' is expected to be removed in Blender 6.0" in the log,
+# where it would have sat until 6.0 broke the docs. Collect them and fail.
+import warnings
+_deprecations: list[str] = []
+warnings.simplefilter("always", DeprecationWarning)
+_orig_showwarning = warnings.showwarning
+
+
+def _capture(message, category, filename, lineno, file=None, line=None):
+    if issubclass(category, DeprecationWarning):
+        _deprecations.append(str(message))
+    _orig_showwarning(message, category, filename, lineno, file, line)
+
+
+warnings.showwarning = _capture
+
 
 def fail(check, msg):
     failures.append(f"{check}: {msg}")
@@ -72,7 +89,7 @@ for attr in sorted(set(re.findall(r"scene\.eevee\.(\w+)", docs))):
     if not hasattr(scene.eevee, attr):
         fail("eevee", f"docs use scene.eevee.{attr}, which no longer exists")
 
-mat = bpy.data.materials.new("probe"); mat.use_nodes = True
+mat = bpy.data.materials.new("probe")   # node_tree is present by default in 5.x
 bsdf = mat.node_tree.nodes["Principled BSDF"]
 sockets = {i.name for i in bsdf.inputs}
 # Only inputs reached through a variable that IS the Principled node. A bare
@@ -183,6 +200,13 @@ try:
         ok(f"usdz: native export produces a conforming archive ({len(names)} entries)")
 except Exception as e:
     fail("usdz", f"native export failed, export-targets.md prescribes it: {e}")
+
+# ── 6. Nothing the checks touched is on a removal path.
+if _deprecations:
+    for d in sorted(set(_deprecations)):
+        fail("deprecated", f"{d} — reached by the docs or the gallery scripts")
+else:
+    ok("deprecated: nothing reached is scheduled for removal")
 
 print("── verify_blender")
 for x in notes:

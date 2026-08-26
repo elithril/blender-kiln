@@ -65,7 +65,6 @@ def create_pbr_material(name, albedo_path=None, normal_path=None,
                          roughness_path=None, metallic=0.0, roughness=0.5,
                          base_color=(0.8, 0.8, 0.8, 1.0)):
     mat = bpy.data.materials.new(name=name)
-    mat.use_nodes = True
     nodes = mat.node_tree.nodes
     links = mat.node_tree.links
     
