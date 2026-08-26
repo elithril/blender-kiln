@@ -17,11 +17,11 @@ A complete 3D asset production pipeline for Claude Code, powered by Blender MCP.
 From a text brief to an optimized, export-ready GLB — in one session.
 
 <p align="center">
-  <img src="examples/gallery/renders/gallery.webp" alt="Five assets produced by the kiln pipeline: barrel, crate, lantern, anvil and crystal cluster" width="100%" />
+  <img src="examples/gallery/renders/gallery.webp" alt="Five reference assets built to the kiln conventions: barrel, crate, lantern, anvil and crystal cluster" width="100%" />
 </p>
 
 <p align="center">
-  <sub>Every asset above was produced by this pipeline and is reproducible from this repo — see <a href="#gallery">Gallery</a>.</sub>
+  <sub>Reference assets built to this skill's conventions and reproducible from this repo — see <a href="#gallery">Gallery</a>.</sub>
 </p>
 
 ## What it does
@@ -64,6 +64,19 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 
 Five props, modelled from scratch by script, cleaned, rendered and exported —
 all headless, on one laptop, with no cloud service and no paid API.
+
+> **What this gallery is, and is not.** These assets were produced by the scripts
+> in this directory, written to the skill's conventions: 1 unit = 1 m, origin
+> centred with the asset sitting on Z=0, `export_apply=False` for GLTF, and
+> optimization as individual steps rather than `gltf-transform optimize`.
+>
+> They were **not** produced by running the skill. The skill drives Blender over
+> MCP and its core loop is interactive — `get_scene_info()` before each phase,
+> `get_viewport_screenshot()` after each modification, and a prompt before any
+> destructive step. None of that is exercised here: this is `blender --background
+> --python`, which is the scripted-modeling path only. Treat the gallery as
+> reference output and a conventions check, not as end-to-end validation of the
+> skill.
 
 <p align="center">
   <img src="examples/gallery/renders/barrel.webp"  width="19%" alt="Barrel" />

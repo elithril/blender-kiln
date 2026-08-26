@@ -138,24 +138,26 @@ def tri_count(obj):
     return n
 
 
-def backdrop(scene, radius=14.0):
-    """Dark studio ground + world, matched to the repo's social card."""
+def backdrop(scene, world_col=None, ground_col=None, strength=0.42, radius=14.0):
+    """Studio ground + world. Each theme passes its own pair of colours."""
     world = bpy.data.worlds.new("studio")
     scene.world = world
     world.use_nodes = True
     bg = world.node_tree.nodes['Background']
-    bg.inputs['Color'].default_value = BACKDROP
-    bg.inputs['Strength'].default_value = 0.42
+    bg.inputs['Color'].default_value = world_col or BACKDROP
+    bg.inputs['Strength'].default_value = strength
 
     bpy.ops.mesh.primitive_circle_add(vertices=96, radius=radius, fill_type='NGON')
     g = bpy.context.object
     g.name = "ground"
-    g.data.materials.append(mat("ground", GROUND, rough=0.62))
+    g.data.materials.append(mat("ground", ground_col or GROUND, rough=0.62))
     return g
 
 
-def three_point(scene, size):
-    """Key / fill / rim / amber accent, scaled to the subject.
+def three_point(scene, size, accent=None, accent_gain=1.0):
+    """Key / fill / rim / accent, scaled to the subject.
+
+    `accent` is the theme's mood light — forge amber, sci-fi cyan, and so on.
 
     Energies are absolute watts calibrated for a ~0.9 m subject and rescaled by
     (size/0.9)^2, since illuminance falls off with the square of the distance and
@@ -163,11 +165,12 @@ def three_point(scene, size):
     """
     s = max(size, 0.35)
     k = (s / 0.9) ** 2
+    accent = accent or (1.0, 0.52, 0.24)
     specs = [
         ("key",   115.0 * k, 3.2 * s, ( 2.6 * s, -2.2 * s,  3.1 * s), (0.85, 0.18, 0.86),  (1.0, 0.97, 0.93)),
         ("fill",   26.0 * k, 4.5 * s, (-3.0 * s, -1.7 * s,  1.5 * s), (1.16, -0.1, -1.05), (0.82, 0.88, 1.0)),
         ("rim",    72.0 * k, 2.0 * s, (-1.4 * s,  3.0 * s,  2.4 * s), (1.05, 0.05, -2.65), (0.90, 0.94, 1.0)),
-        ("amber",  30.0 * k, 1.6 * s, ( 1.1 * s,  2.2 * s,  0.5 * s), (1.45, 0.0, -2.2),   (1.0, 0.52, 0.24)),
+        ("accent", 30.0 * k * accent_gain, 1.6 * s, ( 1.1 * s,  2.2 * s,  0.5 * s), (1.45, 0.0, -2.2), accent),
     ]
     for name, energy, sz, loc, rot, col in specs:
         l = bpy.data.lights.new(name, 'AREA')
