@@ -60,6 +60,41 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 - **Batch mode**: wizard collects scene/theme/palette/reference images upfront, generates a YAML manifest, runner executes autonomously — ideal for overnight production or large asset sets
 - **Full logging**: every asset produces a production log with copy-paste prompts
 
+## Running over Blender MCP
+
+The skill drives a live Blender through the [Blender MCP](https://github.com/ahujasid/blender-mcp)
+addon. Below is `SM_Barrel` built, cleaned and exported inside a running Blender
+session — object named to convention, sitting on Z=0, ready to export:
+
+<p align="center">
+  <img src="docs/images/mcp-viewport.webp" alt="A barrel built by the kiln pipeline inside a live Blender session, with the BlenderMCP panel visible in the sidebar" width="88%" />
+</p>
+
+The MCP pass and the headless scripted pass agree **to the byte** — 111.9 kB GLB
+either way, same 2,202 triangles, same three materials.
+
+### Check the integrations before you search
+
+<img src="docs/images/mcp-panel.webp" alt="The BlenderMCP sidebar panel with all four integrations unchecked" width="215" align="right" />
+
+All four integrations ship **off**, as shown here. That matters more than it
+looks: while an integration is off, the addon does not register its commands at
+all, so a search does not come back "disabled" — it comes back
+
+```
+Unknown command type: search_polyhaven_assets
+```
+
+which reads like a version mismatch and sends you hunting for the wrong problem.
+
+`get_polyhaven_status`, `get_sketchfab_status`, `get_hunyuan3d_status` and
+`get_hyper3d_status` are registered unconditionally and return the fix step by
+step — including the Sketchfab API key, which nothing else surfaces. **Iron rule
+22** requires checking them first. Tick the boxes in the BlenderMCP panel of the
+3D Viewport sidebar (press <kbd>N</kbd> if hidden), then reconnect.
+
+<br clear="all" />
+
 ## Gallery
 
 Fifteen props across three themes, modelled from scratch by script, cleaned,

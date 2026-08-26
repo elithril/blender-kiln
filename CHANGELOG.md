@@ -6,6 +6,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — found by exercising the skill against a live Blender MCP addon
+
+- **The SOURCE phase failed on a default install with a misleading error.** All
+  four addon integrations (PolyHaven, Sketchfab, Tencent Hunyuan3D, Hyper3D
+  Rodin) ship OFF, and while an integration is off the addon does not register
+  its commands at all — so `search_polyhaven_assets` answers
+  `Unknown command type: search_polyhaven_assets`, which reads as a version
+  mismatch. The `get_*_status` tools are always registered and carry the exact
+  remediation, including the Sketchfab API-key step. New iron rule 22 requires
+  checking them first and surfacing their message.
+- **The skill reimplemented 3D generation the addon already provides.**
+  `references/ai-generation.md` prescribed a ~25 GB local `hy3dgen` install
+  (CUDA-only texturing) with an HF Spaces fallback, while never mentioning
+  `generate_hunyuan3d_model` and its job tools — nor Hyper3D Rodin, a second
+  backend, at all. The MCP-native path is now documented first.
+- **Rule 14 could not be satisfied as written.** It asked to verify dimensions,
+  but the skill only ever called `get_scene_info()`, which does not carry them.
+  New iron rule 23 points at `get_object_info()`, whose `world_bounding_box` is
+  what the check actually needs.
+- 15 of the 25 MCP tools were never mentioned anywhere in the skill. SKILL.md now
+  carries the full tool surface, extracted from the server source and exercised
+  live.
+
+### Changed
+
+- Iron rules: two core rules added (22, 23), so the batch-specific rules move
+  from 22-26 to 24-28. 28 rules total, 23 core plus 5 batch.
+
 ### Added
 
 - `examples/gallery/` — a reproducible render gallery. Fifteen props across three
@@ -23,6 +51,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (rules 7 and 16), and a per-asset production log recording licences (rule 17).
   The README states which rules a headless script cannot honour, and why.
 - README gallery section, per-theme metrics tables, and hero contact sheet.
+- README section "Running over Blender MCP", with viewport screenshots from a live
+  session: the pipeline building an asset inside a running Blender, and the addon
+  panel showing all four integrations off — which is what iron rule 22 is about.
 
 ## [1.0.0] — 2026-08-26
 
