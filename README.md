@@ -79,12 +79,12 @@ Measured, not estimated — these are the sizes the commands below produced:
 
 | Asset | Tris | GLB raw | + dedup/weld/Draco | + gltfpack (meshopt) | Saved | Render |
 |---|---:|---:|---:|---:|---:|---:|
-| `barrel` | 2,202 | 107.2 kB | 13.0 kB | 25.9 kB | **88%** | 3.8 s |
-| `crate` | 1,836 | 128.6 kB | 9.7 kB | 21.3 kB | **92%** | 3.8 s |
-| `lantern` | 1,396 | 95.7 kB | 9.3 kB | 17.5 kB | **90%** | 4.0 s |
-| `anvil` | 888 | 62.9 kB | 6.6 kB | 11.5 kB | **90%** | 4.0 s |
+| `barrel` | 2,202 | 107.2 kB | 13.0 kB | 25.9 kB | **88%** | 3.7 s |
+| `crate` | 1,836 | 128.6 kB | 9.7 kB | 20.9 kB | **92%** | 3.5 s |
+| `lantern` | 1,396 | 95.7 kB | 9.3 kB | 17.5 kB | **90%** | 3.8 s |
+| `anvil` | 888 | 62.9 kB | 6.6 kB | 11.5 kB | **90%** | 3.8 s |
 | `crystal` | 722 | 40.7 kB | 5.3 kB | 11.4 kB | **87%** | 3.8 s |
-| **total** | **7,044** | **435.1 kB** | | | **90%** | |
+| **total** | **7,044** | **435.2 kB** | | | **90%** | |
 
 Draco wins on size here; gltfpack's meshopt output is roughly twice as large but
 decodes faster on the client. Both are lossy, and both are run as **individual

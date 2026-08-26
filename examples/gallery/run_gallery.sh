@@ -18,7 +18,9 @@ for a in "${ASSETS[@]}"; do
   "$BLENDER" --background --factory-startup --python "$HERE/build.py" -- \
       "$a" "$OUT" "$RES" "$SAMPLES" 2>/dev/null \
     | grep '^METRICS ' | sed 's/^METRICS //' >> "$OUT/metrics.jsonl"
-  cp "$OUT/$a.png" "$RENDERS/$a.png"
+  # Commit renders as WebP: the whole set is ~116 kB this way against 6.2 MB
+  # as PNG, and GitHub renders WebP in READMEs.
+  cwebp -q 88 -resize 900 900 -quiet "$OUT/$a.png" -o "$RENDERS/$a.webp"
 
   # OPTIMIZE phase. Individual steps only — never `gltf-transform optimize`
   # (iron rule 8), which bundles choices this pipeline needs to make itself.
@@ -29,3 +31,7 @@ for a in "${ASSETS[@]}"; do
 done
 
 python3 "$HERE/report.py" "$OUT" "$RENDERS"
+
+echo
+echo "Renders: $RENDERS ($(du -sh "$RENDERS" | cut -f1))"
+echo "Note: renders/gallery.webp is the contact sheet, assembled separately."
