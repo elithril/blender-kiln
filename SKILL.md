@@ -107,6 +107,11 @@ nothing and the user gets no response.
     cannot be satisfied from it.
 25. ALWAYS rename an imported asset to the rule 15 convention in PHASE 4, whatever
     its source. Marketplace and AI imports arrive under the source file's name.
+26. NEVER pick a rig without measuring vertices ÷ deform bones first. Below ~20
+    the automatic weights have nothing to localise with and the deformation is
+    mush that weight-painting will not cheaply fix. Measured: a 370-vertex figure
+    on a Rigify human gives 2.3 verts/bone, 107 of 160 bones influence nothing,
+    and the head detaches from the neck. See the RIG SELECTION gate in PHASE 5c.
 ```
 
 ---
@@ -288,7 +293,7 @@ User can switch model or backend at any time during a session.
 ## Pipeline — `/kiln`
 
 ```
-[1] CONFIG → [2] BRIEF → [3] SOURCE → [4] IMPORT → [5] CLEANUP → [5b] TEXTURING → [6] OPTIMIZE → [7] EXPORT
+[1] CONFIG → [2] BRIEF → [3] SOURCE → [4] IMPORT → [5] CLEANUP → [5b] TEXTURING → [5c] RIG (characters) → [6] OPTIMIZE → [7] EXPORT
 ```
 
 ### [1] CONFIG — Collect Parameters
@@ -376,7 +381,7 @@ IF type = character
     → recommend AI
     → ASK: "Will this character need rigging/animation?"
       IF yes → force T-pose in concept image prompt
-    → note: full rigging is phase 2
+              → record it: the RIG SELECTION gate in PHASE 5c depends on it
 
 ELSE
     → present both options without recommendation
@@ -490,6 +495,45 @@ Execute the full cleanup sequence from `references/validation-checklist.md` § E
 
 **Auto mode:** non-destructive cleanup runs automatically. Decimate remains interactive.
 **Guided mode:** show each step, wait for validation.
+
+### [5c] RIG SELECTION — characters only (rule 26)
+
+Runs after CLEANUP, once the mesh is final. **Measure before choosing**, never the
+other way round:
+
+```python
+verts  = len(mesh.data.vertices)
+budget = verts / 20          # deform bones this mesh can actually carry
+```
+
+Then pick from what Rigify ships — bone counts measured on Blender 5.0.1:
+
+| Mesh vertices | Choose | Deform bones | Verts/bone |
+|---:|---|---:|---:|
+| < 700 | **Hand-built rig, 12-20 bones.** See `references/characters.md` § Match the rig's density | 12-20 | 20-35 |
+| 700 - 3,000 | `bpy.ops.object.armature_basic_human_metarig_add()` | 35 | 20-85 |
+| > 3,000 | `bpy.ops.object.armature_human_metarig_add()` | 160 | 20+ |
+| quadruped, > 900 | `bpy.ops.object.armature_basic_quadruped_metarig_add()` | 46 | 20+ |
+
+**A Rigify human needs ~3,200 vertices to be worth it.** Below that it is actively
+worse than a small rig: on a 370-vertex figure it left 107 of its 160 deform bones
+influencing nothing, smeared the rest across 8-9 bones per vertex, and detached the
+head. Do not reach for the biggest rig because it is the most capable one.
+
+**After skinning, verify — do not assume:**
+
+```python
+dead = sum(1 for vg in mesh.vertex_groups
+           if not any(g.group == vg.index and g.weight > 0.01
+                      for v in mesh.data.vertices for g in v.groups))
+```
+
+Any dead deform bone means the rig is too dense for the mesh. Go down a tier.
+Then run the validator in `references/characters.md` § Validation Script.
+
+**Posing a generated Rigify rig?** Its limbs ship in IK, so the FK controls do
+nothing until you flip them — see `references/characters.md` § FK/IK System. This
+fails silently: no error, no movement.
 
 ### [5b] TEXTURING
 

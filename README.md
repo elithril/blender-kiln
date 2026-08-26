@@ -332,7 +332,7 @@ Once installed, the skill directory looks like this:
 
 ## Iron rules
 
-The skill enforces 30 rules (25 core + 5 batch-specific). Key ones:
+The skill enforces 31 rules (26 core + 5 batch-specific). Key ones:
 
 1. Always `get_scene_info()` before each phase
 2. Always `get_viewport_screenshot()` after each modification
@@ -350,6 +350,8 @@ The skill enforces 30 rules (25 core + 5 batch-specific). Key ones:
     marketplace download arrives under the source file's name
 12. Frame the viewport before screenshotting it, or the verification shot shows
     an apparently empty scene
+13. Never pick a rig without measuring vertices ÷ deform bones — a Rigify human
+    needs ~3,200 vertices to be worth it
 
 ## Output
 

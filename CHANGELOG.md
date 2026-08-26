@@ -6,6 +6,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — the skill now picks the rig instead of leaving it to judgment
+
+- **New PHASE 5c, RIG SELECTION, in `SKILL.md`** — not buried in a reference the
+  model may never load. It measures the mesh first and routes from the count, with
+  the tiers measured on Blender 5.0.1:
+
+  | Mesh vertices | Rig | Deform bones |
+  |---:|---|---:|
+  | < 700 | hand-built, 12-20 bones | 12-20 |
+  | 700 - 3,000 | `armature_basic_human_metarig_add` | 35 |
+  | > 3,000 | `armature_human_metarig_add` | 160 |
+  | quadruped > 900 | `armature_basic_quadruped_metarig_add` | 46 |
+
+  **A Rigify human needs ~3,200 vertices to be worth it.** The gate also carries the
+  post-skinning check for dead deform bones, and the pointer to the silent IK/FK
+  trap. The 370-vertex figure that produced mush now routes to the hand-built rig.
+- **New iron rule 26**: never pick a rig without measuring vertices ÷ deform bones.
+  Core rules become 1-26, batch 27-31, 31 total. Every cross-reference re-audited
+  by meaning — 0 invalid, and rules 15, 22, 23, 24, 26 and 28 each verified to say
+  what the citation claims.
+
 ### Fixed — rigging reference, exercised on a real armature
 
 - **The Layered Actions section stopped exactly where it gets hard.** Its snippet
