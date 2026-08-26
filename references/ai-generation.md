@@ -62,7 +62,7 @@ else:
 | Error | Action |
 |---|---|
 | OOM (out of memory) | Ask user: switch to smaller model (turbo), reduce resolution, or fallback to HF Spaces |
-| Model not found | Guide to `/kiln:setup` for download |
+| Model not found | Guide to `/kiln setup` for download |
 | MPS not supported op | Fallback to CPU for that operation, warn user about speed |
 | Any crash | Ask user: "Switch to HF Spaces for this asset?" — never switch silently |
 

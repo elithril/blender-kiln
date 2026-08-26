@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `owner` is now an object, per the marketplace schema.
 - Skill naming harmonized on `kiln` (matching the `SKILL.md` frontmatter) instead of
   the mixed `blender-kiln` / `kiln` references.
+- Documented commands were not invocable. The README and `SKILL.md` listed twelve
+  `/kiln:<sub>` entries, but `kiln` is a single skill with no `commands/` directory,
+  and a colon addresses a plugin's skill (`blender-kiln:kiln`) — so `/kiln:setup`
+  resolved to nothing. All entry points are now documented in their working form,
+  `/kiln <sub>`, and `SKILL.md` gained an argument-routing table.
 
 ### Added
 - `.claude-plugin/plugin.json` manifest (version, author, license, keywords).
@@ -28,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Full 8-phase pipeline: CONFIG → BRIEF → SOURCE → IMPORT → CLEANUP → TEXTURING →
   OPTIMIZE → EXPORT.
-- Batch mode: `/kiln:batch` wizard, YAML manifest, autonomous runner.
+- Batch mode: `/kiln batch` wizard, YAML manifest, autonomous runner.
 - Reference image support across the full pipeline.
 - Hunyuan3D 2.x generation — local (CUDA / Apple Silicon MPS) and HF Spaces.
 - Marketplace sourcing via PolyHaven and Sketchfab.
