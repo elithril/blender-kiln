@@ -44,6 +44,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   nothing relevant. `bpy.ops.preferences.addon_enable(module="rigify")` is the one
   that works.
 
+- **Nothing said to match the rig's density to the mesh's.** Rigging a real CC-BY
+  character (Khronos `RiggedFigure`, 370 vertices) with a Rigify human produced
+  visible mush: the head detached at the neck and the limbs collapsed into the
+  torso. Cause, measured: **2.3 vertices per deform bone**, and **107 of the 160
+  deform bones influenced nothing at all** — automatic weights had no geometry to
+  localise them, so the vertices that were weighted got smeared across 8 or 9 bones
+  each. The same mesh, same pose, on a 13-bone rig sized to it: 28.5 vertices per
+  bone, 0 dead bones, volume held. The reference now says to check the ratio before
+  choosing a rig, and gives the one-line check.
+- **A freshly generated Rigify rig ignores its own FK controls, silently.** Every
+  limb ships `IK_FK = 0.0`, so IK drives the chain and rotating `upper_arm_fk.L`
+  moves nothing — measured, 0 of 370 vertices displaced, with no error or warning.
+  Setting it to 1.0 moved 221 of 370 on the same pose. Documented as the first thing
+  to check when a Rigify pose "does not apply".
+
 ### Verified — no changes needed
 
 - **Bone Collections (section 10) work verbatim** on Blender 5.0.1: three

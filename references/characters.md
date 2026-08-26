@@ -72,6 +72,21 @@ Leg chain: Thigh → Thigh_Twist → Shin → Shin_Twist → Foot
 
 ### 4. FK/IK System
 
+**A freshly generated Rigify rig ignores its own FK controls.** Every limb ships
+with `IK_FK = 0.0` on its parent bone, which means IK drives the chain and
+rotating `upper_arm_fk.L` does exactly nothing — no error, no warning, the mesh
+simply does not move. Measured: 0 of 370 vertices displaced. Flip the limb first:
+
+```python
+for n in ("upper_arm_parent.L", "upper_arm_parent.R",
+          "thigh_parent.L", "thigh_parent.R"):
+    rig.pose.bones[n]["IK_FK"] = 1.0     # 0 = IK drives, 1 = FK drives
+```
+
+With that set, the same pose moved 221 of 370 vertices. This is the first thing
+to check when a Rigify pose "does not apply".
+
+
 ```python
 # IK constraint setup pattern
 import bpy
@@ -431,6 +446,36 @@ def validate_character_rig(armature_obj):
 | **Rigify** | Blender addon (built-in) | All types | Configurable meta-rig, production-ready. Free and offline — see below. |
 | **AccuRIG** (Reallusion) | Desktop app (free) | Detailed humanoids | Better results than Mixamo on hands/fingers. |
 | **Auto-Rig Pro** | Blender addon (paid ~$40) | Production | Smart retopo + rig + game-ready export. |
+
+### Match the rig's density to the mesh's
+
+Before choosing a rig, divide **vertices by deform bones**. Automatic weights need
+enough geometry around each bone to localise its influence; below roughly 5
+vertices per deform bone they cannot, and the result is mush no amount of
+weight-painting fixes cheaply.
+
+Measured on the same 370-vertex stylised figure, same pose, same camera:
+
+| | Rigify human | Rig sized to the mesh |
+|---|---:|---:|
+| Deform bones | 160 | 13 |
+| Vertices per deform bone | **2.3** | **28.5** |
+| Deform bones influencing nothing | **107 of 160** | 0 |
+| Max influences per vertex | 9 | 6 |
+| Result | head detaches at the neck, limbs collapse into the torso | volume held, pose readable |
+
+The 107 dead bones are the tell: `parent_set(type='ARMATURE_AUTO')` had no
+geometry to give them, so they sit in the skin palette doing nothing while the
+vertices that *are* weighted get smeared across eight or nine bones each.
+
+**So:** reach for a Rigify human when the mesh has the topology to carry it —
+order of thousands of vertices, loops at the joints. For a low-poly or stylised
+figure, build the 12-20 bones the silhouette actually needs. Check the ratio
+first; it costs one line.
+
+```python
+ratio = len(mesh.data.vertices) / sum(1 for b in rig.data.bones if b.use_deform)
+```
 
 ### Rigify from Python
 
