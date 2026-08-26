@@ -6,6 +6,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — batch mode, exercised for the first time
+
+- **The batch runner disabled the integrations it depends on, between every
+  asset.** Its scene-clear step was `bpy.ops.wm.read_homefile(use_empty=True)`,
+  which builds a fresh scene — and the addon keeps every integration flag as a
+  *scene* property (`scene.blendermcp_use_polyhaven` and friends). Measured: the
+  flag flips to False, the command stops being registered, and the next call
+  answers `Unknown command type`. Asset 1 succeeds, every asset after it fails,
+  and rule 25 forbids prompting, so an overnight batch failed silently from the
+  second asset onward. The clear now removes datablocks instead, which leaves
+  scene properties intact — verified.
+- **Pre-flight did not validate integrations.** Rule 25 forbids prompting once
+  the loop runs, so a missing integration has to be caught before starting.
+  Pre-flight now maps each `method` in the manifest to the status calls it needs
+  and aborts with the addon's own remediation text.
+- Pre-flight now names the tool for "verify Blender MCP is connected"
+  (`get_addon_status`) and checks the addon version, since an outdated addon is
+  missing commands a batch may need.
+- Stale cross-references in `references/batch-mode.md`: "All 21 existing iron
+  rules" (now 23), and rule 28 pointing at "Rule 23 (no prompts)" when the
+  renumbering in the previous release moved it to 25.
+- Removed three dangling entries from SKILL.md's resource table
+  (`../creative-excellence/`, `../threejs-r3f/`, `../motion-principles/`). None
+  exist, and they point outside the plugin directory, which the plugin spec
+  forbids.
+
+### Added
+
+- SKILL.md now records that MCP tool names and the addon's raw socket command
+  names differ, that some MCP tools have no socket equivalent, and that ticking
+  an integration checkbox takes effect without reconnecting.
+
 ### Fixed — found by exercising the skill against a live Blender MCP addon
 
 - **The SOURCE phase failed on a default install with a misleading error.** All
