@@ -26,6 +26,82 @@ When a character is flagged for rigging:
 
 ---
 
+## Converting a pose to T-pose
+
+Rule 13 wants a T-pose. Free libraries do not supply one — measured on three
+models, none was:
+
+| Model | Licence | Vertices | Measured pose |
+|---|---|---:|---|
+| Khronos `RiggedFigure` | CC-BY 4.0 | 370 | A-pose, -26.8 deg |
+| Khronos `CesiumMan` | CC-BY 4.0 | 3,273 | A-pose, -28.2 deg |
+| Blender Human Base Meshes | **CC0** | 10,582 | I-pose, -70.8 deg |
+
+A-pose and arms-down are the modelling conventions; T-pose is a *rigging*
+convention. So converting is the normal path.
+
+### The method that works
+
+Build a throwaway rig only to obtain **arm weights**, then rotate the vertices
+yourself about the shoulder, scaled by each vertex's arm weight. The weighting is
+what gives a smooth shoulder instead of a crease. Discard the rig afterwards.
+
+```python
+ANG = math.radians(71.9)          # measured shoulder->hand angle
+SH  = Vector((0.198, 0.0, 1.318)) # measured shoulder
+for sf, sgn in (("L", 1), ("R", -1)):
+    gi = {g.name: g.index for g in mesh.vertex_groups}
+    idx = [gi[n] for n in (f"UpperArm_{sf}", f"LowerArm_{sf}") if n in gi]
+    pivot = Vector((sgn * SH.x, 0.0, SH.z))
+    for v in mesh.data.vertices:
+        w = min(sum(g.weight for g in v.groups if g.group in idx), 1.0)
+        if w < 0.01:
+            continue
+        v.co = pivot + Matrix.Rotation(-sgn * ANG * w, 4, "Y") @ (v.co - pivot)
+mesh.data.update()
+```
+
+**Check the rotation arithmetically before running it.** Two lines of trigonometry
+settle the sign, and getting it wrong is not obvious from the code:
+
+```python
+for s in (+1, -1):
+    c, sn = math.cos(s*ANG), math.sin(s*ANG)
+    print(math.degrees(math.atan2(-dx*sn + dz*c, dx*c + dz*sn)))
+# -71.9 deg takes the wrist from (0.199, -0.608) to (0.640, 0.000): horizontal.
+# +71.9 deg takes it to -143.8 deg: further down.
+```
+
+### Three approaches that do not work
+
+Each cost a cycle before the method above:
+
+- **Selecting arm vertices geometrically.** The shoulder pivot gets estimated from
+  the widest slice, and on a stylised figure the head block is wider than the
+  torso threshold, so the pivot lands on the skull. Result: -26.8 deg became
+  -56.3 deg.
+- **Posing the arm with Euler angles on a bone.** A bone's local axes depend on
+  its roll, which you did not set. Testing all three and keeping the largest
+  displacement picked an axis that lifted the tip by 5.6 cm — not the right one.
+  Result: arms at -87.6 deg, wingspan collapsed from 0.88 m to 0.55 m.
+- **Right axis, wrong sign.** Pushed the arms further down, to -79.7 deg.
+
+The verification that catches all three: **wingspan ≈ height** after conversion.
+
+### Where to get a CC0 humanoid
+
+Blender publishes **Human Base Meshes** (CC0): eight full bodies, realistic and
+stylised, male and female.
+`https://download.blender.org/demo/asset-bundles/human-base-meshes/` — 48 MB.
+
+Two traps in that bundle:
+
+- The asset entries named `realistic_body_male` and so on are **cameras**, used
+  for asset previews. The geometry lives under `GEO-body_male_realistic`.
+- An object appended as a dependency can end up in **no collection at all**, so it
+  never appears in the viewport. `visible_get()` returns False and
+  `users_collection` is empty; link it to `scene.collection.objects` by hand.
+
 ## Rigging Patterns
 
 ### 1. Joint Orientation

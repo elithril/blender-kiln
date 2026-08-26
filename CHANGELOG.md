@@ -6,6 +6,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — pose is now measured, not assumed
+
+- **Iron rule 13 only covered generation.** It said to generate characters in
+  T-pose, and stopped there — so a marketplace or downloaded character went
+  straight to rigging in whatever pose its author used, unmeasured. Rule 13 now
+  requires measuring the pose on import, and PHASE 4 carries the measurement.
+- **T-pose is not available from free libraries.** Measured on three: Khronos
+  `RiggedFigure` A-pose at -26.8°, Khronos `CesiumMan` A-pose at -28.2°, Blender's
+  Human Base Meshes I-pose at -70.8°. A-pose and arms-down are *modelling*
+  conventions; T-pose is a *rigging* convention. So converting is the normal path,
+  and `references/characters.md` now documents it rather than assuming a T-posed
+  source appears.
+- **The pose measurement has to be shoulder-to-hand.** A horizontal slice of the
+  mesh picks up hip and thigh vertices: it reported -17° on a body whose arms were
+  at -71°, an error of 53°. The check is now written down, along with the
+  silhouette test that catches a bad conversion — wingspan ≈ height.
+- **Documented the conversion that works, and three that do not.** Building a
+  throwaway rig for its arm *weights*, then rotating vertices about the shoulder
+  scaled by that weight, gives a clean shoulder. Selecting arm vertices
+  geometrically puts the pivot on the skull; posing with Euler angles on a bone
+  picks the wrong local axis; and the right axis with the wrong sign pushes the
+  arms further down. Each of those is recorded with the number it produced, plus
+  the two lines of trigonometry that settle the sign before you run anything.
+- **Recorded a CC0 source.** Blender's Human Base Meshes bundle, with its two
+  traps: the asset entries are preview *cameras* (geometry is under `GEO-`), and an
+  object appended as a dependency can land in no collection at all and never appear.
+
 ### Changed — the skill now picks the rig instead of leaving it to judgment
 
 - **New PHASE 5c, RIG SELECTION, in `SKILL.md`** — not buried in a reference the

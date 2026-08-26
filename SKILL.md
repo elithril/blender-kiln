@@ -74,8 +74,13 @@ nothing and the user gets no response.
     Fallback: solid white. Never environment/ground/context.
 12. SINGLE VIEW by default for AI generation. Multi-view only if user
     provides their own multi-angle images.
-13. ALWAYS generate characters in T-POSE if rigging is planned.
-    Ask the user if the character will be animated; force T-pose if yes.
+13. ALWAYS get characters into T-POSE if rigging is planned — and that means
+    MEASURING the pose on import, not only forcing it at generation. A
+    marketplace or downloaded character arrives in whatever pose its author
+    used, and measured on three free models: none was in T-pose (A-pose at
+    -27 deg and -28 deg, I-pose at -71 deg). Converting is the normal path, not
+    the exception. See PHASE 4 for the measurement and
+    references/characters.md for the conversion.
 14. ALWAYS respect 1 Blender unit = 1 meter. Verify dimensions after import
     with get_object_info() — see rule 24.
 15. ALWAYS name according to conventions (PascalCase + prefixes in Blender,
@@ -449,6 +454,30 @@ get_scene_info() → import via execute_blender_code
 → alert if dimensions seem wrong ("Asset is 0.002m tall. Scale issue?")
 → frame the viewport, THEN get_viewport_screenshot     (rule 2)
 ```
+
+**Measure the pose (rule 13) — characters only.** Do it here, before anything
+downstream assumes a rest pose. Measure **shoulder to hand**, never a horizontal
+slice of the mesh: a slice picks up hip and thigh vertices and reported -17 deg
+on a body whose arms were actually at -71 deg.
+
+```python
+cos = [v.co for v in mesh.data.vertices]
+H = max(c.z for c in cos)
+right = [c for c in cos if c.x > 0]
+hand = max(right, key=lambda c: c.x)
+torso_w = max(c.x for c in cos if abs(c.z - H * 0.75) < H * 0.02)
+shoulder = max((c for c in right if abs(c.x - torso_w) < 0.03), key=lambda c: c.z)
+angle = math.degrees(math.atan2(hand.z - shoulder.z, hand.x - shoulder.x))
+```
+
+| Angle | Pose | Action |
+|---|---|---|
+| within ±15 deg | T-pose | proceed |
+| -15 to -45 deg | A-pose | convert — see `references/characters.md` § Converting a pose to T-pose |
+| below -45 deg | I-pose, arms at the sides | convert; this is the hardest case, the arms touch the torso |
+
+A T-pose also shows in the silhouette: **wingspan ≈ height**. The reference body
+measured 1.68 m across for 1.69 m tall once converted.
 
 **Rename on import — every method, not just scripted.** A marketplace download
 lands under whatever name the source file carried (`ClassicNightstand_01`), and an
