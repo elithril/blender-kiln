@@ -90,6 +90,26 @@ Draco wins on size here; gltfpack's meshopt output is roughly twice as large but
 decodes faster on the client. Both are lossy, and both are run as **individual
 steps** — never `gltf-transform optimize`, per iron rule 8.
 
+Two things the intermediate sizes will tell you if you read them closely:
+
+- `weld` makes the file **bigger** (98.1 kB → 113.4 kB on the barrel). It is a
+  preparation step for Draco, not a size win on its own — don't ship its output.
+- Only Draco survives a round trip into Blender. Verified by re-importing every
+  variant:
+
+| Output | Re-imports into Blender | Size |
+|---|---|---:|
+| `_original.glb` | yes — 2,202 tris | 107.2 kB |
+| `_dedup.glb` | yes — 2,202 tris | 98.1 kB |
+| `_weld.glb` | yes — 2,202 tris | 113.4 kB |
+| `_final.glb` (Draco) | yes — 2,202 tris, built-in decoder | **13.0 kB** |
+| `_packed.glb` (meshopt) | **no** — `EXT_meshopt_compression` unsupported | 25.9 kB |
+
+`EXT_meshopt_compression` is a **web runtime** format: three.js and Babylon decode
+it, Blender's glTF importer does not. That error on import is expected, not a
+broken file — reach for `_final.glb` when you need the asset back in Blender, and
+for `_packed.glb` when you are shipping to a viewer that decodes meshopt.
+
 ### Reproduce it
 
 ```bash
