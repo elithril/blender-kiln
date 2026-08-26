@@ -23,12 +23,15 @@ git clone https://github.com/Tencent/Hunyuan3D-2.git {models_path}/Hunyuan3D-2
 cd {models_path}/Hunyuan3D-2
 
 # Install dependencies
-pip3 install -r requirements.txt
-pip3 install -e .
+# A bare pip3 fails on any PEP 668 Python (Homebrew, most Linux distros).
+python3 -m venv {models_path}/venv
+{models_path}/venv/bin/pip install -r requirements.txt
+{models_path}/venv/bin/pip install -e .
 
 # Download model weights (via huggingface_hub)
 python3 -c "
 from huggingface_hub import snapshot_download
+# Run with {models_path}/venv/bin/python, not the system python3.
 snapshot_download('tencent/Hunyuan3D-2mini', local_dir='{models_path}/Hunyuan3D-2mini')
 "
 

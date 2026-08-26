@@ -122,7 +122,9 @@ Note: Gradio API is auto-generated — can break without notice on Space updates
 
 ### Setup
 
-- `pip3 install gradio_client`
+- `gradio_client`, installed in a venv:
+  `python3 -m venv ~/.hunyuan3d/venv && ~/.hunyuan3d/venv/bin/pip install gradio_client`
+  (a bare `pip3 install` fails on any PEP 668 Python — Homebrew, most Linux distros)
 - Python 3.10+ recommended
 
 ### API Flow (2-step)

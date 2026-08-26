@@ -162,7 +162,8 @@ in Blender.
 - User-provided image — local path, drag-and-drop, or URL
 
 **3D Generation (one of):**
-- **HF Spaces** (default) — no install, requires `gradio_client` (`pip3 install gradio_client`)
+- **HF Spaces** — requires `gradio_client` in a venv (see `/kiln setup`; a bare
+  `pip3 install` fails on any PEP 668 Python, which is most of them)
 - **Local** — requires Hunyuan3D-2 models downloaded locally. Run `/kiln setup` to install.
 
 **Optional:**
@@ -186,24 +187,54 @@ Scan and report status for each component:
 
 ```
 ── 🔍 Environment ──────────────────────────
-Platform     {macOS / Windows / Linux} │ {NVIDIA RTX xxxx (xx GB VRAM) / Apple Silicon (MPS) / No GPU}
-Blender MCP  {✅ connected (port 9876) / ❌ not detected}
-Python       {version, path}
+Platform     {macOS / Windows / Linux} │ {NVIDIA RTX xxxx (xx GB VRAM) / Apple Silicon (xx GB unified) / No GPU}
+Blender MCP  {✅ connected, addon v1.x / ⚠️ connected but outdated / ❌ not detected}
+Python       {version, path} │ {⚠️ externally managed (PEP 668)}
 
 ── 3D Generation ───────────────────────────
-Backend      {✅ Local (Hunyuan3D-2 mini) / ✅ HF Spaces / ❌ not configured}
+Backend      {✅ MCP native / ✅ Local (Hunyuan3D-2 mini) / ✅ HF Spaces / ❌ not configured}
 Models       {list installed models with sizes, or "none"}
-Device       {cuda / mps / cpu} │ Texture: {✅ local (CUDA) / ⚠️ HF Spaces only / ⚠️ Blender only (no CUDA)}
+Device       {cuda / mps / cpu / unknown until a backend is installed}
 
 ── Tools ───────────────────────────────────
 gradio_client   {✅ / ❌}  │ gltf-transform  {✅ / ⚠️ optional}
 gltfpack        {✅ / ⚠️}  │ nano-banana     {✅ / ❌}
 ```
 
-**GPU detection commands:**
-- macOS: `system_profiler SPDisplaysDataType`
-- Windows: `nvidia-smi` or `wmic path win32_VideoController get name,adapterram`
-- Linux: `nvidia-smi`
+**Detection commands — every field above, with the command that fills it:**
+
+| Field | Command | Gotcha |
+|---|---|---|
+| Platform / GPU (macOS) | `system_profiler SPDisplaysDataType` | Reports **no VRAM** on Apple Silicon — memory is unified. Use `sysctl -n hw.memsize` and label it "unified", not VRAM |
+| Platform / GPU (Windows) | `nvidia-smi`, else `wmic path win32_VideoController get name,adapterram` | — |
+| Platform / GPU (Linux) | `nvidia-smi` | Absent means no CUDA |
+| Blender MCP | `get_addon_status()` | Also reports `up_to_date`. If false, `uvx blender-mcp install-addon`. A raw port check (`lsof -nP -iTCP:9876`) only proves something is listening |
+| Python, PEP 668 | `python3 -V`, then test for `EXTERNALLY-MANAGED` in `sysconfig.get_paths()['stdlib']` | Homebrew and most Linux distros ship one. It makes every bare `pip3 install` fail — see below |
+| Models | `du -sh ~/.hunyuan3d/models/*` | Path is the default from `references/setup-install.md`; absent directory means none installed |
+| Device | `nvidia-smi` → cuda. Else `platform.machine() == 'arm64'` on Darwin → mps *probable* | `torch.backends.mps.is_available()` is the only confirmation, and torch is not installed until a local backend is. Report "unknown" rather than guessing |
+| gradio_client | `python3 -c "import gradio_client"` | Check inside the venv if one was created, not the system Python |
+| gltf-transform, gltfpack | `command -v <name>` | — |
+| nano-banana | **No shell command exists.** It is an MCP server — check whether its tools are in reach | Never report ❌ from a shell probe |
+
+### Installing Python packages — read this before proposing pip
+
+Most macOS and Linux Pythons are **externally managed** (PEP 668). `pip3 install
+<anything>` fails outright there:
+
+```
+error: externally-managed-environment
+```
+
+So never propose a bare `pip3 install`. Create a venv and install into it:
+
+```bash
+python3 -m venv ~/.hunyuan3d/venv
+~/.hunyuan3d/venv/bin/pip install gradio_client
+```
+
+Then use `~/.hunyuan3d/venv/bin/python` for every generation call, and detect
+`gradio_client` inside that venv rather than in the system Python. `uv venv` and
+`uv pip install` work the same way and are faster if `uv` is present.
 
 ### Step 2: Guided setup (if needed)
 
@@ -211,9 +242,19 @@ Based on scan results, propose actions:
 
 **If no 3D backend configured:**
 > "Choose your 3D generation backend:"
-> 1. **HF Spaces** (recommended to start) — no install, uses cloud GPU
-> 2. **Local Hunyuan3D** — download models, runs on your machine
-> 3. **Both** — local as primary, HF Spaces as fallback
+> 1. **MCP native** (recommended to start) — nothing to install. Tick *Use Tencent
+>    Hunyuan 3D model generation* (or *Use Hyper3D Rodin*) in the BlenderMCP panel
+>    of the 3D Viewport sidebar, press <kbd>N</kbd> if hidden. Takes effect
+>    immediately. See `references/ai-generation.md`.
+> 2. **HF Spaces** — needs `gradio_client` in a venv, uses a shared cloud GPU with
+>    a queue
+> 3. **Local Hunyuan3D** — ~25 GB of weights, runs offline, texture generation
+>    needs CUDA
+> 4. **Both** — local as primary, one of the above as fallback
+
+Check what is already on before asking: `get_hunyuan3d_status()` and
+`get_hyper3d_status()`. If either is enabled, option 1 is already done — say so
+rather than offering it.
 
 **If user chooses Local:** Load `references/setup-install.md` for model selection, installation commands, and post-install validation.
 

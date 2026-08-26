@@ -166,7 +166,8 @@ gltfpack -i input.glb -o output.glb -cc
 
 ### Alternative: usdzconvert (CLI)
 ```bash
-pip3 install usd-core
+# Bare pip3 fails on PEP 668 Pythons; use a venv.
+python3 -m venv ~/.kiln/venv && ~/.kiln/venv/bin/pip install usd-core
 usdzconvert input.glb output.usdz
 ```
 
