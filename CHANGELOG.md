@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+## [1.1.0] — 2026-08-26
+
 ### Fixed — an API on its way out, caught by the CI's first run
 
 - **`Material.use_nodes` is scheduled for removal in Blender 6.0**, and the docs and
