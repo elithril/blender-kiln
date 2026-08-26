@@ -52,6 +52,12 @@ def _(root: Path):
     p.write_text(re.sub(r"enforces \d+ rules \(\d+ core", "enforces 28 rules (23 core", p.read_text()))
 
 
+@case("a per-file line count goes stale", "counts")
+def _(root: Path):
+    p = root / "README.md"
+    p.write_text(re.sub(r"(\| `references/characters\.md` \|[^|]+\| )~\d+", r"\g<1>~120", p.read_text()))
+
+
 @case("reference to a file outside the plugin", "paths")
 def _(root: Path):
     p = root / "SKILL.md"
