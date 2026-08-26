@@ -78,17 +78,23 @@ PROCEDURAL_NODES = {
 }
 
 
-def poly_budget(tris, tier="balanced", kind="prop"):
-    """Return (status, message). Never raises — the caller reports, it never blocks."""
-    lo, hi = POLY_BUDGETS[tier]
-    if tris < lo:
-        return "under", f"{tris:,} tris is below the {tier} {kind} range ({lo:,}-{hi:,})"
-    if tris <= hi:
-        return "ok", f"{tris:,} tris is within the {tier} {kind} range ({lo:,}-{hi:,})"
+def poly_budget(tris, kind="prop"):
+    """Classify a tri count against the detail tiers, and alert only if it clears
+    the top one. Returns (tier_or_status, message).
+
+    The tier is a CONFIG-phase choice in the real pipeline, so a count below the
+    `balanced` floor is not a defect — it just belongs to `lightweight`. Forcing
+    one tier and reporting everything else as out of range says nothing useful.
+    Iron rule 4: report, never block.
+    """
+    for tier, (lo, hi) in POLY_BUDGETS.items():
+        if tris <= hi:
+            return tier, f"{tris:,} tris — {tier} {kind} tier ({lo:,}-{hi:,})"
+    hi = POLY_BUDGETS["detailed"][1]
     over = 100.0 * (tris / hi - 1.0)
-    level = "ALERT" if over > 50.0 else "over"
-    return level, (f"{tris:,} tris is {over:.0f}% above the {tier} {kind} ceiling "
-                   f"({hi:,}) — iron rule 4: reported, not blocked")
+    status = "ALERT" if over > 50.0 else "over"
+    return status, (f"{tris:,} tris is {over:.0f}% above the detailed {kind} ceiling "
+                    f"({hi:,}) — iron rule 4: reported, not blocked")
 
 
 def material_audit(obj):

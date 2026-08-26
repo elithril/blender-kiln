@@ -42,7 +42,7 @@ for theme in ("forge", "scifi", "nature"):
                  f"**{100.0 * (1 - t_best / t_raw):.0f}%** |")
     blocks.append("\n".join(lines))
     for r in group:
-        if r["budget"] in ("over", "ALERT"):
+        if r["budget"] in ("over", "ALERT"):  # tiers are fine; only excess alerts
             alerts.append(f"- `{r['asset']}` — {r['budget_note']}")
         if r["material_audit"]:
             alerts.append(f"- `{r['asset']}` — procedural nodes would be lost: "

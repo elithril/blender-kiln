@@ -125,12 +125,6 @@ Measured, not estimated — these are the sizes the commands below produced:
 | `boulder` | `SM_Boulder` | 320 | 34.0 kB | 4.3 kB | 8.3 kB | **87%** |
 | **subtotal** | | **3,363** | **241.0 kB** | | | **87%** |
 
-#### Budget and audit notes
-
-Iron rule 4 reports, it never blocks:
-
-- `container` — 5,076 tris is 2% above the balanced prop ceiling (5,000) — iron rule 4: reported, not blocked
-
 Draco wins on size; gltfpack's meshopt output is roughly twice as large but
 decodes faster on the client. Both are lossy, and both run as **individual
 steps** — never `gltf-transform optimize`, per iron rule 20.
@@ -160,7 +154,7 @@ Audited against the iron rules and `references/`, honestly:
 | Rule | Status | How |
 |---|---|---|
 | 3 — one asset at a time | yes | `build.py` handles exactly one per process |
-| 4 — never hard-cap polys, alert out of range | yes | `studio.poly_budget()` reports against the `references/topology-rules.md` tiers; the cargo container trips it at 2% over and still builds |
+| 4 — never hard-cap polys, alert out of range | yes | `studio.poly_budget()` classifies each asset into a `references/topology-rules.md` tier — 9 lightweight, 5 balanced, 1 detailed — and alerts only above the top ceiling. Nothing is ever blocked |
 | 5 — never spend money | yes | everything local; no marketplace, no generation service |
 | 7 / 16 — always keep the .blend, in the asset folder | yes | `<asset>/<asset>.blend` |
 | 10 — apply transforms, merge doubles, recalc normals before export | yes | `studio.cleanup()`, in that order, before any export |

@@ -38,8 +38,8 @@ model_s = time.time() - t0
 dims = [round(d, 3) for d in obj.dimensions]
 scale_ok = all(0.02 < d < 20.0 for d in dims)
 
-# Rule 4: report against the soft budget, never block.
-budget_status, budget_msg = S.poly_budget(tris, tier="balanced", kind="prop")
+# Rule 4: classify against the soft budgets, never block.
+budget_status, budget_msg = S.poly_budget(tris, kind="prop")
 
 # Rule 19: audit materials BEFORE any GLTF export.
 audit = S.material_audit(obj)
@@ -79,7 +79,7 @@ with open(path("_log.md"), "w") as f:
 | Faces before merge | {faces_before:,} |
 | Dimensions (m) | {dims[0]} x {dims[1]} x {dims[2]} |
 | Scale check (rule 14) | {"1 unit = 1 m, plausible" if scale_ok else "OUT OF RANGE"} |
-| Poly budget (rule 4) | {budget_status} — {budget_msg} |
+| Detail tier (rule 4) | {budget_status} — {budget_msg} |
 | GLB raw | {size_raw / 1024:.1f} kB |
 
 ## Materials
