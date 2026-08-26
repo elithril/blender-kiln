@@ -6,6 +6,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — the marketplace path, exercised against the live PolyHaven API
+
+- **IMPORT never renamed anything.** Rule 15 wants `SM_PascalCase` objects with a
+  matching `_Mesh` data-block, but a marketplace download lands under the source
+  file's name (`ClassicNightstand_01`) and an AI import under whatever the importer
+  chose. The phase said nothing about it, so every non-scripted asset broke rule 15
+  by default. New iron rule 25 requires the rename in PHASE 4, whatever the source.
+- **Rule 2's screenshots could show an empty scene.** `get_viewport_screenshot`
+  captures the viewport as aimed, and on a wide view a 0.7 m prop is a few pixels at
+  the origin — so the shot the skill relies on to verify a modification looks like
+  the modification deleted everything. New iron rule 22 requires framing the subject
+  first, with the `view3d.view_selected` override that does it.
+- Iron rules: two core rules added (22, 25), so the core set is 1-25 and the
+  batch-specific rules move from 24-28 to 26-30. 30 total, 25 core plus 5 batch.
+  Every `rule N` cross-reference in SKILL.md, README.md and references/ was audited
+  against the renumbered set — by meaning, not just by existence, which is how the
+  previous renumbering left rule 28 pointing at the wrong rule.
+
+### Verified
+
+- The `marketplace` creation method now works end to end against the live PolyHaven
+  API: 521 models indexed, search returns polycount and dimensions for tier
+  selection, download and import succeed, and scale is exact — PolyHaven reports
+  millimetres (`568 x 424 x 700`) and the importer produces
+  `0.568 x 0.424 x 0.7` Blender units.
+- `references/sourcing-strategy.md` records the millimetre-to-metre detail, so a
+  raw 568-unit object is recognisable as a failed conversion.
+
 ### Fixed — `/kiln setup`, exercised for the first time
 
 - **Every `pip3 install` in the skill failed.** All six of them, including

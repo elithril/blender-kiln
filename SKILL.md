@@ -77,7 +77,7 @@ nothing and the user gets no response.
 13. ALWAYS generate characters in T-POSE if rigging is planned.
     Ask the user if the character will be animated; force T-pose if yes.
 14. ALWAYS respect 1 Blender unit = 1 meter. Verify dimensions after import
-    with get_object_info() — see rule 23.
+    with get_object_info() — see rule 24.
 15. ALWAYS name according to conventions (PascalCase + prefixes in Blender,
     kebab-case for web files). See references/naming-conventions.md.
 16. ALWAYS save the .blend file in the asset output folder.
@@ -92,16 +92,21 @@ nothing and the user gets no response.
 21. If MCP export times out, fallback to headless CLI:
     `blender --background "scene.blend" --python-expr "..."`.
     See references/export-targets.md for the full command.
-22. ALWAYS check integration status before searching a marketplace or launching
+22. ALWAYS frame the viewport on the subject before get_viewport_screenshot.
+    An unframed view renders a 0.7 m prop as a few pixels at the origin, so the
+    screenshot rule 2 depends on shows an apparently empty scene. See PHASE 4.
+23. ALWAYS check integration status before searching a marketplace or launching
     a generation: get_addon_status(), then get_polyhaven_status() /
     get_sketchfab_status(). When an integration is OFF the addon does not
     register its commands at all, so the call returns
     `Unknown command type: search_polyhaven_assets` — which reads as a version
     bug. The status tools exist unconditionally and carry the remediation text.
     Surface THAT, never the raw error.
-23. ALWAYS verify dimensions with get_object_info(name) — it returns
+24. ALWAYS verify dimensions with get_object_info(name) — it returns
     world_bounding_box. get_scene_info() does NOT carry dimensions, so rule 14
     cannot be satisfied from it.
+25. ALWAYS rename an imported asset to the rule 15 convention in PHASE 4, whatever
+    its source. Marketplace and AI imports arrive under the source file's name.
 ```
 
 ---
@@ -430,10 +435,39 @@ For assets with repetitive patterns (railings, fences, stone walls, vegetation s
 ### [4] IMPORT
 
 ```
-get_scene_info() → import via execute_blender_code → verify world_bounding_box
+get_scene_info() → import via execute_blender_code
+→ get_object_info(name) → verify world_bounding_box   (rules 14, 23)
+→ RENAME to SM_PascalCase, data-block to SM_..._Mesh   (rule 15)
 → center + normalize scale if needed (1 unit = 1 meter)
 → alert if dimensions seem wrong ("Asset is 0.002m tall. Scale issue?")
-→ get_viewport_screenshot
+→ frame the viewport, THEN get_viewport_screenshot     (rule 2)
+```
+
+**Rename on import — every method, not just scripted.** A marketplace download
+lands under whatever name the source file carried (`ClassicNightstand_01`), and an
+AI-generated mesh under whatever the importer chose. Neither satisfies rule 15, so
+rename here, in IMPORT, before anything downstream reads the name:
+
+```python
+obj.name = "SM_ClassicNightstand"
+obj.data.name = "SM_ClassicNightstand_Mesh"
+```
+
+**Frame before you screenshot.** `get_viewport_screenshot` captures the viewport
+as it is aimed. On a wide-angle view a 0.7 m prop is a handful of pixels at the
+origin, so the screenshot rule 2 relies on shows an apparently empty scene — which
+reads as "the operation deleted everything". Frame the subject first:
+
+```python
+bpy.ops.object.select_all(action='DESELECT')
+obj.select_set(True)
+bpy.context.view_layer.objects.active = obj
+for area in bpy.context.screen.areas:
+    if area.type == 'VIEW_3D':
+        for region in area.regions:
+            if region.type == 'WINDOW':
+                with bpy.context.temp_override(area=area, region=region):
+                    bpy.ops.view3d.view_selected()
 ```
 
 **Output format:**
