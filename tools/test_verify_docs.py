@@ -18,10 +18,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-CASES: list[tuple[str, str, callable]] = []
+# Two kinds of case. `expect="name"` seeds a regression and demands that check
+# fire. `expect=None` seeds a CORRECT edit and demands total silence — because
+# every check in this file has, at some point, fired on correct input, and a
+# check people learn to ignore is worse than no check at all.
+CASES: list[tuple[str, str | None, callable]] = []
 
 
-def case(name: str, expect: str):
+def case(name: str, expect: str | None):
     def deco(fn):
         CASES.append((name, expect, fn))
         return fn
@@ -68,6 +72,30 @@ def _(root: Path):
 def _(root: Path):
     p = root / "SKILL.md"
     p.write_text(p.read_text() + "\n\nLoad `references/does-not-exist.md`.\n")
+
+
+@case("two different minimum Blender versions are stated", "versions")
+def _(root: Path):
+    p = root / "README.md"
+    p.write_text(p.read_text() + "\n\nRequires Blender 3.6+ for this feature.\n")
+
+
+@case("a history note is not a requirement", None)
+def _(root: Path):
+    p = root / "references" / "characters.md"
+    p.write_text(p.read_text() + "\n\nSince Blender 6.0, bone collections were replaced again.\n")
+
+
+@case("an API-availability qualifier is not a requirement", None)
+def _(root: Path):
+    p = root / "references" / "texturing-strategy.md"
+    p.write_text(p.read_text() + "\n```python\n# Thin Film weight (Blender 5.2+)\n```\n")
+
+
+@case("uv pip install is not bare pip", None)
+def _(root: Path):
+    p = root / "references" / "ai-generation.md"
+    p.write_text(p.read_text() + "\n```bash\nuv pip install trimesh\n```\n")
 
 
 @case("README image goes missing", "images")
@@ -131,10 +159,17 @@ for name, expect, seed in CASES:
         shutil.copytree(ROOT, work, ignore=shutil.ignore_patterns(".git", "out", "__pycache__"))
         seed(work)
         code, out = run(work)
-        caught = code != 0 and any(l.strip().startswith(f"FAIL {expect}") for l in out.split("\n"))
-        print(f"  {'ok  ' if caught else 'MISS'} {name}  (expected check: {expect})")
-        if not caught:
+        fails = [l.strip() for l in out.split("\n") if l.strip().startswith("FAIL")]
+        if expect is None:
+            good = code == 0
+            print(f"  {'ok  ' if good else 'CRIE'} {name}  (must stay silent)")
+        else:
+            good = code != 0 and any(l.startswith(f"FAIL {expect}") for l in fails)
+            print(f"  {'ok  ' if good else 'MISS'} {name}  (expected check: {expect})")
+        if not good:
             bad += 1
-            print("       " + "\n       ".join(l for l in out.split("\n") if "FAIL" in l) or "       no failure reported")
-print(f"\n── {len(CASES) - bad}/{len(CASES)} regressions caught")
+            print("       " + ("\n       ".join(fails) or "no failure reported"))
+pos = sum(1 for _, e, _ in CASES if e is not None)
+print(f"\n── {len(CASES) - bad}/{len(CASES)} cases pass "
+      f"({pos} seeded regressions, {len(CASES) - pos} must-stay-silent)")
 sys.exit(1 if bad else 0)

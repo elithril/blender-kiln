@@ -7,7 +7,7 @@
 <p align="center">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg" /></a>
   <img alt="Claude Code plugin" src="https://img.shields.io/badge/Claude%20Code-plugin-d97757" />
-  <img alt="Blender 4.x+" src="https://img.shields.io/badge/Blender-4.x%2B-e87d0d?logo=blender&logoColor=white" />
+  <img alt="Blender 4.4+, verified on 5.0 and 5.2" src="https://img.shields.io/badge/Blender-4.4%2B%20%C2%B7%20verified%205.0%2F5.2-e87d0d?logo=blender&logoColor=white" />
   <img alt="Blender MCP" src="https://img.shields.io/badge/Blender-MCP-6c5ce7" />
   <a href="https://github.com/elithril/blender-kiln/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/elithril/blender-kiln?style=flat" /></a>
 </p>
@@ -210,7 +210,7 @@ cd examples/gallery
 THEMES="forge nature" ./run_gallery.sh
 ```
 
-Needs Blender 5.x, `gltf-transform`, `gltfpack` and `cwebp`.
+Needs Blender 4.4+ (measured on 5.0 and 5.2), plus `gltf-transform`, `gltfpack` and `cwebp`.
 
 `studio.py` holds the shared rig (sRGB→linear palette, three-point lighting with a
 per-theme accent, camera fitting, cleanup, budget check, material audit, render,
@@ -249,7 +249,14 @@ Two Blender API traps cost real debugging time here, because both fail silently:
 
 ### Required
 
-- **Blender 4.x+** with the [Blender MCP](https://github.com/ahujasid/blender-mcp) addon running (port 9876)
+- **Blender 4.4 or newer**, with the [Blender MCP](https://github.com/ahujasid/blender-mcp)
+  addon running (port 9876). Install the addon with `uvx blender-mcp install-addon`.
+
+  **4.4 is a hard floor, not a preference.** Layered actions arrived in 4.4, and the
+  animation code here reaches F-curves through `action.layers[].strips[].channelbag()`;
+  on 4.0–4.3 that path does not exist. Everything in this repository is measured on
+  **5.0** locally and **5.2 LTS** in CI — 4.4 to 4.5 satisfy the API but are untested,
+  so treat them as unverified rather than supported.
 
 ### 3D Generation (choose one or both)
 
