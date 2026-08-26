@@ -16,6 +16,14 @@ A complete 3D asset production pipeline for Claude Code, powered by Blender MCP.
 
 From a text brief to an optimized, export-ready GLB — in one session.
 
+<p align="center">
+  <img src="examples/gallery/renders/gallery.webp" alt="Five assets produced by the kiln pipeline: barrel, crate, lantern, anvil and crystal cluster" width="100%" />
+</p>
+
+<p align="center">
+  <sub>Every asset above was produced by this pipeline and is reproducible from this repo — see <a href="#gallery">Gallery</a>.</sub>
+</p>
+
 ## What it does
 
 Kiln is a Claude Code skill that turns you into a 3D asset production studio. It orchestrates Blender (via MCP), AI generation (Hunyuan3D, Pollinations/FLUX), and marketplace search (PolyHaven, Sketchfab) into a single coherent pipeline.
@@ -51,6 +59,58 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 - **Multi-asset sessions**: cross-asset coherence (scale, materials, poly budget)
 - **Batch mode**: wizard collects scene/theme/palette/reference images upfront, generates a YAML manifest, runner executes autonomously — ideal for overnight production or large asset sets
 - **Full logging**: every asset produces a production log with copy-paste prompts
+
+## Gallery
+
+Five props, modelled from scratch by script, cleaned, rendered and exported —
+all headless, on one laptop, with no cloud service and no paid API.
+
+<p align="center">
+  <img src="examples/gallery/renders/barrel.webp"  width="19%" alt="Barrel" />
+  <img src="examples/gallery/renders/crate.webp"   width="19%" alt="Crate" />
+  <img src="examples/gallery/renders/lantern.webp" width="19%" alt="Lantern" />
+  <img src="examples/gallery/renders/anvil.webp"   width="19%" alt="Anvil" />
+  <img src="examples/gallery/renders/crystal.webp" width="19%" alt="Crystal cluster" />
+</p>
+
+### What the OPTIMIZE phase actually buys
+
+Measured, not estimated — these are the sizes the commands below produced:
+
+| Asset | Tris | GLB raw | + dedup/weld/Draco | + gltfpack (meshopt) | Saved | Render |
+|---|---:|---:|---:|---:|---:|---:|
+| `barrel` | 2,202 | 107.2 kB | 13.0 kB | 25.9 kB | **88%** | 3.8 s |
+| `crate` | 1,836 | 128.6 kB | 9.7 kB | 21.3 kB | **92%** | 3.8 s |
+| `lantern` | 1,396 | 95.7 kB | 9.3 kB | 17.5 kB | **90%** | 4.0 s |
+| `anvil` | 888 | 62.9 kB | 6.6 kB | 11.5 kB | **90%** | 4.0 s |
+| `crystal` | 722 | 40.7 kB | 5.3 kB | 11.4 kB | **87%** | 3.8 s |
+| **total** | **7,044** | **435.1 kB** | | | **90%** | |
+
+Draco wins on size here; gltfpack's meshopt output is roughly twice as large but
+decodes faster on the client. Both are lossy, and both are run as **individual
+steps** — never `gltf-transform optimize`, per iron rule 8.
+
+### Reproduce it
+
+```bash
+cd examples/gallery
+./run_gallery.sh          # needs Blender 5.x, gltf-transform, gltfpack
+```
+
+`studio.py` holds the shared studio rig (palette, three-point lighting, camera
+fitting, render, GLB export), `assets.py` one builder per prop, and `build.py`
+drives a single asset through model → cleanup → render → export → metrics.
+
+Two things worth knowing if you write your own builders, because both cost real
+debugging time here:
+
+- **Principled BSDF inputs are linear, not sRGB.** Feeding hex-picked values
+  straight in washes everything out — linear `0.31` is sRGB `0.58`, so a magenta
+  lands as pale pink. `studio.srgb()` does the conversion.
+- **Writing `obj.location` does not refresh `obj.matrix_world`.** Read it in the
+  same breath and you get the *previous* transform, so a "sit it on Z=0"
+  correction silently does nothing and the asset ends up half-buried under the
+  ground plane. Flush with `view_layer.update()` first.
 
 ## Commands
 

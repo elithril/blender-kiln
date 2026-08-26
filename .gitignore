@@ -10,6 +10,10 @@
 generated-assets/
 batch-manifest.local.yaml
 
+# Gallery intermediates: GLBs, .blend files and metrics are regenerated
+# by examples/gallery/run_gallery.sh. Only renders/ is committed.
+examples/gallery/out/
+
 # Node (gltf-transform / gltfpack local installs)
 node_modules/
 package-lock.json

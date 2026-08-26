@@ -4,6 +4,17 @@ All notable changes to blender-kiln are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `examples/gallery/` — a reproducible render gallery. Five props (barrel, crate,
+  lantern, anvil, crystal cluster) modelled from scratch by script, cleaned,
+  rendered in headless EEVEE and exported to GLB, with measured optimization
+  numbers: 7,044 tris, 435.1 kB raw, 43.9 kB after dedup/weld/Draco. Run
+  `run_gallery.sh` to regenerate everything.
+- README gallery section and hero image.
+
 ## [1.0.0] — 2026-08-26
 
 First tagged release. The pipeline landed in April 2026 but was never released;
