@@ -133,6 +133,40 @@ if m:
     else:
         notes.append(f"counts: structure table within 15% ({actual:,} lines)")
 
+# ── 4c. Stated minimum Blender versions do not contradict each other.
+# The README badge said "4.x+" while its own Reproduce section said "Needs
+# Blender 5.x", and nothing had ever been run on 4.x.
+#
+# Three attempts at this check, and the shape is the scar tissue. Matching every
+# "Blender N.N" flagged history: "Since Blender 4.0+, bone layers were replaced"
+# requires nothing. Blacklisting history words then silenced the check entirely,
+# because the real requirement lines say "verified" and "measured on" too. A
+# blacklist of history phrasings is unbounded — any new way of writing history
+# defeats it. So this is a WHITELIST of requirement phrasings: the version has to
+# be the thing being demanded, not a qualifier on an API note. "Blender 4.4+:
+# F-curves live in a channelbag" and "(Blender 4.x+)" state where a feature
+# exists and are correctly invisible here.
+FLOOR = re.compile(
+    r"(?:needs?|requires?|minimum)\s+(?:of\s+)?Blender\s*v?(\d+\.(?:\d+|x))"
+    r"|Blender\s*v?(\d+\.(?:\d+|x))\+?\s+or\s+(?:newer|later|above)"
+    r"|badge/Blender-(\d+\.(?:\d+|x))",
+    re.I)
+floors: dict[str, set[str]] = {}
+for doc in DOCS:
+    for line in doc.read_text().split("\n"):
+        for m in FLOOR.finditer(line):
+            floors.setdefault(next(g for g in m.groups() if g), set()).add(doc.name)
+if not floors:
+    fail("versions", "no minimum Blender version is stated as a requirement — "
+                     "the README must say what it needs")
+elif len(floors) > 1:
+    fail("versions", f"more than one minimum stated: "
+                     f"{ {k: sorted(v) for k, v in floors.items()} }")
+else:
+    v, where = next(iter(floors.items()))
+    notes.append(f"versions: one stated minimum, Blender {v}+ "
+                 f"(stated in {', '.join(sorted(where))})")
+
 # ── 5. Referenced files exist.
 # SKILL.md once pointed at ../creative-excellence/ and two other skills that
 # existed nowhere, and outside the plugin directory besides.

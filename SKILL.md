@@ -175,7 +175,12 @@ in Blender.
 ## Dependencies
 
 **Required:**
-- `blender-mcp` — Blender must be open with MCP server started (port 9876)
+- `blender-mcp` — Blender must be open with MCP server started (port 9876).
+  Install the addon with `uvx blender-mcp install-addon`; `addon_utils.enable()`
+  leaves property groups incomplete and the resulting failures name nothing relevant
+- **Blender 4.4 or newer.** Layered actions arrived in 4.4 and the animation paths
+  here go through `action.layers[].strips[].channelbag()`, which does not exist
+  before it. Measured on 5.0 and 5.2 LTS; 4.4-4.5 satisfy the API but are untested
 
 **Concept art (built-in, no install needed):**
 - Pollinations API — free, no key, used via curl (default)
