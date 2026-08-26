@@ -6,6 +6,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — continuous checks on the documentation itself
+
+- **`tools/verify_docs.py`** plus `.github/workflows/verify.yml`: the repository had
+  no CI at all. Nine checks, text only, no Blender, a few seconds on every push.
+  Each one exists because the corresponding mistake was actually made here — iron
+  rules forming an unbroken sequence, every cited `rule N` existing **and meaning
+  what the citation claims**, the README count matching, referenced files existing
+  and staying inside the plugin, README images resolving, no bare `pip install`,
+  a valid manifest whose `source` is a real directory, and commands documented in
+  the form that actually resolves.
+- **`tools/test_verify_docs.py`** seeds each of those
+  regressions into a copy of the repo and asserts the checker catches it: **11/11**,
+  with the clean repo passing. A checker that only ever passes proves nothing —
+  the same reasoning that exposed rule 19's material audit and the rig validator.
+- Writing it caught two false positives in the checker itself: a 40-character
+  window matched "Rule 6 is overridden — Rule 28 (no prompts)" against rule 6, and
+  `uv pip install` tripped the bare-pip rule. Both fixed before merging, because a
+  check that fires on correct input is the one people learn to ignore.
+
+### Fixed
+
+- README line counts were stale after eight pull requests: `SKILL.md` ~660 → ~880,
+  total ~3,250 → ~3,870.
+
 ### Changed — pose is now measured, not assumed
 
 - **Iron rule 13 only covered generation.** It said to generate characters in

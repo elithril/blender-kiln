@@ -1,0 +1,31 @@
+name: verify
+
+# Checks that the skill's own documentation is still true. Text only — no
+# Blender, no network — so it runs on every push in seconds.
+#
+# Every check exists because the corresponding mistake was actually made here:
+# three iron-rule renumberings (two left a broken reference), a manifest
+# pointing at a path that did not exist, twelve documented commands that
+# resolved to nothing, and six pip3 commands that failed on any PEP 668 Python.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify the documentation is self-consistent
+        run: python3 tools/verify_docs.py
+
+      - name: Verify the verifier still catches regressions
+        run: python3 tools/test_verify_docs.py
