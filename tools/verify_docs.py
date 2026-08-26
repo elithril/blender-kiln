@@ -215,6 +215,20 @@ else:
     if data:
         if not isinstance(data.get("owner"), dict):
             fail("manifest", "owner must be an object, per the marketplace schema")
+
+        # The version lives in two manifests and a release edits both by hand. A
+        # mismatch installs the plugin under the wrong number, silently, while
+        # every other check passes.
+        pj = ROOT / ".claude-plugin" / "plugin.json"
+        if pj.exists():
+            pv = json.loads(pj.read_text()).get("version")
+            mv = (data.get("metadata") or {}).get("version")
+            if pv != mv:
+                fail("manifest", f"manifest versions disagree: "
+                                 f"plugin.json {pv!r} vs marketplace.json {mv!r}")
+            elif pv:
+                notes.append(f"manifest: both manifests agree on version {pv}")
+
         for plugin in data.get("plugins", []):
             src = plugin.get("source")
             if not isinstance(src, str) or not src.startswith("./"):

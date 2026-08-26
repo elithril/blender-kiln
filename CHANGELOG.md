@@ -6,6 +6,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.2] — 2026-08-26
+
+### Fixed — the README stated two different Blender versions, and neither was measured
+
+- **The badge said `Blender 4.x+` while the Reproduce section said `Needs Blender
+  5.x`.** Both numbers were written rather than measured: nothing in this repository
+  has ever run on 4.x. The real floor is **4.4**, for a specific reason — the
+  animation code reaches F-curves through `action.layers[].strips[].channelbag()`,
+  and layered actions arrived in 4.4. Everything here is measured on 5.0 locally and
+  5.2.1 LTS in CI. 4.4–4.5 satisfy the API but are untested, so the README now calls
+  them unverified rather than supported, which is the honest word.
+- **The check written to catch this took three attempts, and the failures are worth
+  recording.** Matching every `Blender N.N` flagged history: "Since Blender 4.0+,
+  bone layers were replaced" demands nothing of the reader. Blacklisting history
+  words then silenced the check *completely*, because the genuine requirement lines
+  say "verified" and "measured on" too — it passed by finding nothing at all, which
+  is the worse failure of the two. It now whitelists requirement phrasings and fails
+  when it finds no requirement, because a check that cannot fail proves nothing.
+- **The test harness could only ever assert that a check fires.** Fourteen cases, all
+  seeded regressions, and nothing asserting a check stays *quiet* — yet five false
+  positives have shipped in these checkers, and a check people learn to ignore is
+  worse than no check. `expect=None` now demands silence on correct input, covering
+  the three this repository actually produced: a history note, an API-availability
+  qualifier, and `uv pip install` tripping the bare-pip rule.
+- **The two plugin manifests could disagree about the version** and nothing noticed.
+  `plugin.json` and `marketplace.json` both carry it, a release touches both by hand,
+  and a mismatch would install the plugin under the wrong number while every check
+  passed. Now verified.
+
 ## [1.1.1] — 2026-08-26
 
 ### Fixed — the HuggingFace path had gone stale

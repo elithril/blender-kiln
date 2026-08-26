@@ -98,6 +98,12 @@ def _(root: Path):
     p.write_text(p.read_text() + "\n```bash\nuv pip install trimesh\n```\n")
 
 
+@case("the two manifests drift apart on version", "manifest")
+def _(root: Path):
+    p = root / ".claude-plugin" / "plugin.json"
+    p.write_text(p.read_text().replace('"version": "1.1.2"', '"version": "9.9.9"'))
+
+
 @case("README image goes missing", "images")
 def _(root: Path):
     (root / "examples" / "gallery" / "renders" / "gallery.webp").unlink()

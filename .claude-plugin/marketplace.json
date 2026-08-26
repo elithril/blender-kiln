@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "3D asset production pipeline for Claude Code, powered by Blender MCP.",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "license": "MIT",
     "homepage": "https://github.com/elithril/blender-kiln",
     "category": "3d-modeling",
