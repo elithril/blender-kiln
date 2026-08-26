@@ -140,26 +140,51 @@ bpy.ops.export_scene.fbx(
 
 **For Apple AR (Quick Look, Reality Composer).**
 
-USDZ is a zip archive containing a USD file + textures. Blender's native USDZ export is limited.
+USDZ is a zip archive containing a USD file + textures.
 
-### Option 1: Reality Converter (macOS, GUI)
-Download from Apple Developer: `https://developer.apple.com/augmented-reality/tools/`
+### Blender exports it natively — start here
 
-### Option 2: usdzconvert (CLI)
-```bash
-# Bare pip3 fails on PEP 668 Pythons; use a venv.
-python3 -m venv ~/.kiln/venv && ~/.kiln/venv/bin/pip install usd-core
-# Then:
-usdzconvert input.glb output.usdz
+Measured on Blender 5.0.1 with a full PolyHaven PBR material:
+
+```python
+bpy.ops.wm.usd_export(
+    filepath=path,                    # .usdz extension selects the archive
+    selected_objects_only=True,
+    export_materials=True,
+    export_textures_mode='NEW',       # copies textures into the archive
+    relative_paths=True,
+    convert_world_material=False,     # see the gotcha below — this matters
+)
 ```
 
-### Option 3: gltf-transform (if supported)
-```bash
-# gltf-transform does NOT convert to USDZ
-# Use usdzconvert or Reality Converter
-```
+What that produced: a 1.86 MB archive holding the `.usdc` plus **four JPEG maps**,
+and a complete preview-surface graph — 1 `UsdPreviewSurface`, 4 `UsdUVTexture`,
+1 `UsdPrimvarReader_float2`, with `normal`, `roughness`, `metallic` **and
+`displacement`** connected.
+
+That is *more* than the glTF export of the same material carries: glTF kept 3 maps
+and dropped displacement entirely (see
+`references/texturing-strategy.md` § texture maps).
+
+**The one real gotcha:** `convert_world_material` defaults to True, which writes a
+`DomeLight` referencing an **`.exr`** into the archive. The USDZ specification
+admits PNG and JPEG only, so that file makes the archive non-conforming and can
+break iOS Quick Look. Setting it to False removes it — verified, the archive then
+holds nothing but the `.usdc` and its JPEGs.
+
+Cosmetic: exported texture files get temporary names (`tmprw2fto0v.jpg`). Harmless,
+but rename them if the archive is a deliverable.
+
+### If the native export is not enough
+
+Reality Converter (macOS GUI, from Apple Developer tools) and `usdzconvert` remain
+options, but neither is needed for a standard PBR prop and both are an extra
+install. Reach for them only when you have measured a specific shortfall — and
+record what it was, so the next person does not reinstall them on faith.
 
 ### USDZ Constraints
+- Images: **PNG and JPEG only.** Anything else (EXR, TIFF) makes the archive
+  non-conforming — hence `convert_world_material=False` above
 - Maximum texture size: 4096x4096 (Apple recommendation: 2048)
 - Materials: PBR Metallic/Roughness workflow
 - Animations: skeletal and transform supported
@@ -172,7 +197,8 @@ usdzconvert input.glb output.usdz
 When export target is "multi":
 1. Export glTF/GLB first (primary format)
 2. Export FBX from the same Blender scene
-3. Convert GLB → USDZ via CLI
+3. Export USDZ from the same scene with `bpy.ops.wm.usd_export` — no CLI
+   conversion needed, and it carries more maps than the GLB
 
 Each format saved in the output folder:
 ```
