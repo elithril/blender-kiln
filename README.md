@@ -422,6 +422,12 @@ generated-assets/
 
 At the end of a multi-asset session, Kiln proposes a cleanup of intermediate files with per-asset size breakdown.
 
+## Contributing
+
+Fixes are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). One rule shapes it:
+**claims must be measured, not reasoned.** Fifteen bugs in this repository's own
+documentation were found by running it, and none of them were visible in the text.
+
 ## License
 
 [MIT](LICENSE) © Nicolas Dolphens
