@@ -1,0 +1,29 @@
+{
+  "name": "blender-kiln",
+  "displayName": "blender-kiln — The 3D Asset Forge",
+  "version": "1.0.0",
+  "description": "Complete 3D asset production pipeline — from text brief to optimized GLB. Orchestrates Blender MCP, AI generation (Hunyuan3D), marketplace search (PolyHaven, Sketchfab), texturing, optimization, and multi-format export.",
+  "author": {
+    "name": "Nicolas Dolphens",
+    "url": "https://github.com/elithril"
+  },
+  "homepage": "https://github.com/elithril/blender-kiln",
+  "repository": "https://github.com/elithril/blender-kiln",
+  "license": "MIT",
+  "keywords": [
+    "blender",
+    "blender-mcp",
+    "3d",
+    "3d-assets",
+    "gltf",
+    "glb",
+    "usdz",
+    "asset-pipeline",
+    "texturing",
+    "pbr",
+    "rigging",
+    "optimization",
+    "hunyuan3d",
+    "threejs"
+  ]
+}

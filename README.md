@@ -2,7 +2,15 @@
   <img src="blender-kiln-logo.png" alt="blender-kiln logo" width="200" />
 </p>
 
-# blender-kiln — The 3D Asset Forge
+<h1 align="center">blender-kiln — The 3D Asset Forge</h1>
+
+<p align="center">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg" /></a>
+  <img alt="Claude Code plugin" src="https://img.shields.io/badge/Claude%20Code-plugin-d97757" />
+  <img alt="Blender 4.x+" src="https://img.shields.io/badge/Blender-4.x%2B-e87d0d?logo=blender&logoColor=white" />
+  <img alt="Blender MCP" src="https://img.shields.io/badge/Blender-MCP-6c5ce7" />
+  <a href="https://github.com/elithril/blender-kiln/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/elithril/blender-kiln?style=flat" /></a>
+</p>
 
 A complete 3D asset production pipeline for Claude Code, powered by Blender MCP.
 
@@ -33,7 +41,7 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 
 - **Multi-method creation**: AI generation (Hunyuan3D 2.x — local or cloud), scripted modeling (Blender Python), geometry nodes, or marketplace sourcing
 - **Local AI generation**: run Hunyuan3D-2 Mini on your machine — NVIDIA GPU for full pipeline, Apple Silicon for shape generation
-- **Environment auto-detection**: `/kiln:setup` scans your system and guides installation
+- **Environment auto-detection**: `/kiln setup` scans your system and guides installation
 - **Reference images**: provide an image per asset (path, URL, or drag-and-drop) — guides all creation methods (AI input, scripted proportions, texture assignment), enriches the brief, and enables post-export visual comparison
 - **Concept art input**: text prompt (Pollinations/FLUX), image path, image URL, or nano-banana (optional)
 - **Smart recommendations**: auto-suggests the best creation method based on asset type and style
@@ -49,18 +57,18 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 | Command | Action |
 |---|---|
 | `/kiln` | Full pipeline (CONFIG → EXPORT) |
-| `/kiln:batch` | Batch wizard → manifest → autonomous multi-asset production |
-| `/kiln:batch run` | Execute/resume a batch manifest (`--all`, `--asset <name>`) |
-| `/kiln:setup` | Environment detection + guided setup |
-| `/kiln:models` | List/switch Hunyuan3D models |
-| `/kiln:status` | Show current pipeline state |
-| `/kiln:search` | Search PolyHaven/Sketchfab |
-| `/kiln:inspect` | Inspect a 3D file (stats, poly count, materials, bbox) |
-| `/kiln:cleanup` | Cleanup a mesh in Blender |
-| `/kiln:texture` | Texture an untextured mesh |
-| `/kiln:optimize` | Optimize a GLB with gltf-transform/gltfpack |
-| `/kiln:convert` | Convert between formats (GLB↔USDZ↔FBX) |
-| `/kiln:help` | List all commands and usage |
+| `/kiln batch` | Batch wizard → manifest → autonomous multi-asset production |
+| `/kiln batch run` | Execute/resume a batch manifest (`--all`, `--asset <name>`) |
+| `/kiln setup` | Environment detection + guided setup |
+| `/kiln models` | List/switch Hunyuan3D models |
+| `/kiln status` | Show current pipeline state |
+| `/kiln search` | Search PolyHaven/Sketchfab |
+| `/kiln inspect` | Inspect a 3D file (stats, poly count, materials, bbox) |
+| `/kiln cleanup` | Cleanup a mesh in Blender |
+| `/kiln texture` | Texture an untextured mesh |
+| `/kiln optimize` | Optimize a GLB with gltf-transform/gltfpack |
+| `/kiln convert` | Convert between formats (GLB↔USDZ↔FBX) |
+| `/kiln help` | List all commands and usage |
 
 ## Requirements
 
@@ -73,7 +81,7 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 | Backend | Install | GPU needed | Texture gen | Offline |
 |---|---|---|---|---|
 | **HF Spaces** (default) | `pip3 install gradio_client` | No (cloud) | Yes | No |
-| **Local [Hunyuan3D-2](https://github.com/Tencent/Hunyuan3D-2)** | Run `/kiln:setup` (~25 GB download) | Optional | CUDA only | Yes |
+| **Local [Hunyuan3D-2](https://github.com/Tencent/Hunyuan3D-2)** | Run `/kiln setup` (~25 GB download) | Optional | CUDA only | Yes |
 
 On Mac (Apple Silicon): local shape generation works via MPS, texture generation falls back to skill's Blender-based texturing.
 On Windows + NVIDIA GPU: full pipeline runs locally — shape + texture, zero cloud dependency.
@@ -88,19 +96,26 @@ On Windows + NVIDIA GPU: full pipeline runs locally — shape + texture, zero cl
 
 ## Installation
 
-### Claude Code CLI
+### As a Claude Code plugin (recommended)
+
+```
+/plugin marketplace add elithril/blender-kiln
+/plugin install blender-kiln@blender-kiln
+```
+
+Then run `/kiln setup` to detect your environment and install what's missing.
+
+### As a standalone skill
 
 ```bash
-# From the skill marketplace
-npx skills add blender-kiln
-
-# Or manually: clone into your skills directory
 git clone https://github.com/elithril/blender-kiln.git ~/.claude/skills/blender-kiln
 ```
 
-### Manual
+Restart Claude Code, then run `/kiln setup`.
 
-Copy the `blender-kiln/` folder into your Claude Code skills directory:
+### Layout
+
+Once installed, the skill directory looks like this:
 
 ```
 ~/.claude/skills/blender-kiln/
@@ -195,4 +210,4 @@ At the end of a multi-asset session, Kiln proposes a cleanup of intermediate fil
 
 ## License
 
-MIT
+[MIT](LICENSE) © Nicolas Dolphens

@@ -15,18 +15,42 @@ You are a 3D asset production expert. You pilot Blender via MCP to produce clean
 | Command | Action |
 |---|---|
 | `/kiln` | Full pipeline (CONFIG → EXPORT) |
-| `/kiln:batch` | Batch wizard → manifest → autonomous multi-asset production |
-| `/kiln:batch run` | Execute/resume a batch manifest (options: `--all`, `--asset <name>`) |
-| `/kiln:setup` | Environment detection + guided setup (models, dependencies, GPU) |
-| `/kiln:models` | List available Hunyuan3D models, switch active model |
-| `/kiln:status` | Show current pipeline state, next steps, prompts |
-| `/kiln:search` | Search PolyHaven/Sketchfab marketplaces |
-| `/kiln:inspect` | Inspect a 3D file (stats, poly count, materials, bbox) |
-| `/kiln:cleanup` | Cleanup a mesh in Blender (standalone) |
-| `/kiln:texture` | Texture an untextured mesh (standalone) |
-| `/kiln:optimize` | Optimize a GLB with gltf-transform/gltfpack (standalone) |
-| `/kiln:convert` | Convert between formats (GLB→USDZ, GLB→FBX, etc.) |
-| `/kiln:help` | List all commands and usage |
+| `/kiln batch` | Batch wizard → manifest → autonomous multi-asset production |
+| `/kiln batch run` | Execute/resume a batch manifest (options: `--all`, `--asset <name>`) |
+| `/kiln setup` | Environment detection + guided setup (models, dependencies, GPU) |
+| `/kiln models` | List available Hunyuan3D models, switch active model |
+| `/kiln status` | Show current pipeline state, next steps, prompts |
+| `/kiln search` | Search PolyHaven/Sketchfab marketplaces |
+| `/kiln inspect` | Inspect a 3D file (stats, poly count, materials, bbox) |
+| `/kiln cleanup` | Cleanup a mesh in Blender (standalone) |
+| `/kiln texture` | Texture an untextured mesh (standalone) |
+| `/kiln optimize` | Optimize a GLB with gltf-transform/gltfpack (standalone) |
+| `/kiln convert` | Convert between formats (GLB→USDZ, GLB→FBX, etc.) |
+| `/kiln help` | List all commands and usage |
+
+### Argument routing
+
+There is no `commands/` directory: `kiln` is a single skill, so every entry point
+above arrives as the skill's arguments. Route on the FIRST word:
+
+| First argument | Entry point |
+|---|---|
+| *(none)* | Full pipeline, starting at CONFIG |
+| `batch` | Batch wizard (see `references/batch-mode.md`) |
+| `batch run` | Batch runner — accepts `--all`, `--asset <name>` |
+| `setup` | Environment detection + guided install |
+| `models` | Model listing / switching |
+| `status` | Pipeline state report |
+| `search`, `inspect`, `cleanup`, `texture`, `optimize`, `convert` | Standalone tools |
+| `help` | Print the command table above and stop |
+
+Anything the first word does not match is treated as an asset brief, so
+`/kiln a low-poly wooden chair` starts the full pipeline with that brief already
+captured — skip the CONFIG question it answers.
+
+NEVER tell the user to type `/kiln:setup` or any other colon form. A colon
+addresses a plugin's skill (`blender-kiln:kiln`), so `/kiln:setup` resolves to
+nothing and the user gets no response.
 
 ---
 
@@ -82,7 +106,7 @@ You are a 3D asset production expert. You pilot Blender via MCP to produce clean
 
 **3D Generation (one of):**
 - **HF Spaces** (default) — no install, requires `gradio_client` (`pip3 install gradio_client`)
-- **Local** — requires Hunyuan3D-2 models downloaded locally. Run `/kiln:setup` to install.
+- **Local** — requires Hunyuan3D-2 models downloaded locally. Run `/kiln setup` to install.
 
 **Optional:**
 - `nano-banana` MCP — alternative concept art generation via Gemini (requires API key with billing)
@@ -91,13 +115,13 @@ You are a 3D asset production expert. You pilot Blender via MCP to produce clean
 - `Sketchfab API token` — free account, needed for downloads
 - `Reality Converter` / `usdzconvert` — USDZ export (macOS)
 
-At first launch, run automatic environment detection (see `/kiln:setup`). Guide installation for anything missing.
+At first launch, run automatic environment detection (see `/kiln setup`). Guide installation for anything missing.
 
 ---
 
-## /kiln:setup — Environment Detection & Setup
+## /kiln setup — Environment Detection & Setup
 
-Run this at first launch or when the user runs `/kiln:setup`.
+Run this at first launch or when the user runs `/kiln setup`.
 
 ### Step 1: Auto-detect environment
 
@@ -138,7 +162,7 @@ Based on scan results, propose actions:
 
 ---
 
-## /kiln:models — Model Management
+## /kiln models — Model Management
 
 List and switch between available Hunyuan3D models.
 
@@ -164,7 +188,7 @@ User can switch model or backend at any time during a session.
 
 ### [1] CONFIG — Collect Parameters
 
-**First launch:** before collecting parameters, run the environment scan from `/kiln:setup` (Step 1 only — auto-detect, no install prompts). Display the summary so the user sees what's available. If critical components are missing (e.g. Blender MCP not connected), warn and offer to run full `/kiln:setup`.
+**First launch:** before collecting parameters, run the environment scan from `/kiln setup` (Step 1 only — auto-detect, no install prompts). Display the summary so the user sees what's available. If critical components are missing (e.g. Blender MCP not connected), warn and offer to run full `/kiln setup`.
 
 **Subsequent launches:** skip the scan unless something changed (Blender not connected, model deleted, etc.).
 
@@ -180,7 +204,7 @@ Collect these parameters. Only type and brief are mandatory — infer the rest f
 | **Mode** (auto / guided) | auto | guided = validation at each step |
 | **Storage** (compact / full) | compact | compact = original + final + .blend + log only |
 | **3D Backend** (local / hf-spaces) | auto-detected | Local if models installed, else HF Spaces |
-| **Hunyuan3D model** | mini | Active model for local backend (see `/kiln:models`) |
+| **Hunyuan3D model** | mini | Active model for local backend (see `/kiln models`) |
 | **HF Space URL** | Jbowyer/Hunyuan3D-2.1 | For HF Spaces backend, overridable |
 | **Auto-open links** | false | Configurable mid-session |
 | **Output folder** (absolute path) | `./generated-assets/` | Confirmed at launch |
@@ -349,7 +373,7 @@ After each tool: show before/after. "Keep? (yes / no / adjust)"
 
 Load `references/cli-tools.md` for commands and parameters.
 
-**Standalone:** `/kiln:optimize` works outside the pipeline.
+**Standalone:** `/kiln optimize` works outside the pipeline.
 
 **Output format:**
 ```
@@ -390,7 +414,7 @@ Save the .blend file via `execute_blender_code`: `bpy.ops.wm.save_as_mainfile(fi
 
 ---
 
-## /kiln:status
+## /kiln status
 
 Show current state at any time:
 
@@ -413,7 +437,7 @@ Note: "Reusable prompts" (concept art prompt, Hunyuan3D params) are stored in th
 
 These commands work independently — no need to run the full pipeline.
 
-### /kiln:inspect
+### /kiln inspect
 
 Inspect any 3D file without importing it into the pipeline.
 
@@ -428,7 +452,7 @@ Anim     {count or "none"}                                         Rig       {ye
 Use `execute_blender_code` to import temporarily, read stats via Python API, then undo/delete.
 For GLB: can also use `gltf-transform inspect {path}` if installed.
 
-### /kiln:cleanup
+### /kiln cleanup
 
 Clean up a mesh already open in Blender (or import one first).
 
@@ -438,7 +462,7 @@ Clean up a mesh already open in Blender (or import one first).
 4. `get_viewport_screenshot()` after each step
 5. If poly count high: propose decimate (always interactive)
 
-### /kiln:texture
+### /kiln texture
 
 Texture an untextured mesh (white mesh from AI generation, or any mesh without materials).
 
@@ -454,7 +478,7 @@ Texture an untextured mesh (white mesh from AI generation, or any mesh without m
 
 **Note on monolithic meshes (AI-generated):** the geometric analysis clusters faces by normal direction, position, and curvature. This works on single-object meshes — it will identify zones (e.g. "top faces = seat", "vertical faces = legs") even without object separation. Results may need manual adjustment for complex shapes.
 
-### /kiln:optimize
+### /kiln optimize
 
 Optimize a GLB file with CLI tools.
 
@@ -476,7 +500,7 @@ Optimize a GLB file with CLI tools.
    ```
 7. User chooses to keep, discard, or adjust parameters
 
-### /kiln:convert
+### /kiln convert
 
 Convert between 3D formats.
 
@@ -499,7 +523,7 @@ Convert between 3D formats.
    {input} → {output} │ {size}
    ```
 
-### /kiln:search
+### /kiln search
 
 Search 3D asset marketplaces.
 
@@ -521,7 +545,7 @@ Search 3D asset marketplaces.
    ```
 5. User can: pick a number to download, open links, refine search, or cancel
 
-### /kiln:help
+### /kiln help
 
 Display all available commands from the Commands table above.
 
@@ -542,13 +566,13 @@ Maintain **cross-asset coherence:**
 
 ---
 
-## /kiln:batch & /kiln:batch run — Batch Mode
+## /kiln batch & /kiln batch run — Batch Mode
 
 Load `references/batch-mode.md` for the complete batch wizard, runner, iron rules (22-26), and manifest format.
 
 **Quick summary:**
-- `/kiln:batch` — wizard collects scene/theme/assets/palette → generates YAML manifest
-- `/kiln:batch run <folder>` — executes manifest autonomously (options: `--all`, `--asset <name>`)
+- `/kiln batch` — wizard collects scene/theme/assets/palette → generates YAML manifest
+- `/kiln batch run <folder>` — executes manifest autonomously (options: `--all`, `--asset <name>`)
 - Manifest is the source of truth: editable, reproducible, versionable
 
 ---
