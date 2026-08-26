@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] — 2026-08-26
+
 ### Fixed — the HuggingFace path had gone stale
 
 - **The default HF Space was paused.** `Jbowyer/Hunyuan3D-2.1`, a community
