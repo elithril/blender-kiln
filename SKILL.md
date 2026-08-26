@@ -176,7 +176,9 @@ in Blender.
 - `gltf-transform` — `npm install -g @gltf-transform/cli`
 - `gltfpack` — `npm install -g gltfpack`
 - `Sketchfab API token` — free account, needed for downloads
-- `Reality Converter` / `usdzconvert` — USDZ export (macOS)
+- `Reality Converter` / `usdzconvert` — **not needed.** Blender exports USDZ
+  natively via `bpy.ops.wm.usd_export`, with more texture maps than the glTF
+  path carries. See `references/export-targets.md` § USDZ
 
 At first launch, run automatic environment detection (see `/kiln setup`). Guide installation for anything missing.
 

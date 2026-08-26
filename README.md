@@ -267,7 +267,7 @@ On Windows + NVIDIA GPU: full pipeline runs locally — shape + texture, zero cl
 - **gltf-transform** — `npm install -g @gltf-transform/cli` (texture compression, Draco)
 - **gltfpack** — `npm install -g gltfpack` (mesh simplification, LOD generation)
 - **Sketchfab API token** — free account, for marketplace downloads
-- **Reality Converter** / **usdzconvert** — USDZ export (macOS)
+- ~~**Reality Converter** / **usdzconvert**~~ — not needed: Blender exports USDZ natively
 
 ## Installation
 

@@ -6,6 +6,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — USDZ export, measured instead of assumed
+
+- **The skill sent users to install two external tools they do not need.**
+  `references/export-targets.md` stated "Blender's native USDZ export is limited"
+  and offered only Reality Converter or `usdzconvert`. Measured on Blender 5.0.1
+  with a full PolyHaven PBR material, the native `bpy.ops.wm.usd_export` produced a
+  1.86 MB archive with four JPEG maps and a complete preview-surface graph — 1
+  `UsdPreviewSurface`, 4 `UsdUVTexture`, 1 `UsdPrimvarReader_float2`, with `normal`,
+  `roughness`, `metallic` and `displacement` connected. That is *more* than the glTF
+  export of the same material carries, which keeps 3 maps and drops displacement.
+  The native path is now documented first, with the parameters that work.
+- **One real constraint found, and it was not the one claimed.**
+  `convert_world_material` defaults to True and writes a `DomeLight` referencing an
+  `.exr` into the archive. The USDZ spec admits PNG and JPEG only, so the archive is
+  non-conforming and iOS Quick Look may reject it. `convert_world_material=False`
+  removes it — verified. This is the sort of specific, checkable limit that
+  "native export is limited" was standing in for.
+- The third and last known instance of one pattern: the skill reimplementing, worse,
+  a capability its own dependency already ships. The other two were Hunyuan3D
+  generation (a ~25 GB local install for something the addon exposes natively) and
+  texturing (a hand-built node graph for three maps where `set_texture` produces
+  sixteen nodes covering seven).
+
 ### Fixed — texturing, exercised against the live PolyHaven API
 
 - **The recommended texturing workflow silently loses over half its texture
