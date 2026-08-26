@@ -189,26 +189,66 @@ bpy.ops.object.mode_set(mode='OBJECT')
 mech_col.is_visible = False
 ```
 
+Verified verbatim on Blender 5.0.1: the three collections are created, `DEF`
+receives its bones, and `MCH` hides.
+
 **Advantage:** A bone can belong to multiple collections. Allows fine-grained control over visibility and selection for animators.
 
 ### 11. Blender 5.x — Layered Actions (Action Slots)
 
-Blender 4.4+ introduces **Layered Actions** with a slots and layers system:
+Blender 4.4+ replaced the flat action with **layered actions**: an action holds
+layers, layers hold strips, and a strip holds one *channelbag* per slot. The
+F-curves live in the channelbag.
+
+**Creating and assigning an action** — this part is unchanged:
 
 ```python
-import bpy
-
-# Create an action with slots
 action = bpy.data.actions.new(name="A_Character_Walk")
-
-# Slots allow linking an action to multiple objects
-# with different channels per slot
-armature_obj = bpy.data.objects['SK_Character']
-armature_obj.animation_data_create()
-armature_obj.animation_data.action = action
+obj = bpy.data.objects['SK_Character']
+obj.animation_data_create()
+obj.animation_data.action = action
 ```
 
-> ⚠️ The Layered Actions API is evolving rapidly between Blender 4.4 and 5.x. Check the Blender version before using these patterns.
+Measured on Blender 5.0.1, that leaves the action **empty**: `len(action.slots) == 0`
+and `len(action.layers) == 0`. Nothing is animated yet.
+
+**The trap.** The next thing to reach for no longer exists:
+
+```python
+action.fcurves.new("location", index=1)
+# AttributeError: 'Action' object has no attribute 'fcurves'
+```
+
+Every pre-4.4 snippet on the internet uses `action.fcurves`, and it fails on any
+current Blender. Nothing in the error hints at slots.
+
+**What works.** Let `keyframe_insert` build the structure, then walk down to the
+F-curves:
+
+```python
+obj.location = (0, 0, 0); obj.keyframe_insert("location", frame=1)
+obj.location = (0, 1, 0); obj.keyframe_insert("location", frame=24)
+
+def fcurves(obj):
+    """Blender 4.4+: F-curves live in a channelbag, one per slot per strip."""
+    action = obj.animation_data.action
+    for layer in action.layers:
+        for strip in layer.strips:
+            for slot in action.slots:
+                bag = strip.channelbag(slot)
+                if bag:
+                    yield from bag.fcurves
+
+# e.g. constant speed, no easing — matters whenever motion must stay in sync
+# with something else (wheel rotation against distance travelled, footfalls
+# against root motion)
+for fc in fcurves(obj):
+    for kp in fc.keyframe_points:
+        kp.interpolation = 'LINEAR'
+```
+
+`keyframe_insert` reuses the assigned action, so the curves land in
+`A_Character_Walk` — verified: 1 slot, 1 layer, 3 F-curves of 2 keyframes each.
 
 ### 12. Mode Switching Gotchas
 
@@ -299,6 +339,12 @@ driver.expression = 'max(0, rot - 0.5) * 2'  # Activates past 30°
 ---
 
 ## Validation Script
+
+Verified against a rig seeded with each defect it claims to catch: non-unit
+armature scale, a second root bone, a bone name with spaces, 5 influences on a
+vertex, unweighted vertices, and shape keys alongside an unapplied modifier.
+**6 of 6 detected**, no false negatives.
+
 
 ```python
 import bpy

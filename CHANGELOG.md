@@ -6,6 +6,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — rigging reference, exercised on a real armature
+
+- **The Layered Actions section stopped exactly where it gets hard.** Its snippet
+  creates and assigns an action, which on Blender 5.0.1 leaves it empty — 0 slots,
+  0 layers. The next thing a reader reaches for, `action.fcurves`, raises
+  `AttributeError: 'Action' object has no attribute 'fcurves'`, because 4.4+ moved
+  F-curves into a channelbag per slot per strip. Every pre-4.4 snippet online uses
+  the old attribute, and nothing in the error hints at slots. The section now
+  carries the walk down to the F-curves, verified: 1 slot, 1 layer, 3 curves of 2
+  keyframes. The previous text hedged with "the API is evolving rapidly" instead of
+  giving the path.
+
+### Verified — no changes needed
+
+- **Bone Collections (section 10) work verbatim** on Blender 5.0.1: three
+  collections created, `DEF` populated by prefix, `MCH` hidden. This is the first
+  section of the skill exercised that needed no correction.
+- **The character validation script catches everything it claims to.** Run against
+  a rig seeded with each defect — non-unit armature scale, a second root bone, a
+  bone name with spaces, 5 influences on a vertex, unweighted vertices, shape keys
+  with an unapplied modifier — it reported **6 of 6**, no false negatives. Both
+  results are now recorded in the reference, since "we tested this" is worth as
+  much to a reader as a fix.
+
 ### Fixed — USDZ export, measured instead of assumed
 
 - **The skill sent users to install two external tools they do not need.**
