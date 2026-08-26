@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — the Blender half of the CI
+
+- **`tools/verify_blender.py`** plus `.github/workflows/blender.yml`, weekly and on
+  demand: eight checks that need Blender running. They cover the findings text
+  analysis cannot reach — `Action.fcurves` removed in 4.4+ and the channelbag walk
+  that replaced it, EEVEE attribute removals and the `BLENDER_EEVEE_NEXT` rename,
+  Principled socket names, Rigify's deform-bone counts against the tiers PHASE 5c
+  routes on, the IK default that makes FK controls silent, geometry nodes needing
+  the modifier applied, and USDZ exporting natively into a conforming archive.
+- Each check reports when a finding has gone *stale* as well as when it breaks: if
+  `Action.fcurves` returns, or a Rigify rig stops defaulting to IK, the run says so
+  rather than passing quietly on advice that is no longer needed.
+- Writing it produced four more false positives — a bare `inputs["..."]` regex
+  matched Normal Map, Mix and Material Output sockets, so `Color`, `Fac`, `Shader`
+  and `Surface` were reported as missing Principled inputs. Narrowed to the
+  Principled node. That is the fourth time this session the same mistake surfaced,
+  which is why both checkers now carry the reasoning in comments.
+
 ### Fixed — geometry nodes, the last untested creation method
 
 - **Iron rule 18 silently destroyed every geometry-nodes asset.** Geometry nodes
