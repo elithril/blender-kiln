@@ -255,7 +255,8 @@ Two Blender API traps cost real debugging time here, because both fail silently:
 
 | Backend | Install | GPU needed | Texture gen | Offline |
 |---|---|---|---|---|
-| **HF Spaces** (default) | `pip3 install gradio_client` | No (cloud) | Yes | No |
+| **MCP native** (recommended) | a checkbox in the addon panel | No (cloud) | Yes | No |
+| **HF Spaces** | `gradio_client` in a venv | No (cloud) | Yes | No |
 | **Local [Hunyuan3D-2](https://github.com/Tencent/Hunyuan3D-2)** | Run `/kiln setup` (~25 GB download) | Optional | CUDA only | Yes |
 
 On Mac (Apple Silicon): local shape generation works via MPS, texture generation falls back to skill's Blender-based texturing.

@@ -116,9 +116,33 @@ else:
 
 ## HF Spaces Backend — Hunyuan3D 2.x
 
-Default Space: `Jbowyer/Hunyuan3D-2.1` (community duplicate, GPU L40S)
-Tested: 2026-04-01, gradio_client 1.3.0
-Note: Gradio API is auto-generated — can break without notice on Space updates.
+**Check the Space is awake before using it.** A community Space pauses when its
+owner stops paying for the GPU, and a paused Space answers HTTP 200 — it looks
+alive. `Jbowyer/Hunyuan3D-2.1`, the previous default here, was measured
+`stage: PAUSED` on 2026-08-26:
+
+```bash
+curl -s https://huggingface.co/api/spaces/<owner>/<name> \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)['runtime']['stage'])"
+# RUNNING  -> usable
+# PAUSED / SLEEPING / BUILD_ERROR -> pick another Space
+```
+
+Candidates, measured 2026-08-26:
+
+| Space | Stage | Likes |
+|---|---|---:|
+| `tencent/Hunyuan3D-2` | RUNNING | 3,370 |
+| `Jbowyer/Hunyuan3D-2.1` | **PAUSED** | 62 |
+
+Prefer the vendor's own Space over a community duplicate: a duplicate depends on
+one person continuing to pay, which is exactly how the old default died.
+
+**Version drift.** This path was last exercised on 2026-04-01 against
+`gradio_client` 1.3.0; PyPI is at 2.6.1 as of 2026-08-26, a major version on.
+The Gradio API here is auto-generated, so it can change shape with the Space or
+the client. Treat the snippet below as a starting point and print
+`client.view_api()` if a call fails, rather than assuming the argument list.
 
 ### Setup
 
@@ -136,7 +160,7 @@ Step 2: **Export** (`/on_export_click`) — exports with optional texture + face
 from gradio_client import Client, handle_file
 
 # Connect to Space
-client = Client("Jbowyer/Hunyuan3D-2.1")
+client = Client("tencent/Hunyuan3D-2")   # verify stage=RUNNING first
 
 # Step 1: Shape generation
 result = client.predict(

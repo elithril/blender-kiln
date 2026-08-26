@@ -397,7 +397,7 @@ config:
   tier: balanced                      # lightweight | balanced | detailed
   storage: compact                    # compact | full
   backend: hf-spaces                  # hf-spaces | local
-  hf_space_url: Jbowyer/Hunyuan3D-2.1  # override if needed
+  hf_space_url: tencent/Hunyuan3D-2    # pre-flight must check stage=RUNNING
   hunyuan_model: mini                 # mini | mini-fast | mini-turbo (local only)
   optimize_preset: resize-1k-webp-draco  # resize-1k-webp-draco | resize-512-webp | none | custom
   output_folder: ./generated-assets/batch-corporate-office-2026-04-02

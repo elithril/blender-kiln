@@ -157,12 +157,15 @@ else:
 # command the recommended path proposed.
 for doc in DOCS:
     for i, line in enumerate(doc.read_text().split("\n"), 1):
-        # `uv pip install`, and any pip reached through a venv path, are the
-        # recommended forms — not what this check is looking for.
-        if re.search(r"(?<!`)\bpip3?\s+install\b", line) \
+        # No backtick exemption: a prescription in markdown IS written in
+        # backticks, and the old lookbehind let `pip3 install gradio_client`
+        # through in the README for the whole audit. Exempt only the forms that
+        # are actually correct — a venv path, uv pip — and prose that is
+        # explicitly warning about bare pip.
+        if re.search(r"\bpip3?\s+install\b", line) \
            and "venv" not in line \
            and not re.search(r"\buv\s+pip\b", line) \
-           and not re.search(r"fail|never|not enough|instead|PEP 668", line, re.I):
+           and not re.search(r"fail|never|not enough|instead|PEP 668|bare pip", line, re.I):
             fail("pip", f"{doc.name}:{i} bare pip install — use a venv: {line.strip()[:70]}")
 
 # ── 8. The plugin manifest is loadable and self-consistent.
