@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — an API on its way out, caught by the CI's first run
+
+- **`Material.use_nodes` is scheduled for removal in Blender 6.0**, and the docs and
+  gallery scripts wrote it in sixteen places. It is already a no-op: a new material
+  in 5.x arrives with a `node_tree`, a Principled BSDF and a Material Output
+  already in place, and `node_tree` stays non-None even with `use_nodes = False`.
+  So every write was doing nothing today and would break in 6.0. Writes removed,
+  reads switched to `node_tree`. The gallery reproduces byte-identically —
+  21,879 tris, 1456.2 kB → 132.7 kB — so the change is inert.
+- **`verify_blender.py` now fails on any `DeprecationWarning`** that the docs or the
+  gallery reach. This one appeared as a single buried line in the very first CI run,
+  where it would have sat until 6.0 broke the documentation. A warning nobody fails
+  on is a warning nobody reads.
+
 ### Added — the Blender half of the CI
 
 - **`tools/verify_blender.py`** plus `.github/workflows/blender.yml`, weekly and on

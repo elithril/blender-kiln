@@ -111,7 +111,6 @@ For stylized/cartoon/low-poly where PBR textures are overkill:
 
 ```python
 mat = bpy.data.materials.new(name="M_Wood_Stylized")
-mat.use_nodes = True
 bsdf = mat.node_tree.nodes.get("Principled BSDF")
 bsdf.inputs["Base Color"].default_value = (0.45, 0.28, 0.14, 1.0)  # warm brown
 bsdf.inputs["Roughness"].default_value = 0.7
@@ -127,7 +126,6 @@ Ready-to-use recipes for common materials. All based on Principled BSDF for GLTF
 #### Metal
 ```python
 mat = bpy.data.materials.new(name="M_Metal_Gold")
-mat.use_nodes = True
 bsdf = mat.node_tree.nodes.get("Principled BSDF")
 bsdf.inputs["Base Color"].default_value = (1.0, 0.766, 0.336, 1.0)  # gold tint
 bsdf.inputs["Metallic"].default_value = 1.0
@@ -138,7 +136,6 @@ Variations: silver `(0.972, 0.960, 0.915)`, copper `(0.955, 0.637, 0.538)`, iron
 #### Glass / Transparent
 ```python
 mat = bpy.data.materials.new(name="M_Glass_Clear")
-mat.use_nodes = True
 bsdf = mat.node_tree.nodes.get("Principled BSDF")
 bsdf.inputs["Base Color"].default_value = (1.0, 1.0, 1.0, 1.0)
 bsdf.inputs["Transmission Weight"].default_value = 1.0
@@ -150,7 +147,6 @@ bsdf.inputs["IOR"].default_value = 1.45         # 1.45-1.52 for glass
 #### Skin / Subsurface Scattering
 ```python
 mat = bpy.data.materials.new(name="M_Skin_Human")
-mat.use_nodes = True
 bsdf = mat.node_tree.nodes.get("Principled BSDF")
 bsdf.inputs["Base Color"].default_value = (0.8, 0.6, 0.5, 1.0)  # skin tone
 bsdf.inputs["Subsurface Weight"].default_value = 0.5
@@ -164,7 +160,6 @@ bsdf.inputs["Metallic"].default_value = 0.0
 #### Emission / Neon
 ```python
 mat = bpy.data.materials.new(name="M_Neon_Blue")
-mat.use_nodes = True
 bsdf = mat.node_tree.nodes.get("Principled BSDF")
 bsdf.inputs["Emission Color"].default_value = (0.0, 0.5, 1.0, 1.0)
 bsdf.inputs["Emission Strength"].default_value = 5.0  # 1-50+
@@ -176,7 +171,6 @@ bsdf.inputs["Emission Strength"].default_value = 5.0  # 1-50+
 # ⚠️ Shader to RGB = EEVEE only, does NOT export to GLTF
 # Use only for Blender preview/render, not for web export
 mat = bpy.data.materials.new(name="M_Toon")
-mat.use_nodes = True
 nodes = mat.node_tree.nodes
 links = mat.node_tree.links
 bsdf = nodes.get("Principled BSDF")
@@ -197,7 +191,6 @@ links.new(ramp.outputs["Color"], output.inputs["Surface"])
 #### Fabric / Textile
 ```python
 mat = bpy.data.materials.new(name="M_Fabric_Cotton")
-mat.use_nodes = True
 bsdf = mat.node_tree.nodes.get("Principled BSDF")
 bsdf.inputs["Base Color"].default_value = (0.3, 0.15, 0.08, 1.0)
 bsdf.inputs["Roughness"].default_value = 0.9
@@ -289,7 +282,7 @@ def bake_channel(obj, channel_type, output_path, resolution=1024):
     
     # Add image texture node to each material (set as active for bake target)
     for slot in obj.material_slots:
-        if not slot.material or not slot.material.use_nodes:
+        if not slot.material or not slot.material.node_tree:   # use_nodes goes in 6.0
             continue
         nodes = slot.material.node_tree.nodes
         img_node = nodes.new('ShaderNodeTexImage')
@@ -313,7 +306,7 @@ def bake_channel(obj, channel_type, output_path, resolution=1024):
     
     # Cleanup temp nodes
     for slot in obj.material_slots:
-        if slot.material and slot.material.use_nodes:
+        if slot.material and slot.material.node_tree:          # use_nodes goes in 6.0
             nodes = slot.material.node_tree.nodes
             temp = nodes.get("__bake_target__")
             if temp:

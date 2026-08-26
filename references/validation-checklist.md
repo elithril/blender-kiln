@@ -130,7 +130,7 @@ for i, slot in enumerate(obj.material_slots):
 
 # Check for missing textures
 for mat in bpy.data.materials:
-    if mat.use_nodes:
+    if mat.node_tree:                      # use_nodes goes in 6.0
         for node in mat.node_tree.nodes:
             if node.type == 'TEX_IMAGE' and node.image is None:
                 print(f"WARNING: Missing texture in material {mat.name}")
@@ -151,7 +151,7 @@ def audit_materials_for_export():
     results = []
     
     for mat in bpy.data.materials:
-        if not mat.use_nodes:
+        if not mat.node_tree:                  # use_nodes goes in 6.0
             continue
         info = {"name": mat.name, "warnings": []}
         has_principled = False

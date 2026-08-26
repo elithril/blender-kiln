@@ -42,7 +42,9 @@ def reset():
 
 def mat(name, base, rough=0.5, metal=0.0, emit=None, emit_str=0.0, alpha=1.0, ior=1.45):
     m = bpy.data.materials.new(name)
-    m.use_nodes = True
+    # No use_nodes = True: a new material in Blender 5.x already carries a
+    # node_tree with a Principled BSDF, and the property is slated for removal
+    # in 6.0. Writing it is a no-op today and a break tomorrow.
     b = m.node_tree.nodes['Principled BSDF']
     b.inputs['Base Color'].default_value = base
     b.inputs['Roughness'].default_value = rough
@@ -127,7 +129,9 @@ def material_audit(obj):
     """
     found = {}
     for m in obj.data.materials:
-        if not m or not m.use_nodes:
+        # node_tree is always present in 5.x, so gate on that rather than on
+        # use_nodes, which is deprecated.
+        if not m or not m.node_tree:
             continue
         reasons = []
         for t in sorted({n.type for n in m.node_tree.nodes if n.type in PROCEDURAL_NODES}):
@@ -237,7 +241,6 @@ def backdrop(scene, world_col=None, ground_col=None, strength=0.42, radius=14.0)
     """Studio ground + world. Each theme passes its own pair of colours."""
     world = bpy.data.worlds.new("studio")
     scene.world = world
-    world.use_nodes = True
     bg = world.node_tree.nodes['Background']
     bg.inputs['Color'].default_value = world_col or BACKDROP
     bg.inputs['Strength'].default_value = strength
