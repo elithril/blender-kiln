@@ -139,7 +139,7 @@ Once installed, the skill directory looks like this:
 
 | File | Content | Lines |
 |---|---|---|
-| `SKILL.md` | Main pipeline, iron rules, commands, setup, model management | ~630 |
+| `SKILL.md` | Main pipeline, iron rules, commands, setup, model management | ~660 |
 | `references/characters.md` | Rigging patterns, anti-patterns, export gotchas, Blender 5.x | ~430 |
 | `references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~410 |
 | `references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~340 |
@@ -153,7 +153,7 @@ Once installed, the skill directory looks like this:
 | `references/setup-install.md` | Model selection, install commands, post-install validation | ~65 |
 | `references/sourcing-strategy.md` | PolyHaven + Sketchfab search patterns | ~65 |
 
-**Total: ~3,225 lines** of production-tested 3D pipeline knowledge.
+**Total: ~3,250 lines** of production-tested 3D pipeline knowledge.
 
 ## Iron rules
 
