@@ -350,6 +350,13 @@ seconds:
 checker catches it — **12/12**. Every case is a mistake that was actually made
 here, including two renumberings that left a reference pointing at the wrong rule.
 
+`tools/verify_blender.py` (`.github/workflows/blender.yml`, weekly and on demand)
+re-checks what needed Blender to establish — the documented `bpy` API still exists,
+the Principled sockets the docs name are real, Rigify's deform-bone counts still
+match the tiers PHASE 5c routes on, geometry nodes still need the modifier applied
+before export, and USDZ still exports natively into a conforming archive. Each of
+those was a shipped bug; this notices when a Blender release makes one wrong again.
+
 ## Iron rules
 
 The skill enforces 31 rules (26 core + 5 batch-specific). Key ones:
