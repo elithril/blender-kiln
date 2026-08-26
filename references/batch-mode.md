@@ -272,16 +272,16 @@ For each asset where `status` is `pending`, `failed`, or `redo` (in manifest ord
 All 21 existing iron rules apply. Additional batch rules:
 
 ```
-22. NEVER switch creation method on failure — skip the asset. DA coherence
+24. NEVER switch creation method on failure — skip the asset. DA coherence
     is more important than completion rate.
-23. NEVER prompt the user during runner execution. All decisions come from
+25. NEVER prompt the user during runner execution. All decisions come from
     the manifest. If a decision can't be made from manifest data, log it
     as an error and skip.
-24. ALWAYS update the manifest file after each asset (status + result).
+26. ALWAYS update the manifest file after each asset (status + result).
     If the process crashes, the manifest reflects progress.
-25. ALWAYS clear the Blender scene between assets. Never carry state from
+27. ALWAYS clear the Blender scene between assets. Never carry state from
     one asset to the next.
-26. BATCH EXCEPTION to Rule 6: In batch runner mode, auto-decimate replaces
+28. BATCH EXCEPTION to Rule 6: In batch runner mode, auto-decimate replaces
     the interactive proposal when poly count >50% above tier range. Log
     before/after stats in the asset log for post-batch review. This is the
     only case where Rule 6 is overridden — Rule 23 (no prompts) takes

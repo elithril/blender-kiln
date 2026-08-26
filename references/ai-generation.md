@@ -1,10 +1,56 @@
 # AI Generation Reference
 
-Two backends available for Hunyuan3D. Local is preferred when configured (faster, offline, no queue).
+**Three backends, in order of preference:**
+
+| Backend | How | Needs | When |
+|---|---|---|---|
+| **Blender MCP native** | `generate_hunyuan3d_model` / `generate_hyper3d_model_via_text` / `_via_images` | a checkbox in the addon panel | default — nothing to install |
+| **Local Hunyuan3D-2** | `hy3dgen` in your own Python | ~25 GB, ideally CUDA | offline work, or full control of the model variant |
+| **HF Spaces** | `gradio_client` | network, tolerance for queues | neither of the above is set up |
+
+---
+
+## MCP-Native Backend — preferred
+
+The Blender MCP addon already ships 3D generation. Reach for this before
+proposing any install: it needs no Python environment, no weights, and no
+gradio client.
+
+**Tencent Hunyuan3D**
+
+```
+get_hunyuan3d_status()                       → is the integration on?
+generate_hunyuan3d_model(...)               → returns a job
+poll_hunyuan_job_status(job_id)     → wait for completion
+import_generated_asset_hunyuan(...) → straight into the scene
+```
+
+**Hyper3D Rodin** — a second, independent backend:
+
+```
+get_hyper3d_status()                    → is the integration on?
+generate_hyper3d_model_via_text(...)            → returns a job
+poll_rodin_job_status(job_id)  → wait for completion
+import_generated_asset(...)    → straight into the scene
+```
+
+**Rule 22 applies here too.** Both integrations are OFF in a default install,
+and while off the addon does not register their commands — the call answers
+`Unknown command type`, not "disabled". Always call `get_hunyuan3d_status()` /
+`get_hyper3d_status()` first and show the remediation from the `message` field: the
+checkboxes live in the BlenderMCP panel of the 3D Viewport sidebar (press N if
+hidden), labelled *Use Tencent Hunyuan 3D model generation* and *Use Hyper3D
+Rodin 3D model generation*.
+
+Rule 5 still binds: Rodin and some Hunyuan tiers are credit-based. Confirm with
+the user before spending anything, and prefer a free backend when one is set up.
 
 ---
 
 ## Local Backend — Hunyuan3D-2 Mini
+
+Use this when you want offline generation or a specific model variant. It is a
+real install, so say so before proposing it.
 
 ### Requirements
 
