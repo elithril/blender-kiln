@@ -80,3 +80,20 @@ When results don't match:
 - User says "more rustic" / "try oak furniture" / "nothing works"
 - Adjust keywords, re-search
 - If nothing found after 2-3 iterations → propose switching to creation
+
+## After download — rules 24 and 25
+
+A PolyHaven or Sketchfab import arrives under the source file's own name
+(`ClassicNightstand_01`), not the project convention. Two things before anything
+downstream reads it:
+
+```
+get_object_info(name)  → world_bounding_box, to verify 1 unit = 1 m (rule 24)
+rename                 → SM_PascalCase + SM_..._Mesh data-block (rule 25)
+```
+
+**Scale is usually right, but check it anyway.** PolyHaven reports dimensions in
+millimetres in its search results (`568 x 424 x 700` for a nightstand) while the
+importer converts to metres, so a correct import measures `0.568 x 0.424 x 0.7`.
+Verified against the live API. A raw 568-unit object means the conversion did not
+happen.

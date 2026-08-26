@@ -332,7 +332,7 @@ Once installed, the skill directory looks like this:
 
 ## Iron rules
 
-The skill enforces 28 rules (23 core + 5 batch-specific). Key ones:
+The skill enforces 30 rules (25 core + 5 batch-specific). Key ones:
 
 1. Always `get_scene_info()` before each phase
 2. Always `get_viewport_screenshot()` after each modification
@@ -346,6 +346,10 @@ The skill enforces 28 rules (23 core + 5 batch-specific). Key ones:
    integration answers `Unknown command type`, not "disabled"
 10. Between batch assets, clear the scene by removing datablocks — never with
     `read_homefile()`, which resets the scene properties holding those flags
+11. Rename every import to the naming convention, whatever its source — a
+    marketplace download arrives under the source file's name
+12. Frame the viewport before screenshotting it, or the verification shot shows
+    an apparently empty scene
 
 ## Output
 

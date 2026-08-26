@@ -156,9 +156,9 @@ Execute a batch manifest autonomously. Zero interaction during execution.
    answers even when the addon is too old to have that command — it reports
    `up_to_date: false` instead. If it does, tell the user to run
    `uvx blender-mcp install-addon` and re-enable the addon, then stop: an
-   outdated addon is missing commands the batch may need, and rule 25 means you
+   outdated addon is missing commands the batch may need, and rule 27 means you
    cannot ask about it later.
-5. **Validate every integration the manifest needs, BEFORE starting.** Rule 25
+5. **Validate every integration the manifest needs, BEFORE starting.** Rule 27
    forbids prompting once the loop is running, so a missing integration must be
    caught here or the batch burns hours failing asset by asset:
 
@@ -207,7 +207,7 @@ For each asset where `status` is `pending`, `failed`, or `redo` (in manifest ord
    A fresh scene resets them all to False, and a disabled integration does not
    error — its command stops being registered, so the next call answers
    `Unknown command type`. Measured: asset 1 succeeds, the clear runs, and every
-   asset after it fails. Rule 25 forbids prompting, so an overnight batch fails
+   asset after it fails. Rule 27 forbids prompting, so an overnight batch fails
    silently from the second asset onward.
 
 3. Execute pipeline phases:
@@ -308,25 +308,25 @@ For each asset where `status` is `pending`, `failed`, or `redo` (in manifest ord
 
 ### Iron Rules (batch-specific)
 
-All 23 core iron rules apply. Additional batch rules:
+All 25 core iron rules apply. Additional batch rules:
 
 ```
-24. NEVER switch creation method on failure — skip the asset. DA coherence
+26. NEVER switch creation method on failure — skip the asset. DA coherence
     is more important than completion rate.
-25. NEVER prompt the user during runner execution. All decisions come from
+27. NEVER prompt the user during runner execution. All decisions come from
     the manifest. If a decision can't be made from manifest data, log it
     as an error and skip.
-26. ALWAYS update the manifest file after each asset (status + result).
+28. ALWAYS update the manifest file after each asset (status + result).
     If the process crashes, the manifest reflects progress.
-27. ALWAYS clear the Blender scene between assets by REMOVING datablocks.
+29. ALWAYS clear the Blender scene between assets by REMOVING datablocks.
     Never carry state from one asset to the next — and never clear with
     read_homefile(), which resets the scene properties the addon keeps its
     integration flags in, silently disabling PolyHaven, Sketchfab, Hunyuan3D
     and Rodin for every remaining asset.
-28. BATCH EXCEPTION to Rule 6: In batch runner mode, auto-decimate replaces
+30. BATCH EXCEPTION to Rule 6: In batch runner mode, auto-decimate replaces
     the interactive proposal when poly count >50% above tier range. Log
     before/after stats in the asset log for post-batch review. This is the
-    only case where Rule 6 is overridden — Rule 25 (no prompts) takes
+    only case where Rule 6 is overridden — Rule 27 (no prompts) takes
     precedence in batch mode.
 ```
 
