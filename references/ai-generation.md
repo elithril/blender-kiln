@@ -116,9 +116,41 @@ else:
 
 ## HF Spaces Backend — Hunyuan3D 2.x
 
-Default Space: `Jbowyer/Hunyuan3D-2.1` (community duplicate, GPU L40S)
-Tested: 2026-04-01, gradio_client 1.3.0
-Note: Gradio API is auto-generated — can break without notice on Space updates.
+**Check the Space is awake before using it.** A community Space pauses when its
+owner stops paying for the GPU. The HTTP endpoint still answers 200, so a browser
+or a `curl` of the page tells you nothing — but `gradio_client` refuses outright,
+which is the useful signal:
+
+```
+ValueError: The current space is in the invalid state: PAUSED.
+            Please contact the owner to fix this.
+```
+
+That is `Jbowyer/Hunyuan3D-2.1`, the previous default here, measured 2026-08-26.
+To check before connecting:
+
+```bash
+curl -s https://huggingface.co/api/spaces/<owner>/<name> \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)['runtime']['stage'])"
+# RUNNING  -> usable
+# PAUSED / SLEEPING / BUILD_ERROR -> pick another Space
+```
+
+Candidates, measured 2026-08-26:
+
+| Space | Stage | Likes |
+|---|---|---:|
+| `tencent/Hunyuan3D-2` | RUNNING | 3,370 |
+| `Jbowyer/Hunyuan3D-2.1` | **PAUSED** | 62 |
+
+Prefer the vendor's own Space over a community duplicate: a duplicate depends on
+one person continuing to pay, which is exactly how the old default died.
+
+**Version drift.** This path was last exercised on 2026-04-01 against
+`gradio_client` 1.3.0; PyPI is at 2.6.1 as of 2026-08-26, a major version on.
+The Gradio API here is auto-generated, so it can change shape with the Space or
+the client. Treat the snippet below as a starting point and print
+`client.view_api()` if a call fails, rather than assuming the argument list.
 
 ### Setup
 
@@ -127,143 +159,56 @@ Note: Gradio API is auto-generated — can break without notice on Space updates
   (a bare `pip3 install` fails on any PEP 668 Python — Homebrew, most Linux distros)
 - Python 3.10+ recommended
 
-### API Flow (2-step)
+### API — verified signature
 
-Step 1: **Shape generation** (`/shape_generation`) — generates white mesh from image
-Step 2: **Export** (`/on_export_click`) — exports with optional texture + face reduction
+Inspected live on `tencent/Hunyuan3D-2`, 2026-08-26, `gradio_client` 2.6.1. The
+Space exposes 12 named endpoints; two matter:
+
+| Endpoint | Returns |
+|---|---|
+| `/shape_generation` | 4 values — mesh `filepath`, `str`, `Dict`, `float` |
+| `/generation_all` | 5 values — mesh + textured `filepath`, `str`, `Dict`, `float` |
+
+Both take the **same 13 parameters**, all with defaults, so pass only what you need:
+
+| Parameter | Type | Default |
+|---|---|---|
+| `caption` | str | None |
+| `image` | filepath | None |
+| `mv_image_front` / `_back` / `_left` / `_right` | filepath | None |
+| `steps` | float | 30 |
+| `guidance_scale` | float | 5.0 |
+| `seed` | float | 1234 |
+| `octree_resolution` | float | 256 |
+| `check_box_rembg` | bool | True |
+| `num_chunks` | float | 8000 |
+| `randomize_seed` | bool | True |
 
 ```python
 from gradio_client import Client, handle_file
 
-# Connect to Space
-client = Client("Jbowyer/Hunyuan3D-2.1")
+client = Client("tencent/Hunyuan3D-2")        # refuses if the Space is paused
 
-# Step 1: Shape generation
 result = client.predict(
-    image=handle_file("path/to/image.png"),
-    mv_image_front=None,
-    mv_image_back=None,
-    mv_image_left=None,
-    mv_image_right=None,
+    image=handle_file("concept.png"),
     steps=30,
-    guidance_scale=5.5,
-    seed=1234,
+    guidance_scale=5.0,
     octree_resolution=256,
     check_box_rembg=True,
-    num_chunks=200000,
-    randomize_seed=True,
-    api_name="/shape_generation",
+    randomize_seed=False,                      # reproducibility
+    seed=1234,
+    api_name="/generation_all",                # or /shape_generation for untextured
 )
-
-# result[0] = GLB path (dict with 'value' key)
-# result[2] = mesh_stats
-glb_path = result[0]["value"]
-mesh_stats = result[2]
-
-# Step 2: Export with optional texture + face reduction
-export = client.predict(
-    mesh_output=handle_file(glb_path),
-    file_type="glb",
-    reduce_face=True,
-    export_texture=True,
-    target_face_num=10000,
-    api_name="/on_export_click",
-)
-
-# export[1] = final GLB path (dict with 'value' key)
-final_glb = export[1]["value"]
+mesh_path = result[0]
 ```
 
-### Generation Modes
+`randomize_seed` defaults to **True**, which makes runs non-reproducible. Set it
+False and fix `seed` when comparing outputs or re-running a batch.
 
-| Mode     | Steps | Time  | Use case                  |
-| -------- | ----- | ----- | ------------------------- |
-| Turbo    | ~10   | ~8s   | Fast iteration, previews  |
-| Fast     | ~20   | ~12s  | Good balance              |
-| Standard | ~30   | ~16s  | Final quality             |
+**If a call fails, print the signature rather than guessing** — this API is
+auto-generated and changes with the Space:
 
-Default: **Standard**. Suggest **Turbo** for iteration, **Standard** for final.
-
-### Octree Resolution
-
-| Level    | Value | Notes           |
-| -------- | ----- | --------------- |
-| Low      | 128   | Fastest         |
-| Standard | 256   | Default         |
-| High     | 512   | Most detail     |
-
-### target_face_num Mapping
-
-| Tier        | Type | target_face_num |
-| ----------- | ---- | --------------- |
-| lightweight | prop | 900             |
-| balanced    | prop | 3250            |
-| detailed    | prop | 10000           |
-| lightweight | hero | 5500            |
-| balanced    | hero | 14000           |
-| detailed    | hero | 50000           |
-| custom      | —    | user-specified  |
-
-### Error Handling
-
-| Error                        | Skill Behavior                                          |
-| ---------------------------- | ------------------------------------------------------- |
-| Timeout >300s                | Inform user, offer to wait or cancel                    |
-| Queue                        | Show position if available                              |
-| Space paused/down            | Show link, offer URL change                             |
-| tex_pipeline not defined     | Export without texture, proceed to TEXTURING phase       |
-| Mesh degenerate (0 faces)   | Offer retry with different seed or approach change       |
-| API schema mismatch          | Inform user, show Space URL                             |
-
-### Concept Art Generation
-
-Three input modes — ask user which they prefer:
-
-#### 1. Text prompt → Pollinations API (default, free, no key)
-
-```bash
-curl -s -o "{output_folder}/{asset_name}_concept.png" \
-  "https://image.pollinations.ai/prompt/{url_encoded_prompt}?width=1024&height=1024&model=flux&nologo=true&seed={seed}"
+```python
+print(client.view_api(return_format="dict")["named_endpoints"]["/generation_all"])
 ```
 
-- Free, no API key required
-- Model: FLUX (via Pollinations)
-- Rate limit: ~1 request per 10s, retry on HTTP 429
-- To iterate: change the prompt or seed, re-run curl
-- Output: PNG 1024x1024
-
-#### 2. User-provided image (path or drag-and-drop)
-
-- User provides a local file path (e.g. `/path/to/concept.png`)
-- Skip generation entirely, pass directly to Hunyuan3D
-- Validate: file exists, is PNG/JPG/WEBP, readable
-
-#### 3. User-provided image URL
-
-- Download via `curl -s -o "{output_folder}/{asset_name}_concept.png" "{url}"`
-- Then treat as local image (mode 2)
-
-#### 4. nano-banana MCP (optional, if configured)
-
-If nano-banana MCP is available and user prefers it:
-- `generate_image(prompt)` — new image from text
-- `continue_editing(prompt)` — iterate on last image
-- `edit_image(imagePath, prompt)` — modify existing image
-- `get_last_image_info()` — get file path of last image
-
-Note: requires Gemini API key with billing enabled (free tier has 0 quota for image generation models).
-
-#### Prompt rules (all modes)
-
-- Object only, transparent/white background, studio lighting
-- Never environment/ground/context
-- Character + rigging → T-pose prompt: `"character in T-pose, arms extended horizontally, palms facing down, legs slightly apart, neutral face, white background"`
-- Accepted formats: PNG (recommended), JPG, WEBP
-- Recommended resolution: 1024x1024 minimum
-
-### Image Requirements for Hunyuan3D
-
-- Transparent or white background (rembg removes it automatically via `check_box_rembg=True`)
-- Single object, well-lit, clear silhouette
-- Front 3/4 view gives best results for single-view
-- Multi-view: only if user provides their own coherent multi-angle images

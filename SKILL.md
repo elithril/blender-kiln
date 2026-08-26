@@ -325,7 +325,7 @@ Collect these parameters. Only type and brief are mandatory — infer the rest f
 | **Storage** (compact / full) | compact | compact = original + final + .blend + log only |
 | **3D Backend** (local / hf-spaces) | auto-detected | Local if models installed, else HF Spaces |
 | **Hunyuan3D model** | mini | Active model for local backend (see `/kiln models`) |
-| **HF Space URL** | Jbowyer/Hunyuan3D-2.1 | For HF Spaces backend, overridable |
+| **HF Space URL** | tencent/Hunyuan3D-2 | HF Spaces backend. Check `stage: RUNNING` first — a paused Space still answers HTTP 200. See `references/ai-generation.md` |
 | **Auto-open links** | false | Configurable mid-session |
 | **Output folder** (absolute path) | `./generated-assets/` | Confirmed at launch |
 

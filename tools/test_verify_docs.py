@@ -81,6 +81,12 @@ def _(root: Path):
     p.write_text(p.read_text() + "\n```bash\npip3 install gradio_client\n```\n")
 
 
+@case("bare pip inside backticks slips through", "pip")
+def _(root: Path):
+    p = root / "README.md"
+    p.write_text(p.read_text() + "\n| **Thing** | `pip3 install something` | note |\n")
+
+
 @case("manifest source stops being a directory", "manifest")
 def _(root: Path):
     p = root / ".claude-plugin" / "marketplace.json"
