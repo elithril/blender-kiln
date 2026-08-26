@@ -74,8 +74,13 @@ nothing and the user gets no response.
     Fallback: solid white. Never environment/ground/context.
 12. SINGLE VIEW by default for AI generation. Multi-view only if user
     provides their own multi-angle images.
-13. ALWAYS generate characters in T-POSE if rigging is planned.
-    Ask the user if the character will be animated; force T-pose if yes.
+13. ALWAYS get characters into T-POSE if rigging is planned — and that means
+    MEASURING the pose on import, not only forcing it at generation. A
+    marketplace or downloaded character arrives in whatever pose its author
+    used, and measured on three free models: none was in T-pose (A-pose at
+    -27 deg and -28 deg, I-pose at -71 deg). Converting is the normal path, not
+    the exception. See PHASE 4 for the measurement and
+    references/characters.md for the conversion.
 14. ALWAYS respect 1 Blender unit = 1 meter. Verify dimensions after import
     with get_object_info() — see rule 24.
 15. ALWAYS name according to conventions (PascalCase + prefixes in Blender,
@@ -107,6 +112,11 @@ nothing and the user gets no response.
     cannot be satisfied from it.
 25. ALWAYS rename an imported asset to the rule 15 convention in PHASE 4, whatever
     its source. Marketplace and AI imports arrive under the source file's name.
+26. NEVER pick a rig without measuring vertices ÷ deform bones first. Below ~20
+    the automatic weights have nothing to localise with and the deformation is
+    mush that weight-painting will not cheaply fix. Measured: a 370-vertex figure
+    on a Rigify human gives 2.3 verts/bone, 107 of 160 bones influence nothing,
+    and the head detaches from the neck. See the RIG SELECTION gate in PHASE 5c.
 ```
 
 ---
@@ -288,7 +298,7 @@ User can switch model or backend at any time during a session.
 ## Pipeline — `/kiln`
 
 ```
-[1] CONFIG → [2] BRIEF → [3] SOURCE → [4] IMPORT → [5] CLEANUP → [5b] TEXTURING → [6] OPTIMIZE → [7] EXPORT
+[1] CONFIG → [2] BRIEF → [3] SOURCE → [4] IMPORT → [5] CLEANUP → [5b] TEXTURING → [5c] RIG (characters) → [6] OPTIMIZE → [7] EXPORT
 ```
 
 ### [1] CONFIG — Collect Parameters
@@ -376,7 +386,7 @@ IF type = character
     → recommend AI
     → ASK: "Will this character need rigging/animation?"
       IF yes → force T-pose in concept image prompt
-    → note: full rigging is phase 2
+              → record it: the RIG SELECTION gate in PHASE 5c depends on it
 
 ELSE
     → present both options without recommendation
@@ -445,6 +455,30 @@ get_scene_info() → import via execute_blender_code
 → frame the viewport, THEN get_viewport_screenshot     (rule 2)
 ```
 
+**Measure the pose (rule 13) — characters only.** Do it here, before anything
+downstream assumes a rest pose. Measure **shoulder to hand**, never a horizontal
+slice of the mesh: a slice picks up hip and thigh vertices and reported -17 deg
+on a body whose arms were actually at -71 deg.
+
+```python
+cos = [v.co for v in mesh.data.vertices]
+H = max(c.z for c in cos)
+right = [c for c in cos if c.x > 0]
+hand = max(right, key=lambda c: c.x)
+torso_w = max(c.x for c in cos if abs(c.z - H * 0.75) < H * 0.02)
+shoulder = max((c for c in right if abs(c.x - torso_w) < 0.03), key=lambda c: c.z)
+angle = math.degrees(math.atan2(hand.z - shoulder.z, hand.x - shoulder.x))
+```
+
+| Angle | Pose | Action |
+|---|---|---|
+| within ±15 deg | T-pose | proceed |
+| -15 to -45 deg | A-pose | convert — see `references/characters.md` § Converting a pose to T-pose |
+| below -45 deg | I-pose, arms at the sides | convert; this is the hardest case, the arms touch the torso |
+
+A T-pose also shows in the silhouette: **wingspan ≈ height**. The reference body
+measured 1.68 m across for 1.69 m tall once converted.
+
 **Rename on import — every method, not just scripted.** A marketplace download
 lands under whatever name the source file carried (`ClassicNightstand_01`), and an
 AI-generated mesh under whatever the importer chose. Neither satisfies rule 15, so
@@ -490,6 +524,45 @@ Execute the full cleanup sequence from `references/validation-checklist.md` § E
 
 **Auto mode:** non-destructive cleanup runs automatically. Decimate remains interactive.
 **Guided mode:** show each step, wait for validation.
+
+### [5c] RIG SELECTION — characters only (rule 26)
+
+Runs after CLEANUP, once the mesh is final. **Measure before choosing**, never the
+other way round:
+
+```python
+verts  = len(mesh.data.vertices)
+budget = verts / 20          # deform bones this mesh can actually carry
+```
+
+Then pick from what Rigify ships — bone counts measured on Blender 5.0.1:
+
+| Mesh vertices | Choose | Deform bones | Verts/bone |
+|---:|---|---:|---:|
+| < 700 | **Hand-built rig, 12-20 bones.** See `references/characters.md` § Match the rig's density | 12-20 | 20-35 |
+| 700 - 3,000 | `bpy.ops.object.armature_basic_human_metarig_add()` | 35 | 20-85 |
+| > 3,000 | `bpy.ops.object.armature_human_metarig_add()` | 160 | 20+ |
+| quadruped, > 900 | `bpy.ops.object.armature_basic_quadruped_metarig_add()` | 46 | 20+ |
+
+**A Rigify human needs ~3,200 vertices to be worth it.** Below that it is actively
+worse than a small rig: on a 370-vertex figure it left 107 of its 160 deform bones
+influencing nothing, smeared the rest across 8-9 bones per vertex, and detached the
+head. Do not reach for the biggest rig because it is the most capable one.
+
+**After skinning, verify — do not assume:**
+
+```python
+dead = sum(1 for vg in mesh.vertex_groups
+           if not any(g.group == vg.index and g.weight > 0.01
+                      for v in mesh.data.vertices for g in v.groups))
+```
+
+Any dead deform bone means the rig is too dense for the mesh. Go down a tier.
+Then run the validator in `references/characters.md` § Validation Script.
+
+**Posing a generated Rigify rig?** Its limbs ship in IK, so the FK controls do
+nothing until you flip them — see `references/characters.md` § FK/IK System. This
+fails silently: no error, no movement.
 
 ### [5b] TEXTURING
 

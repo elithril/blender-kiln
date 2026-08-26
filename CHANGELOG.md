@@ -6,6 +6,119 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — pose is now measured, not assumed
+
+- **Iron rule 13 only covered generation.** It said to generate characters in
+  T-pose, and stopped there — so a marketplace or downloaded character went
+  straight to rigging in whatever pose its author used, unmeasured. Rule 13 now
+  requires measuring the pose on import, and PHASE 4 carries the measurement.
+- **T-pose is not available from free libraries.** Measured on three: Khronos
+  `RiggedFigure` A-pose at -26.8°, Khronos `CesiumMan` A-pose at -28.2°, Blender's
+  Human Base Meshes I-pose at -70.8°. A-pose and arms-down are *modelling*
+  conventions; T-pose is a *rigging* convention. So converting is the normal path,
+  and `references/characters.md` now documents it rather than assuming a T-posed
+  source appears.
+- **The pose measurement has to be shoulder-to-hand.** A horizontal slice of the
+  mesh picks up hip and thigh vertices: it reported -17° on a body whose arms were
+  at -71°, an error of 53°. The check is now written down, along with the
+  silhouette test that catches a bad conversion — wingspan ≈ height.
+- **Documented the conversion that works, and three that do not.** Building a
+  throwaway rig for its arm *weights*, then rotating vertices about the shoulder
+  scaled by that weight, gives a clean shoulder. Selecting arm vertices
+  geometrically puts the pivot on the skull; posing with Euler angles on a bone
+  picks the wrong local axis; and the right axis with the wrong sign pushes the
+  arms further down. Each of those is recorded with the number it produced, plus
+  the two lines of trigonometry that settle the sign before you run anything.
+- **Recorded a CC0 source.** Blender's Human Base Meshes bundle, with its two
+  traps: the asset entries are preview *cameras* (geometry is under `GEO-`), and an
+  object appended as a dependency can land in no collection at all and never appear.
+
+### Changed — the skill now picks the rig instead of leaving it to judgment
+
+- **New PHASE 5c, RIG SELECTION, in `SKILL.md`** — not buried in a reference the
+  model may never load. It measures the mesh first and routes from the count, with
+  the tiers measured on Blender 5.0.1:
+
+  | Mesh vertices | Rig | Deform bones |
+  |---:|---|---:|
+  | < 700 | hand-built, 12-20 bones | 12-20 |
+  | 700 - 3,000 | `armature_basic_human_metarig_add` | 35 |
+  | > 3,000 | `armature_human_metarig_add` | 160 |
+  | quadruped > 900 | `armature_basic_quadruped_metarig_add` | 46 |
+
+  **A Rigify human needs ~3,200 vertices to be worth it.** The gate also carries the
+  post-skinning check for dead deform bones, and the pointer to the silent IK/FK
+  trap. The 370-vertex figure that produced mush now routes to the hand-built rig.
+- **New iron rule 26**: never pick a rig without measuring vertices ÷ deform bones.
+  Core rules become 1-26, batch 27-31, 31 total. Every cross-reference re-audited
+  by meaning — 0 invalid, and rules 15, 22, 23, 24, 26 and 28 each verified to say
+  what the citation claims.
+
+### Fixed — rigging reference, exercised on a real armature
+
+- **The Layered Actions section stopped exactly where it gets hard.** Its snippet
+  creates and assigns an action, which on Blender 5.0.1 leaves it empty — 0 slots,
+  0 layers. The next thing a reader reaches for, `action.fcurves`, raises
+  `AttributeError: 'Action' object has no attribute 'fcurves'`, because 4.4+ moved
+  F-curves into a channelbag per slot per strip. Every pre-4.4 snippet online uses
+  the old attribute, and nothing in the error hints at slots. The section now
+  carries the walk down to the F-curves, verified: 1 slot, 1 layer, 3 curves of 2
+  keyframes. The previous text hedged with "the API is evolving rapidly" instead of
+  giving the path.
+
+- **The validation script raised three false alarms on a production rig.** Run
+  against a generated Rigify human it flagged 10 root bones, 706 bones against a
+  75-bone mobile limit, and 486 names with "special characters". All three were
+  wrong in the way that matters — they fire on a correct rig:
+  - the 10 parentless bones are mechanism bones, **none of them deform**;
+  - the 75-bone budget applies to the skin palette, and the same rig has **160
+    deform bones**, not 706;
+  - the offending character is the **hyphen** in Rigify's own `DEF-spine` /
+    `MCH-torso` convention, which survives glTF and FBX intact — verified, 486
+    hyphenated node names in the exported GLB.
+
+  It now counts deforming bones and deforming roots, and allows hyphens.
+  Re-verified both ways: **2 alerts on the Rigify rig, both genuine**, and still
+  **6 of 6** on the seeded rig.
+- **`export_def_bones` was never mentioned anywhere.** Nor was `use_deform`. Without
+  it the glTF exporter ships every control and mechanism bone as a joint: measured
+  on the Rigify human, 865 joints and 255 kB become **319 joints and 98 kB**. The
+  validator now points at it whenever total bones far exceed deforming ones.
+- **Rigify had one table row and no code**, despite being the only free, built-in,
+  offline auto-rigging option. It now has the three calls that work — including
+  that `addon_utils.enable()` is not enough: it loads the module but leaves
+  `RigifyParameters` incomplete, so generation dies on
+  `'RigifyParameters' object has no attribute 'make_custom_pivot'`, which names
+  nothing relevant. `bpy.ops.preferences.addon_enable(module="rigify")` is the one
+  that works.
+
+- **Nothing said to match the rig's density to the mesh's.** Rigging a real CC-BY
+  character (Khronos `RiggedFigure`, 370 vertices) with a Rigify human produced
+  visible mush: the head detached at the neck and the limbs collapsed into the
+  torso. Cause, measured: **2.3 vertices per deform bone**, and **107 of the 160
+  deform bones influenced nothing at all** — automatic weights had no geometry to
+  localise them, so the vertices that were weighted got smeared across 8 or 9 bones
+  each. The same mesh, same pose, on a 13-bone rig sized to it: 28.5 vertices per
+  bone, 0 dead bones, volume held. The reference now says to check the ratio before
+  choosing a rig, and gives the one-line check.
+- **A freshly generated Rigify rig ignores its own FK controls, silently.** Every
+  limb ships `IK_FK = 0.0`, so IK drives the chain and rotating `upper_arm_fk.L`
+  moves nothing — measured, 0 of 370 vertices displaced, with no error or warning.
+  Setting it to 1.0 moved 221 of 370 on the same pose. Documented as the first thing
+  to check when a Rigify pose "does not apply".
+
+### Verified — no changes needed
+
+- **Bone Collections (section 10) work verbatim** on Blender 5.0.1: three
+  collections created, `DEF` populated by prefix, `MCH` hidden. This is the first
+  section of the skill exercised that needed no correction.
+- **The character validation script catches everything it claims to.** Run against
+  a rig seeded with each defect — non-unit armature scale, a second root bone, a
+  bone name with spaces, 5 influences on a vertex, unweighted vertices, shape keys
+  with an unapplied modifier — it reported **6 of 6**, no false negatives. Both
+  results are now recorded in the reference, since "we tested this" is worth as
+  much to a reader as a fix.
+
 ### Fixed — USDZ export, measured instead of assumed
 
 - **The skill sent users to install two external tools they do not need.**
