@@ -18,6 +18,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   keyframes. The previous text hedged with "the API is evolving rapidly" instead of
   giving the path.
 
+- **The validation script raised three false alarms on a production rig.** Run
+  against a generated Rigify human it flagged 10 root bones, 706 bones against a
+  75-bone mobile limit, and 486 names with "special characters". All three were
+  wrong in the way that matters — they fire on a correct rig:
+  - the 10 parentless bones are mechanism bones, **none of them deform**;
+  - the 75-bone budget applies to the skin palette, and the same rig has **160
+    deform bones**, not 706;
+  - the offending character is the **hyphen** in Rigify's own `DEF-spine` /
+    `MCH-torso` convention, which survives glTF and FBX intact — verified, 486
+    hyphenated node names in the exported GLB.
+
+  It now counts deforming bones and deforming roots, and allows hyphens.
+  Re-verified both ways: **2 alerts on the Rigify rig, both genuine**, and still
+  **6 of 6** on the seeded rig.
+- **`export_def_bones` was never mentioned anywhere.** Nor was `use_deform`. Without
+  it the glTF exporter ships every control and mechanism bone as a joint: measured
+  on the Rigify human, 865 joints and 255 kB become **319 joints and 98 kB**. The
+  validator now points at it whenever total bones far exceed deforming ones.
+- **Rigify had one table row and no code**, despite being the only free, built-in,
+  offline auto-rigging option. It now has the three calls that work — including
+  that `addon_utils.enable()` is not enough: it loads the module but leaves
+  `RigifyParameters` incomplete, so generation dies on
+  `'RigifyParameters' object has no attribute 'make_custom_pivot'`, which names
+  nothing relevant. `bpy.ops.preferences.addon_enable(module="rigify")` is the one
+  that works.
+
 ### Verified — no changes needed
 
 - **Bone Collections (section 10) work verbatim** on Blender 5.0.1: three

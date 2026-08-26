@@ -359,21 +359,34 @@ def validate_character_rig(armature_obj):
         warnings.append("🔴 Armature scale ≠ 1.0. Apply scale first.")
     
     # Check root bone
-    root_bones = [b for b in armature.bones if not b.parent]
-    if len(root_bones) != 1:
-        warnings.append(f"🔴 Expected 1 root bone, found {len(root_bones)}: {[b.name for b in root_bones]}")
-    elif root_bones[0].name != 'Root':
+    # Only DEFORMING parentless bones are a problem. A control rig legitimately
+    # has several parentless mechanism bones — a generated Rigify human has 10,
+    # none of which deform.
+    root_bones = [b for b in armature.bones if not b.parent and b.use_deform]
+    if len(root_bones) > 1:
+        warnings.append(f"🔴 {len(root_bones)} deforming root bones: {[b.name for b in root_bones]}")
+    elif len(root_bones) == 1 and root_bones[0].name not in ('Root', 'root'):
         warnings.append(f"🟡 Root bone named '{root_bones[0].name}', expected 'Root'.")
-    
-    # Count bones
-    bone_count = len(armature.bones)
-    if bone_count > 75:
-        warnings.append(f"🟠 {bone_count} bones. Mobile limit ~75 per draw call.")
-    
-    # Check for bones with spaces/special chars in names
+
+    # Count DEFORM bones, not total. The budget applies to what the skin palette
+    # carries, and a control rig is mostly controls: the same Rigify human is 706
+    # bones but 160 deforming.
+    deform_count = sum(1 for b in armature.bones if b.use_deform)
+    total_count = len(armature.bones)
+    if deform_count > 75:
+        warnings.append(f"🟠 {deform_count} deform bones. Mobile limit ~75 per draw call.")
+    if total_count > deform_count * 2:
+        warnings.append(
+            f"🟡 {total_count} bones total for {deform_count} deforming. glTF exports "
+            f"ALL of them as joints by default — pass export_def_bones=True. Measured "
+            f"on a Rigify human: 865 joints / 255 kB becomes 319 joints / 98 kB.")
+
+    # Hyphens are fine: they are Rigify's own convention (DEF-spine, MCH-torso) and
+    # survive glTF and FBX intact — verified, 486 hyphenated node names in the GLB.
+    # Spaces and everything else are the real risk.
     import re
     for bone in armature.bones:
-        if re.search(r'[^a-zA-Z0-9_.]', bone.name):
+        if re.search(r'[^a-zA-Z0-9_.\-]', bone.name):
             warnings.append(f"🟡 Bone '{bone.name}' has special characters. May cause export issues.")
     
     # Check vertex groups on child meshes
@@ -415,9 +428,38 @@ def validate_character_rig(armature_obj):
 | Tool | Type | Best for | Notes |
 |---|---|---|---|
 | **Mixamo** | Web service (free) | Standard humanoids | Upload mesh, auto-rig + 2500 animations. Requires Adobe account. |
-| **Rigify** | Blender addon (built-in) | All types | Configurable meta-rig, production-ready. More control than Mixamo. |
+| **Rigify** | Blender addon (built-in) | All types | Configurable meta-rig, production-ready. Free and offline — see below. |
 | **AccuRIG** (Reallusion) | Desktop app (free) | Detailed humanoids | Better results than Mixamo on hands/fingers. |
 | **Auto-Rig Pro** | Blender addon (paid ~$40) | Production | Smart retopo + rig + game-ready export. |
+
+### Rigify from Python
+
+The only free, built-in, offline option. Three calls:
+
+```python
+import bpy
+
+# addon_utils.enable() is NOT enough — it loads the module but leaves the
+# RigifyParameters property group incomplete, and generation then dies on
+# "'RigifyParameters' object has no attribute 'make_custom_pivot'", which says
+# nothing about the real cause. Use the preferences operator.
+bpy.ops.preferences.addon_enable(module="rigify")
+
+bpy.ops.object.armature_human_metarig_add()   # 159-bone metarig, editable
+bpy.ops.pose.rigify_generate()                # -> full control rig
+```
+
+Measured on Blender 5.0.1: the generated human rig is **706 bones, 160 of them
+deforming, across 23 bone collections** (Face, Torso, `Arm.L (IK)`, `Arm.L (FK)`,
+Fingers…). Position the metarig on your mesh first — generating is cheap and
+repeatable, editing a generated rig is not.
+
+Two consequences for export, both easy to miss:
+
+- Pass `export_def_bones=True` to the glTF exporter. Without it every control and
+  mechanism bone ships as a joint.
+- Rigify names bones `DEF-spine`, `MCH-torso`. Those hyphens are fine — verified
+  through both glTF and FBX.
 
 ## Retopology Tools
 
