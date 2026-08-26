@@ -147,7 +147,8 @@ Download from Apple Developer: `https://developer.apple.com/augmented-reality/to
 
 ### Option 2: usdzconvert (CLI)
 ```bash
-pip3 install usd-core
+# Bare pip3 fails on PEP 668 Pythons; use a venv.
+python3 -m venv ~/.kiln/venv && ~/.kiln/venv/bin/pip install usd-core
 # Then:
 usdzconvert input.glb output.usdz
 ```

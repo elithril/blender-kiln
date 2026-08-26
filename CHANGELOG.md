@@ -6,6 +6,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — `/kiln setup`, exercised for the first time
+
+- **Every `pip3 install` in the skill failed.** All six of them, including
+  `pip3 install gradio_client` — the first install the "recommended to start"
+  path proposes. Homebrew and most Linux distros ship an externally-managed
+  Python (PEP 668), where a bare `pip3 install` errors out with
+  `externally-managed-environment`. All six now create and use a venv, and
+  SKILL.md explains why before any pip is proposed.
+- **Five of the eleven fields in the environment report had no command to fill
+  them**: Blender MCP status, models list, device, nano-banana, and the PEP 668
+  warning. SKILL.md now carries a table pairing every field with its command and
+  its gotcha.
+- **The report asked for VRAM on Apple Silicon, where there is none.**
+  `system_profiler SPDisplaysDataType` reports no VRAM line — memory is unified.
+  The template now says "unified" and uses `sysctl -n hw.memsize`.
+- **Device detection was circular**: it wanted `cuda / mps / cpu`, which only
+  `torch` can confirm, and torch is not installed until a local backend is. It now
+  reports "unknown" rather than guessing, with `nvidia-smi` and
+  `platform.machine()` as the pre-torch signals.
+- **Backend choice did not offer the MCP-native path** documented in the previous
+  release, and asked the user to choose without first checking
+  `get_hunyuan3d_status()` / `get_hyper3d_status()` to see if it was already on.
+- Blender MCP detection now uses `get_addon_status()`, which also reports whether
+  the addon is behind the server's protocol — a raw port check only proves
+  something is listening.
+
 ### Fixed — batch mode, exercised for the first time
 
 - **The batch runner disabled the integrations it depends on, between every
