@@ -2,7 +2,15 @@
   <img src="blender-kiln-logo.png" alt="blender-kiln logo" width="200" />
 </p>
 
-# blender-kiln — The 3D Asset Forge
+<h1 align="center">blender-kiln — The 3D Asset Forge</h1>
+
+<p align="center">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg" /></a>
+  <img alt="Claude Code plugin" src="https://img.shields.io/badge/Claude%20Code-plugin-d97757" />
+  <img alt="Blender 4.x+" src="https://img.shields.io/badge/Blender-4.x%2B-e87d0d?logo=blender&logoColor=white" />
+  <img alt="Blender MCP" src="https://img.shields.io/badge/Blender-MCP-6c5ce7" />
+  <a href="https://github.com/elithril/blender-kiln/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/elithril/blender-kiln?style=flat" /></a>
+</p>
 
 A complete 3D asset production pipeline for Claude Code, powered by Blender MCP.
 
@@ -88,19 +96,26 @@ On Windows + NVIDIA GPU: full pipeline runs locally — shape + texture, zero cl
 
 ## Installation
 
-### Claude Code CLI
+### As a Claude Code plugin (recommended)
+
+```
+/plugin marketplace add elithril/blender-kiln
+/plugin install blender-kiln@blender-kiln
+```
+
+Then run `/kiln:setup` to detect your environment and install what's missing.
+
+### As a standalone skill
 
 ```bash
-# From the skill marketplace
-npx skills add blender-kiln
-
-# Or manually: clone into your skills directory
 git clone https://github.com/elithril/blender-kiln.git ~/.claude/skills/blender-kiln
 ```
 
-### Manual
+Restart Claude Code, then run `/kiln:setup`.
 
-Copy the `blender-kiln/` folder into your Claude Code skills directory:
+### Layout
+
+Once installed, the skill directory looks like this:
 
 ```
 ~/.claude/skills/blender-kiln/
@@ -195,4 +210,4 @@ At the end of a multi-asset session, Kiln proposes a cleanup of intermediate fil
 
 ## License
 
-MIT
+[MIT](LICENSE) © Nicolas Dolphens
