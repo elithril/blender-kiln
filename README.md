@@ -314,7 +314,7 @@ Once installed, the skill directory looks like this:
 
 | File | Content | Lines |
 |---|---|---|
-| `SKILL.md` | Main pipeline, iron rules, MCP tool surface, commands, setup | ~710 |
+| `SKILL.md` | Main pipeline, iron rules, MCP tool surface, commands, setup | ~880 |
 | `references/characters.md` | Rigging patterns, anti-patterns, export gotchas, Blender 5.x | ~430 |
 | `references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~410 |
 | `references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~340 |
@@ -328,7 +328,26 @@ Once installed, the skill directory looks like this:
 | `references/setup-install.md` | Model selection, install commands, post-install validation | ~65 |
 | `references/sourcing-strategy.md` | PolyHaven + Sketchfab search patterns | ~65 |
 
-**Total: ~3,250 lines** of production-tested 3D pipeline knowledge.
+**Total: ~3,870 lines** of production-tested 3D pipeline knowledge.
+
+## Continuous checks
+
+`tools/verify_docs.py` runs on every push (`.github/workflows/verify.yml`) and
+checks that this documentation is still true — text only, no Blender, a few
+seconds:
+
+- iron rules form one unbroken 1..N sequence across `SKILL.md` and `batch-mode.md`
+- every cited `rule N` exists **and means what the citation claims**
+- the rule count above matches reality
+- every referenced file exists, and none point outside the plugin directory
+- every README image resolves
+- no bare `pip install` (it fails on any PEP 668 Python)
+- the plugin manifest is valid and its `source` is a real directory
+- documented commands use the invocable `/kiln <sub>` form
+
+`tools/test_verify_docs.py` seeds each of those regressions and asserts the
+checker catches it — **11/11**. Every case is a mistake that was actually made
+here, including two renumberings that left a reference pointing at the wrong rule.
 
 ## Iron rules
 
