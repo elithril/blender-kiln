@@ -151,8 +151,29 @@ Execute a batch manifest autonomously. Zero interaction during execution.
 1. Read `{batch-folder}/batch-manifest.yaml`
 2. Validate: all palette materials have valid sources, all assets have required fields
 3. Run environment scan (Step 1 of `/kiln setup` — auto-detect only, no prompts)
-4. Verify Blender MCP is connected
-5. Display batch summary:
+4. Verify Blender MCP is connected: `get_addon_status()`. This is an
+   MCP-server-side aggregation over the addon's `get_addon_info` command, so it
+   answers even when the addon is too old to have that command — it reports
+   `up_to_date: false` instead. If it does, tell the user to run
+   `uvx blender-mcp install-addon` and re-enable the addon, then stop: an
+   outdated addon is missing commands the batch may need, and rule 25 means you
+   cannot ask about it later.
+5. **Validate every integration the manifest needs, BEFORE starting.** Rule 25
+   forbids prompting once the loop is running, so a missing integration must be
+   caught here or the batch burns hours failing asset by asset:
+
+   | Any asset with | Check |
+   |---|---|
+   | `method: marketplace` | `get_polyhaven_status()` and `get_sketchfab_status()` |
+   | `method: hunyuan3d` + `config.backend: mcp` | `get_hunyuan3d_status()` |
+   | Rodin generation | `get_hyper3d_status()` |
+
+   If a needed integration is off, ABORT the batch and print the `message` field
+   from the status call — it names the checkbox and the sidebar panel. Do not
+   start and hope. Ticking the box takes effect immediately; the addon's message
+   says to restart the connection, but that is not required (verified).
+
+6. Display batch summary:
 
 ```
 ── Batch: {name} ───────────────────────────
@@ -168,8 +189,26 @@ For each asset where `status` is `pending`, `failed`, or `redo` (in manifest ord
 ```
 1. Update manifest: status → "running"
 
-2. Clear Blender scene:
-   execute_blender_code → bpy.ops.wm.read_homefile(use_empty=True)
+2. Clear Blender scene — by DELETING datablocks, never with read_homefile:
+
+   execute_blender_code →
+     import bpy
+     for o in list(bpy.data.objects):
+         bpy.data.objects.remove(o, do_unlink=True)
+     for blk in (bpy.data.meshes, bpy.data.materials, bpy.data.images,
+                 bpy.data.node_groups, bpy.data.armatures):
+         for d in list(blk):
+             if d.users == 0:
+                 blk.remove(d)
+
+   NEVER `bpy.ops.wm.read_homefile(use_empty=True)`. It builds a fresh scene,
+   and the addon stores every integration flag as a SCENE property
+   (`scene.blendermcp_use_polyhaven`, `_sketchfab`, `_hunyuan3d`, `_hyper3d`).
+   A fresh scene resets them all to False, and a disabled integration does not
+   error — its command stops being registered, so the next call answers
+   `Unknown command type`. Measured: asset 1 succeeds, the clear runs, and every
+   asset after it fails. Rule 25 forbids prompting, so an overnight batch fails
+   silently from the second asset onward.
 
 3. Execute pipeline phases:
 
@@ -269,7 +308,7 @@ For each asset where `status` is `pending`, `failed`, or `redo` (in manifest ord
 
 ### Iron Rules (batch-specific)
 
-All 21 existing iron rules apply. Additional batch rules:
+All 23 core iron rules apply. Additional batch rules:
 
 ```
 24. NEVER switch creation method on failure — skip the asset. DA coherence
@@ -279,12 +318,15 @@ All 21 existing iron rules apply. Additional batch rules:
     as an error and skip.
 26. ALWAYS update the manifest file after each asset (status + result).
     If the process crashes, the manifest reflects progress.
-27. ALWAYS clear the Blender scene between assets. Never carry state from
-    one asset to the next.
+27. ALWAYS clear the Blender scene between assets by REMOVING datablocks.
+    Never carry state from one asset to the next — and never clear with
+    read_homefile(), which resets the scene properties the addon keeps its
+    integration flags in, silently disabling PolyHaven, Sketchfab, Hunyuan3D
+    and Rodin for every remaining asset.
 28. BATCH EXCEPTION to Rule 6: In batch runner mode, auto-decimate replaces
     the interactive proposal when poly count >50% above tier range. Log
     before/after stats in the asset log for post-batch review. This is the
-    only case where Rule 6 is overridden — Rule 23 (no prompts) takes
+    only case where Rule 6 is overridden — Rule 25 (no prompts) takes
     precedence in batch mode.
 ```
 

@@ -344,6 +344,8 @@ The skill enforces 28 rules (23 core + 5 batch-specific). Key ones:
 8. Never use `gltf-transform optimize` — use individual steps
 9. Always check integration status before searching a marketplace — a disabled
    integration answers `Unknown command type`, not "disabled"
+10. Between batch assets, clear the scene by removing datablocks — never with
+    `read_homefile()`, which resets the scene properties holding those flags
 
 ## Output
 

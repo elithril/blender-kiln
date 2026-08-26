@@ -133,6 +133,23 @@ command only while its checkbox is ticked, so calling it while off returns
 `Unknown command type: <name>` — indistinguishable from a version mismatch. The
 `get_*_status` tools are always registered and carry the fix. Hence rule 22.
 
+**Ticking a box takes effect immediately.** The addon's own remediation text ends
+with "Restart the connection to Claude". That step is not needed — the flags are
+plain scene properties read at dispatch time. Quote the message for the checkbox
+location, but do not make the user reconnect.
+
+**Two layers, different names.** These are MCP tool names. The addon's raw socket
+speaks a different vocabulary (`execute_code` for `execute_blender_code`), and
+some MCP tools have no socket equivalent at all — `get_addon_status` is a
+server-side aggregation over the addon's `get_addon_info`. Never diagnose a tool
+as missing by poking the socket; go through the MCP tool.
+
+**Check the addon version once per session.** `get_addon_status()` reports
+`up_to_date`. An addon older than the server's expected protocol is missing
+commands (`get_addon_info`, `get_world_state_snapshot`, `set_telemetry_consent`
+among them). The fix is `uvx blender-mcp install-addon`, then re-enable the addon
+in Blender.
+
 ---
 
 ## Dependencies
@@ -707,6 +724,3 @@ Axis conversion at export is automatic.
 | CLI tools (gltf-transform, gltfpack) | `references/cli-tools.md` |
 | Characters, rigging (phase 2) | `references/characters.md` |
 | Batch mode (wizard, runner, manifest) | `references/batch-mode.md` |
-| Artistic framing | `../creative-excellence/SKILL.md` |
-| Three.js/R3F compatibility | `../threejs-r3f/SKILL.md` |
-| Animation principles | `../motion-principles/SKILL.md` |
