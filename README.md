@@ -139,7 +139,7 @@ Once installed, the skill directory looks like this:
 
 | File | Content | Lines |
 |---|---|---|
-| `SKILL.md` | Main pipeline, iron rules, commands, setup, model management | ~660 |
+| `SKILL.md` | Main pipeline, iron rules, MCP tool surface, commands, setup | ~710 |
 | `references/characters.md` | Rigging patterns, anti-patterns, export gotchas, Blender 5.x | ~430 |
 | `references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~410 |
 | `references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~340 |
@@ -157,7 +157,7 @@ Once installed, the skill directory looks like this:
 
 ## Iron rules
 
-The skill enforces 26 rules (21 core + 5 batch-specific). Key ones:
+The skill enforces 28 rules (23 core + 5 batch-specific). Key ones:
 
 1. Always `get_scene_info()` before each phase
 2. Always `get_viewport_screenshot()` after each modification
@@ -167,6 +167,8 @@ The skill enforces 26 rules (21 core + 5 batch-specific). Key ones:
 6. Never `export_apply=True` for GLTF — modifiers balloon file size
 7. Always run material export audit before GLTF export
 8. Never use `gltf-transform optimize` — use individual steps
+9. Always check integration status before searching a marketplace — a disabled
+   integration answers `Unknown command type`, not "disabled"
 
 ## Output
 

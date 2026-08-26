@@ -1,5 +1,24 @@
 # Sourcing Strategy Reference
 
+## Preflight — rule 22, before the first search
+
+```
+get_polyhaven_status()  →  {"enabled": bool, "message": "..."}
+get_sketchfab_status()  →  {"enabled": bool, "message": "..."}
+```
+
+Both integrations are **OFF in a default addon install**. While off, the addon
+does not register `search_polyhaven_assets` / `search_sketchfab_models` at all,
+so calling them returns `Unknown command type: <name>` — which looks like a
+version mismatch and sends the user hunting for the wrong problem.
+
+If `enabled` is false, print the `message` field verbatim. It names the exact
+fix: the BlenderMCP panel in the 3D Viewport sidebar (press N if hidden), and the
+checkbox to tick. Then offer the other marketplace, or the creation path.
+
+Never surface `Unknown command type` to the user.
+
+
 ## Overview
 Search existing marketplaces before generating. Present ~10 results with links. Iterate until user finds what they need or switches to creation.
 

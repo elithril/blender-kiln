@@ -76,7 +76,8 @@ nothing and the user gets no response.
     provides their own multi-angle images.
 13. ALWAYS generate characters in T-POSE if rigging is planned.
     Ask the user if the character will be animated; force T-pose if yes.
-14. ALWAYS respect 1 Blender unit = 1 meter. Verify dimensions after import.
+14. ALWAYS respect 1 Blender unit = 1 meter. Verify dimensions after import
+    with get_object_info() — see rule 23.
 15. ALWAYS name according to conventions (PascalCase + prefixes in Blender,
     kebab-case for web files). See references/naming-conventions.md.
 16. ALWAYS save the .blend file in the asset output folder.
@@ -91,7 +92,46 @@ nothing and the user gets no response.
 21. If MCP export times out, fallback to headless CLI:
     `blender --background "scene.blend" --python-expr "..."`.
     See references/export-targets.md for the full command.
+22. ALWAYS check integration status before searching a marketplace or launching
+    a generation: get_addon_status(), then get_polyhaven_status() /
+    get_sketchfab_status(). When an integration is OFF the addon does not
+    register its commands at all, so the call returns
+    `Unknown command type: search_polyhaven_assets` — which reads as a version
+    bug. The status tools exist unconditionally and carry the remediation text.
+    Surface THAT, never the raw error.
+23. ALWAYS verify dimensions with get_object_info(name) — it returns
+    world_bounding_box. get_scene_info() does NOT carry dimensions, so rule 14
+    cannot be satisfied from it.
 ```
+
+---
+
+## Blender MCP — tool surface
+
+All 25 tools exposed by `blender-mcp`, extracted from the server source and
+exercised live against the addon. Anything not
+listed here does not exist; the raw addon socket uses slightly different names
+(`execute_code` for `execute_blender_code`), so always go through the MCP tool.
+
+| Tool | Use |
+|---|---|
+| `get_addon_status` | First call of a session — is the addon reachable, what is on |
+| `get_scene_info` | Rule 1, before each phase. Object count and names only — **no dimensions** |
+| `get_object_info` | Rule 23. Returns `world_bounding_box`, materials, vert/edge/poly counts |
+| `get_viewport_screenshot` | Rule 2, after each modification. `max_size`, `filepath`, `format` |
+| `execute_blender_code` | The workhorse: modelling, cleanup, export |
+| `set_texture` | Apply a downloaded PolyHaven texture to an object |
+| `get_polyhaven_status` / `get_sketchfab_status` | Rule 22, before any search |
+| `search_polyhaven_assets` / `download_polyhaven_asset` / `get_polyhaven_categories` | PolyHaven, only when enabled |
+| `search_sketchfab_models` / `download_sketchfab_model` / `get_sketchfab_model_preview` | Sketchfab, only when enabled |
+| `get_hunyuan3d_status` / `generate_hunyuan3d_model` / `poll_hunyuan_job_status` / `import_generated_asset_hunyuan` | Native Hunyuan3D generation — prefer over any local install |
+| `get_hyper3d_status` / `generate_hyper3d_model_via_text` / `generate_hyper3d_model_via_images` / `poll_rodin_job_status` / `import_generated_asset` | Native Hyper3D Rodin generation |
+| `disable_telemetry` / `record_trajectory_feedback` | Addon telemetry |
+
+**A disabled integration does not fail, it disappears.** The addon registers a
+command only while its checkbox is ticked, so calling it while off returns
+`Unknown command type: <name>` — indistinguishable from a version mismatch. The
+`get_*_status` tools are always registered and carry the fix. Hence rule 22.
 
 ---
 
@@ -229,6 +269,20 @@ Ask: **"Search marketplaces or create from scratch?"**
 #### Marketplace Path
 
 Load `references/sourcing-strategy.md`.
+
+**Preflight (rule 22) — do this BEFORE the first search:**
+
+```
+get_polyhaven_status()   → {"enabled": false, "message": "...press N..."}
+get_sketchfab_status()   → {"enabled": false, "message": "..."}
+```
+
+Both are OFF in a default addon install. While OFF, `search_polyhaven_assets`
+and `search_sketchfab_models` are **not registered as commands** — they answer
+`Unknown command type`, not "disabled". If either is off, show the `message`
+field verbatim (it names the BlenderMCP sidebar panel and the N shortcut) and
+offer to continue on the other source or switch to the creation path. Never
+report the raw `Unknown command type` error to the user.
 
 - Search PolyHaven + Sketchfab with brief keywords
 - Present ~10 results (name, poly count, link)
