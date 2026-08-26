@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Three of the twelve per-file line counts in the README structure table had
+  drifted by 23-54% after eight pull requests (`characters.md` ~430 → 638,
+  `sourcing-strategy.md` ~65 → 100, `ai-generation.md` ~220 → 270). The CI checked
+  the *total* and the SKILL.md row but not the individual rows, which is exactly how
+  a stale number survives review. It now checks every row, and the seeded-regression
+  suite covers the case: **12/12**.
+
 ### Added — continuous checks on the documentation itself
 
 - **`tools/verify_docs.py`** plus `.github/workflows/verify.yml`: the repository had

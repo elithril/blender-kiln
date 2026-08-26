@@ -315,18 +315,18 @@ Once installed, the skill directory looks like this:
 | File | Content | Lines |
 |---|---|---|
 | `SKILL.md` | Main pipeline, iron rules, MCP tool surface, commands, setup | ~880 |
-| `references/characters.md` | Rigging patterns, anti-patterns, export gotchas, Blender 5.x | ~430 |
-| `references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~410 |
-| `references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~340 |
+| `references/characters.md` | Rigging patterns, anti-patterns, export gotchas, Blender 5.x | ~640 |
+| `references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~450 |
+| `references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~360 |
 | `references/validation-checklist.md` | Geometry cleanup + material export audit | ~250 |
-| `references/ai-generation.md` | Hunyuan3D 2.x (local + cloud), concept art (Pollinations/nano-banana) | ~220 |
-| `references/export-targets.md` | GLB/FBX/USDZ settings, headless CLI, post-export checklist | ~210 |
+| `references/ai-generation.md` | Hunyuan3D 2.x (local + cloud), concept art (Pollinations/nano-banana) | ~270 |
+| `references/export-targets.md` | GLB/FBX/USDZ settings, headless CLI, post-export checklist | ~240 |
 | `references/cli-tools.md` | gltf-transform, gltfpack, LOD workflow, metrics | ~210 |
-| `references/uv-materials.md` | UV unwrapping, PBR channel packing | ~155 |
+| `references/uv-materials.md` | UV unwrapping, PBR channel packing | ~160 |
 | `references/naming-conventions.md` | Blender + GLTF name mapping + file conventions | ~150 |
 | `references/topology-rules.md` | Poly budgets, quad rules, edge flow | ~90 |
-| `references/setup-install.md` | Model selection, install commands, post-install validation | ~65 |
-| `references/sourcing-strategy.md` | PolyHaven + Sketchfab search patterns | ~65 |
+| `references/setup-install.md` | Model selection, install commands, post-install validation | ~70 |
+| `references/sourcing-strategy.md` | PolyHaven + Sketchfab search patterns | ~100 |
 
 **Total: ~3,870 lines** of production-tested 3D pipeline knowledge.
 
@@ -338,7 +338,8 @@ seconds:
 
 - iron rules form one unbroken 1..N sequence across `SKILL.md` and `batch-mode.md`
 - every cited `rule N` exists **and means what the citation claims**
-- the rule count above matches reality
+- the rule count above matches reality, and every line count in the structure
+  table is within 15% of the file it describes
 - every referenced file exists, and none point outside the plugin directory
 - every README image resolves
 - no bare `pip install` (it fails on any PEP 668 Python)
@@ -346,7 +347,7 @@ seconds:
 - documented commands use the invocable `/kiln <sub>` form
 
 `tools/test_verify_docs.py` seeds each of those regressions and asserts the
-checker catches it — **11/11**. Every case is a mistake that was actually made
+checker catches it — **12/12**. Every case is a mistake that was actually made
 here, including two renumberings that left a reference pointing at the wrong rule.
 
 ## Iron rules

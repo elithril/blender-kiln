@@ -110,6 +110,29 @@ elif (int(m.group(1)), int(m.group(2)), int(m.group(3))) != (len(rules), len(cor
 else:
     notes.append(f"count: README matches at {len(rules)}")
 
+# ── 4b. Per-file line counts in the structure table.
+# Three of twelve had drifted by 23-54% after eight pull requests. The total was
+# checked; the rows were not, which is how a stale number survives a review.
+for m in re.finditer(r"\| `references/([\w.-]+)` \|[^|]+\| ~(\d+) \|", README.read_text()):
+    name, claimed = m.group(1), int(m.group(2))
+    ref = ROOT / "references" / name
+    if not ref.exists():
+        fail("counts", f"README lists references/{name}, which does not exist")
+        continue
+    actual = len(ref.read_text().split("\n"))
+    if abs(actual - claimed) / max(claimed, 1) > 0.15:
+        fail("counts", f"references/{name}: README says ~{claimed}, actual {actual}")
+
+m = re.search(r"\*\*Total: ~([\d,]+) lines\*\*", README.read_text())
+if m:
+    claimed = int(m.group(1).replace(",", ""))
+    actual = sum(len(f.read_text().split("\n"))
+                 for f in [SKILL] + sorted((ROOT / "references").glob("*.md")))
+    if abs(actual - claimed) / max(claimed, 1) > 0.15:
+        fail("counts", f"README total says ~{claimed:,}, actual {actual:,}")
+    else:
+        notes.append(f"counts: structure table within 15% ({actual:,} lines)")
+
 # ── 5. Referenced files exist.
 # SKILL.md once pointed at ../creative-excellence/ and two other skills that
 # existed nowhere, and outside the plugin directory besides.
