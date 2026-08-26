@@ -14,10 +14,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tencent/Hunyuan3D-2` (RUNNING, 3,370 likes), and the reference carries the
   one-line check for the runtime stage. A duplicate depends on one person
   continuing to pay for a GPU, which is exactly how the old default died.
-- **The pinned client version was a major release behind.** The path was last
-  exercised against `gradio_client` 1.3.0; PyPI is at 2.6.1. Since the Gradio API
-  here is auto-generated, the reference now says to print `client.view_api()` when
-  a call fails rather than trusting the argument list in the snippet.
+- **The pinned client version was a major release behind**, and the documented API
+  flow did not match the Space. Connected live with `gradio_client` 2.6.1 and read
+  the signature: `tencent/Hunyuan3D-2` exposes 12 named endpoints, of which
+  `/shape_generation` (4 returns) and `/generation_all` (5 returns) matter, both
+  taking the same 13 parameters. The documented two-step flow named an
+  `/on_export_click` endpoint that is not among them. The reference now carries the
+  measured signature and the call that prints it when something changes.
+- **`randomize_seed` defaults to True** on both endpoints, which makes runs
+  non-reproducible — worth knowing before comparing outputs or re-running a batch.
+  Now documented.
 - **A bare `pip install` had survived the whole audit in the README**, because
   `verify_docs.py` exempted anything in backticks — and a prescription in markdown
   *is* written in backticks. The exemption is gone, only genuinely correct forms

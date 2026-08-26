@@ -256,8 +256,13 @@ Two Blender API traps cost real debugging time here, because both fail silently:
 | Backend | Install | GPU needed | Texture gen | Offline |
 |---|---|---|---|---|
 | **MCP native** (recommended) | a checkbox in the addon panel | No (cloud) | Yes | No |
-| **HF Spaces** | `gradio_client` in a venv | No (cloud) | Yes | No |
+| **HF Spaces** — [`tencent/Hunyuan3D-2`](https://huggingface.co/spaces/tencent/Hunyuan3D-2) | `gradio_client` in a venv | No (cloud) | Yes | No |
 | **Local [Hunyuan3D-2](https://github.com/Tencent/Hunyuan3D-2)** | Run `/kiln setup` (~25 GB download) | Optional | CUDA only | Yes |
+
+The MCP-native path is the one to start with: nothing to install, just a checkbox in
+the addon panel. The HF Space is verified live — 12 endpoints, `/generation_all` and
+`/shape_generation` — but a community Space can pause without notice, so the skill
+checks its runtime stage before connecting.
 
 On Mac (Apple Silicon): local shape generation works via MPS, texture generation falls back to skill's Blender-based texturing.
 On Windows + NVIDIA GPU: full pipeline runs locally — shape + texture, zero cloud dependency.
@@ -317,19 +322,19 @@ Once installed, the skill directory looks like this:
 |---|---|---|
 | `SKILL.md` | Main pipeline, iron rules, MCP tool surface, commands, setup | ~880 |
 | `references/characters.md` | Rigging patterns, anti-patterns, export gotchas, Blender 5.x | ~640 |
-| `references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~450 |
+| `references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~460 |
 | `references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~360 |
 | `references/validation-checklist.md` | Geometry cleanup + material export audit | ~250 |
-| `references/ai-generation.md` | Hunyuan3D 2.x (local + cloud), concept art (Pollinations/nano-banana) | ~270 |
+| `references/ai-generation.md` | Hunyuan3D 2.x (local + cloud), concept art (Pollinations/nano-banana) | ~220 |
 | `references/export-targets.md` | GLB/FBX/USDZ settings, headless CLI, post-export checklist | ~240 |
 | `references/cli-tools.md` | gltf-transform, gltfpack, LOD workflow, metrics | ~210 |
-| `references/uv-materials.md` | UV unwrapping, PBR channel packing | ~160 |
+| `references/uv-materials.md` | UV unwrapping, PBR channel packing | ~150 |
 | `references/naming-conventions.md` | Blender + GLTF name mapping + file conventions | ~150 |
 | `references/topology-rules.md` | Poly budgets, quad rules, edge flow | ~90 |
 | `references/setup-install.md` | Model selection, install commands, post-install validation | ~70 |
 | `references/sourcing-strategy.md` | PolyHaven + Sketchfab search patterns | ~100 |
 
-**Total: ~3,870 lines** of production-tested 3D pipeline knowledge.
+**Total: ~3,833 lines** of production-tested 3D pipeline knowledge.
 
 ## Continuous checks
 
