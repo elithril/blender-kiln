@@ -184,6 +184,36 @@ commands (`get_addon_info`, `get_world_state_snapshot`, `set_telemetry_consent`
 among them). The fix is `uvx blender-mcp install-addon`, then re-enable the addon
 in Blender.
 
+### On the official Blender Lab MCP
+
+The Blender Foundation's server (`projects.blender.org/lab/blender_mcp`, the one
+behind Claude's Blender connector) drives the same Blender with **different
+tools, and none for marketplaces or generation**. Measured by the quality bench
+(`bench/results/mcp-comparison-2026-09-29.md`): kiln 1.1.2 shipped the same 7 GLBs
+on it, for 10% less cost. Map the tools, and source around the gaps:
+
+| Skill says | On the Lab MCP |
+|---|---|
+| `get_scene_info` (rule 1) | `get_objects_summary` |
+| `get_object_info` (rule 24) | `get_object_detail_summary` |
+| `get_viewport_screenshot` (rule 2) | `get_screenshot_of_area_as_image`, or `render_viewport_to_path` |
+| frame the viewport (rule 22) | `jump_to_view3d_object_by_name` |
+| `bpy_api_lookup` | `search_api_docs` / `get_python_api_docs`, plus `search_manual_docs` |
+| `execute_blender_code` | same name |
+| `get_addon_status`, `get_*_status` (rule 23) | none — `get_objects_summary` answering is the connection check |
+| PolyHaven tools, `set_texture` | the public API from Bash — `references/sourcing-strategy.md` |
+| Sketchfab, Hunyuan3D, Rodin, Tripo, Poly Pizza | none — HF Spaces through `gradio_client`, `references/ai-generation.md` |
+| `export_scene` | `bpy.ops.export_scene.gltf` in `execute_blender_code` (rules 18, 19) |
+
+Setup, each point measured: the add-on's manifest sets
+`blender_version_min = "5.1.0"` — kiln's own floor stays 4.4, but this path needs
+at least that; it installs as an extension; **online access on** (Preferences → System,
+or `--online-mode`), or the add-on refuses to serve. Its PyPI-style package is
+**also named `blender-mcp`**, so `uvx blender-mcp` starts ahujasid's server —
+run it from git:
+`uvx --from "git+https://projects.blender.org/lab/blender_mcp.git#subdirectory=mcp" blender-mcp`.
+Register it under the MCP name `blender` so `mcp__blender__*` still matches.
+
 ---
 
 ## Dependencies

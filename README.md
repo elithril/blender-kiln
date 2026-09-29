@@ -339,7 +339,7 @@ Once installed, the skill directory looks like this:
 | `references/naming-conventions.md` | Blender + GLTF name mapping + file conventions | ~150 |
 | `references/topology-rules.md` | Poly budgets, quad rules, edge flow | ~90 |
 | `references/setup-install.md` | Model selection, install commands, post-install validation | ~70 |
-| `references/sourcing-strategy.md` | PolyHaven + Sketchfab search patterns | ~100 |
+| `references/sourcing-strategy.md` | PolyHaven (MCP or public API) + Sketchfab search patterns | ~120 |
 
 **Total: ~3,833 lines** of production-tested 3D pipeline knowledge.
 

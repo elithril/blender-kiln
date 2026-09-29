@@ -1,6 +1,6 @@
 # Sourcing Strategy Reference
 
-## Preflight — rule 22, before the first search
+## Preflight — rule 23, before the first search
 
 ```
 get_polyhaven_status()  →  {"enabled": bool, "message": "..."}
@@ -29,9 +29,31 @@ Search existing marketplaces before generating. Present ~10 results with links. 
 - MCP tools: `search_polyhaven_assets`, `download_polyhaven_asset`, `set_texture`, `get_polyhaven_categories`
 - Categories: wood, metal, rock, fabric, brick, plaster, terrain, floor, roofing, aerial
 
+### Without the MCP integration — the public API
+
+On the official Blender Lab MCP, or with the integration off, go to PolyHaven's
+public API from Bash. No key, CC0 assets. Verified 2026-09-29:
+
+```bash
+UA="blender-kiln"                                          # ToS 2.4: a unique User-Agent, always
+curl -s -A "$UA" "https://api.polyhaven.com/assets?type=models&categories=furniture"   # {id: {name, categories, ...}}
+curl -s -A "$UA" "https://api.polyhaven.com/files/WoodenChair_01"   # per format, per resolution
+```
+
+`files/<id>` → `gltf` → `1k` / `2k` / `4k` → `gltf` gives the `.gltf` URL and an
+`include` map of its textures and `.bin`; download every entry into the same
+relative layout, then import the `.gltf`. **Pick the resolution from the tier**
+(lightweight 1k, balanced 1k–2k, detailed 2k–4k): the bench's chair shipped at
+16.2 MB from 2K maps and at 0.48 MB from 1K, same 724 triangles.
+
+**Terms of Service** (`Poly-Haven/Public-API`, `ToS.md`): the assets are CC0 and
+need no attribution, but using the *live API* requires a unique User-Agent (2.4)
+and a visible credit to Poly Haven for the content (2.5). Write
+`Source: Poly Haven (polyhaven.com), via the public API` in the asset log (rule 17).
+
 ### Search flow
 1. Extract keywords from brief (material, style, era)
-2. `search_polyhaven_assets` with keywords
+2. `search_polyhaven_assets` with keywords — or the API above when the MCP has no PolyHaven tools
 3. Present results with name, type, link
 4. Links format: `https://polyhaven.com/a/{asset_name}`
 
