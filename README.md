@@ -332,7 +332,7 @@ Once installed, the skill directory looks like this:
 | `references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~460 |
 | `references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~360 |
 | `references/validation-checklist.md` | Geometry cleanup + material export audit | ~250 |
-| `references/ai-generation.md` | Hunyuan3D 2.x (local + cloud), concept art (FLUX.1-schnell, nano-banana) | ~280 |
+| `references/ai-generation.md` | Hunyuan3D 2.x (local + cloud), concept art (FLUX.1-schnell, nano-banana), free-quota and token rules | ~340 |
 | `references/export-targets.md` | GLB/FBX/USDZ settings, headless CLI, post-export checklist | ~240 |
 | `references/cli-tools.md` | gltf-transform, gltfpack, LOD workflow, metrics | ~210 |
 | `references/uv-materials.md` | UV unwrapping, PBR channel packing | ~150 |

@@ -230,6 +230,9 @@ Register it under the MCP name `blender` so `mcp__blender__*` still matches.
 - `black-forest-labs/FLUX.1-schnell` HF Space — free, Apache-2.0, through the same
   `gradio_client` venv as the 3D Spaces (default). See `references/ai-generation.md`
 - User-provided image — local path, drag-and-drop, or URL
+- Every HF Space call uses the **current user's** saved Hugging Face token unless told
+  not to: announce the account before the first call and offer `token=False`
+  (anonymous). Never read or log a token. See `references/ai-generation.md`
 - Pollinations — **no longer free**: HTTP 402 after one image (measured 2026-09-29)
 
 **3D Generation (one of):**

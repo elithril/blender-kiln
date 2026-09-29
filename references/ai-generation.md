@@ -253,6 +253,23 @@ docstring: "the locally saved token is used if there is one"). So whether a
 session is anonymous depends on `~/.cache/huggingface/token`, not on the code.
 Check it with `hf auth whoami` before quoting a quota.
 
+### Whose account pays the quota — say it, every session
+
+The skill carries no credential and never names an account. Whatever token a
+Space call uses is the **current user's own**, from their machine — and
+`gradio_client` uses it silently. So, before the first Space call of a session:
+
+1. Run `hf auth whoami` (or `uvx --from huggingface_hub hf auth whoami`).
+2. If it names an account, tell the user: "Space calls will count against your
+   Hugging Face account `<name>`'s free GPU quota." Offer anonymous calls instead.
+3. Anonymous means `Client("<space>", token=False)` — measured: `token=None` (the
+   default) sends the saved token, `token=False` sends none. Setting
+   `HF_HUB_DISABLE_IMPLICIT_TOKEN=1` does the same for a whole process.
+
+Never read, print, copy or write a token anywhere — not into a script, a log, a
+manifest or a message. Needing one means asking the user to run `hf auth login`
+themselves.
+
 So the free cloud path is **one or two generations a day**. Say so before a batch
 of AI assets, never promise it, and never suggest the paid PRO plan (rule 5).
 
