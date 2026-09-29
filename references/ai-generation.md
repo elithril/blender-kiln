@@ -244,9 +244,14 @@ Every free Space here runs on **ZeroGPU**, and its quota is per user and per day
 **2 minutes without a Hugging Face account, 3.5 minutes with a free one**,
 resetting 24 h after the first use (Hugging Face's own reference,
 `huggingface/skills`, `huggingface-zerogpu/references/how-quota-works.md`). One
-TRELLIS.2 generation requests 60–120 s: measured on 2026-09-29, the quota ran out
-after one FLUX image and one Hunyuan3D shape, with
-`You have exceeded your free ZeroGPU quota (120s requested vs. 0s left)`.
+TRELLIS.2 generation requests 60–120 s: measured on 2026-09-29 on a **free
+logged-in account**, the quota ran out after one FLUX image and one Hunyuan3D
+shape, with `You have exceeded your free ZeroGPU quota (120s requested vs. 0s left)`.
+
+**`gradio_client` sends the locally saved Hugging Face token by default** (its own
+docstring: "the locally saved token is used if there is one"). So whether a
+session is anonymous depends on `~/.cache/huggingface/token`, not on the code.
+Check it with `hf auth whoami` before quoting a quota.
 
 So the free cloud path is **one or two generations a day**. Say so before a batch
 of AI assets, never promise it, and never suggest the paid PRO plan (rule 5).
