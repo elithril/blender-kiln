@@ -16,6 +16,11 @@ BENCH = Path(__file__).resolve().parent
 REPO = BENCH.parent
 BLENDER = os.environ.get("BLENDER", "/Applications/Blender.app/Contents/MacOS/Blender")
 MCP_VERSION = os.environ.get("BENCH_MCP_VERSION", "2.0.0")
+# Which Blender MCP the session drives: "ahujasid" (PyPI blender-mcp) or "lab",
+# the official Blender Lab server — whose package is ALSO named blender-mcp, so
+# it is always run from its git checkout, never resolved by name.
+MCP = os.environ.get("BENCH_MCP", "ahujasid")
+LAB_DIR = Path(os.environ.get("BENCH_LAB_DIR", BENCH / "runs" / "_deps" / "blender_mcp_lab"))
 MODEL = os.environ.get("BENCH_MODEL", "claude-opus-5-5")
 TIMEOUT_S = int(os.environ.get("BENCH_TIMEOUT_S", "3600"))
 PORT = 9876
@@ -48,8 +53,15 @@ def start_blender(profile, log):
     if port_open():
         sys.exit(f"port {PORT} is already taken — close the other Blender first, "
                  "or the session would drive the wrong one")
-    (profile / "scripts" / "addons").mkdir(parents=True, exist_ok=True)
-    shutil.copy(bundled_addon(), profile / "scripts" / "addons" / "blender_mcp.py")
+    if MCP == "lab":
+        ext = profile / "extensions" / "user_default" / "mcp"
+        shutil.rmtree(ext, ignore_errors=True)
+        shutil.copytree(LAB_DIR / "addon" / "blender_mcp_addon", ext)
+        start, extra = "blender_start_lab.py", ["--online-mode"]
+    else:
+        (profile / "scripts" / "addons").mkdir(parents=True, exist_ok=True)
+        shutil.copy(bundled_addon(), profile / "scripts" / "addons" / "blender_mcp.py")
+        start, extra = "blender_start.py", []
     env = dict(os.environ,
                BLENDER_USER_SCRIPTS=str(profile / "scripts"),
                BLENDER_USER_CONFIG=str(profile / "config"),
@@ -57,8 +69,8 @@ def start_blender(profile, log):
                BLENDER_USER_DATAFILES=str(profile / "datafiles"))
     # GUI, not --background: get_viewport_screenshot needs a viewport, and
     # rule 2 calls it after every change.
-    proc = subprocess.Popen([BLENDER, "--factory-startup", "--python-exit-code", "1",
-                             "--python", str(BENCH / "blender_start.py")],
+    proc = subprocess.Popen([BLENDER, "--factory-startup", *extra, "--python-exit-code", "1",
+                             "--python", str(BENCH / start)],
                             env=env, stdout=log, stderr=subprocess.STDOUT)
     for _ in range(120):
         if port_open():
@@ -97,8 +109,13 @@ def run_brief(brief, outdir):
     outdir.mkdir(parents=True, exist_ok=True)
     work = outdir / "work"
     work.mkdir(exist_ok=True)
-    (outdir / "mcp.json").write_text(json.dumps({"mcpServers": {"blender": {
-        "command": "uvx", "args": [f"blender-mcp=={MCP_VERSION}"]}}}))
+    if MCP == "lab":
+        server = {"command": "uvx", "args": ["--from", str(LAB_DIR / "mcp"), "blender-mcp"],
+                  "env": {"BLENDER_PATH": BLENDER}}
+    else:
+        server = {"command": "uvx", "args": [f"blender-mcp=={MCP_VERSION}"]}
+    # Named "blender" either way: the skill's allowed-tools is mcp__blender__*.
+    (outdir / "mcp.json").write_text(json.dumps({"mcpServers": {"blender": server}}))
 
     before = skill_fingerprint()
     with open(outdir / "blender.log", "w") as blog:
@@ -144,6 +161,8 @@ def run_brief(brief, outdir):
     usage = result.get("usage", {})
     session = {
         "brief": brief["id"],
+        "mcp": MCP if MCP != "lab" else f"lab@{sh(['git', '-C', str(LAB_DIR), 'rev-parse', '--short', 'HEAD']).strip()}",
+        "blender": sh([BLENDER, "--version"]).splitlines()[0],
         "claude_exit": code,
         "wall_s": wall,
         "is_error": result.get("is_error"),
