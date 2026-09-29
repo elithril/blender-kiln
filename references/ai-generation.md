@@ -238,6 +238,39 @@ print(client.view_api(return_format="dict")["named_endpoints"]["/generation_all"
 
 ---
 
+## Free cloud quota — the real ceiling
+
+Every free Space here runs on **ZeroGPU**, and its quota is per user and per day:
+**2 minutes without a Hugging Face account, 3.5 minutes with a free one**,
+resetting 24 h after the first use (Hugging Face's own reference,
+`huggingface/skills`, `huggingface-zerogpu/references/how-quota-works.md`). One
+TRELLIS.2 generation requests 60–120 s: measured on 2026-09-29, the quota ran out
+after one FLUX image and one Hunyuan3D shape, with
+`You have exceeded your free ZeroGPU quota (120s requested vs. 0s left)`.
+
+So the free cloud path is **one or two generations a day**. Say so before a batch
+of AI assets, never promise it, and never suggest the paid PRO plan (rule 5).
+
+## TRELLIS.2 — candidate, not yet the default
+
+`microsoft/TRELLIS.2` (MIT) outputs a mesh **with baked PBR textures**, which is
+exactly what the Hunyuan3D Space's broken `/generation_all` no longer gives. Its
+Space API, read live on 2026-09-29 (a generation has NOT completed yet — the
+quota above ran out first):
+
+| Endpoint | Takes | Note |
+|---|---|---|
+| `/start_session` | — | call first; state lives in the client session |
+| `/preprocess_image` | `input` | background removal; returns a path |
+| `/image_to_3d` | `image`, `seed`, `resolution` ("1024"), sampler settings | |
+| `/extract_glb` | `decimation_target`, `texture_size` | **rejects a target under 100,000** — decimate in Blender after (rule 6) |
+
+**Locally on Apple Silicon**, `shivampkumar/trellis-mac` reports ~5 min a model on
+an M4 Pro with 24 GB, 18 GB peak, 15 GB of weights — its numbers, not measured
+here. **Licences**: TRELLIS.2 is MIT, but that pipeline also pulls **DINOv3**
+(Meta's own licence) and **RMBG-2.0 (CC BY-NC 4.0 — non-commercial)**. Say so
+before recommending it for anything commercial.
+
 ## Concept Art
 
 SKILL.md sends text-prompt concept art here; this section did not exist until the
