@@ -1,6 +1,6 @@
 """Gallery driver: one asset through model → cleanup → audit → render → export.
 
-    blender --background --factory-startup --python build.py -- <asset> <outdir> [res] [samples]
+    blender --background --factory-startup --python-exit-code 1 --python build.py -- <asset> <outdir> [res] [samples]
 
 Follows the skill's iron rules for the phases it actually covers. It does NOT
 run the skill: the skill drives Blender over MCP and its loop is interactive

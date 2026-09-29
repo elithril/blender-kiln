@@ -127,6 +127,24 @@ def _(root: Path):
     p.write_text(p.read_text().replace("| `get_object_info` | Rule 24.", "| `get_object_info` | Rule 23.", 1))
 
 
+@case("headless export fallback loses --python-exit-code", "exitcode")
+def _(root: Path):
+    p = root / "references" / "export-targets.md"
+    p.write_text(p.read_text().replace("  --python-exit-code 1 \\\n", "", 1))
+
+
+@case("Blender CI step loses --python-exit-code", "exitcode")
+def _(root: Path):
+    p = root / ".github" / "workflows" / "blender.yml"
+    p.write_text(p.read_text().replace(" --python-exit-code 1", "", 1))
+
+
+@case("prose naming blender --background --python is not a command", None)
+def _(root: Path):
+    p = root / "README.md"
+    p.write_text(p.read_text() + "\nThis is `blender --background --python`, the scripted path.\n")
+
+
 @case("manifest source stops being a directory", "manifest")
 def _(root: Path):
     p = root / ".claude-plugin" / "marketplace.json"

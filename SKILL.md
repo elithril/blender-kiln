@@ -109,7 +109,8 @@ nothing and the user gets no response.
 20. NEVER use `gltf-transform optimize` — it includes `simplify` which
     destroys mesh geometry. Always use individual steps (resize → webp → draco).
 21. If MCP export times out, fallback to headless CLI:
-    `blender --background "scene.blend" --python-expr "..."`.
+    `blender --background "scene.blend" --python-exit-code 1 --python-expr "..."`.
+    Without `--python-exit-code 1` a failed export still exits 0 — measured.
     See references/export-targets.md for the full command.
 22. ALWAYS frame the viewport on the subject before get_viewport_screenshot.
     An unframed view renders a 0.7 m prop as a few pixels at the origin, so the

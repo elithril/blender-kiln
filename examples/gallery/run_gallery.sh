@@ -30,7 +30,7 @@ done
 
 for a in $ASSETS; do
   echo "── $a"
-  "$BLENDER" --background --factory-startup --python "$HERE/build.py" -- \
+  "$BLENDER" --background --factory-startup --python-exit-code 1 --python "$HERE/build.py" -- \
       "$a" "$OUT" "$RES" "$SAMPLES" 2>/dev/null \
     | grep '^METRICS ' | sed 's/^METRICS //' >> "$OUT/metrics.jsonl"
 

@@ -46,9 +46,15 @@ bpy.ops.export_scene.gltf(
 
 The MCP server can **timeout on GLTF exports** (long-running operation). If the export via `execute_blender_code` fails or times out, use the headless CLI export:
 
+`--python-exit-code 1` is not optional: without it Blender exits **0** when the
+script raises, so a failed export reads as a successful one (measured on 5.0.1 —
+an explicit `sys.exit(1)` propagates, an uncaught exception does not). Check the
+exit code, then check the file exists.
+
 ```bash
 blender \
   --background "/path/to/scene.blend" \
+  --python-exit-code 1 \
   --python-expr "
 import bpy, os
 export_path = '/path/to/output.glb'

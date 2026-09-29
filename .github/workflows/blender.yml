@@ -39,5 +39,5 @@ jobs:
 
       - name: Re-check the Blender-side findings
         run: |
-          blender --background --factory-startup \
+          blender --background --factory-startup --python-exit-code 1 \
             --python tools/verify_blender.py

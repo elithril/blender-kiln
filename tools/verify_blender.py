@@ -3,7 +3,7 @@
 
 Run through Blender, never as plain Python:
 
-    blender --background --factory-startup --python tools/verify_blender.py
+    blender --background --factory-startup --python-exit-code 1 --python tools/verify_blender.py
 
 Every check corresponds to a bug this repository actually shipped. They exist to
 notice when a Blender release makes one of them wrong again.

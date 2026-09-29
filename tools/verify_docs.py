@@ -216,6 +216,46 @@ for doc in DOCS:
            and not re.search(r"fail|never|not enough|instead|PEP 668|bare pip", line, re.I):
             fail("pip", f"{doc.name}:{i} bare pip install — use a venv: {line.strip()[:70]}")
 
+# ── 7b. Every headless Blender command fails loud.
+# Blender exits 0 when a --python script raises, unless given
+# --python-exit-code; an explicit sys.exit(1) does propagate. So a crash in
+# verify_blender.py outside its try blocks passed CI green, and the skill's own
+# headless export fallback (rule 21) reported a failed export as a success.
+# Only commands are checked — code fences in docs, and command lines in scripts
+# and workflows — not prose that names the command in passing.
+CMD_FILES = DOCS + [ROOT / "CONTRIBUTING.md"] \
+    + sorted((ROOT / ".github" / "workflows").glob("*.yml")) \
+    + sorted((ROOT / "examples").rglob("*.sh")) + sorted((ROOT / "examples").rglob("*.py")) \
+    + sorted((ROOT / "tools").glob("*.py"))
+blender_cmds = 0
+for f in CMD_FILES:
+    if not f.exists() or f.name == "verify_docs.py" or f.name.startswith("test_"):
+        continue
+    md = f.suffix == ".md"
+    in_fence = False
+    logical, start = "", 0
+    for i, line in enumerate(f.read_text().split("\n"), 1):
+        if md and line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        if md and not in_fence:
+            continue
+        if not logical:
+            start = i
+        logical += line.rstrip("\\") + " "
+        if line.rstrip().endswith("\\"):
+            continue
+        cmd, logical = logical.strip(), ""
+        if not re.match(r'^(blender|"?\$BLENDER"?|\S*/Blender)\b', cmd):
+            continue
+        if "--background" not in cmd or "--python" not in cmd:
+            continue
+        blender_cmds += 1
+        if "--python-exit-code" not in cmd:
+            fail("exitcode", f"{f.relative_to(ROOT)}:{start} headless Blender without "
+                             f"--python-exit-code 1 — a crash would exit 0: {cmd[:70]}")
+notes.append(f"exitcode: {blender_cmds} headless Blender command(s), all fail loud")
+
 # ── 8. The plugin manifest is loadable and self-consistent.
 mf = ROOT / ".claude-plugin" / "marketplace.json"
 if not mf.exists():
