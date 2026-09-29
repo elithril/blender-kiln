@@ -146,7 +146,10 @@ for a in arms:
                 unweighted += 1
             max_infl = max(max_infl, len(gs))
             used.update(names[g.group] for g in gs if g.group in names)
-    dead = [b.name for b in deform if b.name not in used]
+    # A parentless root that drives nothing is the hierarchy's anchor, not a
+    # defect — the skill's own convention names it Root. Both bench villagers
+    # have one; counted as dead it flagged two healthy rigs.
+    dead = [b.name for b in deform if b.name not in used and b.parent is not None]
 
     # Deformation probe: bend every deforming bone by 25° and compare edge
     # lengths posed against rest. A healthy skin stretches a little; a tearing

@@ -31,10 +31,11 @@ def arm(defects):
     rig = bpy.context.object
     rig.name = "SK_Arm"
     bpy.ops.object.mode_set(mode="EDIT")
-    b0 = rig.data.edit_bones[0]; b0.name = "upper"; b0.head = (0, 0, 0); b0.tail = (0, 0, 1)
+    root = rig.data.edit_bones[0]; root.name = "Root"; root.head = (0, 0, -0.2); root.tail = (0, 0, 0)
+    b0 = rig.data.edit_bones.new("upper"); b0.head = (0, 0, 0); b0.tail = (0, 0, 1); b0.parent = root
     b1 = rig.data.edit_bones.new("lower"); b1.head = (0, 0, 1); b1.tail = (0, 0, 2); b1.parent = b0
     if defects:
-        b2 = rig.data.edit_bones.new("orphan"); b2.head = (1, 0, 0); b2.tail = (1, 0, 0.5)
+        b2 = rig.data.edit_bones.new("orphan"); b2.head = (1, 0, 0); b2.tail = (1, 0, 0.5); b2.parent = root
     bpy.ops.object.mode_set(mode="OBJECT")
     body.select_set(True); rig.select_set(True)
     bpy.context.view_layer.objects.active = rig
@@ -50,6 +51,8 @@ def arm(defects):
         orphan.remove([v.index for v in body.data.vertices])
     else:
         bpy.ops.object.parent_set(type="ARMATURE_AUTO")
+    # The root sits below the mesh and gets no weight: a healthy anchor.
+    body.vertex_groups["Root"].remove([v.index for v in body.data.vertices]) if "Root" in body.vertex_groups else None
     bpy.ops.export_scene.gltf(filepath=f"{out}/arm_{'bad' if defects else 'good'}.glb",
                               export_format="GLB", export_apply=False)
 
@@ -97,7 +100,7 @@ def check(name, ok, got):
     print(f"{'PASS' if ok else 'FAIL'}  {name}  ({got})")
 
 g, b = good["rigs"][0], bad["rigs"][0]
-check("healthy rig: every deform bone drives something", g["deform_bones_without_influence"] == 0, g)
+check("healthy rig: an unweighted Root is not a dead bone", g["deform_bones_without_influence"] == 0, g)
 check("healthy rig: no unweighted vertex", g["unweighted_verts"] == 0, g["unweighted_verts"])
 check("healthy rig: closed mesh after weld", good["boundary_edges"] == 0 and good["non_manifold_edges"] == 0,
       (good["boundary_edges"], good["non_manifold_edges"]))

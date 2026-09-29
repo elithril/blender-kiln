@@ -58,7 +58,10 @@ def flags(brief, m):
 def row(bid, s):
     b = BRIEFS.get(bid, {"expect": {}, "path": "?"})
     tc = s.get("tool_calls", {})
-    shots = sum(n for k, n in tc.items() if k.endswith("get_viewport_screenshot"))
+    # Each MCP names its capture tools differently: ahujasid's get_viewport_screenshot,
+    # the Lab server's get_screenshot_of_* and render_viewport_to_path.
+    shots = sum(n for k, n in tc.items()
+                if k.endswith("get_viewport_screenshot") or "screenshot_of" in k or k.endswith("render_viewport_to_path"))
     sess = (f"{s['claude_exit']} | {s['num_turns']} | {round(s['wall_s'] / 60, 1)} min | "
             f"${round(s['cost_usd_equiv'] or 0, 2)} | {sum(tc.values())} | {shots}")
     if not s["measures"]:
