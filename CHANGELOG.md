@@ -6,6 +6,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — a quality bench, and a baseline to hold every change against
+
+- **Nothing had measured an end-to-end `/kiln` session.** `bench/` runs the skill
+  headless on six fixed briefs, one per pipeline path, and measures each shipped
+  GLB after re-importing it — topology, grounding, surviving textures, rig
+  structure, and a deformation probe that sees a rig which validates yet produces
+  mush. Baseline on 1.1.2: `bench/results/baseline-2026-09-29.md`.
+
+### Changed — concept art no longer depends on Pollinations
+
+- **Pollinations answers HTTP 402 `Payment-Required` after one image** (measured
+  2026-09-29), and the session then painted over its watermark. The default is now
+  the `black-forest-labs/FLUX.1-schnell` HF Space: Apache-2.0, same `gradio_client`
+  venv, 5.6 s for a 1024×1024 image, no watermark. `references/ai-generation.md`
+  gains the concept-art section `SKILL.md` had been pointing at all along.
+- **Rule 5** now says a 402 means switch source, and forbids removing a watermark.
+
+### Fixed — what the baseline found
+
+- **Auto mode stopped before OPTIMIZE** on 3 of 6 briefs and named the result
+  `_final.glb` — a 16 MB file for a 724-triangle chair. Auto mode now applies the
+  default preset for glTF, and `_final.glb` is written only after the phase.
+- **Rule 2** measured at 2–4 screenshots for 6–17 edits; it is now anchored to
+  phases, with two opposite angles after texturing — a UV defect on one crate
+  corner passed every count.
+- **Rule 6**: the untouched factory Cube is removed and logged; anything else is
+  hidden, never deleted. Runs had done both.
+- **`gradio_client` 2.7.1 returns the Hunyuan3D mesh as a dict**; a `gradio_path()`
+  helper unwraps both shapes. The Space's textured endpoint fails server-side
+  today (`NameError`), and the reference says so.
+- **Rigs, measured on Blender 5.2.2**: the glTF exporter re-parents a deform bone
+  under a control bone to its nearest deforming ancestor, and binds unweighted
+  vertices to a synthetic `neutral_bone` — so validate before export, not after.
+- **Batch durations** are measured with timestamps, never estimated.
+- **The tool surface** now covers all 36 tools of `blender-mcp` 2.0.0, with what
+  each costs. It had cited rule 22 for integration status and rule 23 for
+  `get_object_info` — both one off after a renumbering. `verify_docs.py` now
+  checks tool-table rows against the rule they cite.
+
 ### Fixed — a headless Blender crash exited 0, so a failed export read as a success
 
 - **Blender exits 0 when a `--python` script raises**, unless it is given
