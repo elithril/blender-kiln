@@ -298,6 +298,9 @@ For each asset where `status` is `pending`, `failed`, or `redo` (in manifest ord
 6. Update manifest:
    status → "done"
    result: { faces, file_size, duration, screenshot }
+   duration = measured: record `date +%s` when the asset goes `running` and
+   when it goes `done`. Never estimate it — a report of estimates reads as
+   measurements. Always set `running` before starting an asset.
 
 7. Append to batch-report.md
 ```

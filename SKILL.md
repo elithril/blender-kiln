@@ -58,14 +58,21 @@ nothing and the user gets no response.
 
 ```
  1. ALWAYS get_scene_info() before each PHASE of the pipeline.
- 2. ALWAYS get_viewport_screenshot() after each significant modification.
+ 2. ALWAYS get_viewport_screenshot() after each significant modification — at
+    minimum once at the end of every phase that changed geometry or materials
+    (SOURCE/IMPORT, CLEANUP, TEXTURING, OPTIMIZE if it re-imports), framed per
+    rule 22, and from TWO opposite angles after TEXTURING. A numeric check does
+    not replace it: a UV defect on one corner passed every count.
  3. ONE asset at a time — never an entire scene at once.
  4. NEVER hard-cap poly count — alert if out of range, never block.
  5. NEVER spend money — no paid services, no credits consumed. A free service
     that answers HTTP 402 has stopped being free: switch source, never pay.
     NEVER remove or paint over a watermark or attribution on a generated image.
  6. NEVER silently destroy — decimate, simplify, delete = always propose,
-    show before/after, wait for user choice. Even in auto mode.
+    show before/after, wait for user choice. Even in auto mode. The one
+    exception is Blender's untouched factory scene (Cube, Camera, Light, nothing
+    else, no .blend loaded): remove the Cube before building and log it. Any
+    other pre-existing object is the user's — hide it, never delete it.
  7. ALWAYS keep the .blend file (contains full history). In compact mode,
     only keep original + final + .blend + log. In full mode, keep all
     intermediate GLBs. ALWAYS save the .blend — it's the recovery point.
@@ -612,9 +619,20 @@ Load `references/texturing-strategy.md`.
 3. **Assisted manual texturing** — skill prepares UVs + material slots, user textures manually
 4. **Try another Space** — if current Space doesn't support texture, offer to change URL
 
-### [6] OPTIMIZE (interactive)
+### [6] OPTIMIZE (interactive in guided mode)
 
-Propose options:
+**Auto mode, glTF target:** apply the default preset without asking — textures to
+WebP, resized only above the tier's cap (lightweight 1024, balanced 2048,
+detailed unchanged), then Draco — as individual steps (rule 20). It does not touch
+geometry, and `_original.glb` survives, so it is not a destruction under rule 6.
+Report before/after sizes, and say that Draco needs a decoder on the client.
+Simplify, decimate and LOD stay interactive in every mode.
+
+Why: the quality bench measured auto mode stopping here on 3 of 6 briefs, leaving
+a 16 MB `_final.glb` for a 724-triangle chair. **`_final.glb` is written only after
+this phase** — before it, the export is `_original.glb`, scripted assets included.
+
+**Guided mode** — propose options:
 - `gltf-transform` → texture compression KTX2, meshopt
 - `gltfpack` → mesh simplification, auto LOD
 - Both
