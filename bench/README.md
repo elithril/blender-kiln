@@ -77,5 +77,8 @@ Stated here so no result is read as more than it is:
 - **Versions are pinned**: `blender-mcp` 2.0.0 with the addon it bundles (1.7),
   installed into a throwaway Blender profile. Blender itself is whatever the
   machine has — recorded in `blender.log`.
+- **The machine's Hugging Face token is used.** `gradio_client` sends the locally
+  saved token by default, so every Space call in these runs counted against a
+  free logged-in account's ZeroGPU quota (3.5 min a day), not the anonymous one.
 - **One run per brief.** A model is not deterministic; a single difference
   between two labels is a lead, not a verdict.
