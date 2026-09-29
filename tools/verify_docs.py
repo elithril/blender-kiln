@@ -100,6 +100,20 @@ for doc in DOCS:
                 fail("semantics", f"{doc.name} says rule {n} is about {phrase!r}, "
                                   f"but rule {n} reads {rules[n][:60]!r}")
 
+# A table row that names a tool and cites a rule must cite the rule that names
+# that tool. The tool-surface table survived a renumbering pointing its status
+# row at rule 22 (framing) and get_object_info at rule 23 (integration status),
+# because the phrase-based check above only reads "Rule N (phrase" forms.
+for doc in DOCS:
+    for i, line in enumerate(doc.read_text().split("\n"), 1):
+        m = re.match(r"^\|\s*`([a-z_]+)`[^|]*\|\s*[Rr]ule\s+(\d+)\b", line)
+        if not m:
+            continue
+        tool, n = m.group(1), int(m.group(2))
+        if n in rules and tool not in rules[n]:
+            fail("semantics", f"{doc.name}:{i} row `{tool}` cites rule {n}, which does not "
+                              f"mention {tool}: {rules[n][:60]!r}")
+
 # ── 4. The rule count advertised in the README matches reality.
 m = re.search(r"enforces (\d+) rules \((\d+) core \+ (\d+) batch", README.read_text())
 if not m:

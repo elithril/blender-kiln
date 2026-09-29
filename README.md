@@ -90,7 +90,7 @@ which reads like a version mismatch and sends you hunting for the wrong problem.
 `get_polyhaven_status`, `get_sketchfab_status`, `get_hunyuan3d_status` and
 `get_hyper3d_status` are registered unconditionally and return the fix step by
 step — including the Sketchfab API key, which nothing else surfaces. **Iron rule
-22** requires checking them first. Tick the boxes in the BlenderMCP panel of the
+23** requires checking them first. Tick the boxes in the BlenderMCP panel of the
 3D Viewport sidebar (press <kbd>N</kbd> if hidden), then reconnect.
 
 <br clear="all" />

@@ -137,30 +137,34 @@ nothing and the user gets no response.
 
 ## Blender MCP — tool surface
 
-All 25 tools exposed by `blender-mcp`, extracted from the server source and
-exercised live against the addon. Anything not
-listed here does not exist; the raw addon socket uses slightly different names
+All 36 tools exposed by `blender-mcp` **2.0.0** (bundled addon 1.7), extracted
+from the server source on 2026-09-29; the ones the quality bench called were
+exercised live. Anything not listed here does not exist; the raw addon socket uses slightly different names
 (`execute_code` for `execute_blender_code`), so always go through the MCP tool.
 
 | Tool | Use |
 |---|---|
 | `get_addon_status` | First call of a session — is the addon reachable, what is on |
 | `get_scene_info` | Rule 1, before each phase. Object count and names only — **no dimensions** |
-| `get_object_info` | Rule 23. Returns `world_bounding_box`, materials, vert/edge/poly counts |
-| `get_viewport_screenshot` | Rule 2, after each modification. `max_size`, `filepath`, `format` |
+| `get_object_info` | Rule 24. Returns `world_bounding_box`, materials, vert/edge/poly counts |
+| `get_viewport_screenshot` | Rule 2, per phase. `max_size`, `filepath`, `format` |
 | `execute_blender_code` | The workhorse: modelling, cleanup, export |
+| `bpy_api_lookup` / `describe_node_type` | Look a `bpy` API or a node's sockets up in the running Blender instead of recalling it — the API moves every release |
+| `export_scene` | Export to GLB/FBX from the server; still apply rule 18 and the rule 19 audit |
 | `set_texture` | Apply a downloaded PolyHaven texture to an object |
-| `get_polyhaven_status` / `get_sketchfab_status` | Rule 22, before any search |
-| `search_polyhaven_assets` / `download_polyhaven_asset` / `get_polyhaven_categories` | PolyHaven, only when enabled |
-| `search_sketchfab_models` / `download_sketchfab_model` / `get_sketchfab_model_preview` | Sketchfab, only when enabled |
-| `get_hunyuan3d_status` / `generate_hunyuan3d_model` / `poll_hunyuan_job_status` / `import_generated_asset_hunyuan` | Native Hunyuan3D generation — prefer over any local install |
-| `get_hyper3d_status` / `generate_hyper3d_model_via_text` / `generate_hyper3d_model_via_images` / `poll_rodin_job_status` / `import_generated_asset` | Native Hyper3D Rodin generation |
-| `disable_telemetry` / `record_trajectory_feedback` | Addon telemetry |
+| `get_polyhaven_status` / `get_sketchfab_status` / `get_polypizza_status` | Rule 23, before any search |
+| `search_polyhaven_assets` / `download_polyhaven_asset` / `get_polyhaven_categories` / `get_polyhaven_asset_preview` | PolyHaven, only when enabled |
+| `search_sketchfab_models` / `download_sketchfab_model` / `get_sketchfab_model_preview` | Sketchfab, only when enabled (free token) |
+| `search_polypizza_models` / `download_polypizza_model` | Poly Pizza low-poly models, only when enabled. Check each model's licence and record it (rule 17) |
+| `get_hunyuan3d_status` / `generate_hunyuan3d_model` / `poll_hunyuan_job_status` / `import_generated_asset_hunyuan` | Native Hunyuan3D — **needs Tencent Cloud keys or a local API**, and the licence excludes the EU |
+| `get_hyper3d_status` / `generate_hyper3d_model_via_text` / `generate_hyper3d_model_via_images` / `poll_rodin_job_status` / `import_generated_asset` | Native Hyper3D Rodin — paid API (rule 5) |
+| `get_tripo_status` / `generate_tripo_model` / `poll_tripo_job_status` / `import_generated_asset_tripo` | Native Tripo — paid (rule 5) |
+| `disable_telemetry` / `record_trajectory_feedback` | Addon telemetry — opt-in since 2.0, leave it off |
 
 **A disabled integration does not fail, it disappears.** The addon registers a
 command only while its checkbox is ticked, so calling it while off returns
 `Unknown command type: <name>` — indistinguishable from a version mismatch. The
-`get_*_status` tools are always registered and carry the fix. Hence rule 22.
+`get_*_status` tools are always registered and carry the fix. Hence rule 23.
 
 **Ticking a box takes effect immediately.** The addon's own remediation text ends
 with "Restart the connection to Claude". That step is not needed — the flags are

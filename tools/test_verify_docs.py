@@ -121,6 +121,12 @@ def _(root: Path):
     p.write_text(p.read_text() + "\n| **Thing** | `pip3 install something` | note |\n")
 
 
+@case("tool table cites the rule next to the right one", "semantics")
+def _(root: Path):
+    p = root / "SKILL.md"
+    p.write_text(p.read_text().replace("| `get_object_info` | Rule 24.", "| `get_object_info` | Rule 23.", 1))
+
+
 @case("manifest source stops being a directory", "manifest")
 def _(root: Path):
     p = root / ".claude-plugin" / "marketplace.json"
