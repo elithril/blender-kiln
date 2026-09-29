@@ -12,8 +12,18 @@ python3 bench/run.py baseline          # all six briefs
 python3 bench/run.py lot2 ai-mushrooms # one brief under a new label
 ```
 
-Results go to `bench/runs/<label>/<brief>/` (git-ignored): the transcript, the
-Blender log, the session's output folder, and `result.json`.
+Results go to `bench/runs/<label>/<brief>/` (git-ignored, hundreds of MB): the
+transcript, the Blender log, the session's output folder, and `result.json`.
+
+`python3 bench/publish.py <label>` copies what proves the claims into
+`bench/results/<label>/` — about 0.5–1 MB a label, and committed:
+`summary.json`, renders as WebP, the logs the skill wrote, and every shipped GLB
+under 1 MB (larger ones listed with size and sha256). No transcript, no `.blend`,
+no concept art. Local paths become `<repo>` / `<home>`, and the export fails if a
+username or an e-mail address survives.
+
+A published label is a record: never republish it over a different run —
+measure under a new label instead.
 
 ## What is measured
 
