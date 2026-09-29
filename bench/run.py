@@ -86,6 +86,13 @@ def tool_stats(transcript):
     return calls
 
 
+def skill_fingerprint():
+    """Hash of every tracked file. The session's work folder sits inside this
+    checkout and permissions are bypassed, so nothing but this stops a session
+    from editing the skill it is being measured on."""
+    return sh(["git", "-C", str(REPO), "ls-files", "-s"]) + sh(["git", "-C", str(REPO), "diff", "HEAD"])
+
+
 def run_brief(brief, outdir):
     outdir.mkdir(parents=True, exist_ok=True)
     work = outdir / "work"
@@ -93,6 +100,7 @@ def run_brief(brief, outdir):
     (outdir / "mcp.json").write_text(json.dumps({"mcpServers": {"blender": {
         "command": "uvx", "args": [f"blender-mcp=={MCP_VERSION}"]}}}))
 
+    before = skill_fingerprint()
     with open(outdir / "blender.log", "w") as blog:
         blender = start_blender(outdir / "profile", blog)
         t0 = time.time()
@@ -119,6 +127,10 @@ def run_brief(brief, outdir):
                 blender.wait(20)
             except subprocess.TimeoutExpired:
                 blender.kill()
+
+    if skill_fingerprint() != before:
+        sys.exit(f"{brief['id']}: the session modified tracked files of the repository — "
+                 "the measurement is void. See `git status` before anything else.")
 
     result = {}
     for line in (outdir / "transcript.jsonl").read_text().splitlines():

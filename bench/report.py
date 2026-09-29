@@ -38,6 +38,9 @@ def flags(brief, m):
     if m.get("empty_material_slots"):
         f.append(f"{m['empty_material_slots']} empty slots")
     imgs = sum(v["images"] for v in m.get("materials", {}).values())
+    compressed = {"EXT_texture_webp", "KHR_texture_basisu"} & set(m.get("extensions_used", []))
+    if imgs and not compressed and m.get("bytes", 0) > 1_000_000:
+        f.append(f"textures uncompressed ({round(m['bytes'] / 1e6, 1)} MB)")
     if brief["expect"].get("textures") and imgs == 0:
         f.append("no texture survived")
     if brief["expect"].get("rig") and not m.get("rigs"):
@@ -57,7 +60,7 @@ def row(bid, s):
     tc = s.get("tool_calls", {})
     shots = sum(n for k, n in tc.items() if k.endswith("get_viewport_screenshot"))
     sess = (f"{s['claude_exit']} | {s['num_turns']} | {round(s['wall_s'] / 60, 1)} min | "
-            f"${s['cost_usd_equiv']} | {sum(tc.values())} | {shots}")
+            f"${round(s['cost_usd_equiv'] or 0, 2)} | {sum(tc.values())} | {shots}")
     if not s["measures"]:
         return [f"| {bid} | {sess} | — | — | — | **no *_final.glb shipped** |"]
     rows = []
