@@ -24,6 +24,10 @@ LAB_DIR = Path(os.environ.get("BENCH_LAB_DIR", BENCH / "runs" / "_deps" / "blend
 MODEL = os.environ.get("BENCH_MODEL", "claude-opus-5-5")
 TIMEOUT_S = int(os.environ.get("BENCH_TIMEOUT_S", "3600"))
 PORT = 9876
+# The skill under test. Defaults to this checkout; point it at another worktree
+# to measure a branch without switching this one (the runner and the results
+# stay here, so labels from different branches sit side by side).
+PLUGIN = Path(os.environ.get("BENCH_PLUGIN_DIR", REPO)).resolve()
 
 
 def sh(cmd, **kw):
@@ -102,7 +106,8 @@ def skill_fingerprint():
     """Hash of every tracked file. The session's work folder sits inside this
     checkout and permissions are bypassed, so nothing but this stops a session
     from editing the skill it is being measured on."""
-    return sh(["git", "-C", str(REPO), "ls-files", "-s"]) + sh(["git", "-C", str(REPO), "diff", "HEAD"])
+    return "".join(sh(["git", "-C", str(d), "ls-files", "-s"]) + sh(["git", "-C", str(d), "diff", "HEAD"])
+                   for d in {REPO, PLUGIN})
 
 
 def run_brief(brief, outdir):
@@ -126,7 +131,7 @@ def run_brief(brief, outdir):
                 prompt = (brief["prompt"] + f"\n\nOutput folder (absolute): {work / 'generated-assets'}")
                 r = subprocess.run(
                     ["claude", "-p", prompt,
-                     "--plugin-dir", str(REPO),
+                     "--plugin-dir", str(PLUGIN),
                      "--mcp-config", str(outdir / "mcp.json"), "--strict-mcp-config",
                      "--setting-sources", "project",
                      "--permission-mode", "bypassPermissions",
@@ -163,6 +168,8 @@ def run_brief(brief, outdir):
         "brief": brief["id"],
         "mcp": MCP if MCP != "lab" else f"lab@{sh(['git', '-C', str(LAB_DIR), 'rev-parse', '--short', 'HEAD']).strip()}",
         "blender": sh([BLENDER, "--version"]).splitlines()[0],
+        "skill": sh(["git", "-C", str(PLUGIN), "rev-parse", "--short", "HEAD"]).strip()
+                 + " " + sh(["git", "-C", str(PLUGIN), "branch", "--show-current"]).strip(),
         "claude_exit": code,
         "wall_s": wall,
         "is_error": result.get("is_error"),
