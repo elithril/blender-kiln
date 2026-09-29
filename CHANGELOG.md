@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — a headless Blender crash exited 0, so a failed export read as a success
+
+- **Blender exits 0 when a `--python` script raises**, unless it is given
+  `--python-exit-code 1`. An explicit `sys.exit(1)` does propagate; an uncaught
+  exception does not. Measured on 5.0.1: the same raising script exits 0 without
+  the flag and 1 with it.
+- **Rule 21's fallback was the exposed path.** When an MCP export times out the
+  skill runs a headless export (`references/export-targets.md`), and a failure
+  there came back as success. The command now carries the flag, and the reference
+  says to check the exit code, then the file.
+- **The Blender CI step had the same hole**: a crash outside `verify_blender.py`'s
+  `try` blocks would have passed green. Run with the flag, it still reports 9/9 —
+  nothing had been hiding. The flag is also on the gallery script, the usage
+  docstrings and CONTRIBUTING.
+- **New `exitcode` check in `verify_docs.py`**: every headless Blender command in a
+  code fence, script or workflow must fail loud. Prose naming the command is left
+  alone. Three cases in `test_verify_docs.py` — **21/21**.
+
 ## [1.1.2] — 2026-08-26
 
 ### Fixed — the README stated two different Blender versions, and neither was measured
