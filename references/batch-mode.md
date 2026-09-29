@@ -37,7 +37,7 @@ Then ask: **"Do you have reference images for any of these assets? (paths, URLs,
 
 - User can provide one image per asset: local path, URL, or drag-and-drop
 - Format: `asset_name: /path/to/image.png` or `asset_name: https://...`
-- If "no" → concept art will be auto-generated from briefs (Pollinations)
+- If "no" → concept art will be auto-generated from briefs (FLUX.1-schnell Space)
 - Reference images are optional per asset — some assets can have images while others don't
 
 ### Step 3 — Materials
@@ -238,7 +238,7 @@ For each asset where `status` is `pending`, `failed`, or `redo` (in manifest ord
        IF reference image was analyzed:
          Use reference image directly as Hunyuan3D input (skip concept art generation).
        ELSE:
-         Generate concept art (Pollinations, auto prompt from brief).
+         Generate concept art (FLUX.1-schnell Space, auto prompt from brief).
        Then AI generation. Use config.backend.
      - marketplace → search PolyHaven/Sketchfab with brief keywords,
        auto-pick first result matching tier. If no result → status: failed.

@@ -146,8 +146,14 @@ Candidates, measured 2026-08-26:
 Prefer the vendor's own Space over a community duplicate: a duplicate depends on
 one person continuing to pay, which is exactly how the old default died.
 
-**Version drift.** This path was last exercised on 2026-04-01 against
-`gradio_client` 1.3.0; PyPI is at 2.6.1 as of 2026-08-26, a major version on.
+**State on 2026-09-29, measured by the quality bench** (`bench/`): the Space is
+RUNNING, `/shape_generation` works, and **`/generation_all` fails server-side**
+with `AppError: 'NameError'` — so there is no free *textured* path here today.
+Fall back to `/shape_generation` and texture in Blender (PHASE 5b). Textured
+generation on a Mac needs CUDA locally, so a local install does not fix this.
+
+**Version drift.** This path was last exercised on 2026-09-29 against
+`gradio_client` 2.7.1.
 The Gradio API here is auto-generated, so it can change shape with the Space or
 the client. Treat the snippet below as a starting point and print
 `client.view_api()` if a call fails, rather than assuming the argument list.
@@ -199,7 +205,24 @@ result = client.predict(
     seed=1234,
     api_name="/generation_all",                # or /shape_generation for untextured
 )
-mesh_path = result[0]
+mesh_path = gradio_path(result[0])
+```
+
+**`gradio_client` 2.x does not always return a path.** On 2.7.1 the Hunyuan3D
+Space returns `result[0]` as a dict (`{"value": path, ...}`) and a copy with
+`shutil` fails with `TypeError: ... not dict` — measured. The FLUX Space returns
+a plain string. Unwrap both, always:
+
+```python
+def gradio_path(x):
+    """A file path out of whatever gradio_client handed back."""
+    if isinstance(x, dict):
+        x = x.get("path") or x.get("value") or x.get("name")
+        if isinstance(x, dict):                    # {"value": {"path": ...}}
+            return gradio_path(x)
+    if not isinstance(x, str):
+        raise TypeError(f"no file path in gradio result: {x!r}")
+    return x
 ```
 
 `randomize_seed` defaults to **True**, which makes runs non-reproducible. Set it
@@ -212,3 +235,49 @@ auto-generated and changes with the Space:
 print(client.view_api(return_format="dict")["named_endpoints"]["/generation_all"])
 ```
 
+
+---
+
+## Concept Art
+
+SKILL.md sends text-prompt concept art here; this section did not exist until the
+quality bench found the gap on 2026-09-29.
+
+### Default — FLUX.1-schnell HF Space
+
+Free, no key, **Apache-2.0** (model card, checked 2026-09-29), and it runs through
+the same `gradio_client` venv as the 3D Spaces — nothing new to install. Measured:
+one 1024×1024 image in **5.6 s**, no watermark.
+
+```python
+from gradio_client import Client
+
+client = Client("black-forest-labs/FLUX.1-schnell")
+result = client.predict(
+    prompt="<asset>, <style>, centered, isolated on a plain white background, "
+           "three-quarter view, single object",
+    seed=42, randomize_seed=False,               # reproducible
+    width=1024, height=1024, num_inference_steps=4,
+    api_name="/infer",
+)
+image_path = gradio_path(result[0])              # a .webp; result[1] is the seed
+```
+
+The Space returns **WebP**. Convert before feeding a 3D Space that expects PNG:
+`sips -s format png concept.webp --out concept.png` on macOS.
+
+**It does not always obey "no ground".** Measured: grass and a drop shadow under
+the subject despite the prompt. Hunyuan3D's `check_box_rembg=True` removes the
+background; inspect the result before generating anyway.
+
+Like every ZeroGPU Space it has a per-user quota and can pause. Check
+`https://huggingface.co/api/spaces/black-forest-labs/FLUX.1-schnell/runtime`
+for `"stage": "RUNNING"` first — a paused Space still answers HTTP 200.
+
+### Not the default any more
+
+| Source | State | Use |
+|---|---|---|
+| **Pollinations** | **HTTP 402 `Payment-Required` after one free image** (measured 2026-09-29) | Only if it answers 200. On 402, switch source — never pay (rule 5), and never paint over its watermark |
+| **nano-banana MCP** | bills a Gemini API key | only on the user's explicit request |
+| **mflux** (local FLUX on Apple Silicon, MIT) | not measured here — model size and speed unverified | an offline option to evaluate, not to recommend yet |

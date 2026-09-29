@@ -26,7 +26,7 @@ From a text brief to an optimized, export-ready GLB — in one session.
 
 ## What it does
 
-Kiln is a Claude Code skill that turns you into a 3D asset production studio. It orchestrates Blender (via MCP), AI generation (Hunyuan3D, Pollinations/FLUX), and marketplace search (PolyHaven, Sketchfab) into a single coherent pipeline.
+Kiln is a Claude Code skill that turns you into a 3D asset production studio. It orchestrates Blender (via MCP), AI generation (Hunyuan3D, FLUX.1-schnell concept art), and marketplace search (PolyHaven, Sketchfab) into a single coherent pipeline.
 
 ```
 [1] CONFIG → [2] BRIEF → [3] SOURCE → [4] IMPORT → [5] CLEANUP → [5b] TEXTURING → [6] OPTIMIZE → [7] EXPORT
@@ -51,7 +51,7 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 - **Local AI generation**: run Hunyuan3D-2 Mini on your machine — NVIDIA GPU for full pipeline, Apple Silicon for shape generation
 - **Environment auto-detection**: `/kiln setup` scans your system and guides installation
 - **Reference images**: provide an image per asset (path, URL, or drag-and-drop) — guides all creation methods (AI input, scripted proportions, texture assignment), enriches the brief, and enables post-export visual comparison
-- **Concept art input**: text prompt (Pollinations/FLUX), image path, image URL, or nano-banana (optional)
+- **Concept art input**: text prompt (FLUX.1-schnell HF Space, free), image path, image URL, or nano-banana (optional)
 - **Smart recommendations**: auto-suggests the best creation method based on asset type and style
 - **Material audit**: detects procedural nodes that will be lost on GLTF export, proposes bake workflow
 - **Post-export validation**: 8-point checklist (Babylon.js sandbox, Three.js console, material spot-check)
@@ -332,7 +332,7 @@ Once installed, the skill directory looks like this:
 | `references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~460 |
 | `references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~360 |
 | `references/validation-checklist.md` | Geometry cleanup + material export audit | ~250 |
-| `references/ai-generation.md` | Hunyuan3D 2.x (local + cloud), concept art (Pollinations/nano-banana) | ~220 |
+| `references/ai-generation.md` | Hunyuan3D 2.x (local + cloud), concept art (FLUX.1-schnell, nano-banana) | ~280 |
 | `references/export-targets.md` | GLB/FBX/USDZ settings, headless CLI, post-export checklist | ~240 |
 | `references/cli-tools.md` | gltf-transform, gltfpack, LOD workflow, metrics | ~210 |
 | `references/uv-materials.md` | UV unwrapping, PBR channel packing | ~150 |

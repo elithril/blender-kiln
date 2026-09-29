@@ -1,7 +1,7 @@
 ---
 name: kiln
 description: "3D asset production pipeline via Blender MCP — sourcing, AI generation, cleanup, texturing, optimization, export. Batch mode for autonomous multi-asset production."
-allowed-tools: Bash, Read, Edit, Write, Grep, Glob, WebFetch, WebSearch, mcp__blender__*, mcp__nano-banana__*, mcp__mcpollinations__*
+allowed-tools: Bash, Read, Edit, Write, Grep, Glob, WebFetch, WebSearch, mcp__blender__*, mcp__nano-banana__*
 ---
 
 # blender-kiln — The 3D Asset Forge
@@ -61,7 +61,9 @@ nothing and the user gets no response.
  2. ALWAYS get_viewport_screenshot() after each significant modification.
  3. ONE asset at a time — never an entire scene at once.
  4. NEVER hard-cap poly count — alert if out of range, never block.
- 5. NEVER spend money — no paid services, no credits consumed.
+ 5. NEVER spend money — no paid services, no credits consumed. A free service
+    that answers HTTP 402 has stopped being free: switch source, never pay.
+    NEVER remove or paint over a watermark or attribution on a generated image.
  6. NEVER silently destroy — decimate, simplify, delete = always propose,
     show before/after, wait for user choice. Even in auto mode.
  7. ALWAYS keep the .blend file (contains full history). In compact mode,
@@ -182,9 +184,11 @@ in Blender.
   here go through `action.layers[].strips[].channelbag()`, which does not exist
   before it. Measured on 5.0 and 5.2 LTS; 4.4-4.5 satisfy the API but are untested
 
-**Concept art (built-in, no install needed):**
-- Pollinations API — free, no key, used via curl (default)
+**Concept art:**
+- `black-forest-labs/FLUX.1-schnell` HF Space — free, Apache-2.0, through the same
+  `gradio_client` venv as the 3D Spaces (default). See `references/ai-generation.md`
 - User-provided image — local path, drag-and-drop, or URL
+- Pollinations — **no longer free**: HTTP 402 after one image (measured 2026-09-29)
 
 **3D Generation (one of):**
 - **HF Spaces** — requires `gradio_client` in a venv (see `/kiln setup`; a bare
@@ -420,7 +424,7 @@ Ask: **"Do you have a reference image, or should I generate a concept from your 
 
 | Mode | How | Notes |
 |---|---|---|
-| **Text prompt** | Generate via Pollinations API (free, no key) | Default method |
+| **Text prompt** | Generate via the FLUX.1-schnell HF Space (free, Apache-2.0) | Default method |
 | **Image path / drag-and-drop** | User provides local file path | Used as reference for any method |
 | **Image URL** | User provides URL, downloaded via curl | Saved locally, used as reference |
 
@@ -435,9 +439,9 @@ A user-provided image (or generated concept art) is useful for ALL creation meth
 | **Geometry Nodes** | Analyze image to inform node parameters — spacing, density, pattern, scale |
 | **Marketplace** | Analyze image to refine search keywords and evaluate result similarity |
 
-If nano-banana MCP is available, offer it as an alternative to Pollinations (supports iterative editing).
+If nano-banana MCP is available, offer it as an alternative (supports iterative editing) — it bills a Gemini key, so only on explicit request (rule 5).
 
-**Concept art & AI generation:** Load `references/ai-generation.md` for Pollinations commands, nano-banana usage, prompt rules, and Hunyuan3D details.
+**Concept art & AI generation:** Load `references/ai-generation.md` for the concept-art commands, prompt rules, and Hunyuan3D details.
 
 **Scripted modeling flow:**
 
@@ -845,7 +849,7 @@ Each asset produces `{name}_log.md`:
 - Visual comparison: {verdict — "close match" / "partial match" / "loose interpretation" / "N/A"}
 
 ## Prompts (copy-paste ready)
-- Concept art: "{exact prompt}" (source: {pollinations|nano-banana|user image|user URL})
+- Concept art: "{exact prompt}" (source: {flux-schnell|nano-banana|user image|user URL})
 - Concept iterations: ["{edit1}", "{edit2}"]
 - Hunyuan3D params: steps={s}, guidance_scale={g}, seed={seed},
   octree_resolution={res}, mode={mode}
@@ -891,7 +895,7 @@ Axis conversion at export is automatic.
 |---|---|
 | Local install (models, commands, validation) | `references/setup-install.md` |
 | Marketplace search | `references/sourcing-strategy.md` |
-| AI generation (Hunyuan3D), concept art (Pollinations, nano-banana) | `references/ai-generation.md` |
+| AI generation (Hunyuan3D), concept art (FLUX.1-schnell Space, nano-banana) | `references/ai-generation.md` |
 | Topology rules, poly budgets | `references/topology-rules.md` |
 | UV, materials, PBR | `references/uv-materials.md` |
 | Texturing white meshes | `references/texturing-strategy.md` |
