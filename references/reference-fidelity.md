@@ -122,10 +122,50 @@ Feed the **linear** value to Principled BSDF. Then three rules the bench measure
   linear). Compose base colour, roughness and metallic from the baked masks, then
   bake nothing procedural into the export (rule 19).
 
-## 5. Review against the reference — twice, at most
+## 5. Review against the reference — measured, twice at most
 
-Render an **orthographic front view framed like the reference** and put the two side
-by side: once after modeling, once after texturing. Look for what the inventory
-listed — insertion, dips, slots, glass — and fix what is missing. **Two correction
-rounds at most**: the image-to-code tool that ran eight vision passes spent ~5x the
-cost for the same likeness. Log each round: what differed, what changed.
+Judging by eye over-corrects: on the bench, a first lantern came out too bright and
+blotchy, its fix grey and flat — saturation 0.17 where the reference measures 0.33,
+texture detail at a third of it. Measure instead. `tools/fidelity_check.py` renders the
+model front-on, orthographic, as a silhouette and under a studio HDRI, scales it to the
+reference's height and prints the gaps, largest first:
+
+```bash
+UA="blender-kiln"                                   # Poly Haven ToS: a unique User-Agent
+curl -s -A "$UA" https://api.polyhaven.com/files/studio_small_09 \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)['hdri']['1k']['hdr']['url'])" \
+  | xargs curl -s -A "$UA" -o studio_small_09_1k.hdr
+blender -b --factory-startup --python-exit-code 1 --python <skill>/tools/fidelity_check.py -- \
+  --reference ref.png --model asset.blend --hdri studio_small_09_1k.hdr --out review/
+```
+
+It writes `overlay.png` (red: reference only, cyan: model only) and `side_by_side.png`,
+and one `FIDELITY {...}` JSON line: silhouette IoU overall and per height band, width and
+core-width differences per band, and per band the material numbers — luminance,
+saturation, warmth (R−B), highlight share, texture detail, value spread. Look at both
+images, then fix the listed gaps.
+
+Read it with its limits, measured on the lantern:
+
+- **The reference's camera and light are unknown.** A frontal orthographic render cannot
+  match a slightly high perspective shot at the base; a few percent is noise.
+- **Thin parts wreck band IoU.** A 2-px wire off by one pixel scores 0.2–0.4. Use the
+  overlay for wires, loops and handles; trust IoU for bodies.
+- **Two correction rounds at most**, each logged: what the numbers said, what changed.
+  The image-to-code tool that ran eight vision passes spent ~5x the cost for a likeness
+  this loop reaches.
+
+## 6. What the measured lantern taught — general rules
+
+- **Measure the thickness of thin parts from the pixels too**, not only the body. Tubes,
+  wires and handles were guessed thin and set inboard; they were the largest silhouette
+  gap (IoU 0.72 → the red bands of the overlay).
+- **Model how parts meet as the inventory says**: an open loop whose legs enter the cap
+  is not a closed ring on a clip.
+- **Curved glass needs ≥ 64 segments and one smooth shell.** At 264 faces, a uniform
+  semi-transparent globe shows its facets as bands, its back faces blending through.
+  Take the frosting from the reference as an alpha/roughness texture; keep the tint
+  neutral unless the reference shows one.
+- **Metal must read warm and specular where it is worn.** Check saturation, warmth and
+  highlights against the reference numbers, not against memory — a patina can be dark
+  and still saturated.

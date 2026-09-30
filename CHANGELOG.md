@@ -38,6 +38,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `gltf-transform validate`: exit 1 on a seeded broken GLB, exit 0 on all 16 bench
   GLBs. It checks the format, not the mesh.
 
+### Added — measuring a model against its reference image
+
+- **`references/reference-fidelity.md`**, for scripted modeling from an image: a detail
+  inventory, the silhouette measured from the pixels, a surface-to-surface attachment
+  check, materials sampled from the image, and two review rounds at most.
+- **`tools/fidelity_check.py`** renders the model front-on as a silhouette and under a
+  Poly Haven studio HDRI, and prints the gaps against the reference, largest first:
+  silhouette IoU per height band, widths, and per band luminance, saturation, warmth,
+  highlights and texture detail. It reproduced the bench's hand analysis (IoU 0.713
+  and 0.772 against 0.717 and 0.773). Judging by eye, sessions over-corrected twice —
+  too bright and blotchy, then grey and flat at half the reference's saturation.
+
 ### Changed — the skill now fires on files people bring, not only on assets they order
 
 - **The frontmatter `description` decides whether kiln exists for a user**, and it
