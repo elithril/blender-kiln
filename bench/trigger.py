@@ -32,6 +32,18 @@ PROMPTS = [
     ("Explain the difference between git merge and git rebase.", False),
 ]
 
+# Held out: written BEFORE any new description was drafted, and never used to
+# tune one. A description is only better if it also improves here — otherwise
+# the test just proves it answers the questions it was written against.
+HELD_OUT = [
+    ("Can you make a stylized sword for my Godot game? I'll need it as a glTF.", True),
+    ("My FBX has flipped normals and floats above the ground in Unreal. Can you fix it in Blender?", True),
+    ("These procedural Blender materials turn grey when I export to glTF, sort it out.", True),
+    ("Generate LODs for this 80k-triangle rock mesh for a web viewer.", True),
+    ("Write a GLSL fragment shader for animated water.", False),
+    ("Help me write a cover letter for a junior game designer job.", False),
+]
+
 
 def fired(transcript):
     for line in transcript.splitlines():
@@ -49,12 +61,14 @@ def fired(transcript):
 
 
 def main():
-    if len(sys.argv) != 2:
-        sys.exit(__doc__)
+    if len(sys.argv) not in (2, 3) or (len(sys.argv) == 3 and sys.argv[2] not in ("--held-out", "--all")):
+        sys.exit(__doc__ + "\n    add --held-out to run only the held-out set, --all for both")
+    mode = sys.argv[2] if len(sys.argv) == 3 else "--main"
+    prompts = {"--main": PROMPTS, "--held-out": HELD_OUT, "--all": PROMPTS + HELD_OUT}[mode]
     out = BENCH / "runs" / sys.argv[1]
     out.mkdir(parents=True, exist_ok=True)
     rows, cost = [], 0.0
-    for prompt, expect in PROMPTS:
+    for prompt, expect in prompts:
         with tempfile.TemporaryDirectory() as work:     # outside any git checkout
             r = subprocess.run(
                 ["claude", "-p", prompt, "--plugin-dir", str(PLUGIN),
@@ -77,11 +91,11 @@ def main():
         print(f"{'ok  ' if got == expect else 'MISS'} fired={got!s:5} expect={expect!s:5} {prompt[:70]}", flush=True)
     tp = sum(r["fired"] and r["expect"] for r in rows)
     fp = sum(r["fired"] and not r["expect"] for r in rows)
-    summary = {"plugin": str(PLUGIN), "model": MODEL, "rows": rows,
+    summary = {"plugin": str(PLUGIN), "model": MODEL, "set": mode, "rows": rows,
                "recall": f"{tp}/{sum(r['expect'] for r in rows)}",
                "false_positives": f"{fp}/{sum(not r['expect'] for r in rows)}",
                "cost_usd_equiv": round(cost, 2)}
-    (out / "trigger.json").write_text(json.dumps(summary, indent=2))
+    (out / f"trigger{'' if mode == '--main' else mode.replace('--', '-')}.json").write_text(json.dumps(summary, indent=2))
     print(f"\nrecall {summary['recall']} · false positives {summary['false_positives']} · ≈${summary['cost_usd_equiv']}")
 
 

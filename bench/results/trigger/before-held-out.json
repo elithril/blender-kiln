@@ -1,0 +1,46 @@
+{
+  "plugin": "<home>/Documents/projects/blender-kiln-skillfix",
+  "model": "claude-opus-5-5",
+  "set": "--held-out",
+  "rows": [
+    {
+      "prompt": "Can you make a stylized sword for my Godot game? I'll need it as a glTF.",
+      "expect": true,
+      "fired": true,
+      "ok": true
+    },
+    {
+      "prompt": "My FBX has flipped normals and floats above the ground in Unreal. Can you fix it in Blender?",
+      "expect": true,
+      "fired": true,
+      "ok": true
+    },
+    {
+      "prompt": "These procedural Blender materials turn grey when I export to glTF, sort it out.",
+      "expect": true,
+      "fired": true,
+      "ok": true
+    },
+    {
+      "prompt": "Generate LODs for this 80k-triangle rock mesh for a web viewer.",
+      "expect": true,
+      "fired": false,
+      "ok": false
+    },
+    {
+      "prompt": "Write a GLSL fragment shader for animated water.",
+      "expect": false,
+      "fired": false,
+      "ok": true
+    },
+    {
+      "prompt": "Help me write a cover letter for a junior game designer job.",
+      "expect": false,
+      "fired": false,
+      "ok": true
+    }
+  ],
+  "recall": "3/4",
+  "false_positives": "0/2",
+  "cost_usd_equiv": 0.86
+}
