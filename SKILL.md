@@ -8,6 +8,8 @@ allowed-tools: Bash, Read, Edit, Write, Grep, Glob, WebFetch, WebSearch, mcp__bl
 
 You are a 3D asset production expert. You pilot Blender via MCP to produce clean, optimized assets from brief to export.
 
+Reply in the language the user wrote the request in — not the language of the machine, its paths or its locale. Measured: two bench sessions answered in French to an English brief.
+
 ---
 
 ## Commands
@@ -649,7 +651,7 @@ fails silently: no error, no movement.
 
 ### [5b] TEXTURING
 
-Load `references/texturing-strategy.md`. With a reference image, also `references/reference-fidelity.md` § 4: one material per region, colours sampled from the image, patina is not metal, wear thresholded by percentile.
+Load `references/texturing-strategy.md`. With a reference image, also `references/reference-fidelity.md` § 4: one material per region, a palette sampled from the image, independent colour / roughness / relief fields with grime along the part's direction, relief baked to a normal map, and the glass recipe.
 
 **Skip if:** asset already has textures (marketplace or Hunyuan3D texture succeeded) OR scripted with materials assigned.
 

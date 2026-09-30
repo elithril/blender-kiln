@@ -49,6 +49,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   highlights and texture detail. It reproduced the bench's hand analysis (IoU 0.713
   and 0.772 against 0.717 and 0.773). Judging by eye, sessions over-corrected twice —
   too bright and blotchy, then grey and flat at half the reference's saturation.
+- **Texture and wire techniques read from an image-to-code tool's own output**: wires
+  traced from the pixels (a bail within 0.7 mm of its hand-measured points), a three-tone
+  palette per region, independent colour / roughness / relief fields with grime along a
+  turned part's direction, relief baked to a normal map (glTF has no bump — measured to
+  export as `normalTexture`), and a frosted-glass recipe. `fidelity_check.py` now counts
+  triangles against `--max-tris` and refuses a model with unloaded textures, which had
+  rendered black and skewed a measure.
+- **The skill replies in the language of the request.** Two sessions had answered in French
+  to an English brief.
 
 ### Changed — the skill now fires on files people bring, not only on assets they order
 

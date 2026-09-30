@@ -1,7 +1,8 @@
 """Measure how far a model is from its reference image — shape and material, in numbers.
 
     blender -b --factory-startup --python-exit-code 1 --python tools/fidelity_check.py -- \\
-        --reference ref.png --model asset.blend|asset.glb --hdri studio.hdr --out review/ [--samples 64]
+        --reference ref.png --model asset.blend|asset.glb --hdri studio.hdr --out review/ \\
+        [--samples 64] [--max-tris 5000]
 
 Renders the model twice from the front, orthographic — a flat silhouette, and a colour
 render under a studio HDRI — scales it to the reference's height, and compares:
@@ -51,10 +52,20 @@ def open_model(path):
     meshes = [o for o in sc.objects if o.type == "MESH" and o not in shapes and not o.hide_render]
     if not meshes:
         sys.exit("fidelity_check: no renderable mesh in the model")
+    # A texture that is not loaded renders black and every material number lies — the
+    # bench's first measure of a lantern did exactly that. Refuse rather than measure it.
+    missing = sorted({n.image.name for o in meshes for sl in o.material_slots if sl.material and sl.material.node_tree
+                      for n in sl.material.node_tree.nodes
+                      if n.type == "TEX_IMAGE" and n.image and not n.image.has_data and not n.image.packed_file
+                      and not os.path.exists(bpy.path.abspath(n.image.filepath))})
+    if missing:
+        sys.exit(f"fidelity_check: textures not loaded, pack them first (bpy.ops.file.pack_all()): {missing}")
+    dg = bpy.context.evaluated_depsgraph_get()
+    tris = sum(sum(len(pl.vertices) - 2 for pl in o.evaluated_get(dg).data.polygons) for o in meshes)
     cs = [o.matrix_world @ Vector(c) for o in meshes for c in o.bound_box]
     lo = Vector([min(c[i] for c in cs) for i in range(3)])
     hi = Vector([max(c[i] for c in cs) for i in range(3)])
-    return sc, lo, hi
+    return sc, lo, hi, tris, len(meshes)
 
 
 def render(sc, lo, hi, path, engine, hdri=None, samples=64):
@@ -149,7 +160,7 @@ def save(arr, path):
 
 def main():
     o = args()
-    sc, lo, hi = open_model(o["model"])
+    sc, lo, hi, tris, nmesh = open_model(o["model"])
     sil, col = os.path.join(o["out"], "_silhouette.png"), os.path.join(o["out"], "_colour.png")
     render(sc, lo, hi, sil, "BLENDER_WORKBENCH")
     render(sc, lo, hi, col, "CYCLES", hdri=o["hdri"], samples=int(o["samples"]))
@@ -181,6 +192,8 @@ def main():
             d = m[k] - r[k]
             if abs(d) > tol:
                 gaps.append((abs(d) / tol / 10, f"band {i + 1}: {k} {m[k]:.3f} vs reference {r[k]:.3f} ({d:+.3f})"))
+    if "max-tris" in o and tris > int(o["max-tris"]):
+        gaps.append((9, f"{tris:,} triangles, above the tier's {int(o['max-tris']):,} (+{tris / int(o['max-tris']) - 1:.0%}) — rule 4: say so"))
     gaps.sort(key=lambda g: -g[0])
 
     ov = np.zeros((H, W, 4), np.float32); ov[..., 3] = 1
@@ -190,9 +203,9 @@ def main():
     save(np.concatenate([bg(pad_to(ref, W)), np.ones((H, 12, 4), np.float32), bg(pad_to(mod_c, W))], 1),
          os.path.join(o["out"], "side_by_side.png"))
 
-    print("FIDELITY " + json.dumps(dict(iou=iou, shape=shape, material=dict(reference=mref, model=mmod),
+    print("FIDELITY " + json.dumps(dict(tris=tris, meshes=nmesh, iou=iou, shape=shape, material=dict(reference=mref, model=mmod),
                                         gaps=[g[1] for g in gaps])))
-    print(f"\nsilhouette IoU {iou:.3f} — largest gaps first:")
+    print(f"\n{tris:,} tris in {nmesh} meshes · silhouette IoU {iou:.3f} — largest gaps first:")
     for _, g in gaps[:12]:
         print("  -", g)
     if not gaps:

@@ -60,6 +60,35 @@ def core_profile(path, height_m):
 `height_m` is the one number you choose (brief, or a real-world size). An opaque
 reference needs a mask first — key out the corner colour.
 
+**Wires, handles and bails: trace their centre line and use it as the curve.** Guessed
+control points drift — kiln's first bail sat 1.8–2.3 % of the height off the reference,
+with a pointed peak where it dips. Traced from the pixels, the same bail lands within
+0.7 mm of an image-to-code tool's hand-measured points:
+
+```python
+def trace_wire(path, height_m, y_from, y_to, side=+1):
+    """Centre line of the outermost thin run on one side of the axis, one point per row,
+    between two fractions of the height from the TOP. [(x_m from axis, z_m from base)]."""
+    im = bpy.data.images.load(path, check_existing=True); w, h = im.size
+    px = np.array(im.pixels[:], dtype=np.float32).reshape(h, w, 4)[::-1]
+    m = px[..., 3] > 0.5
+    rows = np.where(m.any(1))[0]; top, bot = rows.min(), rows.max(); mpp = height_m / (bot - top + 1)
+    cx = int(np.median(np.where(m[rows])[1]))
+    pts = []
+    for y in range(int(top + y_from * (bot - top)), int(top + y_to * (bot - top))):
+        xs = np.where(m[y])[0]; xs = xs[xs > cx] if side > 0 else xs[xs < cx]
+        if not len(xs): continue
+        edge = xs.max() if side > 0 else xs.min(); run = [edge]; on = set(xs)
+        while (edge - side * len(run)) in on: run.append(edge - side * len(run))
+        pts.append(((np.mean(run) - cx) * mpp * side, (bot - y) * mpp))
+    return pts
+```
+
+Thin every ~10th point and feed them to a curve (Blender: a poly spline converted to a
+NURBS/Bezier, or points through a `Curve` object with a bevel for the wire's measured
+thickness). Where the wire meets another part the trace catches that part — stop the
+range above it.
+
 ## 3. Check that every part is attached
 
 Measure surface to surface with a BVH — vertex-to-vertex distances overstate gaps
@@ -91,36 +120,56 @@ check and still reads wrong. Step 1's "inserted" is checked in step 5, by eye.
 patina, wire, soot — never one material for every metal part. And **one texture set
 per major part**: a single Smart UV atlas over 19 parts left the tank 14 % of it.
 
-Sample each region's colour from the image:
+Sample each region's **range**, not only its median — blotches live between a dark and a
+light that the image shows. Measured on the lantern's tank: `#120f0c` / `#241e19` / `#4b3f33`.
 
 ```python
-def region_colour(path, x, y, w, h):
-    """Median opaque colour of a crop (x, y from the TOP-left, in pixels) → (srgb, linear)."""
+def region_palette(path, x, y, w, h):
+    """Dark / mid / light sRGB colours of a crop (x, y from the TOP-left): the 10th, 50th and
+    90th luminance percentiles, each averaged over a small window."""
     im = bpy.data.images.load(path, check_existing=True); W, H = im.size
     px = np.array(im.pixels[:], dtype=np.float32).reshape(H, W, 4)[::-1]
     c = px[y:y + h, x:x + w].reshape(-1, 4); c = c[c[:, 3] > 0.5][:, :3]
-    s = np.median(c, axis=0)
-    return s, np.where(s <= 0.04045, s / 12.92, ((s + 0.055) / 1.055) ** 2.4)
+    order = np.argsort(c @ np.array([0.2126, 0.7152, 0.0722])); k = max(1, len(c) // 40)
+    at = lambda q: np.median(c[order[max(0, int(q * (len(c) - 1)) - k): int(q * (len(c) - 1)) + k + 1]], axis=0)
+    return {q: at(q) for q in (0.1, 0.5, 0.9)}
 ```
 
-Feed the **linear** value to Principled BSDF. Then three rules the bench measured:
+Convert to linear (`s/12.92` below 0.04045, `((s+0.055)/1.055)**2.4` above) before Principled.
+Then build the surface the way the image-to-code tool did — its lantern out-read kiln's
+v3 on texture detail (0.031 against 0.022 for the reference's 0.032):
 
-- **A photographed metal's colour is its patina's, and patina is not metal.** The
-  lantern's tank measures sRGB (0.14, 0.12, 0.10). Put that on a surface with
-  Metallic 0.85 and it renders as a grey mirror of the environment. Patina:
-  measured colour, Metallic ~0.2, Roughness ~0.65. Only the worn edges are metal:
-  bright bronze, Metallic 1, Roughness ~0.3.
-- **Wear follows curvature — thresholded by percentile, on the part itself.**
-  Cycles' Pointiness spans only 0.48–0.57 on a coarse mesh (measured on the tank),
-  so a fixed threshold of 0.52 or 0.56 lands anywhere. Bake Pointiness, take the
-  part's 90th and 99th percentiles as the ramp's ends, and multiply by a fine noise
-  so edges wear in patches, not as a ruled line. Cavities darken with AO (distance
-  ~1 cm for a hand-sized prop).
+- **Independent fields, never one derived from another.** Colour: multi-octave noise
+  (three scales, e.g. 4 / 13 / 48 over the part) mixing the palette's dark and mid, with
+  sparse bright wear specks toward its light. Roughness: *its own* noise, over a range
+  (0.16–0.64 there), not the colour's inverse. Relief: fine pits plus broad dents. Cavity:
+  AO. A single noise driving all four reads as the flat, blotchy "camouflage" of kiln's v1.
+- **Give grime a direction.** Streaks run along a turned part's profile — vertical on a
+  lathe. That needs **cylindrical UVs on turned parts** (u around, v along the height), not
+  Smart UV Project, whose islands scatter any direction.
+- **Metal can be metal.** The image-to-code lantern is Metallic 0.92 all over with a dark,
+  warm colour field, and reads right; kiln's v3 split patina (Metallic ~0.2) from worn
+  edges (Metallic 1) and also reads right. What fails is a *dark colour at high metallic
+  without warmth*: it mirrors a grey studio. Choose either, and let `tools/fidelity_check.py`
+  judge saturation, warmth and highlights.
+- **Wear follows curvature — thresholded by percentile, on the part itself.** Cycles'
+  Pointiness spans only 0.48–0.57 on a coarse mesh (measured on the tank), so a fixed
+  threshold lands anywhere. Bake Pointiness, take the part's 90th and 99th percentiles as
+  the ramp's ends, multiply by noise so edges wear in patches.
 - **Bake colour through an Emission shader into a float image.** A DIFFUSE bake of a
-  metallic surface comes out near-black; a byte sRGB target shifts the value. Baked
-  this way, a flat texel returns the measured patina exactly (0.0174 against 0.0176
-  linear). Compose base colour, roughness and metallic from the baked masks, then
-  bake nothing procedural into the export (rule 19).
+  metallic surface comes out near-black; a byte sRGB target shifts the value. Baked this
+  way a flat texel returns the sampled colour exactly (0.0174 against 0.0176 linear).
+- **Relief ships as a normal map.** glTF has no bump. Wire the height field through a Bump
+  node, bake type NORMAL, tangent space, into a Non-Color float image, and connect it
+  through a Normal Map node — measured: mean (0.5, 0.5, 1) as a flat surface should be,
+  and the export carries `normalTexture`.
+- **Glass, the recipe that read right:** smooth shell (≥ 64 segments), roughness ~0.1, a
+  clear coat (Principled *Coat* weight 1), alpha ~0.65, and a **frost texture** — sparse
+  bright specks from high-frequency noise, gathered by a broad blotch field — in colour and
+  alpha. Neutral tint unless the reference shows one.
+
+Pack every generated image into the .blend (`bpy.ops.file.pack_all()`) before measuring or
+exporting: an unpacked texture renders black, and `fidelity_check.py` now refuses it.
 
 ## 5. Review against the reference — measured, twice at most
 
@@ -136,7 +185,8 @@ curl -s -A "$UA" https://api.polyhaven.com/files/studio_small_09 \
   | python3 -c "import json,sys; print(json.load(sys.stdin)['hdri']['1k']['hdr']['url'])" \
   | xargs curl -s -A "$UA" -o studio_small_09_1k.hdr
 blender -b --factory-startup --python-exit-code 1 --python <skill>/tools/fidelity_check.py -- \
-  --reference ref.png --model asset.blend --hdri studio_small_09_1k.hdr --out review/
+  --reference ref.png --model asset.blend --hdri studio_small_09_1k.hdr --out review/ \\
+  --max-tris 5000                                    # the tier's top: rule 4 is reported, not blocked
 ```
 
 It writes `overlay.png` (red: reference only, cyan: model only) and `side_by_side.png`,
