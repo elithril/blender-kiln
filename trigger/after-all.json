@@ -1,0 +1,118 @@
+{
+  "plugin": "<home>/Documents/projects/blender-kiln-skillfix",
+  "model": "claude-opus-5-5",
+  "set": "--all",
+  "rows": [
+    {
+      "prompt": "I need a low-poly treasure chest for my three.js game, as a GLB file.",
+      "expect": true,
+      "fired": true,
+      "ok": true
+    },
+    {
+      "prompt": "Make me a 3D model of a wooden barrel I can drop into Unity.",
+      "expect": true,
+      "fired": true,
+      "ok": true
+    },
+    {
+      "prompt": "g\u00e9n\u00e8re un asset 3D d'une lanterne m\u00e9di\u00e9vale pour mon jeu web",
+      "expect": true,
+      "fired": true,
+      "ok": true
+    },
+    {
+      "prompt": "This .glb is 40 MB, can you shrink it for the web without wrecking it?",
+      "expect": true,
+      "fired": true,
+      "ok": true
+    },
+    {
+      "prompt": "Rig this humanoid mesh in Blender so I can animate it.",
+      "expect": true,
+      "fired": true,
+      "ok": true
+    },
+    {
+      "prompt": "Convert my model.glb to USDZ for AR Quick Look on iPhone.",
+      "expect": true,
+      "fired": true,
+      "ok": true
+    },
+    {
+      "prompt": "Find me a free CC0 table model and get it into Blender, cleaned up.",
+      "expect": true,
+      "fired": true,
+      "ok": true
+    },
+    {
+      "prompt": "I want 20 props for a sci-fi corridor, all in the same style, exported for the web.",
+      "expect": true,
+      "fired": true,
+      "ok": true
+    },
+    {
+      "prompt": "Write a Python function that parses a CSV file and returns a list of dicts.",
+      "expect": false,
+      "fired": false,
+      "ok": true
+    },
+    {
+      "prompt": "Design a flat 2D logo for my bakery as an SVG.",
+      "expect": false,
+      "fired": false,
+      "ok": true
+    },
+    {
+      "prompt": "Set up a React component with a three.js canvas and orbit controls.",
+      "expect": false,
+      "fired": false,
+      "ok": true
+    },
+    {
+      "prompt": "Explain the difference between git merge and git rebase.",
+      "expect": false,
+      "fired": false,
+      "ok": true
+    },
+    {
+      "prompt": "Can you make a stylized sword for my Godot game? I'll need it as a glTF.",
+      "expect": true,
+      "fired": true,
+      "ok": true
+    },
+    {
+      "prompt": "My FBX has flipped normals and floats above the ground in Unreal. Can you fix it in Blender?",
+      "expect": true,
+      "fired": true,
+      "ok": true
+    },
+    {
+      "prompt": "These procedural Blender materials turn grey when I export to glTF, sort it out.",
+      "expect": true,
+      "fired": true,
+      "ok": true
+    },
+    {
+      "prompt": "Generate LODs for this 80k-triangle rock mesh for a web viewer.",
+      "expect": true,
+      "fired": true,
+      "ok": true
+    },
+    {
+      "prompt": "Write a GLSL fragment shader for animated water.",
+      "expect": false,
+      "fired": false,
+      "ok": true
+    },
+    {
+      "prompt": "Help me write a cover letter for a junior game designer job.",
+      "expect": false,
+      "fired": false,
+      "ok": true
+    }
+  ],
+  "recall": "12/12",
+  "false_positives": "0/6",
+  "cost_usd_equiv": 3.08
+}
