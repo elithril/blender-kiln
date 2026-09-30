@@ -5,6 +5,15 @@ script. It is the cheap half of what image-to-code pipelines spend dozens of vis
 passes on: **measure the image instead of eyeballing it**, and spend the model's
 attention only on what measuring cannot settle.
 
+**Scale the procedure to the asset.** Every step below costs turns: a lantern went from
+$1.90 to $3.52 once all of them ran. Match the effort to what the asset is for:
+
+| Tier / use | Steps |
+|---|---|
+| lightweight, background prop | § 1 inventory, § 3 attachment, one § 5 measure of the shipped file |
+| balanced (default) | all of § 1–5, two correction rounds |
+| detailed, hero asset, character | all of it, plus the extra views of § 1, each measured |
+
 Why it exists — measured on 2026-09-30 against Poly Haven's `Lantern_01` preview
 (`bench/results/ref-compare/`): kiln's scripted lantern matched the reference's
 likeness for $1.90, but shipped a top loop resting *on* the cap instead of inserted
@@ -99,9 +108,10 @@ def trace_wire(path, height_m, y_from, y_to, side=+1):
     return pts
 ```
 
-Thin every ~10th point and feed them to a curve (Blender: a poly spline converted to a
-NURBS/Bezier, or points through a `Curve` object with a bevel for the wire's measured
-thickness). Where the wire meets another part the trace catches that part — stop the
+Thin every ~10th point and feed them to a **smooth** curve — a NURBS spline of order 3–4 or
+Bezier points with `AUTO` handles, beveled to the wire's measured thickness. Never a poly
+spline: straight segments between the traced points read as kinks — a bail built that way
+showed angular shoulders the reference does not have. Where the wire meets another part the trace catches that part — stop the
 range above it.
 
 ## 3. Check that every part is attached
@@ -171,9 +181,11 @@ v3 on texture detail (0.031 against 0.022 for the reference's 0.032):
   Pointiness spans only 0.48–0.57 on a coarse mesh (measured on the tank), so a fixed
   threshold lands anywhere. Bake Pointiness, take the part's 90th and 99th percentiles as
   the ramp's ends, multiply by noise so edges wear in patches.
-- **Bake colour through an Emission shader into a float image.** A DIFFUSE bake of a
-  metallic surface comes out near-black; a byte sRGB target shifts the value. Baked this
-  way a flat texel returns the sampled colour exactly (0.0174 against 0.0176 linear).
+- **Bake colour through an Emission shader into a float image — and convert it before
+  export (next rule), always both.** A DIFFUSE bake of a metallic surface comes out
+  near-black; a byte sRGB target shifts the value. Baked this way a flat texel returns
+  the sampled colour exactly (0.0174 against 0.0176 linear) — but shipped as is, it
+  exports black. This rule without the next one produced the worst lantern of the bench.
 - **Convert a float bake to sRGB bytes before export — or the colour ships black.**
   Measured on Blender 5.2.2: the glTF exporter writes a linear float base-colour image
   into the PNG *without* the sRGB transfer — linear 0.2 lands as byte 51 instead of 124,
@@ -222,11 +234,17 @@ UA="blender-kiln"                                   # Poly Haven ToS: a unique U
 curl -s -A "$UA" https://api.polyhaven.com/files/studio_small_09 \
   | python3 -c "import json,sys; print(json.load(sys.stdin)['hdri']['1k']['hdr']['url'])" \
   | xargs curl -s -A "$UA" -o studio_small_09_1k.hdr
+# --max-tris: the tier's top (rule 4 reported, not blocked). --view/--elevation: where the photo's camera stood (§1)
 blender -b --factory-startup --python-exit-code 1 --python <skill>/tools/fidelity_check.py -- \
-  --reference ref.png --model asset.blend --hdri studio_small_09_1k.hdr --out review/ \\
-  --max-tris 5000 \\                                 # the tier's top: rule 4 is reported, not blocked
-  --view front --elevation 12                         # where the photo's camera stood (§1)
+  --reference ref.png --model asset_final.glb --hdri studio_small_09_1k.hdr --out review/ \
+  --max-tris 5000 --view front --elevation 12
 ```
+
+**Close the listed gaps; never push the score.** The real object itself scores ~0.80 IoU
+against its own photo — the camera, the lens and the light differ. A reconstruction above
+that has started copying the photo's perspective: the lantern that reached 0.898 against
+the photo was the *worst* against the real object from every side. Fix the gaps the tool
+lists — a band whose width is off by more than 8 %, a clearly wrong part — and stop.
 
 **The last measure is of the file that ships — `_final.glb`, not the `.blend`.** A session
 validated its lantern at saturation 0.30 in the .blend; the GLB it shipped read 0.12,
@@ -259,6 +277,10 @@ Read it with its limits, measured on the lantern:
 - **Two correction rounds at most — three measures in all**, each logged: what the numbers
   said, what changed. At 16–32 samples and 512 px bakes during review; 1024 only for the
   final bake. Eight measures and ten bakes took one session to 105 turns and $5.63.
+- **Tick the inventory at the final review**, line by line, on an enlarged crop of the
+  reference next to the same crop of the render: present and right, or not. A lantern's
+  pentagon loop, listed in its own inventory, came out a rounded teardrop that no number
+  flagged — numbers see silhouettes and colours, not whether a detail is still there.
 - **Correct half-way.** A gap is a direction, not a dose: one session moved saturation
   from 0.17 straight to 0.38 for a target of 0.33. Move halfway, measure, finish.
   The image-to-code tool that ran eight vision passes spent ~5x the cost for a likeness
@@ -283,8 +305,10 @@ Read it with its limits, measured on the lantern:
   the real object, not "too reflective".
 - **Fine detail is what reads as real.** At 0.022–0.024 texture detail against the
   reference's 0.032 (the real asset measures 0.028 under the same light), surfaces read
-  clean and new; scratches (thin lines along the part's
-  u direction) and pits in the relief field close most of it.
+  clean and new. Add it as **fine features** — scratches (thin lines along the part's u
+  direction), pits, edge nicks — **never by raising the relief's amplitude**: a session that
+  did reached the reference's detail number with a surface that read as lumpy cast iron,
+  and had to undo it. The number is a proxy; the look decides.
 - **Metal must read warm and specular where it is worn.** Check saturation, warmth and
   highlights against the reference numbers, not against memory — a patina can be dark
   and still saturated.

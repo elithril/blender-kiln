@@ -63,6 +63,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Scored from five sides against the real Poly Haven asset, the version that best fitted
   the ~15° photo from the front was the *worst* against the object: it had copied the
   photo's perspective into the geometry, its base 30 % too tall.
+- **What the lantern loop got wrong, corrected before other objects** (commit after 7 trials):
+  the review no longer chases the photo score — the real object scores ~0.80 against its own
+  photo, and the version that reached 0.898 was the worst against it; shape gaps are local
+  (a band's width off by more than 8 %), and wire bands are judged by width, not IoU. Detail
+  comes from fine features, never relief amplitude (a session made its lantern read as
+  lumpy cast iron). Traced wires become smooth splines, not polylines (a bail came out
+  kinked). The inventory is ticked line by line at the final review (a pentagon loop turned
+  into a teardrop no number flagged). The procedure scales with the tier — the lantern's
+  cost had gone from $1.90 to $3.52. The float bake and its sRGB conversion are one rule.
+- **`tools/test_fidelity_check.py`** seeds the review tool, 10/10, in the Blender CI. Its
+  first run caught the views framed by height only: anything wider than tall was clipped.
 - **A float colour bake shipped black.** Measured on Blender 5.2.2 with a minimal repro:
   the glTF exporter writes a linear float base-colour image into its PNG without the sRGB
   transfer (linear 0.2 → byte 51, not 124). A lantern reviewed at saturation 0.30 shipped

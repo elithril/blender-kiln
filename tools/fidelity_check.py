@@ -95,7 +95,10 @@ def render(sc, lo, hi, path, engine, hdri=None, samples=64):
         "right": (Vector((3 * H, 0, 0)), (math.pi / 2, 0, math.pi / 2), H),
         "top":   (Vector((0, 0, 3 * H)), (0, 0, 0), max(size.x, size.y)),
     }[VIEW]
-    cam.data.ortho_scale = max(frame_h, size.x, size.y) * 1.02 if VIEW == "top" else frame_h * 1.02
+    # Frame the larger of what this view shows: height, and the width across the view.
+    # Height alone clipped anything wider than tall — a 2 x 1 x 1 box measured 1:1 from the front.
+    across = {"front": size.x, "back": size.x, "left": size.y, "right": size.y}.get(VIEW, 0)
+    cam.data.ortho_scale = max(frame_h, size.x, size.y) * 1.02 if VIEW == "top" else max(frame_h, across) * 1.02
     cam.location = ctr + offset; cam.rotation_euler = rot
     if ELEVATION and VIEW != "top":
         # Tilt the camera down onto the object by ELEVATION degrees, orbiting its centre:
@@ -213,11 +216,22 @@ def main():
                           core_width=float((mc[s].mean() - rc[s].mean()) / max(rc[s].mean(), 1))))
     mref, mmod = material(ref), material(mod_c)
 
+    # Shape gaps are LOCAL: a band whose width is off, or a band clearly wrong. Overall IoU
+    # is not a target — the real Lantern_01 scores ~0.80 against its own photo, and the
+    # bench's version that pushed it to 0.898 was the worst against the real object.
+    # Band IoU alone is not a gap either: a 2-px wire off by a pixel scores 0.2-0.4.
     gaps = []
-    for b in shape:
-        if b["iou"] < 0.8:
-            gaps.append((1 - b["iou"], f"band {b['band']}/{BANDS} (1 = top): silhouette IoU {b['iou']:.2f}, "
-                                      f"width {b['full_width']:+.0%}, core {b['core_width']:+.0%}"))
+    body = max(rc.max(), 1)
+    for i, b in enumerate(shape):
+        # A band with no solid body at the axis (wires, a loop, a handle) has a meaningless
+        # core width — it measures the hole of the loop. Judge it by its full width only.
+        sl = slice(i * H // BANDS, (i + 1) * H // BANDS)
+        solid = rc[sl].mean() > 0.15 * body
+        off = max(abs(b["full_width"]), abs(b["core_width"]) if solid else 0.0)
+        if off > 0.08 or (solid and b["iou"] < 0.5):
+            gaps.append((off * 4 + max(0.0, 0.5 - b["iou"]),
+                         f"band {b['band']}/{BANDS} (1 = top): width {b['full_width']:+.0%}, core "
+                         f"{b['core_width']:+.0%}, IoU {b['iou']:.2f} — check the overlay there"))
     for i, (r, m) in enumerate(zip(mref, mmod)):
         if not r or not m:
             continue
@@ -241,7 +255,8 @@ def main():
 
     print("FIDELITY " + json.dumps(dict(tris=tris, meshes=nmesh, iou=iou, shape=shape, material=dict(reference=mref, model=mmod),
                                         gaps=[g[1] for g in gaps])))
-    print(f"\n{tris:,} tris in {nmesh} meshes · silhouette IoU {iou:.3f} — largest gaps first:")
+    print(f"\n{tris:,} tris in {nmesh} meshes · silhouette IoU {iou:.3f} (information, not a target: "
+          f"a real object scores ~0.80 against its own photo) — gaps to close, largest first:")
     for _, g in gaps[:12]:
         print("  -", g)
     if not gaps:
