@@ -17,22 +17,22 @@ Same five briefs (the AI brief is out: the free ZeroGPU quota was spent), Blende
 | **total** | **32.85 MB** | **2.22 MB** | **÷14.8** | **3.87 MB** | **1.48 MB** | **÷2.6** |
 
 The one regression is real and explained: the Lab chair's "before" session had
-picked 1K maps and shipped them uncompressed; the fixed skill picks 1K–2K for the
+picked 1K maps and shipped them uncompressed; the fixed skill then picked 1K–2K for the
 balanced tier, and that session took 2K, then WebP. Smaller per pixel, larger in
-total. The tier guidance should say 1K for balanced unless the brief asks for
-close-ups.
+total. Fixed since in `d13d4e1`: web textures are capped at 1K, as
+`uv-materials.md` already said — not yet re-measured.
 
 ## Did the fixes cause it? Read in the transcripts, not assumed
 
 | | before (10 sessions) | after (10 sessions) |
 |---|---|---|
-| Final GLBs with Draco | batch only | **all** |
-| Textured GLBs with WebP | 0 | **all** |
+| Final GLBs compressed (Draco) | 0 of 14 | **14 of 14** |
+| Textured GLBs with WebP | 0 of 4 | **4 of 4** |
 | Khronos validator run | 3 | **8** |
 | Factory Cube | deleted in some, hidden in others | **removed and logged in 10/10** |
 | PolyHaven API on the Lab MCP: User-Agent + credit (ToS) | 0 of 2 | **2 of 2** |
 | Fused (non-manifold) edges shipped | 84 (Lab lantern) | **0** |
-| Measure findings | 3 | **0** |
+| Measure findings | 4 (2 per MCP) | **0** |
 
 ## What it cost
 
