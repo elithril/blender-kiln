@@ -7,15 +7,21 @@
       "path": "scripted modeling",
       "kind": "prop",
       "tier": "balanced",
-      "expect": {"textures": false, "rig": false},
-      "prompt": "/kiln A hanging iron lantern with a glass cage and a ring on top, for a medieval inn. Type: prop. Style: stylized. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. Create it by scripted modeling in Blender — no marketplace, no AI generation."
+      "expect": {
+        "textures": false,
+        "rig": false
+      },
+      "prompt": "/kiln A hanging iron lantern with a glass cage and a ring on top, for a medieval inn. Type: prop. Style: stylized. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. Create it by scripted modeling in Blender \u2014 no marketplace, no AI generation."
     },
     {
       "id": "ai-mushrooms",
       "path": "AI generation (HF Spaces)",
       "kind": "prop",
       "tier": "balanced",
-      "expect": {"textures": true, "rig": false},
+      "expect": {
+        "textures": true,
+        "rig": false
+      },
       "prompt": "/kiln A cluster of three stylized fantasy mushrooms with spotted caps, for a forest scene. Type: prop. Style: stylized. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. 3D backend: hf-spaces. Create it by AI generation."
     },
     {
@@ -23,15 +29,21 @@
       "path": "marketplace import (PolyHaven)",
       "kind": "prop",
       "tier": "balanced",
-      "expect": {"textures": true, "rig": false},
-      "prompt": "/kiln A realistic wooden chair for a farmhouse kitchen. Type: prop. Style: realistic. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. Source it from PolyHaven — no AI generation, no Sketchfab."
+      "expect": {
+        "textures": true,
+        "rig": false
+      },
+      "prompt": "/kiln A realistic wooden chair for a farmhouse kitchen. Type: prop. Style: realistic. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. Source it from PolyHaven \u2014 no AI generation, no Sketchfab."
     },
     {
       "id": "pbr-crate",
       "path": "texturing (PolyHaven PBR)",
       "kind": "prop",
       "tier": "balanced",
-      "expect": {"textures": true, "rig": false},
+      "expect": {
+        "textures": true,
+        "rig": false
+      },
       "prompt": "/kiln A sci-fi supply crate with reinforced corners and a handle on each side. Type: prop. Style: realistic. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. Model it by script, then texture it with PolyHaven PBR textures."
     },
     {
@@ -39,7 +51,10 @@
       "path": "character + rig selection",
       "kind": "character",
       "tier": "lightweight",
-      "expect": {"textures": false, "rig": true},
+      "expect": {
+        "textures": false,
+        "rig": true
+      },
       "prompt": "/kiln A low-poly humanoid villager, rigged and ready for animation in a web game. Type: character. Style: low-poly. Export: glTF. Detail tier: lightweight. Mode: auto. Storage: compact. Create it by scripted modeling, then rig it."
     },
     {
@@ -47,8 +62,48 @@
       "path": "batch mode",
       "kind": "prop",
       "tier": "lightweight",
-      "expect": {"textures": false, "rig": false, "assets": 3},
+      "expect": {
+        "textures": false,
+        "rig": false,
+        "assets": 3
+      },
       "prompt": "/kiln batch Scene: a blacksmith's workshop. Assets: a wooden stool, a water bucket, a coiled rope. Style: stylized. Palette: warm browns and iron grey. Export: glTF. Detail tier: lightweight. Storage: compact. Creation method: scripted modeling for all three. Then run the batch with /kiln batch run --all."
+    },
+    {
+      "id": "ref-lantern",
+      "path": "reconstruction from a reference image",
+      "kind": "prop",
+      "tier": "balanced",
+      "reference": "Lantern_01.png",
+      "expect": {
+        "textures": false,
+        "rig": false
+      },
+      "prompt": "/kiln Rebuild the hurricane lantern in this reference image as a game asset: <REFS>/Lantern_01.png. Type: prop. Style: realistic. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. Create it by scripted modeling in Blender from the image \u2014 no marketplace, no AI generation. Match the reference's proportions, parts, materials and colours as closely as you can."
+    },
+    {
+      "id": "ref-ammo-box",
+      "path": "reconstruction from a reference image",
+      "kind": "prop",
+      "tier": "balanced",
+      "reference": "ammo_box.png",
+      "expect": {
+        "textures": false,
+        "rig": false
+      },
+      "prompt": "/kiln Rebuild the ammo box in this reference image as a game asset: <REFS>/ammo_box.png. Type: prop. Style: realistic. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. Create it by scripted modeling in Blender from the image \u2014 no marketplace, no AI generation. Match the reference's proportions, parts, materials and colours as closely as you can."
+    },
+    {
+      "id": "ref-chair",
+      "path": "reconstruction from a reference image",
+      "kind": "prop",
+      "tier": "balanced",
+      "reference": "WoodenChair_01.png",
+      "expect": {
+        "textures": false,
+        "rig": false
+      },
+      "prompt": "/kiln Rebuild the wooden chair in this reference image as a game asset: <REFS>/WoodenChair_01.png. Type: prop. Style: realistic. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. Create it by scripted modeling in Blender from the image \u2014 no marketplace, no AI generation. Match the reference's proportions, parts, materials and colours as closely as you can."
     }
   ]
 }

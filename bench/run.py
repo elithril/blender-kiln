@@ -128,7 +128,8 @@ def run_brief(brief, outdir):
         t0 = time.time()
         try:
             with open(outdir / "transcript.jsonl", "w") as tr, open(outdir / "claude.err", "w") as err:
-                prompt = (brief["prompt"] + f"\n\nOutput folder (absolute): {work / 'generated-assets'}")
+                prompt = (brief["prompt"].replace("<REFS>", str(BENCH / "runs" / "_refs"))
+                          + f"\n\nOutput folder (absolute): {work / 'generated-assets'}")
                 r = subprocess.run(
                     ["claude", "-p", prompt,
                      "--plugin-dir", str(PLUGIN),
