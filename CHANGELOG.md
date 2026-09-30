@@ -51,7 +51,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed — what a Space call spends, and whose
 
 - **The free cloud path is one or two generations a day.** ZeroGPU gives 2 minutes
-  without an account and 3.5 with a free one; one TRELLIS.2 run asks 60–120 s.
+  without an account and 3.5 with a free one; one TRELLIS.2 run asks 60–120 s. A call
+  reserves the Space's declared duration (90 s for a 5.6 s FLUX image), and the quota
+  resets 24 h after the first call, not at midnight — measured: still refused the
+  next morning. A spent quota means no concept art either; the reference now lists
+  the free fallbacks, a PolyHaven CC0 preview among them.
 - **A Space call never uses a token silently.** `gradio_client` sends the saved
   Hugging Face token by default (`token=None`; measured). The skill announces whose
   account pays before the first call, offers `token=False`, and never reads, prints

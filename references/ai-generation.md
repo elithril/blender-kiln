@@ -270,6 +270,16 @@ Never read, print, copy or write a token anywhere — not into a script, a log, 
 manifest or a message. Needing one means asking the user to run `hf auth login`
 themselves.
 
+**A call reserves the Space's declared duration, not the time it runs.** FLUX.1-schnell
+produces an image in 5.6 s, yet a call is refused with `90s requested vs. 0s left`;
+TRELLIS.2 asks 60–120 s. Budget in reservations, not in seconds of work.
+
+**And the day does not start at midnight.** Measured on a free account: first Space
+call on 2026-09-29 at ~15:00, quota spent by ~16:00, and the next morning at 12:45
+FLUX was still refused — the reset comes 24 h after the *first* call, so ~15:00.
+Plan around it: once the quota is spent, **no Space works for the rest of that
+window, concept art included.**
+
 So the free cloud path is **one or two generations a day**. Say so before a batch
 of AI assets, never promise it, and never suggest the paid PRO plan (rule 5).
 
@@ -328,6 +338,21 @@ background; inspect the result before generating anyway.
 Like every ZeroGPU Space it has a per-user quota and can pause. Check
 `https://huggingface.co/api/spaces/black-forest-labs/FLUX.1-schnell/runtime`
 for `"stage": "RUNNING"` first — a paused Space still answers HTTP 200.
+
+### When the quota is spent
+
+FLUX runs on the same ZeroGPU quota as the 3D Spaces, so a spent quota also means
+no concept art. In order of preference, all free:
+
+1. **The user's own image** — a sketch, a photo, a screenshot. Ask for it first.
+2. **A CC0 reference from PolyHaven**: every asset has an official preview,
+   `thumbnail_url` in `https://api.polyhaven.com/info/<id>` — replace its query
+   (`?width=256&height=256&v=…`) with `?width=1024&height=1024`, measured to work —
+   transparent PNG, and the real model exists for comparison. Credit it (ToS 2.5).
+3. **Scripted modeling from the brief alone**, which needs no image at all.
+4. **Wait for the reset** — say when, from the time of the first call.
+
+Never suggest the paid PRO plan to get the quota back (rule 5).
 
 ### Not the default any more
 
