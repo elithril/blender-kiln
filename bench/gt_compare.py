@@ -109,13 +109,19 @@ def main():
     o = args()
     tfiles, tH = silhouettes(o["truth"], os.path.join(o["out"], "truth"))
     tm = {v: mask(f) for v, f in tfiles.items()}
+    # A view that is mostly air — a chair from the side, posts and rails — cannot be scored
+    # by silhouette: a few pixels of offset empty the overlap (0.12-0.16 at every yaw for the
+    # bench's chair), and the yaw search then follows the noise. Such views are reported but
+    # left out of the mean and the yaw choice.
+    fill = {v: float(m.mean()) for v, m in tm.items()}
+    scored = [v for v in VIEWS if fill[v] >= 0.30]
     rows = {}
     for path, label in zip(o["model"], o["label"]):
         best = None
         for yaw in (0, 90, 180, 270):
             files, H = silhouettes(path, os.path.join(o["out"], f"{label}_y{yaw}"), yaw)
             per = {v: iou(tm[v], fit(mask(files[v]), tm[v].shape[0])) for v in VIEWS}
-            mean = float(np.mean(list(per.values())))
+            mean = float(np.mean([per[v] for v in scored])) if scored else float(np.mean(list(per.values())))
             print(f"YAW {label} {yaw:>3}°: " + " ".join(f"{v} {per[v]:.3f}" for v in VIEWS) + f" · mean {mean:.3f}")
             if best is None or mean > best[0]:
                 best = (mean, yaw, per, files, H)
@@ -123,7 +129,12 @@ def main():
         rows[label] = dict(views=per, mean_iou=mean, yaw=yaw, height_m=H,
                            height_vs_truth=H / tH - 1, base_share=base_share(mask(files["front"])))
     truth_base = base_share(tm["front"])
-    print("GT " + json.dumps(dict(truth_height_m=tH, truth_base_share=truth_base, models=rows)))
+    print("GT " + json.dumps(dict(truth_height_m=tH, truth_base_share=truth_base, truth_fill=fill,
+                                  scored_views=scored, models=rows)))
+    left_out = [v for v in VIEWS if v not in scored]
+    if left_out:
+        print("views left out of the mean (mostly air, silhouette meaningless): "
+              + ", ".join(f"{v} ({fill[v]:.0%} filled)" for v in left_out))
     print(f"\ntruth: {tH * 100:.1f} cm, base {truth_base:.1%} of the height")
     print(f"{'model':10} " + " ".join(f"{v:>6}" for v in VIEWS) + "   mean  yaw   height        base")
     for label, r in rows.items():
