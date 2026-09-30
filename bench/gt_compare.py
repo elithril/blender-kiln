@@ -116,6 +116,7 @@ def main():
             files, H = silhouettes(path, os.path.join(o["out"], f"{label}_y{yaw}"), yaw)
             per = {v: iou(tm[v], fit(mask(files[v]), tm[v].shape[0])) for v in VIEWS}
             mean = float(np.mean(list(per.values())))
+            print(f"YAW {label} {yaw:>3}°: " + " ".join(f"{v} {per[v]:.3f}" for v in VIEWS) + f" · mean {mean:.3f}")
             if best is None or mean > best[0]:
                 best = (mean, yaw, per, files, H)
         mean, yaw, per, files, H = best
