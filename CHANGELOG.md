@@ -72,6 +72,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   kinked). The inventory is ticked line by line at the final review (a pentagon loop turned
   into a teardrop no number flagged). The procedure scales with the tier — the lantern's
   cost had gone from $1.90 to $3.52. The float bake and its sRGB conversion are one rule.
+- **3/4 photos and openwork objects**, found by testing on a crate and a chair: the review
+  camera now takes `--azimuth` as well as `--elevation`, framing by projecting the bounding
+  box (a real crate against its own 3/4 preview: 0.573 level, 0.925 at 50°/20°); and
+  openwork — a chair from the side, 0.12–0.16 at every orientation — is judged on
+  proportions and by eye.
 - **`tools/test_fidelity_check.py`** seeds the review tool, 10/10, in the Blender CI. Its
   first run caught the views framed by height only: anything wider than tall was clipped.
 - **A float colour bake shipped black.** Measured on Blender 5.2.2 with a minimal repro:

@@ -237,8 +237,14 @@ curl -s -A "$UA" https://api.polyhaven.com/files/studio_small_09 \
 # --max-tris: the tier's top (rule 4 reported, not blocked). --view/--elevation: where the photo's camera stood (§1)
 blender -b --factory-startup --python-exit-code 1 --python <skill>/tools/fidelity_check.py -- \
   --reference ref.png --model asset_final.glb --hdri studio_small_09_1k.hdr --out review/ \
-  --max-tris 5000 --view front --elevation 12
+  --max-tris 5000 --view front --elevation 12 --azimuth 0
 ```
+
+**Most product photos are 3/4 views: set `--azimuth`** — degrees the camera turns toward
+the object's right (+X seen from the front). Read it like the elevation, before modeling:
+from which side the photo sees the object, and how much. Measured on Poly Haven's
+ammo_box against its own 3/4 preview: IoU 0.573 rendered level from the side, 0.925 at
+azimuth 50°, elevation 20°. Without it, a 3/4 photo cannot be measured at all.
 
 **Close the listed gaps; never push the score.** The real object itself scores ~0.80 IoU
 against its own photo — the camera, the lens and the light differ. A reconstruction above
@@ -272,6 +278,11 @@ Read it with its limits, measured on the lantern:
 
 - **The reference's camera and light are unknown.** A frontal orthographic render cannot
   match a slightly high perspective shot at the base; a few percent is noise.
+- **Openwork is judged on proportions and by eye, not by silhouette.** A chair seen from
+  the side is posts and rails: its silhouette overlaps nothing whatever its accuracy
+  (0.12–0.16 for every orientation of a good reconstruction). For chairs, frames, lattices,
+  cages: compare width, depth and height ratios and the heights of key features (seat,
+  arms) against the reference, and look at the side-by-side.
 - **Thin parts wreck band IoU.** A 2-px wire off by one pixel scores 0.2–0.4. Use the
   overlay for wires, loops and handles; trust IoU for bodies.
 - **Two correction rounds at most — three measures in all**, each logged: what the numbers

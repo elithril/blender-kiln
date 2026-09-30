@@ -313,7 +313,7 @@ shipped bug; this notices when a Blender release makes one wrong again.
 `tools/test_fidelity_check.py` runs in the same workflow and seeds what the review tool
 claims to measure — a model against its own render (IoU 0.998), the same model 20 % wider
 (measured +20.3 %), an unloaded texture (refused), a `.blend` (warned), a triangle limit,
-and `--view` on a 2 x 1 x 1 box — **10/10**. Its first run caught the tool framing views by
+and `--view` and `--azimuth` on a 2 x 1 x 1 box — **12/12**. Its first run caught the tool framing views by
 height only: anything wider than tall was clipped, a box measured 1:1 instead of 2:1.
 
 ## Iron rules

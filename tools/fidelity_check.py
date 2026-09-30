@@ -2,7 +2,7 @@
 
     blender -b --factory-startup --python-exit-code 1 --python tools/fidelity_check.py -- \\
         --reference ref.png --model asset.blend|asset.glb --hdri studio.hdr --out review/ \\
-        [--view front|back|left|right|top] [--elevation DEG] [--samples 64] [--max-tris 5000]
+        [--view front|back|left|right|top] [--elevation DEG] [--azimuth DEG] [--samples 64] [--max-tris 5000]
 
 One reference image per call. A reference shot from the side or from above is measured
 with --view set to where that camera stood; run once per view the user provided.
@@ -29,6 +29,7 @@ from mathutils import Vector
 BANDS = 5
 VIEW = "front"
 ELEVATION = 0.0
+AZIMUTH = 0.0
 
 
 def args():
@@ -41,9 +42,10 @@ def args():
             sys.exit(f"fidelity_check: missing --{k}")
     if o.get("view", "front") not in ("front", "back", "left", "right", "top"):
         sys.exit("fidelity_check: --view is front, back, left, right or top")
-    global VIEW, ELEVATION
+    global VIEW, ELEVATION, AZIMUTH
     VIEW = o.get("view", "front")
     ELEVATION = float(o.get("elevation", 0))
+    AZIMUTH = float(o.get("azimuth", 0))
     os.makedirs(o["out"], exist_ok=True)
     return o
 
@@ -100,16 +102,27 @@ def render(sc, lo, hi, path, engine, hdri=None, samples=64):
     across = {"front": size.x, "back": size.x, "left": size.y, "right": size.y}.get(VIEW, 0)
     cam.data.ortho_scale = max(frame_h, size.x, size.y) * 1.02 if VIEW == "top" else max(frame_h, across) * 1.02
     cam.location = ctr + offset; cam.rotation_euler = rot
-    if ELEVATION and VIEW != "top":
-        # Tilt the camera down onto the object by ELEVATION degrees, orbiting its centre:
-        # a photo taken from slightly above shows the top of every disc as an ellipse, and
-        # a frontal render compared with it reads those discs as taller than they are.
-        e = math.radians(ELEVATION)
+    if (ELEVATION or AZIMUTH) and VIEW != "top":
+        # Orbit the camera around the object's centre: AZIMUTH turns it toward the object's
+        # right (+X seen from the front) — most product photos are 3/4 views — and ELEVATION
+        # tilts it down: a photo taken from above shows every disc's top as an ellipse, and a
+        # level render compared with it reads those discs as taller than they are.
+        e, a = math.radians(ELEVATION), math.radians(AZIMUTH)
         d = (cam.location - ctr)
-        horiz = Vector((d.x, d.y, 0)).normalized() * d.length
+        hx, hy = d.x, d.y
+        hx, hy = hx * math.cos(a) - hy * math.sin(a), hx * math.sin(a) + hy * math.cos(a)
+        horiz = Vector((hx, hy, 0)).normalized() * d.length
         cam.location = ctr + horiz * math.cos(e) + Vector((0, 0, d.length * math.sin(e)))
         cam.rotation_euler = (ctr - cam.location).to_track_quat("-Z", "Y").to_euler()
-        cam.data.ortho_scale = max(H * math.cos(e) + max(size.x, size.y) * math.sin(e), size.x, size.y) * 1.04
+    # Frame what this camera actually sees: project the bounding box's eight corners onto
+    # its image plane. Rules per view clipped anything wider than tall once already.
+    bpy.context.view_layer.update()
+    inv = cam.matrix_world.inverted()
+    corners = [inv @ Vector((x, y, z)) for x in (lo.x, hi.x) for y in (lo.y, hi.y) for z in (lo.z, hi.z)]
+    xs, ys = [c.x for c in corners], [c.y for c in corners]
+    cam.data.ortho_scale = max(max(xs) - min(xs), max(ys) - min(ys)) * 1.04
+    shift = cam.matrix_world.to_3x3() @ Vector(((max(xs) + min(xs)) / 2, (max(ys) + min(ys)) / 2, 0))
+    cam.location = cam.location + shift
     sc.render.engine = engine
     sc.render.film_transparent = True
     sc.render.resolution_x = sc.render.resolution_y = 768

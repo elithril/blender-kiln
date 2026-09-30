@@ -12,7 +12,8 @@ test writes its own tiny HDRI. Cases:
 - a texture that is not loaded: refused, exit 1 — it would render black;
 - a .blend: measured, with the warning that the shipped file is what counts;
 - --max-tris: reported above the limit, silent below;
-- --view left on a 2 x 1 x 1 box: the silhouette is square, not 2:1.
+- --view and --azimuth on a 2 x 1 x 1 box: 2:1 from the front, 1:1 from the side or at 90°,
+  and 2.12:1 at 45° (2 cos 45° + sin 45°) — the 3/4 view most product photos are.
 """
 import json, os, subprocess, sys, tempfile
 
@@ -110,8 +111,12 @@ with tempfile.TemporaryDirectory() as d:
     check("--max-tris: reported above the limit", any("triangles, above" in g for g in over["gaps"]), over["tris"])
     check("--max-tris: silent below it", not any("triangles, above" in g for g in under["gaps"]), under["tris"])
 
-    for view, want in (("front", 2.0), ("left", 1.0)):
-        _, _, out = measure(d, f"{d}/box.glb", "--view", view)
+    for label, extra, want in (("--view front", ("--view", "front"), 2.0),
+                               ("--view left", ("--view", "left"), 1.0),
+                               ("--azimuth 90", ("--azimuth", "90"), 1.0),
+                               ("--azimuth 45", ("--azimuth", "45"), 2 * 0.7071 + 0.7071)):
+        view = label.replace("--", "").replace(" ", "_")
+        _, _, out = measure(d, f"{d}/box.glb", *extra)
         probe = f"{d}/probe_{view}.py"
         open(probe, "w").write(
             "import bpy, numpy as np\n"
@@ -119,7 +124,7 @@ with tempfile.TemporaryDirectory() as d:
             "m = np.array(im.pixels[:]).reshape(h, w, 4)[..., 3] > 0.5\n"
             "ys, xs = np.where(m); print('ASPECT', (np.ptp(xs) + 1) / (np.ptp(ys) + 1))\n")
         a = float(next(l for l in blender("--python", probe).stdout.splitlines() if l.startswith("ASPECT")).split()[1])
-        check(f"--view {view}: box silhouette {want:g}:1", abs(a - want) < 0.08, round(a, 2))
+        check(f"{label}: 2x1x1 box silhouette {want:.2f}:1", abs(a - want) < 0.08, round(a, 2))
 
 print(f"\n{sum(checks)}/{len(checks)}")
 sys.exit(0 if all(checks) else 1)
