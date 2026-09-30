@@ -38,6 +38,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `gltf-transform validate`: exit 1 on a seeded broken GLB, exit 0 on all 16 bench
   GLBs. It checks the format, not the mesh.
 
+### Changed — the skill now fires on files people bring, not only on assets they order
+
+- **The frontmatter `description` decides whether kiln exists for a user**, and it
+  only described producing an asset. Measured with `bench/trigger.py` on 12 prompts
+  written as users write: the old one fired on **6 of 8** that should trigger it —
+  it missed "shrink this 40 MB GLB" and "convert to USDZ", both of which kiln does
+  — and on none of the 4 that should not. On 6 held-out prompts, written before
+  the new description was drafted, it scored 3 of 4 (it missed "generate LODs").
+  The new one: **12 of 12, 0 false positives in 6**. One run per prompt.
+
 ### Changed — what a Space call spends, and whose
 
 - **The free cloud path is one or two generations a day.** ZeroGPU gives 2 minutes
