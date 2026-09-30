@@ -54,7 +54,8 @@ PBR texturing, a rigged character, batch mode. Skill 1.1.2 against the current b
 | Defects the measure found | 2 → 1 (a stool 6 mm below the ground) | 2 → **0** |
 | Cost for the five | $6.49 → $7.34 (+13 %) | $5.82 → $7.81 (+34 %) |
 
-<p align="center"><img src="../bench/results/final/before-after-ahujasid.webp" alt="Six briefs on ahujasid's MCP, before (left) and after (right)" width="100%" /></p>
+<p align="center"><img src="../bench/results/final/before-after-ahujasid.webp" alt="Five briefs on ahujasid's MCP: before on the left half, after on the right half" width="100%" /></p>
+<p align="center"><sub><b>Left half: before</b> (skill 1.1.2) · <b>right half: after</b>. One row per brief — lantern, PolyHaven chair, PBR crate, rigged villager, batch props — each object rendered from two angles under the same studio light. The Lab MCP's sheet: <a href="../bench/results/final/before-after-lab.webp">before-after-lab.webp</a>.</sub></p>
 
 No visual regression on either server. The skill now does the work it used to skip —
 optimization, validation, re-checks — and pays for it in turns.
@@ -87,7 +88,8 @@ Details: [`bench/results/mcp-comparison-2026-09-29.md`](../bench/results/mcp-com
 One reference — Poly Haven's `Lantern_01` preview, photographed from about 15° above — and the
 same brief each time. Each version is the skill after the previous one's findings.
 
-<p align="center"><img src="../bench/results/lantern-iterations/v7-control.webp" alt="Reference, v3, v6 re-exported, v7 and an image-to-code tool, under the same studio light" width="100%" /></p>
+<p align="center"><img src="../bench/results/lantern-iterations/v7-control.webp" alt="Top row: the reference photo, kiln v3, kiln v6 re-exported, kiln v7, img2threejs. Bottom row: close-ups of the top" width="100%" /></p>
+<p align="center"><sub><b>Top row, left to right:</b> the reference photo · kiln v3 · kiln v6 re-exported · kiln v7 · img2threejs — all rendered at the photo's ~15° angle under the same studio HDRI. <b>Bottom row:</b> the same versions, close-up on the bail and top loop (the reference crop on the left). Every version up to v6: <a href="../bench/results/lantern-iterations/">lantern-iterations/</a>.</sub></p>
 
 | | truth, 5 views | height vs real | saturation (ref 0.32) | tris | cost |
 |---|---:|---:|---:|---:|---:|
@@ -135,7 +137,8 @@ layered texture fields, a frosted-glass recipe — were measured and adopted.
 The lantern loop could have fitted the skill to one lantern. The same skill, before and after,
 on two other Poly Haven references:
 
-<p align="center"><img src="../bench/results/generalisation/crate-chair.webp" alt="Reference, before and after, for an ammo box and a gothic chair" width="100%" /></p>
+<p align="center"><img src="../bench/results/generalisation/crate-chair.webp" alt="For an ammo box (top) and a gothic chair (bottom): the reference photo, kiln before the lantern loop, kiln after" width="100%" /></p>
+<p align="center"><sub><b>Left to right:</b> the reference photo · kiln before the lantern loop · kiln after. <b>Top:</b> Poly Haven's ammo_box. <b>Bottom:</b> Poly Haven's WoodenChair_01.</sub></p>
 
 | | truth | height vs real | cost |
 |---|---:|---:|---:|
