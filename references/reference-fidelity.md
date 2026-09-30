@@ -205,8 +205,13 @@ blender -b --factory-startup --python-exit-code 1 --python <skill>/tools/fidelit
   --view front --elevation 12                         # where the photo's camera stood (§1)
 ```
 
-One call per reference view. Try the elevation you read at ±5° and keep the best: the
-measure is only meaningful at the photo's own angle. **Never fit the model to a mismatched
+One call per reference view, **at the elevation you read on the ellipses — fixed before
+modeling, never chosen by the score.** Picking the angle at which the model being built
+scores best is circular: on the bench a session tried 10 / 15 / 20°, kept 20° because its
+model fitted there, and shipped a base 27 % flatter than the real one. With a close
+camera the ellipses open toward the bottom (read 9° at the cap, 12° at the bell, 24° at the
+base on one photo): take the rim nearest mid-height. And never rescale the whole model to
+raise the score — that same session narrowed every width by 5.7 %. **Never fit the model to a mismatched
 view** — on the bench, the version that scored best against the photo (0.898, frontal)
 was the *worst* against the real object seen from every side, because it had copied
 the photo's perspective into the geometry.
@@ -223,7 +228,11 @@ Read it with its limits, measured on the lantern:
   match a slightly high perspective shot at the base; a few percent is noise.
 - **Thin parts wreck band IoU.** A 2-px wire off by one pixel scores 0.2–0.4. Use the
   overlay for wires, loops and handles; trust IoU for bodies.
-- **Two correction rounds at most**, each logged: what the numbers said, what changed.
+- **Two correction rounds at most — three measures in all**, each logged: what the numbers
+  said, what changed. At 16–32 samples and 512 px bakes during review; 1024 only for the
+  final bake. Eight measures and ten bakes took one session to 105 turns and $5.63.
+- **Correct half-way.** A gap is a direction, not a dose: one session moved saturation
+  from 0.17 straight to 0.38 for a target of 0.33. Move halfway, measure, finish.
   The image-to-code tool that ran eight vision passes spent ~5x the cost for a likeness
   this loop reaches.
 

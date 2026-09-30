@@ -63,6 +63,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Scored from five sides against the real Poly Haven asset, the version that best fitted
   the ~15° photo from the front was the *worst* against the object: it had copied the
   photo's perspective into the geometry, its base 30 % too tall.
+- **The camera's elevation is read, then fixed — never picked by the score.** A session
+  that chose among 10 / 15 / 20° the angle its own model fitted best kept 20°, and shipped a
+  base 27 % flatter than the real one. Reviews are now capped at three measures, correct
+  half-way toward a target (saturation had jumped 0.17 → 0.38 for 0.33), and keep every
+  working file in the asset folder — the same session had written into `/tmp`.
 - **Luminance and highlights depend on the light.** The real asset, measured against its
   own preview under the tool's HDRI, reads luminance +0.05 and highlights 2.5 % for
   1.5 %; saturation held (0.33 for 0.32). Those two are now alarms, not targets.
