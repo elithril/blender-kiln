@@ -32,13 +32,20 @@ def args():
     return o
 
 
-def silhouettes(path, out_prefix):
+def silhouettes(path, out_prefix, yaw_deg=0):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     if path.lower().endswith((".glb", ".gltf")):
         bpy.ops.import_scene.gltf(filepath=path)
     else:
         bpy.ops.wm.open_mainfile(filepath=path)
     sc = bpy.context.scene
+    if yaw_deg:
+        # A model may face another way than the truth — a crate long in X where the truth is
+        # long in Y. Turn it about the vertical before comparing; main() keeps the best yaw.
+        piv = bpy.data.objects.new("_yaw", None); sc.collection.objects.link(piv)
+        for ob in [o for o in sc.objects if o.parent is None and o is not piv]:
+            ob.parent = piv
+        piv.rotation_euler = (0, 0, math.radians(yaw_deg)); bpy.context.view_layer.update()
     for ob in sc.objects:
         if ob.type in ("CAMERA", "LIGHT"):
             ob.hide_render = True
@@ -104,17 +111,23 @@ def main():
     tm = {v: mask(f) for v, f in tfiles.items()}
     rows = {}
     for path, label in zip(o["model"], o["label"]):
-        files, H = silhouettes(path, os.path.join(o["out"], label))
-        per = {v: iou(tm[v], fit(mask(files[v]), tm[v].shape[0])) for v in VIEWS}
-        rows[label] = dict(views=per, mean_iou=float(np.mean(list(per.values()))), height_m=H,
+        best = None
+        for yaw in (0, 90, 180, 270):
+            files, H = silhouettes(path, os.path.join(o["out"], f"{label}_y{yaw}"), yaw)
+            per = {v: iou(tm[v], fit(mask(files[v]), tm[v].shape[0])) for v in VIEWS}
+            mean = float(np.mean(list(per.values())))
+            if best is None or mean > best[0]:
+                best = (mean, yaw, per, files, H)
+        mean, yaw, per, files, H = best
+        rows[label] = dict(views=per, mean_iou=mean, yaw=yaw, height_m=H,
                            height_vs_truth=H / tH - 1, base_share=base_share(mask(files["front"])))
     truth_base = base_share(tm["front"])
     print("GT " + json.dumps(dict(truth_height_m=tH, truth_base_share=truth_base, models=rows)))
     print(f"\ntruth: {tH * 100:.1f} cm, base {truth_base:.1%} of the height")
-    print(f"{'model':10} " + " ".join(f"{v:>6}" for v in VIEWS) + "   mean   height        base")
+    print(f"{'model':10} " + " ".join(f"{v:>6}" for v in VIEWS) + "   mean  yaw   height        base")
     for label, r in rows.items():
         print(f"{label:10} " + " ".join(f"{r['views'][v]:6.3f}" for v in VIEWS)
-              + f"  {r['mean_iou']:.3f}  {r['height_m'] * 100:5.1f} cm {r['height_vs_truth']:+.0%}  "
+              + f"  {r['mean_iou']:.3f} {r['yaw']:>4}°  {r['height_m'] * 100:5.1f} cm {r['height_vs_truth']:+.0%}  "
                 f"{r['base_share']:.1%} ({r['base_share'] / truth_base - 1:+.0%})")
 
 
