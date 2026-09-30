@@ -174,6 +174,29 @@ v3 on texture detail (0.031 against 0.022 for the reference's 0.032):
 - **Bake colour through an Emission shader into a float image.** A DIFFUSE bake of a
   metallic surface comes out near-black; a byte sRGB target shifts the value. Baked this
   way a flat texel returns the sampled colour exactly (0.0174 against 0.0176 linear).
+- **Convert a float bake to sRGB bytes before export — or the colour ships black.**
+  Measured on Blender 5.2.2: the glTF exporter writes a linear float base-colour image
+  into the PNG *without* the sRGB transfer — linear 0.2 lands as byte 51 instead of 124,
+  and reads back as 0.03. A lantern reviewed at saturation 0.30 shipped at 0.12, its base
+  colour near black, its metal a grey mirror. Converted first, the byte is 124 and the
+  re-imported value 0.202:
+
+```python
+def to_srgb_byte(float_img):
+    """A byte sRGB copy of a linear float image — what the glTF exporter writes correctly."""
+    w, h = float_img.size
+    lin = np.array(float_img.pixels[:], dtype=np.float32).reshape(-1, 4)
+    rgb = np.clip(lin[:, :3], 0, 1)
+    enc = np.where(rgb <= 0.0031308, rgb * 12.92, 1.055 * np.power(rgb, 1 / 2.4) - 0.055)
+    out = bpy.data.images.new(float_img.name + "_sRGB", w, h, alpha=True, float_buffer=False)
+    out.colorspace_settings.name = "sRGB"
+    out.pixels = np.concatenate([enc, lin[:, 3:4]], 1).ravel().tolist()   # byte pixels are the encoded values
+    out.pack()
+    return out
+```
+
+  Swap it into the Image Texture node that feeds Base Color before exporting. Non-Color
+  maps (roughness, metallic, normal) are data and export correctly as they are.
 - **Relief ships as a normal map.** glTF has no bump. Wire the height field through a Bump
   node, bake type NORMAL, tangent space, into a Non-Color float image, and connect it
   through a Normal Map node — measured: mean (0.5, 0.5, 1) as a flat surface should be,
@@ -204,6 +227,11 @@ blender -b --factory-startup --python-exit-code 1 --python <skill>/tools/fidelit
   --max-tris 5000 \\                                 # the tier's top: rule 4 is reported, not blocked
   --view front --elevation 12                         # where the photo's camera stood (§1)
 ```
+
+**The last measure is of the file that ships — `_final.glb`, not the `.blend`.** A session
+validated its lantern at saturation 0.30 in the .blend; the GLB it shipped read 0.12,
+because the export had dropped the colour's transfer (§ 4). Only the shipped file is what
+the user gets.
 
 One call per reference view, **at the elevation you read on the ellipses — fixed before
 modeling, never chosen by the score.** Picking the angle at which the model being built

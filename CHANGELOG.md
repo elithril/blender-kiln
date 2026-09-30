@@ -63,6 +63,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Scored from five sides against the real Poly Haven asset, the version that best fitted
   the ~15° photo from the front was the *worst* against the object: it had copied the
   photo's perspective into the geometry, its base 30 % too tall.
+- **A float colour bake shipped black.** Measured on Blender 5.2.2 with a minimal repro:
+  the glTF exporter writes a linear float base-colour image into its PNG without the sRGB
+  transfer (linear 0.2 → byte 51, not 124). A lantern reviewed at saturation 0.30 shipped
+  at 0.12. `to_srgb_byte()` converts first (byte 124, 0.202 back); the last review measure
+  must now be of `_final.glb`, and `fidelity_check.py` warns when given a `.blend`. The
+  float bake itself came from this release's own advice.
 - **The camera's elevation is read, then fixed — never picked by the score.** A session
   that chose among 10 / 15 / 20° the angle its own model fitted best kept 20°, and shipped a
   base 27 % flatter than the real one. Reviews are now capped at three measures, correct

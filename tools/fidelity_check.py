@@ -190,6 +190,9 @@ def save(arr, path):
 
 def main():
     o = args()
+    if not o["model"].lower().endswith((".glb", ".gltf")):
+        print("fidelity_check: WARNING — measuring a .blend. The final measure must be of the exported "
+              "GLB: an export can change what you see (a linear float texture ships black).")
     sc, lo, hi, tris, nmesh = open_model(o["model"])
     sil, col = os.path.join(o["out"], "_silhouette.png"), os.path.join(o["out"], "_colour.png")
     render(sc, lo, hi, sil, "BLENDER_WORKBENCH")
