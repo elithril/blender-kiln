@@ -487,7 +487,7 @@ A user-provided image (or generated concept art) is useful for ALL creation meth
 | Method | How the image is used |
 |---|---|
 | **Hunyuan3D** | Passed directly as generation input (image → 3D) |
-| **Scripted modeling** | Analyze image to guide Python modeling — match proportions, number of parts, shapes, structural details, relative sizes |
+| **Scripted modeling** | **Load `references/reference-fidelity.md`** — inventory the details, measure the silhouette from the pixels, check every part is attached, sample materials from the image, review twice against it |
 | **Geometry Nodes** | Analyze image to inform node parameters — spacing, density, pattern, scale |
 | **Marketplace** | Analyze image to refine search keywords and evaluate result similarity |
 
@@ -649,7 +649,7 @@ fails silently: no error, no movement.
 
 ### [5b] TEXTURING
 
-Load `references/texturing-strategy.md`.
+Load `references/texturing-strategy.md`. With a reference image, also `references/reference-fidelity.md` § 4: one material per region, colours sampled from the image, patina is not metal, wear thresholded by percentile.
 
 **Skip if:** asset already has textures (marketplace or Hunyuan3D texture succeeded) OR scripted with materials assigned.
 

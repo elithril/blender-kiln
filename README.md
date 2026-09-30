@@ -253,6 +253,7 @@ Once installed, the skill directory looks like this:
     ├── naming-conventions.md
     ├── sourcing-strategy.md
     ├── texturing-strategy.md
+    ├── reference-fidelity.md
     ├── topology-rules.md
     ├── uv-materials.md
     └── validation-checklist.md
@@ -266,6 +267,7 @@ Once installed, the skill directory looks like this:
 | `references/characters.md` | Rigging patterns, anti-patterns, export gotchas, Blender 5.x | ~640 |
 | `references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~460 |
 | `references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~360 |
+| `references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, review | ~130 |
 | `references/validation-checklist.md` | Geometry cleanup + material export audit | ~250 |
 | `references/ai-generation.md` | Hunyuan3D 2.x (local + cloud), concept art (FLUX.1-schnell, nano-banana), free-quota and token rules | ~340 |
 | `references/export-targets.md` | GLB/FBX/USDZ settings, headless CLI, post-export checklist | ~240 |
