@@ -196,7 +196,7 @@ on it, for 10% less cost. Map the tools, and source around the gaps:
 |---|---|
 | `get_scene_info` (rule 1) | `get_objects_summary` |
 | `get_object_info` (rule 24) | `get_object_detail_summary` |
-| `get_viewport_screenshot` (rule 2) | `get_screenshot_of_area_as_image`, or `render_viewport_to_path` |
+| `get_viewport_screenshot` (rule 2) | `get_screenshot_of_area_as_image(area_ui_type="VIEW_3D")`, or `render_viewport_to_path` |
 | frame the viewport (rule 22) | `jump_to_view3d_object_by_name` |
 | `bpy_api_lookup` | `search_api_docs` / `get_python_api_docs`, plus `search_manual_docs` |
 | `execute_blender_code` | same name |
@@ -213,6 +213,13 @@ or `--online-mode`), or the add-on refuses to serve. Its PyPI-style package is
 run it from git:
 `uvx --from "git+https://projects.blender.org/lab/blender_mcp.git#subdirectory=mcp" blender-mcp`.
 Register it under the MCP name `blender` so `mcp__blender__*` still matches.
+
+**Rule 2 needs saying twice on this server.** The bench's sessions knew the capture
+tool and called it right — then took **one screenshot per session** on 4 of 5
+briefs, and framed once in five. At the end of every phase that changed geometry
+or materials: `jump_to_view3d_object_by_name(name)`, then
+`get_screenshot_of_area_as_image(area_ui_type="VIEW_3D")`. After TEXTURING, a second
+angle too. A single-asset run therefore takes **at least four** captures.
 
 ---
 
@@ -660,8 +667,9 @@ Load `references/texturing-strategy.md`.
 ### [6] OPTIMIZE (interactive in guided mode)
 
 **Auto mode, glTF target:** apply the default preset without asking — textures to
-WebP, resized only above the tier's cap (lightweight 1024, balanced 2048,
-detailed unchanged), then Draco — as individual steps (rule 20). It does not touch
+WebP, resized to the target's cap from `references/uv-materials.md` § Texture
+Resolution per Use Case — **1024 for web/glTF, the default, whatever the tier**;
+2048 only when the brief asks for close-ups or targets console/PC — then Draco — as individual steps (rule 20). It does not touch
 geometry, and `_original.glb` survives, so it is not a destruction under rule 6.
 Report before/after sizes, and say that Draco needs a decoder on the client.
 Simplify, decimate and LOD stay interactive in every mode.

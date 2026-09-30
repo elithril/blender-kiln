@@ -42,9 +42,11 @@ curl -s -A "$UA" "https://api.polyhaven.com/files/WoodenChair_01"   # per format
 
 `files/<id>` → `gltf` → `1k` / `2k` / `4k` → `gltf` gives the `.gltf` URL and an
 `include` map of its textures and `.bin`; download every entry into the same
-relative layout, then import the `.gltf`. **Pick the resolution from the tier**
-(lightweight 1k, balanced 1k–2k, detailed 2k–4k): the bench's chair shipped at
-16.2 MB from 2K maps and at 0.48 MB from 1K, same 724 triangles.
+relative layout, then import the `.gltf`. **Download `1k` for a web/glTF target**,
+the default — the cap in `references/uv-materials.md` § Texture Resolution per Use
+Case. `2k` only for close-ups or a console/PC target. Measured on the same
+724-triangle chair: 16.2 MB from 2K maps uncompressed, 1.03 MB from 2K in WebP,
+0.48 MB from 1K uncompressed.
 
 **Terms of Service** (`Poly-Haven/Public-API`, `ToS.md`): the assets are CC0 and
 need no attribution, but using the *live API* requires a unique User-Agent (2.4)
