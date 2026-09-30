@@ -27,7 +27,22 @@ detail that will be forgotten.
 ```
 
 Write *how* parts meet ("inserted", "hooked", "welded", "resting") — that is what
-step 3 checks.
+step 3 checks. **Inventory from enlarged crops, not the whole image**: at full-image size
+the lantern's top loop read as two legs entering the cap; a 3x crop shows a closed
+pentagon on a hinge clip — and the review had praised the wrong version.
+
+**Before modeling, settle what one photo cannot say:**
+
+- **More views, when the object deserves it** — a hero asset, a character, anything whose
+  back or underside will be seen. Ask for a side and a top view; each one given is
+  measured in step 5 with its own `--view`. Parts no view shows are inventions: say which.
+- **The real size.** A photo has no scale. Ask; otherwise take the object's usual size
+  (a hurricane lantern is ~30 cm) and log it as an assumption. Measured: five
+  reconstructions of one lantern, 23–52 % too tall, none of them saying so.
+- **The camera's elevation.** A photo taken from above shows the top of every circle as an
+  ellipse, whose minor/major ratio is sin θ. Read θ on the widest rim you can see; step 5
+  renders at that elevation. Ignoring it inflates every stacked disc: fitted to a ~15°
+  photo, a lantern's base grew 30 % taller than the real one's.
 
 ## 2. Measure the silhouette
 
@@ -186,8 +201,15 @@ curl -s -A "$UA" https://api.polyhaven.com/files/studio_small_09 \
   | xargs curl -s -A "$UA" -o studio_small_09_1k.hdr
 blender -b --factory-startup --python-exit-code 1 --python <skill>/tools/fidelity_check.py -- \
   --reference ref.png --model asset.blend --hdri studio_small_09_1k.hdr --out review/ \\
-  --max-tris 5000                                    # the tier's top: rule 4 is reported, not blocked
+  --max-tris 5000 \\                                 # the tier's top: rule 4 is reported, not blocked
+  --view front --elevation 12                         # where the photo's camera stood (§1)
 ```
+
+One call per reference view. Try the elevation you read at ±5° and keep the best: the
+measure is only meaningful at the photo's own angle. **Never fit the model to a mismatched
+view** — on the bench, the version that scored best against the photo (0.898, frontal)
+was the *worst* against the real object seen from every side, because it had copied
+the photo's perspective into the geometry.
 
 It writes `overlay.png` (red: reference only, cyan: model only) and `side_by_side.png`,
 and one `FIDELITY {...}` JSON line: silhouette IoU overall and per height band, width and
@@ -216,6 +238,16 @@ Read it with its limits, measured on the lantern:
   semi-transparent globe shows its facets as bands, its back faces blending through.
   Take the frosting from the reference as an alpha/roughness texture; keep the tint
   neutral unless the reference shows one.
+- **Know which numbers depend on the light.** Poly Haven's own Lantern_01, measured with
+  its own textures under the tool's HDRI against its own preview, reads saturation 0.33
+  for 0.32 — reliable — but luminance +0.05 and highlights 2.5 % for 1.5 %: the HDRI is
+  not the preview's. So **saturation, detail and shape are targets; luminance and
+  highlights are only alarms when far off.** A reconstruction at 2.5 % highlights matched
+  the real object, not "too reflective".
+- **Fine detail is what reads as real.** At 0.022–0.024 texture detail against the
+  reference's 0.032 (the real asset measures 0.028 under the same light), surfaces read
+  clean and new; scratches (thin lines along the part's
+  u direction) and pits in the relief field close most of it.
 - **Metal must read warm and specular where it is worn.** Check saturation, warmth and
   highlights against the reference numbers, not against memory — a patina can be dark
   and still saturated.

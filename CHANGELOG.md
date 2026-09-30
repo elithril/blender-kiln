@@ -56,6 +56,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   export as `normalTexture`), and a frosted-glass recipe. `fidelity_check.py` now counts
   triangles against `--max-tris` and refuses a model with unloaded textures, which had
   rendered black and skewed a measure.
+- **What one photo cannot say is settled before modeling**: the real size (asked, or the
+  usual size stated as an assumption — five reconstructions of one lantern came out
+  23–52 % too tall), more views for an asset whose back will be seen, and the camera's
+  elevation read on a rim's ellipse. `fidelity_check.py` takes `--view` and `--elevation`.
+  Scored from five sides against the real Poly Haven asset, the version that best fitted
+  the ~15° photo from the front was the *worst* against the object: it had copied the
+  photo's perspective into the geometry, its base 30 % too tall.
+- **Luminance and highlights depend on the light.** The real asset, measured against its
+  own preview under the tool's HDRI, reads luminance +0.05 and highlights 2.5 % for
+  1.5 %; saturation held (0.33 for 0.32). Those two are now alarms, not targets.
 - **The skill replies in the language of the request.** Two sessions had answered in French
   to an English brief.
 

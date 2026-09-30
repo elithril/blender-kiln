@@ -405,6 +405,12 @@ Collect these parameters. Only type and brief are mandatory — infer the rest f
 Reformulate the enriched brief for confirmation:
 > "OK: medieval wooden chair, stylized, for web (glTF), tier balanced (1.5-5K tris). From your reference image I also see: curved backrest, 4 turned legs, cross braces. Good?"
 
+**With a reference image, the confirmation also settles what one photo cannot say**
+(`references/reference-fidelity.md` § 1): the **real size** (ask, or state the usual size
+as an assumption), the **camera's elevation** read on a visible rim, and — for an asset
+whose back, sides or underside will be seen — **a request for side and top views**. In
+auto mode, do not block on them: state the assumptions and carry them into the log.
+
 ### [3] SOURCE — Marketplace or Create?
 
 Ask: **"Search marketplaces or create from scratch?"**

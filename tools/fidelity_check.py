@@ -2,7 +2,10 @@
 
     blender -b --factory-startup --python-exit-code 1 --python tools/fidelity_check.py -- \\
         --reference ref.png --model asset.blend|asset.glb --hdri studio.hdr --out review/ \\
-        [--samples 64] [--max-tris 5000]
+        [--view front|back|left|right|top] [--elevation DEG] [--samples 64] [--max-tris 5000]
+
+One reference image per call. A reference shot from the side or from above is measured
+with --view set to where that camera stood; run once per view the user provided.
 
 Renders the model twice from the front, orthographic — a flat silhouette, and a colour
 render under a studio HDRI — scales it to the reference's height, and compares:
@@ -24,6 +27,8 @@ import numpy as np
 from mathutils import Vector
 
 BANDS = 5
+VIEW = "front"
+ELEVATION = 0.0
 
 
 def args():
@@ -34,6 +39,11 @@ def args():
     for k in ("reference", "model", "hdri", "out"):
         if k not in o:
             sys.exit(f"fidelity_check: missing --{k}")
+    if o.get("view", "front") not in ("front", "back", "left", "right", "top"):
+        sys.exit("fidelity_check: --view is front, back, left, right or top")
+    global VIEW, ELEVATION
+    VIEW = o.get("view", "front")
+    ELEVATION = float(o.get("elevation", 0))
     os.makedirs(o["out"], exist_ok=True)
     return o
 
@@ -75,8 +85,28 @@ def render(sc, lo, hi, path, engine, hdri=None, samples=64):
         cam = bpy.data.objects.new("_fidelity_cam", bpy.data.cameras.new("_fidelity_cam"))
         sc.collection.objects.link(cam)
     sc.camera = cam
-    cam.data.type = "ORTHO"; cam.data.ortho_scale = H * 1.02
-    cam.location = ctr + Vector((0, -3 * H, 0)); cam.rotation_euler = (math.pi / 2, 0, 0)   # front, -Y looking +Y
+    cam.data.type = "ORTHO"
+    # Blender's front is -Y looking +Y. A view names where the camera stands.
+    size = (hi - lo)
+    offset, rot, frame_h = {
+        "front": (Vector((0, -3 * H, 0)), (math.pi / 2, 0, 0), H),
+        "back":  (Vector((0, 3 * H, 0)), (math.pi / 2, 0, math.pi), H),
+        "left":  (Vector((-3 * H, 0, 0)), (math.pi / 2, 0, -math.pi / 2), H),
+        "right": (Vector((3 * H, 0, 0)), (math.pi / 2, 0, math.pi / 2), H),
+        "top":   (Vector((0, 0, 3 * H)), (0, 0, 0), max(size.x, size.y)),
+    }[VIEW]
+    cam.data.ortho_scale = max(frame_h, size.x, size.y) * 1.02 if VIEW == "top" else frame_h * 1.02
+    cam.location = ctr + offset; cam.rotation_euler = rot
+    if ELEVATION and VIEW != "top":
+        # Tilt the camera down onto the object by ELEVATION degrees, orbiting its centre:
+        # a photo taken from slightly above shows the top of every disc as an ellipse, and
+        # a frontal render compared with it reads those discs as taller than they are.
+        e = math.radians(ELEVATION)
+        d = (cam.location - ctr)
+        horiz = Vector((d.x, d.y, 0)).normalized() * d.length
+        cam.location = ctr + horiz * math.cos(e) + Vector((0, 0, d.length * math.sin(e)))
+        cam.rotation_euler = (ctr - cam.location).to_track_quat("-Z", "Y").to_euler()
+        cam.data.ortho_scale = max(H * math.cos(e) + max(size.x, size.y) * math.sin(e), size.x, size.y) * 1.04
     sc.render.engine = engine
     sc.render.film_transparent = True
     sc.render.resolution_x = sc.render.resolution_y = 768
@@ -188,7 +218,10 @@ def main():
     for i, (r, m) in enumerate(zip(mref, mmod)):
         if not r or not m:
             continue
-        for k, tol in (("sat", 0.06), ("warm", 0.02), ("detail", 0.008), ("lum", 0.03), ("highlights", 0.008)):
+        # Tolerances from the bench's calibration: the real Lantern_01, measured against its
+        # own preview under this HDRI, reads luminance +0.05 and highlights +0.010 — the light,
+        # not the object. Saturation and detail held (0.33/0.32, 0.028/0.032).
+        for k, tol in (("sat", 0.06), ("warm", 0.025), ("detail", 0.008), ("lum", 0.07), ("highlights", 0.02)):
             d = m[k] - r[k]
             if abs(d) > tol:
                 gaps.append((abs(d) / tol / 10, f"band {i + 1}: {k} {m[k]:.3f} vs reference {r[k]:.3f} ({d:+.3f})"))
