@@ -23,6 +23,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   gains the concept-art section `SKILL.md` had been pointing at all along.
 - **Rule 5** now says a 402 means switch source, and forbids removing a watermark.
 
+### Added — the official Blender Lab MCP, and PolyHaven without an integration
+
+- **Kiln runs on the Blender Foundation's MCP** — the server behind Claude's Blender
+  connector. Measured: 1.1.2 shipped the same 7 GLBs on it for 10% less. `SKILL.md`
+  now maps its tools one by one, gives the setup facts that each cost a failed start
+  (the add-on's `5.1.0` floor, online access, a package name that collides with
+  ahujasid's on PyPI), and says *when* to capture on it — its sessions took one
+  screenshot each.
+- **PolyHaven's public API**, for a server with no PolyHaven tools: endpoints
+  verified live, and what its Terms of Service require that the sessions had not
+  done — a unique User-Agent and a visible credit.
+- **The Khronos validator after every export**, through the already-required
+  `gltf-transform validate`: exit 1 on a seeded broken GLB, exit 0 on all 16 bench
+  GLBs. It checks the format, not the mesh.
+
+### Changed — what a Space call spends, and whose
+
+- **The free cloud path is one or two generations a day.** ZeroGPU gives 2 minutes
+  without an account and 3.5 with a free one; one TRELLIS.2 run asks 60–120 s.
+- **A Space call never uses a token silently.** `gradio_client` sends the saved
+  Hugging Face token by default (`token=None`; measured). The skill announces whose
+  account pays before the first call, offers `token=False`, and never reads, prints
+  or writes a token.
+- **TRELLIS.2 is documented as a candidate, not the default**: its Space API is
+  recorded as read live — `/extract_glb` rejects a target under 100,000 triangles —
+  but no generation has completed on it yet. The local Apple Silicon port is listed
+  with its licences, including a non-commercial background remover.
+
 ### Fixed — what the baseline found
 
 - **Auto mode stopped before OPTIMIZE** on 3 of 6 briefs and named the result
@@ -40,6 +68,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   under a control bone to its nearest deforming ancestor, and binds unweighted
   vertices to a synthetic `neutral_bone` — so validate before export, not after.
 - **Batch durations** are measured with timestamps, never estimated.
+- **The manifold check never ran**: it was missing from the cleanup's execution
+  order, and a lantern shipped 84 edges shared by 3–4 faces. It is step 5 now, and
+  separates fused edges (always a defect) from open ones (fine on a leaf).
+- **Web textures are capped at 1K**, as `uv-materials.md` already said. An earlier
+  fix in this release had set 2K for the balanced tier, and a chair doubled.
+- **The README's key-rules list** was a Markdown ordered list, which renumbers
+  itself: twelve of thirteen entries named the wrong rule. It now writes
+  `**Rule N**`, and `verify_docs.py` checks each entry against its rule and rejects
+  an ordered list in that section.
 - **The tool surface** now covers all 36 tools of `blender-mcp` 2.0.0, with what
   each costs. It had cited rule 22 for integration status and rule 23 for
   `get_object_info` — both one off after a renumbering. `verify_docs.py` now

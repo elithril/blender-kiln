@@ -145,6 +145,18 @@ def _(root: Path):
     p.write_text(p.read_text() + "\nThis is `blender --background --python`, the scripted path.\n")
 
 
+@case("README key rule points at the wrong number", "semantics")
+def _(root: Path):
+    p = root / "README.md"
+    p.write_text(p.read_text().replace("- **Rule 18** — never `export_apply=True`", "- **Rule 6** — never `export_apply=True`", 1))
+
+
+@case("README key rules go back to an ordered list", "semantics")
+def _(root: Path):
+    p = root / "README.md"
+    p.write_text(p.read_text().replace("- **Rule 1** — always", "1. Always", 1))
+
+
 @case("manifest source stops being a directory", "manifest")
 def _(root: Path):
     p = root / ".claude-plugin" / "marketplace.json"

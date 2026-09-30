@@ -374,26 +374,29 @@ shipped bug; this notices when a Blender release makes one wrong again.
 
 ## Iron rules
 
-The skill enforces 31 rules (26 core + 5 batch-specific). Key ones:
+The skill enforces 31 rules (26 core + 5 batch-specific). Key ones, by their real
+number — the full text is in `SKILL.md` and `references/batch-mode.md`:
 
-1. Always `get_scene_info()` before each phase
-2. Always `get_viewport_screenshot()` after each modification
-3. Never hard-cap poly count — alert if out of range, never block
-4. Never silently destroy — decimate/simplify always interactive
-5. Always keep the .blend file — in compact mode, only original + final + .blend + log
-6. Never `export_apply=True` for GLTF — modifiers balloon file size
-7. Always run material export audit before GLTF export
-8. Never use `gltf-transform optimize` — use individual steps
-9. Always check integration status before searching a marketplace — a disabled
-   integration answers `Unknown command type`, not "disabled"
-10. Between batch assets, clear the scene by removing datablocks — never with
-    `read_homefile()`, which resets the scene properties holding those flags
-11. Rename every import to the naming convention, whatever its source — a
-    marketplace download arrives under the source file's name
-12. Frame the viewport before screenshotting it, or the verification shot shows
-    an apparently empty scene
-13. Never pick a rig without measuring vertices ÷ deform bones — a Rigify human
-    needs ~3,200 vertices to be worth it
+- **Rule 1** — always `get_scene_info()` before each phase
+- **Rule 2** — always `get_viewport_screenshot()` at the end of every phase that
+  changed geometry or materials, two angles after texturing
+- **Rule 4** — never hard-cap poly count: alert if out of range, never block
+- **Rule 5** — never spend money: a free service that answers HTTP 402 has stopped
+  being free, so switch source; never remove a watermark
+- **Rule 6** — never silently destroy: decimate, simplify, delete are always proposed
+- **Rule 7** — always keep the `.blend` file
+- **Rule 18** — never `export_apply=True` for glTF: modifiers balloon file size
+- **Rule 19** — always run the material export audit before a glTF export
+- **Rule 20** — never `gltf-transform optimize`: use individual steps
+- **Rule 22** — frame the viewport before screenshotting it, or the shot shows an
+  apparently empty scene
+- **Rule 23** — always check integration status before searching a marketplace: a
+  disabled integration answers `Unknown command type`, not "disabled"
+- **Rule 25** — rename every import to the naming convention, whatever its source
+- **Rule 26** — never pick a rig without measuring vertices ÷ deform bones: a
+  Rigify human needs ~3,200 vertices to be worth it
+- **Rule 30** — between batch assets, clear the scene by removing datablocks, never
+  with `read_homefile()`
 
 ## Output
 

@@ -114,6 +114,30 @@ for doc in DOCS:
             fail("semantics", f"{doc.name}:{i} row `{tool}` cites rule {n}, which does not "
                               f"mention {tool}: {rules[n][:60]!r}")
 
+# The README's key-rules list names each rule by number. It was once a Markdown
+# ordered list, which renumbers itself 1, 2, 3: twelve of its thirteen entries
+# pointed at the wrong rule. Now every "**Rule N**" bullet must share its code
+# spans with rule N's text — a mis-numbered entry names a tool the rule lacks.
+for i, line in enumerate(README.read_text().split("\n"), 1):
+    m = re.match(r"^- \*\*Rule (\d+)\*\* — (.*)", line)
+    if not m:
+        continue
+    n = int(m.group(1))
+    spans = re.findall(r"`([^`]+)`", m.group(2))
+    body = rules.get(n, "")
+    for span in spans:
+        key = span.split("(")[0].split("=")[0]
+        if key and key not in body:
+            fail("semantics", f"README.md:{i} says rule {n} is about `{span}`, "
+                              f"but rule {n} reads {body[:60]!r}")
+
+_rd = README.read_text()
+_sec = _rd[_rd.find("## Iron rules"):]
+_sec = _sec[:_sec.find("\n## ", 4)] if "\n## " in _sec[4:] else _sec
+if re.search(r"^\d+\. ", _sec, re.M):
+    fail("semantics", "README.md § Iron rules uses an ordered list — Markdown renumbers it "
+                      "1, 2, 3 whatever the rule numbers; write '- **Rule N** — …'")
+
 # ── 4. The rule count advertised in the README matches reality.
 m = re.search(r"enforces (\d+) rules \((\d+) core \+ (\d+) batch", README.read_text())
 if not m:
