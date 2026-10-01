@@ -11,7 +11,7 @@
         "textures": false,
         "rig": false
       },
-      "prompt": "/kiln A hanging iron lantern with a glass cage and a ring on top, for a medieval inn. Type: prop. Style: stylized. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. Create it by scripted modeling in Blender \u2014 no marketplace, no AI generation."
+      "prompt": "/kiln A hanging iron lantern with a glass cage and a ring on top, for a medieval inn. Type: prop. Style: stylized. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. Create it by scripted modeling in Blender — no marketplace, no AI generation."
     },
     {
       "id": "ai-mushrooms",
@@ -33,7 +33,7 @@
         "textures": true,
         "rig": false
       },
-      "prompt": "/kiln A realistic wooden chair for a farmhouse kitchen. Type: prop. Style: realistic. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. Source it from PolyHaven \u2014 no AI generation, no Sketchfab."
+      "prompt": "/kiln A realistic wooden chair for a farmhouse kitchen. Type: prop. Style: realistic. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. Source it from PolyHaven — no AI generation, no Sketchfab."
     },
     {
       "id": "pbr-crate",
@@ -79,7 +79,7 @@
         "textures": false,
         "rig": false
       },
-      "prompt": "/kiln Rebuild the hurricane lantern in this reference image as a game asset: <REFS>/Lantern_01.png. Type: prop. Style: realistic. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. Create it by scripted modeling in Blender from the image \u2014 no marketplace, no AI generation. Match the reference's proportions, parts, materials and colours as closely as you can."
+      "prompt": "/kiln Rebuild the hurricane lantern in this reference image as a game asset: <REFS>/Lantern_01.png. Type: prop. Style: realistic. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. Create it by scripted modeling in Blender from the image — no marketplace, no AI generation. Match the reference's proportions, parts, materials and colours as closely as you can."
     },
     {
       "id": "ref-ammo-box",
@@ -91,7 +91,7 @@
         "textures": false,
         "rig": false
       },
-      "prompt": "/kiln Rebuild the ammo box in this reference image as a game asset: <REFS>/ammo_box.png. Type: prop. Style: realistic. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. Create it by scripted modeling in Blender from the image \u2014 no marketplace, no AI generation. Match the reference's proportions, parts, materials and colours as closely as you can."
+      "prompt": "/kiln Rebuild the ammo box in this reference image as a game asset: <REFS>/ammo_box.png. Type: prop. Style: realistic. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. Create it by scripted modeling in Blender from the image — no marketplace, no AI generation. Match the reference's proportions, parts, materials and colours as closely as you can."
     },
     {
       "id": "ref-chair",
@@ -103,7 +103,19 @@
         "textures": false,
         "rig": false
       },
-      "prompt": "/kiln Rebuild the wooden chair in this reference image as a game asset: <REFS>/WoodenChair_01.png. Type: prop. Style: realistic. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. Create it by scripted modeling in Blender from the image \u2014 no marketplace, no AI generation. Match the reference's proportions, parts, materials and colours as closely as you can."
+      "prompt": "/kiln Rebuild the wooden chair in this reference image as a game asset: <REFS>/WoodenChair_01.png. Type: prop. Style: realistic. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. Create it by scripted modeling in Blender from the image — no marketplace, no AI generation. Match the reference's proportions, parts, materials and colours as closely as you can."
+    },
+    {
+      "id": "ref-lantern-trellis",
+      "path": "finishing a local TRELLIS.2 generation against its reference image",
+      "kind": "prop",
+      "tier": "balanced",
+      "reference": "Lantern_01.png",
+      "expect": {
+        "textures": true,
+        "rig": false
+      },
+      "prompt": "/kiln Finish this AI-generated hurricane lantern as a game asset. Reference image: <REFS>/Lantern_01.png. Raw generation, made locally with TRELLIS.2 from that image: <REFS>/trellis/lantern_trellis.glb — keep its shape, it is the starting mesh. Type: prop. Style: realistic. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. Decimation to the balanced budget is approved in advance (keep the original file). Match the reference's size, materials and colours as closely as you can."
     }
   ]
 }
