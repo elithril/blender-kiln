@@ -1,4 +1,4 @@
-# Lantern iterations — one reference, ten versions
+# Lantern iterations — one reference, eleven versions
 
 Reference: Poly Haven `Lantern_01` preview (CC0), photographed from ~15° above. The session
 only ever sees the photo; the real asset (29.4 cm, 33,902 tris) is the bench's marking
@@ -44,6 +44,7 @@ object rendered under the same light as the witness.
 | v8 — dark metal reported | 0.905 | 1.1 / 9.7 mm | +20 % | −24 % | 0.228 | +0.081 | 0.35 | 9,514 | $4.02 |
 | **v9 — + TRELLIS.2 template** | **0.921** | **0.8 / 4.8 mm** | +2 % | **−6 %** | 0.226 | +0.079 | 0.27–0.31 | 9,964 | $5.19 |
 | **v10 — + metal mask fixed** | 0.914 | **0.8 / 4.0 mm** | 0 % † | **−4 %** | 0.244 | +0.093 | — | 9,738 | $4.52 |
+| v11 — joints rendered, patina metal, one metal ‡ | 0.897 | 1.0 / 4.9 mm | +1 % | +1 % | 0.221 | +0.086 | — | 12,418 | $7.64 |
 | TRELLIS.2 raw (local, free) | 0.952 | 0.6 / 1.6 mm | 1 m | +1 % | 0.207 | +0.137 | 0.32 | 191,520 | $0 |
 | TRELLIS.2 finished by kiln, try 1 | 0.926 | — | +2 % | +1 % | 0.214 | +0.078 | — | 5,070 | $4.81 |
 | TRELLIS.2 finished by kiln, try 2 | 0.866 | — | 0 % | +6 % | 0.222 | +0.088 | — | 6,092 | $4.84 |
@@ -75,7 +76,14 @@ height before comparing and are not affected; v10's height column is.
   the globe too prominent, a plain grey filler cap, the globe's frosting too faint, and one
   material (the tank) at the edge of the islands threshold (0.59 in-between, largest 48 %).
 
-Images: `v8-v9-v10-compare.webp`, `progression-v1-v8.webp` (all versions, same render), `v7-v8-v9-compare.webp`,
+- **v11 fixes what v10 hid** (`1dc852d`): the air tubes now bend into the tank on a
+  fillet instead of a flat cut on its slope; one bronze for the whole body (3 materials,
+  metallic 0.97–1.00); 16+ sides. But it overshot: the bronze reads new and clean —
+  albedo variation 0.017 for the real 0.029, almost no relief — the patina lost with the
+  non-metal. ‡ The account's usage limit cut the session after EXPORT and its own
+  verification, during the final message: the file and log are complete.
+
+Images: `v10-v11-compare.webp`, `v11-closeups-texture-joint.webp`, `v8-v9-v10-compare.webp`, `progression-v1-v8.webp` (all versions, same render), `v7-v8-v9-compare.webp`,
 `trellis-finish-compare.webp`, `trellis-finish-front-diff.webp` (red: truth only, blue:
 model only — try 2's wires are intact and a few pixels out, which empties a thin band's
 overlap).
