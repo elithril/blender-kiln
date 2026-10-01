@@ -317,7 +317,7 @@ claims to measure — a model against its own render (IoU 0.998), the same model
 (kept under twice its top, a reduction proposed past it), dark metal (reported; the same
 colour as non-metal, silent), metal in hard scattered islands (reported; one soft region,
 silent), metal painted mostly as non-metal (reported), a plain surface against a grainy photo
-(too clean, reported), joint close-ups (a rod resting on a sphere rendered; sunk or free,
+(cleaner than the photo, listed), joint close-ups (a rod resting on a sphere rendered; sunk or free,
 not), and `--view` and `--azimuth` on a 2 x 1 x 1 box — **26/26**. Its first run caught the tool framing views by
 height only: anything wider than tall was clipped, a box measured 1:1 instead of 2:1.
 `tools/test_template_profile.py` reads a seeded turned part back through

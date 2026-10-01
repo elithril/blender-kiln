@@ -198,7 +198,7 @@ with tempfile.TemporaryDirectory() as d:
 
     for name, flagged in (("plain", True), ("grainy", False)):
         _, r, _ = measure(d, f"{d}/{name}.glb", "--samples", "16", ref="ref_grainy.png")
-        hit = [g for g in r["gaps"] if "too clean" in g]
+        hit = [g for g in r["gaps"] if "cleaner than the photo" in g]
         check(f"{name} vs a grainy photo: too-clean gap {'reported' if flagged else 'silent'}", bool(hit) == flagged,
               [round(m["grain"], 3) for m in r["material"]["model"] if m and m.get("grain") is not None])
 

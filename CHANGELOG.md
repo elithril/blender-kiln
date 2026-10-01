@@ -88,6 +88,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   its thin parts to a 97 % decimation the score did not see: wires are now rebuilt, not
   decimated (a rule in SKILL.md's CLEANUP, where every session passes — the run had grepped
   the reference, not read it), and open edges are counted after.
+- **v12's lessons, kept as limits rather than more rules.** Told a joining part "sits on a
+  shaped foot", v12 flared its tubes into flat tongues: a part now enters with its section
+  unchanged, a foot only where the photo clearly shows one, judged against the photo's
+  crop. It tackled six material problems in one round and its surface regressed (grain
+  28 → 24 % of the photo's — not the WebP step, measured 28 → 26 %): one material problem
+  per round now, and ageing added one layer at a time. The too-clean grain line is listed
+  as information, not ranked as a gap.
 - **A surface too clean for its photo is reported; widths come from the template; glass
   takes the photo's tint.** v11 fixed v10's joints and metals and overshot: one clean
   bronze read new (grain 20 % of the photo's on the tank; the real object 74 %, the

@@ -162,9 +162,11 @@ def floating_parts(objs, tol=0.0005):
 
 Contact is not insertion: a loop that touches its cap at one point passes this
 check and still reads wrong. **A part that joins another ENTERS it** — its end runs past
-the surface by at least its own radius — **or sits on a modelled foot** shaped to that
-surface (the real lantern's air tubes land in a sheet-metal saddle). Never a flat cut
-resting on a curve: v10's tubes touched the tank at one point and lifted 14.6 mm off it
+the surface by at least its own radius, its section unchanged, with at most a small fillet
+where it meets. A foot, a flange or a saddle only when the photo shows one clearly, and
+then judged the same way: its joint render next to the same crop of the photo. Never a
+flat cut resting on a curve — and never a tube widened or flattened to make a foot: v12,
+told to "sit on a shaped foot", flared its tubes' lower elbows into flat tongues. Never: v10's tubes touched the tank at one point and lifted 14.6 mm off it
 across their end, and the session's inventory had ticked them "inserted". No distance
 can judge it (the real tubes lift 8.6 mm under their foot), so `fidelity_check.py`
 renders every end of a long part that touches another — the two parts alone, flat grey,
@@ -210,12 +212,14 @@ v3 on texture detail (0.031 against 0.022 for the reference's 0.032):
   vertical on a lathe. That needs **cylindrical UVs on turned parts** (u around, v along
   the height), not Smart UV Project, whose islands scatter any direction. They modulate
   the patina; they are not stripes: v10's regular vertical streaks read as wood grain.
-- **Age is a layer INSIDE the material, never an absence of it.** Darker in cavities and
-  under rims (bake AO into the colour and roughness), worn light on the edges (curvature),
-  mottled at three scales, and a relief of fine pits and broad dents in the normal map. v11,
-  one clean bronze everywhere, read new: its grain was 20 % of the photo's on the tank, the
-  real object 74 %, and its relief 0.4° against the real object's 8°. `fidelity_check.py`
-  reports a band whose grain falls under 28 % of the photo's (one truth, narrow margin).
+- **Age is a layer INSIDE the material, never an absence of it** — darker in cavities and
+  under rims (AO), worn light on the edges (curvature), a relief of fine pits and dents.
+  v11, one clean bronze everywhere, read new: its grain was 20 % of the photo's on the tank,
+  the real object 74 %. But **add it ONE layer at a time**, the one the photo shows most,
+  then measure: v12 stacked noise, AO, pits, scratches, crust and a drip in one round and
+  came out smeared, its grain FALLING from 28 % to 24 % of the photo's (measured: not the
+  WebP step, which moved it 28 → 26 %). `fidelity_check.py` lists a band whose grain falls
+  under 28 % of the photo's, as information (one truth, narrow margin).
 - **A metal's base colour is its reflectance — it cannot be dark.** Tarnish and patina
   STAY METAL — a darker base colour (the real brass: around 0.30) and a higher roughness;
   only crusts — thick rust, soot, caked dirt — are non-metal, on a minority of the
@@ -347,7 +351,9 @@ Read it with its limits, measured on the lantern:
 - **Thin parts wreck band IoU.** A 2-px wire off by one pixel scores 0.2–0.4. Use the
   overlay for wires, loops and handles; trust IoU for bodies.
 - **Two correction rounds at most — three measures in all**, each logged: what the numbers
-  said, what changed. At 16–32 samples and 512 px bakes during review; 1024 only for the
+  said, what changed. **One material problem per round** — the largest the review shows —
+  then measure again. v12 tackled six at once (grain, saturation, joints, widths, glass,
+  patina) and its surface regressed while every one of its fixes was "applied". At 16–32 samples and 512 px bakes during review; 1024 only for the
   final bake. Eight measures and ten bakes took one session to 105 turns and $5.63.
 - **Tick the inventory at the final review**, line by line, on an enlarged crop of the
   reference next to the same crop of the render: present and right, or not. A lantern's

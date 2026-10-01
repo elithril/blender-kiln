@@ -191,7 +191,7 @@ def dark_metals(meshes):
 def contact_ends(meshes, tol=0.0005):
     """Ends of elongated parts (tubes, rods, legs, handles) that touch another part.
 
-    A joint is where a part must ENTER another, or sit on a shaped foot — a flat cut resting
+    A joint is where a part must ENTER another (a foot only where the photo shows one) — a flat cut resting
     on a curved surface touches at one point and passes every distance check: lantern v10's
     air tubes did, and read as unconnected. No threshold can judge it (the real Lantern_01's
     tubes lift 8.6 mm off the tank too, under a sheet-metal foot), so the tool renders each
@@ -478,9 +478,9 @@ def main():
                 gaps.append((abs(d) / tol / 10, f"band {i + 1}: {k} {m[k]:.3f} vs reference {r[k]:.3f} ({d:+.3f}){note}"))
     for i, (r, m) in enumerate(zip(mref, mmod)):
         if r and m and r.get("grain") and m.get("grain") is not None and m["grain"] < TOO_CLEAN * r["grain"]:
-            gaps.append((5, f"band {i + 1}: the surface reads too clean — grain {m['grain'] / r['grain']:.0%} of the photo's. "
-                            f"Age is a layer inside the material: darker in cavities and under rims (AO), worn light on "
-                            f"edges, fine pits and dents in the relief"))
+            gaps.append((-0.5, f"band {i + 1}: the surface reads cleaner than the photo — grain {m['grain'] / r['grain']:.0%} "
+                            f"of the photo's (information). If the crop agrees, add the ONE ageing layer the photo shows "
+                            f"most, then measure — never several at once"))
     for r in metals:
         if r.get("mask_soft", 1) < CONFETTI_SOFT and r.get("mask_largest", 1) < CONFETTI_LARGEST:
             gaps.append((7, f"material {r['material']}: metal in scattered hard-edged islands (largest {r['mask_largest']:.0%} of "
@@ -523,7 +523,8 @@ def main():
         print("  - none above tolerance")
     if joints:
         print(f"\n{len(ends)} joints where a long part ends on another — LOOK at each ({o['out']}/joints/, two views):"
-              " it must enter the other part or sit on a shaped foot; a flat cut resting on a curve reads unconnected")
+              " it must enter the other part, its section unchanged; a flat cut resting on a curve reads unconnected,"
+              " and a tube flared into a foot reads as a tongue — compare each with the same crop of the photo")
 
 
 main()
