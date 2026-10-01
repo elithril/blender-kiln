@@ -116,6 +116,18 @@
         "rig": false
       },
       "prompt": "/kiln Finish this AI-generated hurricane lantern as a game asset. Reference image: <REFS>/Lantern_01.png. Raw generation, made locally with TRELLIS.2 from that image: <REFS>/trellis/lantern_trellis.glb — keep its shape, it is the starting mesh. Type: prop. Style: realistic. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. Decimation to the balanced budget is approved in advance (keep the original file). Match the reference's size, materials and colours as closely as you can."
+    },
+    {
+      "id": "ref-lantern-template",
+      "path": "reconstruction from a reference image, with a generated mesh as a measuring template",
+      "kind": "prop",
+      "tier": "balanced",
+      "reference": "Lantern_01.png",
+      "expect": {
+        "textures": false,
+        "rig": false
+      },
+      "prompt": "/kiln Rebuild the hurricane lantern in this reference image as a game asset: <REFS>/Lantern_01.png. Type: prop. Style: realistic. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. Create it by scripted modeling in Blender from the image — no marketplace, no AI generation. Match the reference's proportions, parts, materials and colours as closely as you can. A TRELLIS.2 generation of this same photo is at <REFS>/trellis/lantern_trellis.glb: use it to measure the proportions only — do not ship its mesh or its texture."
     }
   ]
 }
