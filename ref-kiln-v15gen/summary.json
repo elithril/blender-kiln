@@ -1,0 +1,99 @@
+{
+  "ref-ammo-box": {
+    "brief": "ref-ammo-box",
+    "mcp": "ahujasid",
+    "blender": "Blender 5.2.2 LTS",
+    "skill": "66e0b08 fix/baseline-findings",
+    "claude_exit": 0,
+    "wall_s": 886.4,
+    "is_error": false,
+    "num_turns": 85,
+    "duration_ms": 881479,
+    "cost_usd_equiv": 3.7990254000000006,
+    "output_tokens": 64526,
+    "input_tokens_total": 5779316,
+    "tool_calls": {
+      "Read": 23,
+      "Bash": 23,
+      "ToolSearch": 1,
+      "mcp__blender__get_addon_status": 1,
+      "mcp__blender__get_scene_info": 1,
+      "mcp__blender__execute_blender_code": 20,
+      "Write": 7,
+      "mcp__blender__get_viewport_screenshot": 3
+    },
+    "final_text": "two texture sets (body, and lid plus hardware):\n- **Paint and rust:** two free CC0 scanned texture sets from Poly Haven, tinted to colours sampled from your photo. Rust sits on edges, in seams, along the bottom and on all the hardware, with dark grime blotches over the paint.\n- **Stencil:** yellow and worn, with the text copied exactly as the photo shows it, including the \"CARTRIGES\" misspelling and \"M 08\".\n\n**How close it is.**\n- **Shape:** the outline overlaps the photo at 0.92. The remaining differences at the top and bottom come from the photo's close-up perspective, which a flat comparison render can't reproduce, so I left the geometry alone.\n- **Material fixes:** I made two correction rounds. The first darkened the paint and added the near-black blotches; the second made the lid satin instead of glossy.\n- **Still off:**\n  - The photo is dimly lit, so my version looks a little lighter and less saturated under neutral light. I matched the material, not the lighting.\n  - The hole in the latch lever reads as a rusty disc. In the photo it's a dark painted recess.\n  - The stencil is worn a bit more than the photo on \"CARTONS\" and \"M 08\".\n- **Unseen sides:** the back, the left end and the bottom aren't in the photo, so I kept them plain. A side or back view would let me match them too.\n\n**Optimization.** Going from `_original` to `_final` took the file from 5.54 MB to 187 KB (\u221297%) by converting textures to WebP and compressing the geometry with Draco. No geometry was simplified. Draco needs a decoder in whatever engine or viewer loads the file.\n\nLicences: the two Poly Haven texture sets are CC0, credited in the log.\n\nFiles are in `/private/tmp/kiln-bench/ref-kiln-v15gen/ref-ammo-box/work/generated-assets/ammo-box/`:\n- `ammo-box_final.glb`\n- `ammo-box_original.glb`\n- `ammo-box.blend` (textures packed, editable source materials kept)\n- `ammo-box_log.md` (assumptions, parts list, review rounds, licences)\n- working folders: `scripts/`, `textures/`, `src_tex/`, `review/`",
+    "sandbox": "/private/tmp/kiln-bench/ref-kiln-v15gen/ref-ammo-box",
+    "contamination": [],
+    "finals": 1,
+    "measures": [
+      {
+        "file": "generated-assets/ammo-box/ammo-box_final.glb",
+        "bytes": 186628,
+        "extensions_used": [
+          "EXT_texture_webp",
+          "KHR_draco_mesh_compression"
+        ],
+        "gltf_meshes": 13,
+        "gltf_materials": 2,
+        "gltf_images": 6,
+        "gltf_skins": 0,
+        "gltf_joints": 0,
+        "gltf_animations": 0,
+        "objects_mesh": 13,
+        "object_names": [
+          "SM_AmmoBox_BailWire",
+          "SM_AmmoBox_Body",
+          "SM_AmmoBox_Handle",
+          "SM_AmmoBox_HandleMount_01",
+          "SM_AmmoBox_HandleMount_02",
+          "SM_AmmoBox_HandleStaple_01",
+          "SM_AmmoBox_HandleStaple_02",
+          "SM_AmmoBox_LatchBoss",
+          "SM_AmmoBox_LatchBracket",
+          "SM_AmmoBox_LatchHinge",
+          "SM_AmmoBox_LatchLever",
+          "SM_AmmoBox_LatchWire",
+          "SM_AmmoBox_Lid"
+        ],
+        "tris": 3856,
+        "verts": 3508,
+        "non_manifold_edges": 0,
+        "boundary_edges": 0,
+        "loose_edges": 0,
+        "degenerate_faces": 0,
+        "dims_m": [
+          0.2924,
+          0.1016,
+          0.2054
+        ],
+        "z_min_m": 0.0,
+        "centre_xy_m": [
+          0.0047,
+          -0.0
+        ],
+        "materials": {
+          "M_Metal_PaintedSteel_Hardware": {
+            "images": 3,
+            "max_px": 1024
+          },
+          "M_Metal_PaintedSteel_Body": {
+            "images": 3,
+            "max_px": 1024
+          }
+        },
+        "empty_material_slots": 0,
+        "rigs": [],
+        "render": "render-ammo-box_final.png"
+      }
+    ],
+    "glbs": [
+      {
+        "file": "ammo-box_final.glb",
+        "bytes": 186628,
+        "sha256": "33449d965bfaa8d726831c5f3e0ddd851e293ba863266e530eec768a42b26575",
+        "published": true
+      }
+    ]
+  }
+}

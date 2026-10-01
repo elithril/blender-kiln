@@ -45,3 +45,22 @@ mid-review (`API Error: Connection lost while your computer was asleep`), not me
   lantern-calibrated threshold does not transfer. To be removed from the session's view.
 - The session reported that WebP had erased the normal map's fine relief; measured, the
   grain moved 0.48 → 0.40 at most and the normals' mean tilt did not change (0.4°).
+
+## The crate with scanned texture sets (skill `66e0b08`, 2026-10-01)
+
+Sandboxed (audit 0), one run, $3.80, 15 min. The session chose two Poly Haven sets
+(`green_metal_rust` as the paint, `rust_coarse_01` as the wear), tinted both toward the
+photo's palette, masked the rust by the form, baked to UVs and credited Poly Haven.
+
+| | truth, 5 views | height | base share | metal |
+|---|---:|---:|---:|---|
+| v14 skill (procedural noise) | 0.878 | +15 % | +1 % | 0.01 |
+| **v15 skill (scanned sets)** | **0.950** | +16 % | −1 % | 0 (factor 0) |
+
+- **The best shape on the bench, any object** — 0.958 from the front.
+- **The surface reads as worn paint**: the stencil is broken like the photo's, the paint
+  has a scanned grain, the rust sits along the lower edge and the seams. From a distance
+  it is still soft, and the large front face fairly even — the photo's darker blotches
+  are missing.
+- A stats script of mine read the paint as 100 % metal: it ignored `metallicFactor: 0`.
+  The review tool applies the factor, which is why it raised nothing.
