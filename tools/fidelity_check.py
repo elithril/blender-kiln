@@ -22,8 +22,8 @@ render under a studio HDRI — scales it to the reference's height, and compares
 Prints one JSON line (`FIDELITY {...}`) and a ranked list of the largest gaps, and writes
 `overlay.png` (red: reference only, cyan: model only) and `side_by_side.png` into --out.
 
-Why: a session reviewing by eye over-corrected twice on the bench — too bright and
-blotchy, then grey and flat. These are the numbers that showed it. They are only as good
+Why: reviewing by eye over-corrects — too bright and blotchy, then grey and flat. These
+numbers do not. They are only as good
 as the match between the two views: the reference's camera and light are unknown, so
 read differences of a few percent as noise, and large ones as the fix list.
 """
@@ -69,8 +69,8 @@ def open_model(path):
     meshes = [o for o in sc.objects if o.type == "MESH" and o not in shapes and not o.hide_render]
     if not meshes:
         sys.exit("fidelity_check: no renderable mesh in the model")
-    # A texture that is not loaded renders black and every material number lies — the
-    # bench's first measure of a lantern did exactly that. Refuse rather than measure it.
+    # A texture that is not loaded renders black and every material number lies.
+    # Refuse rather than measure it.
     missing = sorted({n.image.name for o in meshes for sl in o.material_slots if sl.material and sl.material.node_tree
                       for n in sl.material.node_tree.nodes
                       if n.type == "TEX_IMAGE" and n.image and not n.image.has_data and not n.image.packed_file
@@ -87,12 +87,10 @@ def open_model(path):
 
 DARK_METAL = 0.15
 CONFETTI_SOFT, CONFETTI_LARGEST = 0.60, 0.5
-# Calibrated on ONE truth: the real Lantern_01's brass averages 0.63; v8, v9 and v10, which
-# read grey or dull, 0.20-0.57. A warning about what light does, not a share to reach.
+# Thresholds, not targets. Their calibration (few references, narrow margins) is recorded
+# in the repository's CHANGELOG, not here: a figure quoted next to a check becomes a value
+# a session aims at.
 MOSTLY_PAINTED = 0.5
-# Grain, model over photo, per band. ONE truth again, and a narrow margin: the real
-# Lantern_01 0.52-0.84, the image-to-code lantern 0.38+, v10 0.31+; v8 and v11, which read
-# dull or new, 0.21-0.22 on the tank.
 TOO_CLEAN = 0.28
 
 
@@ -126,10 +124,8 @@ def mask_shape(met):
     """A metallic mask's shape: the share of in-between texels (0.15-0.85: soft transitions)
     and the largest connected island's share of the metal (one region, or scattered).
 
-    Read on a 256 grid. Calibrated on the real Lantern_01 (one region: 99 %, 43 % soft),
-    v8 (scattered, 19-85 %, but 74-99 % soft: reads smooth) and v9 (3-40 %, 32-52 % soft:
-    camouflage). A mean jump between texels was tried first and dropped: it counts edges,
-    not their hardness — a hard 8-texel checker read 0.109, the real brass 0.117."""
+    Read on a 256 grid. Scattered AND hard reads as camouflage; scattered but soft reads
+    smooth. (A mean jump between texels counts edges, not their hardness: not used.)"""
     soft = float(((met > 0.15) & (met < 0.85)).mean())
     m = met > 0.5; lab = np.zeros(m.shape, np.int32); n, sizes = 0, []
     for y0, x0 in zip(*np.nonzero(m)):
@@ -149,12 +145,8 @@ def dark_metals(meshes):
     """Metallic texels whose base colour is too dark: physically impossible, they render black.
 
     In the metal/roughness workflow a metal's base colour IS its reflectance. Darkening it to
-    paint age gives a black mirror under any light — the bench's lantern v7 measured 0.02-0.15
-    on its metal (sRGB luminance) and rendered 23 % darker than the real asset, while matching
-    the photo's luminance: the photo's own light was darker, and the session tuned to it. The
-    real aged brass (Poly Haven Lantern_01): 0.30 median, 0.25 for its darkest tenth, and only
-    its rust and soot painted as NON-metal. (Its metallic share is no target: quoted as
-    "48 %", a session thresholded a noise to reach it — see mask_shape.)
+    paint age gives a black mirror under any light. Age is painted with roughness and with
+    non-metal crusts; the base colour comes from the photo's palette, above this floor.
     """
     rows, seen = [], set()
     for m in {sl.material for o in meshes for sl in o.material_slots if sl.material and sl.material.node_tree}:
@@ -191,11 +183,11 @@ def dark_metals(meshes):
 def contact_ends(meshes, tol=0.0005):
     """Ends of elongated parts (tubes, rods, legs, handles) that touch another part.
 
-    A joint is where a part must ENTER another (a foot only where the photo shows one) — a flat cut resting
-    on a curved surface touches at one point and passes every distance check: lantern v10's
-    air tubes did, and read as unconnected. No threshold can judge it (the real Lantern_01's
-    tubes lift 8.6 mm off the tank too, under a sheet-metal foot), so the tool renders each
-    one up close and the session LOOKS. Loose parts are the connected pieces of the model."""
+    A joint is where a part must ENTER another (a foot only where the photo shows one) — a
+    flat cut resting on a curved surface touches at one point, passes every distance check
+    and reads unconnected. No threshold can judge it (a real foot lifts off its surface too),
+    so the tool renders each one up close and the session LOOKS. Loose parts are the
+    connected pieces of the model."""
     import bmesh
     from mathutils.bvhtree import BVHTree
     dg = bpy.context.evaluated_depsgraph_get(); bm = bmesh.new()
@@ -251,7 +243,7 @@ def contact_ends(meshes, tol=0.0005):
 def render_joints(sc, ends, out, centre):
     """Two close renders of every contact end, into out/: the two parts in contact ONLY, in
     flat grey (Workbench) — a joint is judged on its shape, and anything else in the frame
-    hid it (a lantern's guard wires behind its tubes). From outside the object, and 60° round."""
+    hides it. From outside the object, and 60° round."""
     os.makedirs(out, exist_ok=True)
     hidden = [ob for ob in sc.objects if ob.type == "MESH" and not ob.hide_render]
     for ob in hidden:
@@ -392,9 +384,8 @@ def material(a):
     sat = np.where(mx > 1e-4, (mx - mn) / np.maximum(mx, 1e-4), 0)
     # Grain: the surface's fine variation inside solid areas, relative to their brightness —
     # deep inside the mask (6 px), so silhouettes and wire edges do not count, and divided by
-    # the band's mean so the photo's exposure does not either. A clean-looking metal has
-    # none: lantern v11 read new at 20 % of its photo's grain on the tank, v8 dull at 31 %;
-    # the real object renders at 74 %, the image-to-code lantern 79 %, v10 57 %.
+    # the band's mean so the photo's exposure does not either. A clean-looking surface has
+    # little.
     deep = m.copy()
     for _ in range(6):
         deep[1:] &= deep[:-1].copy(); deep[:-1] &= deep[1:].copy(); deep[:, 1:] &= deep[:, :-1].copy(); deep[:, :-1] &= deep[:, 1:].copy()
@@ -446,9 +437,9 @@ def main():
     mref, mmod = material(ref), material(mod_c)
 
     # Shape gaps are LOCAL: a band whose width is off, or a band clearly wrong. Overall IoU
-    # is not a target — the real Lantern_01 scores ~0.80 against its own photo, and the
-    # bench's version that pushed it to 0.898 was the worst against the real object.
-    # Band IoU alone is not a gap either: a 2-px wire off by a pixel scores 0.2-0.4.
+    # is not a target — a real object scores well under 1 against its own photo, and a model
+    # pushed past that copies the photo's perspective. Band IoU alone is not a gap either:
+    # a 2-px wire off by a pixel scores very low.
     gaps = []
     body = max(rc.max(), 1)
     for i, b in enumerate(shape):
@@ -464,13 +455,9 @@ def main():
     for i, (r, m) in enumerate(zip(mref, mmod)):
         if not r or not m:
             continue
-        # Tolerances from the bench's calibration: the real Lantern_01, measured against its
-        # own preview under this HDRI, reads luminance +0.05 and highlights +0.010 — the light,
-        # not the object. Saturation and detail held (0.33/0.32, 0.028/0.032).
-        # Luminance and highlights are ALARMS, never targets: the photo's light is unknown.
-        # Lantern v7 matched the photo's luminance to 0.003 and was 23 % darker than the real
-        # object under this HDRI — the real one is 28 % brighter than its own photo here. The
-        # material's own numbers (dark_metals) are what light cannot move.
+        # Luminance and highlights are ALARMS, never targets: the photo's light is unknown,
+        # and a match under a different light proves nothing. The material's own numbers
+        # (dark_metals) are what light cannot move.
         for k, tol in (("sat", 0.06), ("warm", 0.025), ("detail", 0.008), ("lum", 0.07), ("highlights", 0.02)):
             d = m[k] - r[k]
             if abs(d) > tol:
@@ -493,7 +480,7 @@ def main():
         if r.get("base_median", 1.0) < DARK_METAL:
             gaps.append((8, f"material {r['material']}: metal with a base colour of {r['base_median']:.2f} (sRGB luminance, "
                             f"median over its {r['metal_share']:.0%} metallic texels; below {DARK_METAL}) — a black mirror under "
-                            f"any light. Brighten the metal, and paint rust, soot and dirt as NON-metal (real aged brass: 0.30) — where the form wears, one soft region, not a share to reach"))
+                            f"any light. Take the base colour from the photo's palette, above this floor, and age the metal with roughness and non-metal crusts"))
     # The tier's range is a guide, not a cap (rule 4). Listed last, as information: ranked
     # first, it read as the top defect and a session spent its review cutting round parts.
     # A reduction is proposed only past twice the tier's top.
@@ -516,7 +503,7 @@ def main():
     print("FIDELITY " + json.dumps(dict(tris=tris, meshes=nmesh, iou=iou, shape=shape, material=dict(reference=mref, model=mmod), metals=metals,
                                         joints=joints, gaps=[g[1] for g in gaps])))
     print(f"\n{tris:,} tris in {nmesh} meshes · silhouette IoU {iou:.3f} (information, not a target: "
-          f"a real object scores ~0.80 against its own photo) — gaps to close, largest first:")
+          f"a real object scores well under 1 against its own photo) — gaps to close, largest first:")
     for _, g in gaps[:12]:
         print("  -", g)
     if not gaps:

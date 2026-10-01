@@ -618,9 +618,8 @@ Execute the full cleanup sequence from `references/validation-checklist.md` § E
 **Poly check:** report the count against the tier. Past **2× the tier's top** → **propose decimate with before/after** (always interactive, even in auto mode); below that, say where the triangles go and keep them.
 
 **Thin parts are never decimated** — wires, bails, loops: anything an order of magnitude
-thinner than the body. A simplifier breaks them whatever the budget (a generated lantern
-decimated 97 %: bail broken, loop open, scored 0.926 against the real object all the
-same — silhouettes do not see holes). Rebuild each as a curve with a round bevel along the
+thinner than the body. A simplifier breaks them whatever the budget, and silhouette scores do not see the
+holes it leaves. Rebuild each as a curve with a round bevel along the
 high-poly's centreline; decimate the body only. **After decimating, compare open and
 non-manifold edge counts with before, and look at a close render of every thin part.**
 

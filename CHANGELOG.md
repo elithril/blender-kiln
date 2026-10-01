@@ -88,6 +88,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   its thin parts to a 97 % decimation the score did not see: wires are now rebuilt, not
   decimated (a rule in SKILL.md's CLEANUP, where every session passes — the run had grepped
   the reference, not read it), and open edges are counted after.
+- **Every generation starts from nothing: no figure from a measured object in what a
+  session reads.** The references and the review tool's own messages quoted the bench
+  lantern's real values as illustrations — its height, its brass's base colour (0.30), its
+  metal share, its profile errors, what each version did. Each one a session could find
+  became a value it aimed at: the metal share (48 %), the height (0.294 m), and the base
+  colour — v11 and v13 logged "median 0.27–0.30 (the doc's real brass is 0.30)" and came
+  out light, even and clean, where the real brass's look comes from colour, roughness and
+  metal varying TOGETHER. `reference-fidelity.md` is rewritten as a method (403 → 330
+  lines, every snippet kept), the tools' docstrings, comments and gap messages keep their
+  thresholds without the figures behind them, and the base colour comes from the photo's
+  palette, with 0.15 as a floor only. The calibration record stays here and in the bench.
 - **v12's lessons, kept as limits rather than more rules.** Told a joining part "sits on a
   shaped foot", v12 flared its tubes into flat tongues: a part now enters with its section
   unchanged, a foot only where the photo clearly shows one, judged against the photo's

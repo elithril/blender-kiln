@@ -3,11 +3,9 @@
     blender -b --factory-startup --python-exit-code 1 --python tools/template_profile.py -- \\
         --template trellis.glb --height <real height, m> [--bands 40] [--json out.json]
 
-A photo bends proportions: a camera 15° above makes every disc's top an ellipse and every
-base taller than it is — the bench's lanterns came out with bases 13-30 % off reading the
-photo alone. A generated mesh of the same photo (TRELLIS.2) holds the proportions in 3D —
-0.952 against the real object from five sides, where scripted reconstructions reached
-0.86-0.90 — but its surface is unusable as an asset (facets, smeared texture, broken wires
+A photo bends proportions: a camera above makes every disc's top an ellipse and every
+base taller than it is. A generated mesh of the same photo (TRELLIS.2) holds the proportions
+in 3D, but its surface is unusable as an asset (facets, smeared texture, broken thin parts
 once decimated). So measure it, and model clean from the measures.
 
 The template is scaled to --height (a generated mesh is always 1 m tall), its axis fitted
@@ -30,7 +28,7 @@ def args():
     for k, v in zip(a[::2], a[1::2]):
         o[k.lstrip("-")] = v
     if "template" not in o or "height" not in o:
-        sys.exit("template_profile: --template and --height (metres, the real object's) are required")
+        sys.exit("template_profile: --template and --height (metres, the object's real height) are required")
     return o
 
 
@@ -84,7 +82,7 @@ def main():
     for v in bm.verts:
         v.co = (v.co - Vector((0, 0, z0))) * s
     co = np.array([v.co[:] for v in bm.verts])
-    gap = 0.008 * H                         # 2.4 mm on a 30 cm lantern
+    gap = 0.008 * H                         # 0.8 % of the height between two parts
     # The axis: the foot's circle. A bounding-box centre is pulled by anything else reaching
     # the floor (a tube, a leg): start from the median, keep the cut's points that go all
     # the way round, and fit their circle (algebraic least squares).

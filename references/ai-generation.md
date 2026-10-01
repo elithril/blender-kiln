@@ -289,44 +289,32 @@ of AI assets, never promise it, and never suggest the paid PRO plan (rule 5).
 `microsoft/TRELLIS.2` (MIT) outputs a mesh **with baked PBR textures**, which is
 exactly what the Hunyuan3D Space's broken `/generation_all` no longer gives. Measured
 on 2026-10-01 through `shivampkumar/trellis-mac` (`d58628f`), on an M4 Pro with 24 GB:
-
-| | Lantern (photo, alpha) | Mushrooms (FLUX concept, no alpha) |
-|---|---:|---:|
-| wall time, pipeline load included | 5 min | 7 min |
-| peak memory | 19.5 GB | **22.5 GB** — a 24 GB machine is the floor |
-| output | 191k tris, 10.9 MB GLB, one material, 1024² PBR | 164k tris, 11.8 MB GLB |
-| scored from five sides against the real asset | **0.952** (scripted kiln: 0.861) | — |
+5–7 min a model, pipeline load included; **19.5–22.5 GB peak memory** — a 24 GB machine
+is the floor; 160–190k triangles, one material, 1024² PBR, ~11 MB GLB.
 
 Disk: **31 GB of weights** (TRELLIS.2-4B 28 GB, DINOv3 2.3 GB, BiRefNet 0.8 GB), plus a
 1 GB venv — not the 15 GB the project's README states.
 
-**What it gives, and what it does not.** The shape is the best the bench has measured,
-proportions included (base share +1 %). But the raw output is a *starting mesh*, never
-an asset — on both objects:
+**What it gives, and what it does not.** Its proportions are good — better than a single
+photo's, which perspective bends — but the raw output is a *starting point*, never an
+asset:
 
-- **always 1 m tall** — set the real size (rule from the BRIEF phase);
-- **far above any tier**: 160–190k triangles, 13.7k non-manifold edges on the lantern,
-  54k open edges on the mushrooms' grass — decimate (rule 6) and clean;
-- **one material**: the lantern's glass globe came out opaque gold metal — split it and
-  rebuild glass by hand;
+- **always 1 m tall** — set the real size (the BRIEF phase);
+- **far above any tier**, with non-manifold and open edges — decimate (rule 6) and clean;
+- **one material** — glass and metal come out as one; split them and rebuild each;
 - **a drawn concept's ink lines are baked into the texture** as black cracks and blots —
   ask for a concept without outlines, or repaint.
 
-**Finished by kiln** (balanced tier, auto mode, decimation approved — one bench run,
-$4.81, 17 min): real height to 2 %, 5,070 triangles, 0.6 MB, glass rebuilt as its own
-material, and the colour of the real asset (warmth +0.078 for +0.076, saturation 0.33 for
-0.37) — which neither the scripted path nor the raw output had. Five sides: 0.926. **But
-the score hides the damage**: decimating 97 % of the mesh broke every thin part — the
-bail jagged and broken, the top loop open, tears at the globe's foot, shards at the base
-(1,089 open edges, 836 non-manifold). Silhouettes do not see a hole. So:
+**Its best use is as a measuring template** for scripted modeling (`reference-fidelity.md`
+§ 2, `tools/template_profile.py`): proportions from the mesh, a clean model from the
+measures, materials from the photo. Finished directly instead, it keeps its weaknesses:
 
-- **thin parts are rebuilt, not decimated** — the session split body, wires and glass
-  and ran a simplifier on each: the wires broke all the same. Rebuild a wire, bail or loop
-  as a curve with a round bevel: its centreline from the high-poly (slice the part along
-  its length, one centroid per slice), its radius from the slices' size. Decimate only the
-  solid body;
+- **thin parts are rebuilt, not decimated** — a simplifier breaks wires, bails and loops
+  whatever the budget. Rebuild each as a curve with a round bevel: its centreline from the
+  high-poly (slice the part along its length, one centroid per slice), its radius from the
+  slices' size. Decimate only the solid body;
 - **after decimating, count open and non-manifold edges** and look at a close render of
-  every thin part before reporting — a score of 0.9 against the truth is not a pass.
+  every thin part before reporting — a good silhouette score is not a pass.
 
 ### Install — five fixes the project's `setup.sh` does not make
 

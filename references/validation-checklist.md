@@ -55,8 +55,8 @@ fused = [e for e in bm.edges if len(e.link_faces) > 2]    # ALWAYS a defect
 open_ = [e for e in bm.edges if len(e.link_faces) == 1]   # fine on a leaf or a cloth
 bm.free()
 # Log both counts. fused > 0 → fix before export, in every mode: parts joined
-# and welded into internal faces. The bench measured 84 such edges on a lantern
-# frame that looked perfect in every render, and passed the glTF validator.
+# and welded into internal faces — invisible in renders, and the glTF validator
+# passes them.
 # open_ > 0 → alert only if the asset must be watertight (3D print, physics).
 ```
 

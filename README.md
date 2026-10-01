@@ -267,7 +267,7 @@ Once installed, the skill directory looks like this:
 | `references/characters.md` | Rigging patterns, anti-patterns, export gotchas, Blender 5.x | ~640 |
 | `references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~460 |
 | `references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~360 |
-| `references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~400 |
+| `references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~330 |
 | `tools/fidelity_check.py` | Renders a model under a studio HDRI and measures shape and material gaps against its reference | ~245 |
 | `tools/template_profile.py` | Reads a turned object's real profile off a 3D template (a generated mesh, a scan), to model from | ~120 |
 | `references/validation-checklist.md` | Geometry cleanup + material export audit | ~250 |
