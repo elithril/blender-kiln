@@ -320,8 +320,10 @@ the score hides the damage**: decimating 97 % of the mesh broke every thin part 
 bail jagged and broken, the top loop open, tears at the globe's foot, shards at the base
 (1,089 open edges, 836 non-manifold). Silhouettes do not see a hole. So:
 
-- **thin parts are rebuilt, not decimated** — trace wires, bails and loops from the
-  high-poly as curves (`trace_wire` in reference-fidelity.md) and decimate only the
+- **thin parts are rebuilt, not decimated** — the session split body, wires and glass
+  and ran a simplifier on each: the wires broke all the same. Rebuild a wire, bail or loop
+  as a curve with a round bevel: its centreline from the high-poly (slice the part along
+  its length, one centroid per slice), its radius from the slices' size. Decimate only the
   solid body;
 - **after decimating, count open and non-manifold edges** and look at a close render of
   every thin part before reporting — a score of 0.9 against the truth is not a pass.

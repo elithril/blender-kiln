@@ -86,7 +86,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   non-commercial RMBG-2.0 swapped for BiRefNet, which needed a float32 cast the lantern's
   cut-out photo never exercised. Finished by kiln it took the real asset's colour — and lost
   its thin parts to a 97 % decimation the score did not see: wires are now rebuilt, not
-  decimated, and open edges are counted after.
+  decimated (a rule in SKILL.md's CLEANUP, where every session passes — the run had grepped
+  the reference, not read it), and open edges are counted after.
 - **Dark metal is reported, and luminance is no longer something to match.** The bench's
   final lantern read near-black: 100 % metal at a base colour of 0.07–0.15, 23 % darker than
   the real object under the same light — while matching the photo's luminance to 0.003,

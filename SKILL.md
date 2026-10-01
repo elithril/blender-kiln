@@ -617,6 +617,13 @@ Execute the full cleanup sequence from `references/validation-checklist.md` § E
 
 **Poly check:** Out of range (>50%) → **propose decimate with before/after** (always interactive, even in auto mode).
 
+**Thin parts are never decimated** — wires, bails, loops: anything an order of magnitude
+thinner than the body. A simplifier breaks them whatever the budget (a generated lantern
+decimated 97 %: bail broken, loop open, scored 0.926 against the real object all the
+same — silhouettes do not see holes). Rebuild each as a curve with a round bevel along the
+high-poly's centreline; decimate the body only. **After decimating, compare open and
+non-manifold edge counts with before, and look at a close render of every thin part.**
+
 **Auto mode:** non-destructive cleanup runs automatically. Decimate remains interactive.
 **Guided mode:** show each step, wait for validation.
 
