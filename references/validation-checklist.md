@@ -220,7 +220,7 @@ else:
 obj = bpy.context.active_object
 face_count = len(obj.data.polygons)
 # Compare against tier range
-# If > 50% above range → propose decimate (ALWAYS interactive)
+# Past 2x the tier's top → propose decimate (ALWAYS interactive); below, report and keep
 ```
 
 ### Decimate (if needed)

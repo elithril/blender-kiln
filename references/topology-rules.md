@@ -39,7 +39,9 @@
 | balanced | 8-20K tris | 1.5-5K | 300-1.5K |
 | detailed | 20-80K tris | 5-15K | 1.5-5K |
 
-These are SOFT ranges. Alert if >50% above range. Never block.
+These are SOFT ranges — a guide, not a cap. Up to twice the top is fine when the
+triangles go where they show (round parts, wires): report the count and where it goes,
+in one line, and do not cut. Past twice the top, propose a reduction (rule 6). Never block.
 
 ## Decimation Strategy
 

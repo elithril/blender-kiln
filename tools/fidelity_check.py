@@ -333,8 +333,14 @@ def main():
             gaps.append((8, f"material {r['material']}: metal with a base colour of {r['base_median']:.2f} (sRGB luminance, "
                             f"median over its {r['metal_share']:.0%} metallic texels; below {DARK_METAL}) — a black mirror under "
                             f"any light. Brighten the metal, and paint rust, soot and dirt as NON-metal (real aged brass: 0.30, 48 % metal)"))
+    # The tier's range is a guide, not a cap (rule 4). Listed last, as information: ranked
+    # first, it read as the top defect and a session spent its review cutting round parts.
+    # A reduction is proposed only past twice the tier's top.
     if "max-tris" in o and tris > int(o["max-tris"]):
-        gaps.append((9, f"{tris:,} triangles, above the tier's {int(o['max-tris']):,} (+{tris / int(o['max-tris']) - 1:.0%}) — rule 4: say so"))
+        top = int(o["max-tris"]); far = tris > 2 * top
+        gaps.append((10 if far else -1, f"{tris:,} triangles, above the tier's {top:,} (+{tris / top - 1:.0%}) — "
+                     + ("over twice the range: propose a reduction (rule 6)" if far
+                        else "within reason: report it and where they go (round parts, wires), do not cut")))
     gaps.sort(key=lambda g: -g[0])
 
     ov = np.zeros((H, W, 4), np.float32); ov[..., 3] = 1

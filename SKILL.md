@@ -396,7 +396,7 @@ Collect these parameters. Only type and brief are mandatory — infer the rest f
 | **Auto-open links** | false | Configurable mid-session |
 | **Output folder** (absolute path) | `./generated-assets/` | Confirmed at launch |
 
-**Detail tier ranges:** see `references/topology-rules.md` § Detail Tiers. Soft ranges — alert if >50% above, never block.
+**Detail tier ranges:** see `references/topology-rules.md` § Detail Tiers. Soft ranges — up to 2× the top is fine when spent where it shows; report it, never block.
 
 **Scene:** auto-detected via `get_scene_info()` — not asked.
 
@@ -615,7 +615,7 @@ Load `references/validation-checklist.md` and execute:
 
 Execute the full cleanup sequence from `references/validation-checklist.md` § Execution Order. Check poly budget against tier from `references/topology-rules.md`.
 
-**Poly check:** Out of range (>50%) → **propose decimate with before/after** (always interactive, even in auto mode).
+**Poly check:** report the count against the tier. Past **2× the tier's top** → **propose decimate with before/after** (always interactive, even in auto mode); below that, say where the triangles go and keep them.
 
 **Thin parts are never decimated** — wires, bails, loops: anything an order of magnitude
 thinner than the body. A simplifier breaks them whatever the budget (a generated lantern

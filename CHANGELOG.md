@@ -88,6 +88,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   its thin parts to a 97 % decimation the score did not see: wires are now rebuilt, not
   decimated (a rule in SKILL.md's CLEANUP, where every session passes — the run had grepped
   the reference, not read it), and open edges are counted after.
+- **The triangle range is a guide, not a cap.** The review tool ranked any overshoot as
+  its first gap, and sessions spent their review cutting round parts (a lantern at 9.5k
+  for a 5k top read "90 % over" as its main defect). Up to twice the tier's top is now
+  reported last and kept, with where the triangles go; a reduction is proposed past
+  twice the top — batch mode decimates to the top there, not to the midpoint.
 - **Dark metal is reported, and luminance is no longer something to match.** The bench's
   final lantern read near-black: 100 % metal at a base colour of 0.07–0.15, 23 % darker than
   the real object under the same light — while matching the photo's luminance to 0.003,

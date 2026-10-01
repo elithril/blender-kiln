@@ -11,7 +11,8 @@ test writes its own tiny HDRI. Cases:
 - the same model 20 % wider: the width gap is reported, and close to +20 %;
 - a texture that is not loaded: refused, exit 1 — it would render black;
 - a .blend: measured, with the warning that the shipped file is what counts;
-- --max-tris: reported above the limit, silent below;
+- --max-tris: a guide, not a cap — under twice the limit listed last and kept, past it a
+  reduction proposed; silent below;
 - a metal with a dark base colour: reported — it renders as a black mirror (lantern v7);
   the same colour as non-metal, and a bright metal, silent;
 - --view and --azimuth on a 2 x 1 x 1 box: 2:1 from the front, 1:1 from the side or at 90°,
@@ -125,6 +126,11 @@ with tempfile.TemporaryDirectory() as d:
     _, under, _ = measure(d, f"{d}/vase.glb", "--max-tris", "100000")
     check("--max-tris: reported above the limit", any("triangles, above" in g for g in over["gaps"]), over["tris"])
     check("--max-tris: silent below it", not any("triangles, above" in g for g in under["gaps"]), under["tris"])
+    check("--max-tris: past 2x, a reduction proposed", any("propose a reduction" in g for g in over["gaps"]), over["tris"])
+    _, near, _ = measure(d, f"{d}/vase.glb", "--max-tris", str(int(over["tris"] / 1.5)))
+    tri = [g for g in near["gaps"] if "triangles, above" in g]
+    check("--max-tris: under 2x, listed last, not to cut",
+          bool(tri) and "do not cut" in tri[0] and near["gaps"][-1] == tri[0], tri)
 
     for name, flagged in (("dark_metal", True), ("dark_paint", False), ("bright_metal", False)):
         _, r, _ = measure(d, f"{d}/{name}.glb")

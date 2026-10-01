@@ -253,7 +253,7 @@ For each asset where `status` is `pending`, `failed`, or `redo` (in manifest ord
 
    [CLEANUP] — Full auto cleanup per references/validation-checklist.md.
      Check poly budget against tier from references/topology-rules.md.
-     If poly count >50% above tier range → auto-decimate to tier midpoint.
+     If poly count is past 2x the tier's top → auto-decimate to the tier's top.
      Log before/after stats.
 
    [TEXTURING] — Load references/texturing-strategy.md. Apply materials from palette:
@@ -331,7 +331,7 @@ All 26 core iron rules apply. Additional batch rules:
     integration flags in, silently disabling PolyHaven, Sketchfab, Hunyuan3D
     and Rodin for every remaining asset.
 31. BATCH EXCEPTION to Rule 6: In batch runner mode, auto-decimate replaces
-    the interactive proposal when poly count >50% above tier range. Log
+    the interactive proposal when poly count is past 2x the tier's top. Log
     before/after stats in the asset log for post-batch review. This is the
     only case where Rule 6 is overridden — Rule 28 (no prompts) takes
     precedence in batch mode.

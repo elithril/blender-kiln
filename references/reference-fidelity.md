@@ -237,7 +237,7 @@ UA="blender-kiln"                                   # Poly Haven ToS: a unique U
 curl -s -A "$UA" https://api.polyhaven.com/files/studio_small_09 \
   | python3 -c "import json,sys; print(json.load(sys.stdin)['hdri']['1k']['hdr']['url'])" \
   | xargs curl -s -A "$UA" -o studio_small_09_1k.hdr
-# --max-tris: the tier's top (rule 4 reported, not blocked). --view/--elevation: where the photo's camera stood (§1)
+# --max-tris: the tier's top (rule 4: reported last, a reduction proposed only past 2x). --view/--elevation: where the photo's camera stood (§1)
 blender -b --factory-startup --python-exit-code 1 --python <skill>/tools/fidelity_check.py -- \
   --reference ref.png --model asset_final.glb --hdri studio_small_09_1k.hdr --out review/ \
   --max-tris 5000 --view front --elevation 12 --azimuth 0
