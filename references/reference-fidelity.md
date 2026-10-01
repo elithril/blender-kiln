@@ -191,13 +191,20 @@ v3 on texture detail (0.031 against 0.022 for the reference's 0.032):
   lathe. That needs **cylindrical UVs on turned parts** (u around, v along the height), not
   Smart UV Project, whose islands scatter any direction.
 - **A metal's base colour is its reflectance — it cannot be dark.** Age is painted as
-  NON-metal: rust, soot and dirt at Metallic 0, bare metal at 1, bright. The real Lantern_01
-  is 46 % metallic, and its metal's base colour is 0.30 (sRGB luminance, median; 0.25 for the
-  darkest tenth). Kiln's v7 was 100 % metal at 0.07–0.15 and rendered as near-black bronze,
+  NON-metal: rust, soot and dirt at Metallic 0, bare metal at 1, bright. The real Lantern_01's
+  metal has a base colour of 0.30 (sRGB luminance, median; 0.25 for the darkest tenth). Kiln's v7 was 100 % metal at 0.07–0.15 and rendered as near-black bronze,
   23 % darker than the real object under the same light. The image-to-code lantern, 100 %
   metal at 0.18, reads close (−3 %). `tools/fidelity_check.py` reports any material whose
   metallic texels sit below **0.15** — calibrated on those three, with no false alarm on the
   bench's truths (lantern, crate, chair) or on TRELLIS.2's output.
+- **The metal is ONE region following the form, with soft edges — never a thresholded
+  noise.** How much is bare is no target (the real brass reads 46 % or 73 % metallic
+  depending on the threshold; quoted as a number, a session made it one): the bare metal
+  sits where the form wears — rims, edges, handled parts — and fades into the patina. v9
+  thresholded a noise into copper islands on a dark patina and read as camouflage. The
+  real brass: one region holding 99 % of its metal. v8: scattered but 74–99 % of its
+  texels in between, and it reads smooth. `fidelity_check.py` reports a mask both
+  scattered (largest island under 50 % of the metal) and hard (under 60 % in between).
 - **Wear follows curvature — thresholded by percentile, on the part itself.** Cycles'
   Pointiness spans only 0.48–0.57 on a coarse mesh (measured on the tank), so a fixed
   threshold lands anywhere. Bake Pointiness, take the part's 90th and 99th percentiles as

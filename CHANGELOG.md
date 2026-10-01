@@ -77,7 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   box (a real crate against its own 3/4 preview: 0.573 level, 0.925 at 50°/20°); and
   openwork — a chair from the side, 0.12–0.16 at every orientation — is judged on
   proportions and by eye.
-- **`tools/test_fidelity_check.py`** seeds the review tool, now 15/15, in the Blender CI. Its
+- **`tools/test_fidelity_check.py`** seeds the review tool, now 19/19, in the Blender CI. Its
   first run caught the views framed by height only: anything wider than tall was clipped.
 - **TRELLIS.2 run locally and measured** (`references/ai-generation.md`): on an M4 Pro with
   24 GB, 5–7 min a model, 19.5–22.5 GB peak, 31 GB of weights; the best shape the bench has
@@ -88,6 +88,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   its thin parts to a 97 % decimation the score did not see: wires are now rebuilt, not
   decimated (a rule in SKILL.md's CLEANUP, where every session passes — the run had grepped
   the reference, not read it), and open edges are counted after.
+- **A metallic mask in scattered hard islands is reported.** Lantern v9's surface came out
+  as copper islands on a dark patina — the skill's dark-metal text had quoted the real brass
+  as "48 % metal", and the session thresholded a noise to reach it. The number is gone; the
+  rule is one worn region following the form, soft-edged. `fidelity_check.py` flags a mask
+  both scattered (largest island < 50 % of the metal) and hard (< 60 % in-between texels):
+  v9 on 9 of 9 materials, none of the bench's truths, v8, img2threejs or TRELLIS.2. A mean
+  texel jump was tried first and dropped — it counts edges, not their hardness.
 - **`tools/template_profile.py` reads proportions off a 3D template** — a generated mesh of
   the photo, a scan — to model from, never to ship. On the bench's lantern the TRELLIS.2
   mesh is within 0.6 mm of the real profile (median; 1.6 mm at worst), the best photo-read

@@ -15,6 +15,8 @@ test writes its own tiny HDRI. Cases:
   reduction proposed; silent below;
 - a metal with a dark base colour: reported — it renders as a black mirror (lantern v7);
   the same colour as non-metal, and a bright metal, silent;
+- a metallic mask in hard-edged scattered islands: reported (lantern v9's camouflage); one
+  soft region, silent;
 - --view and --azimuth on a 2 x 1 x 1 box: 2:1 from the front, 1:1 from the side or at 90°,
   and 2.12:1 at 45° (2 cos 45° + sin 45°) — the 3/4 view most product photos are.
 """
@@ -73,6 +75,22 @@ def metal_vase(name, base, metallic):
 metal_vase("dark_metal", (0.05, 0.04, 0.03), 1.0)
 metal_vase("dark_paint", (0.05, 0.04, 0.03), 0.0)
 metal_vase("bright_metal", (0.45, 0.35, 0.20), 1.0)
+# metallic masks, bright metal: hard-edged scattered islands (lantern v9) must be reported;
+# one soft region following the height — wear on the lower half — must not
+import random
+def masked_vase(name, mask):
+    vase(1.0)
+    m = bpy.data.materials["m"]; nt = m.node_tree; b = nt.nodes["Principled BSDF"]
+    b.inputs["Base Color"].default_value = (0.45, 0.35, 0.20, 1)
+    img = bpy.data.images.new(name, 256, 256); img.pixels = [c for v in mask for c in (v, v, v, 1.0)]
+    img.filepath_raw = f"{d}/{name}.png"; img.file_format = "PNG"; img.save()
+    t = nt.nodes.new("ShaderNodeTexImage"); t.image = img; t.image.colorspace_settings.name = "Non-Color"
+    nt.links.new(t.outputs["Color"], b.inputs["Metallic"])
+    export(f"{d}/{name}.glb")
+random.seed(1)
+cells = [[random.random() < 0.35 for _ in range(32)] for _ in range(32)]   # 8-texel islands, at 256 px
+masked_vase("confetti", [1.0 if cells[y // 8][x // 8] else 0.0 for y in range(256) for x in range(256)])
+masked_vase("soft_wear", [min(1.0, max(0.0, (160 - y) / 64)) for y in range(256) for x in range(256)])
 # a 2 x 1 x 1 box: 2 m along X, so front is 2:1 and left is 1:1
 fresh(); bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, 0.5)); bpy.context.object.scale = (2, 1, 1)
 bpy.ops.object.transform_apply(scale=True); export(f"{d}/box.glb")
@@ -137,6 +155,12 @@ with tempfile.TemporaryDirectory() as d:
         hit = [g for g in r["gaps"] if "black mirror" in g]
         check(f"{name}: dark-metal gap {'reported' if flagged else 'silent'}", bool(hit) == flagged,
               [round(m["base_median"], 3) for m in r["metals"]])
+
+    for name, flagged in (("confetti", True), ("soft_wear", False)):
+        _, r, _ = measure(d, f"{d}/{name}.glb")
+        hit = [g for g in r["gaps"] if "camouflage" in g]
+        check(f"{name}: metallic-islands gap {'reported' if flagged else 'silent'}", bool(hit) == flagged,
+              [(round(m.get("mask_soft", 1), 2), round(m.get("mask_largest", 1), 2)) for m in r["metals"]])
 
     for label, extra, want in (("--view front", ("--view", "front"), 2.0),
                                ("--view left", ("--view", "left"), 1.0),

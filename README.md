@@ -315,7 +315,8 @@ shipped bug; this notices when a Blender release makes one wrong again.
 claims to measure — a model against its own render (IoU 0.998), the same model 20 % wider
 (measured +20.3 %), an unloaded texture (refused), a `.blend` (warned), the triangle range
 (kept under twice its top, a reduction proposed past it), dark metal (reported; the same
-colour as non-metal, silent), and `--view` and `--azimuth` on a 2 x 1 x 1 box — **17/17**. Its first run caught the tool framing views by
+colour as non-metal, silent), metal in hard scattered islands (reported; one soft region,
+silent), and `--view` and `--azimuth` on a 2 x 1 x 1 box — **19/19**. Its first run caught the tool framing views by
 height only: anything wider than tall was clipped, a box measured 1:1 instead of 2:1.
 `tools/test_template_profile.py` reads a seeded turned part back through
 `template_profile.py` — radii, a free rod, a rod pressed against the body — **4/4**.

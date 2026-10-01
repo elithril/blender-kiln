@@ -14,7 +14,8 @@ render under a studio HDRI — scales it to the reference's height, and compares
 - material, per band: luminance, saturation, warmth (R−B), highlight share, texture
   detail (high-pass energy) and value spread — luminance and highlights depend on the
   photo's unknown light, so they are alarms, not targets;
-- the model's own materials: metal whose base colour is too dark to be physical.
+- the model's own materials: metal whose base colour is too dark to be physical, and a
+  metallic mask in scattered hard-edged islands (camouflage).
 
 Prints one JSON line (`FIDELITY {...}`) and a ranked list of the largest gaps, and writes
 `overlay.png` (red: reference only, cyan: model only) and `side_by_side.png` into --out.
@@ -83,6 +84,7 @@ def open_model(path):
 
 
 DARK_METAL = 0.15
+CONFETTI_SOFT, CONFETTI_LARGEST = 0.60, 0.5
 
 
 def _image_channel(sock):
@@ -111,6 +113,29 @@ def _texels(im, size=128):
     return a
 
 
+def mask_shape(met):
+    """A metallic mask's shape: the share of in-between texels (0.15-0.85: soft transitions)
+    and the largest connected island's share of the metal (one region, or scattered).
+
+    Read on a 256 grid. Calibrated on the real Lantern_01 (one region: 99 %, 43 % soft),
+    v8 (scattered, 19-85 %, but 74-99 % soft: reads smooth) and v9 (3-40 %, 32-52 % soft:
+    camouflage). A mean jump between texels was tried first and dropped: it counts edges,
+    not their hardness — a hard 8-texel checker read 0.109, the real brass 0.117."""
+    soft = float(((met > 0.15) & (met < 0.85)).mean())
+    m = met > 0.5; lab = np.zeros(m.shape, np.int32); n, sizes = 0, []
+    for y0, x0 in zip(*np.nonzero(m)):
+        if lab[y0, x0]:
+            continue
+        n += 1; lab[y0, x0] = n; stack, cnt = [(y0, x0)], 0
+        while stack:
+            y, x = stack.pop(); cnt += 1
+            for yy, xx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                if 0 <= yy < m.shape[0] and 0 <= xx < m.shape[1] and m[yy, xx] and not lab[yy, xx]:
+                    lab[yy, xx] = n; stack.append((yy, xx))
+        sizes.append(cnt)
+    return soft, (max(sizes) / m.sum() if sizes else 1.0)
+
+
 def dark_metals(meshes):
     """Metallic texels whose base colour is too dark: physically impossible, they render black.
 
@@ -119,7 +144,8 @@ def dark_metals(meshes):
     on its metal (sRGB luminance) and rendered 23 % darker than the real asset, while matching
     the photo's luminance: the photo's own light was darker, and the session tuned to it. The
     real aged brass (Poly Haven Lantern_01): 0.30 median, 0.25 for its darkest tenth, and only
-    48 % of its texels metallic — rust and soot are painted as NON-metal.
+    its rust and soot painted as NON-metal. (Its metallic share is no target: quoted as
+    "48 %", a session thresholded a noise to reach it — see mask_shape.)
     """
     rows, seen = [], set()
     for m in {sl.material for o in meshes for sl in o.material_slots if sl.material and sl.material.node_tree}:
@@ -140,10 +166,15 @@ def dark_metals(meshes):
             lin = np.array(b.inputs["Base Color"].default_value[:3])
             base = np.broadcast_to(np.where(lin <= 0.0031308, lin * 12.92, 1.055 * lin ** (1 / 2.4) - 0.055), (128, 128, 3))
         k = met > 0.8
-        if k.mean() < 0.05:
-            continue
-        lum = (base @ np.array([0.2126, 0.7152, 0.0722]))[k]
-        rows.append(dict(material=m.name, metal_share=float(k.mean()), base_median=float(np.median(lum))))
+        row = dict(material=m.name, metal_share=float(k.mean()))
+        if mi:                                    # the mask's shape, on a finer grid than the colour check
+            fine = _texels(mi, 256)[..., mch] * mk
+            if 0.05 < (fine > 0.5).mean() < 0.95:
+                row["mask_soft"], row["mask_largest"] = mask_shape(fine)
+        if k.mean() >= 0.05:
+            row["base_median"] = float(np.median((base @ np.array([0.2126, 0.7152, 0.0722]))[k]))
+        if "base_median" in row or "mask_soft" in row:
+            rows.append(row)
     return rows
 
 
@@ -329,10 +360,14 @@ def main():
                 note = " — light-dependent: check the material, do not tune to it" if k in ("lum", "highlights") else ""
                 gaps.append((abs(d) / tol / 10, f"band {i + 1}: {k} {m[k]:.3f} vs reference {r[k]:.3f} ({d:+.3f}){note}"))
     for r in metals:
-        if r["base_median"] < DARK_METAL:
+        if r.get("mask_soft", 1) < CONFETTI_SOFT and r.get("mask_largest", 1) < CONFETTI_LARGEST:
+            gaps.append((7, f"material {r['material']}: metal in scattered hard-edged islands (largest {r['mask_largest']:.0%} of "
+                            f"the metal, {r['mask_soft']:.0%} of texels in between) — reads as camouflage. Wear is one "
+                            f"region following the form (edges, handled parts) with soft transitions; never a thresholded noise"))
+        if r.get("base_median", 1.0) < DARK_METAL:
             gaps.append((8, f"material {r['material']}: metal with a base colour of {r['base_median']:.2f} (sRGB luminance, "
                             f"median over its {r['metal_share']:.0%} metallic texels; below {DARK_METAL}) — a black mirror under "
-                            f"any light. Brighten the metal, and paint rust, soot and dirt as NON-metal (real aged brass: 0.30, 48 % metal)"))
+                            f"any light. Brighten the metal, and paint rust, soot and dirt as NON-metal (real aged brass: 0.30) — where the form wears, one soft region, not a share to reach"))
     # The tier's range is a guide, not a cap (rule 4). Listed last, as information: ranked
     # first, it read as the top defect and a session spent its review cutting round parts.
     # A reduction is proposed only past twice the tier's top.
