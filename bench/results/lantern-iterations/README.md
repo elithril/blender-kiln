@@ -43,12 +43,16 @@ object rendered under the same light as the witness.
 | v7 | 0.861 | — | +2 % | −10 % | 0.152 | +0.040 | **0.07–0.15** | 7,552 | $3.52 |
 | v8 — dark metal reported | 0.905 | 1.1 / 9.7 mm | +20 % | −24 % | 0.228 | +0.081 | 0.35 | 9,514 | $4.02 |
 | **v9 — + TRELLIS.2 template** | **0.921** | **0.8 / 4.8 mm** | +2 % | **−6 %** | 0.226 | +0.079 | 0.27–0.31 | 9,964 | $5.19 |
-| **v10 — + metal mask fixed** | 0.914 | **0.8 / 4.0 mm** | 0 % | **−4 %** | 0.244 | +0.093 | — | 9,738 | $4.52 |
+| **v10 — + metal mask fixed** | 0.914 | **0.8 / 4.0 mm** | 0 % † | **−4 %** | 0.244 | +0.093 | — | 9,738 | $4.52 |
 | TRELLIS.2 raw (local, free) | 0.952 | 0.6 / 1.6 mm | 1 m | +1 % | 0.207 | +0.137 | 0.32 | 191,520 | $0 |
 | TRELLIS.2 finished by kiln, try 1 | 0.926 | — | +2 % | +1 % | 0.214 | +0.078 | — | 5,070 | $4.81 |
 | TRELLIS.2 finished by kiln, try 2 | 0.866 | — | 0 % | +6 % | 0.222 | +0.088 | — | 6,092 | $4.84 |
 
 Height is an assumption in every brief: none gives the size, and the template is 1 m tall.
+† **Contaminated.** The skill at v9 and v10 (`8d6121a`–`a4808a7`) carried the real height
+in an example command (`--height 0.294`); v10 copied it as its assumption, v9 saw it and
+assumed 30 cm. Removed in `18f8eec`. Shape scores and profiles are scaled to the real
+height before comparing and are not affected; v10's height column is.
 
 **What these say, and what they do not.**
 
