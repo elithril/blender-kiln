@@ -1,4 +1,4 @@
-# Lantern iterations — one reference, eleven versions
+# Lantern iterations — one reference, thirteen versions
 
 Reference: Poly Haven `Lantern_01` preview (CC0), photographed from ~15° above. The session
 only ever sees the photo; the real asset (29.4 cm, 33,902 tris) is the bench's marking
@@ -46,6 +46,7 @@ object rendered under the same light as the witness.
 | **v10 — + metal mask fixed** | 0.914 | **0.8 / 4.0 mm** | 0 % † | **−4 %** | 0.244 | +0.093 | — | 9,738 | $4.52 |
 | v11 — joints rendered, patina metal, one metal ‡ | 0.897 | 1.0 / 4.9 mm | +1 % | +1 % | 0.221 | +0.086 | — | 12,418 | $7.64 |
 | ~~v12~~ — **contaminated, not a measurement** § | 0.914 | — | +2 % | −3 % | — | — | — | 10,852 | $8.43 |
+| **v13 — v11 + template widths + tinted glass, sandboxed** | **0.924** | 0.7 / 10.8 mm | +2 % | +1 % | 0.235 | +0.074 | — | 9,208 | $5.63 |
 | TRELLIS.2 raw (local, free) | 0.952 | 0.6 / 1.6 mm | 1 m | +1 % | 0.207 | +0.137 | 0.32 | 191,520 | $0 |
 | TRELLIS.2 finished by kiln, try 1 | 0.926 | — | +2 % | +1 % | 0.214 | +0.078 | — | 5,070 | $4.81 |
 | TRELLIS.2 finished by kiln, try 2 | 0.866 | — | 0 % | +6 % | 0.222 | +0.088 | — | 6,092 | $4.84 |
@@ -96,7 +97,14 @@ height before comparing and are not affected; v10's height column is.
   measured on THIS lantern. Its improvement on the lantern overstates how it generalises;
   the crate and the chair are the test of that.
 
-Images: `v12-contaminated-compare.webp`, `v12-contaminated-closeups.webp`, `v10-v11-compare.webp`, `v11-closeups-texture-joint.webp`, `v8-v9-v10-compare.webp`, `progression-v1-v8.webp` (all versions, same render), `v7-v8-v9-compare.webp`,
+- **v13, the first sandboxed run** (`0ec4783`, audit: 0 calls outside the sandbox): the
+  best shape of all (0.924, front 0.896), joints entering clean with their section kept,
+  the glass tinted. **The texture is not there**: the tank reads clean, bright and glossy
+  — grain 16 % of the photo's, highlights 0.053 for the real object's 0.030. By the
+  criterion set before the run (texture at least v10's, geometry at least v11's), it
+  passes on geometry and fails on texture.
+
+Images: `v13-compare.webp`, `v13-closeups.webp`, `v12-contaminated-compare.webp`, `v12-contaminated-closeups.webp`, `v10-v11-compare.webp`, `v11-closeups-texture-joint.webp`, `v8-v9-v10-compare.webp`, `progression-v1-v8.webp` (all versions, same render), `v7-v8-v9-compare.webp`,
 `trellis-finish-compare.webp`, `trellis-finish-front-diff.webp` (red: truth only, blue:
 model only — try 2's wires are intact and a few pixels out, which empties a thin band's
 overlap).
