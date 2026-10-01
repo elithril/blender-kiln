@@ -88,6 +88,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   its thin parts to a 97 % decimation the score did not see: wires are now rebuilt, not
   decimated (a rule in SKILL.md's CLEANUP, where every session passes — the run had grepped
   the reference, not read it), and open edges are counted after.
+- **`tools/template_profile.py` reads proportions off a 3D template** — a generated mesh of
+  the photo, a scan — to model from, never to ship. On the bench's lantern the TRELLIS.2
+  mesh is within 0.6 mm of the real profile (median; 1.6 mm at worst), the best photo-read
+  reconstruction 1.1 mm and 9.7 mm at worst, at the step a 15° camera hides. Seeded by
+  `tools/test_template_profile.py` (4/4, in the Blender CI), whose first run caught the
+  axis pulled off-centre by a tube reaching the floor.
 - **The triangle range is a guide, not a cap.** The review tool ranked any overshoot as
   its first gap, and sessions spent their review cutting round parts (a lantern at 9.5k
   for a 5k top read "90 % over" as its main defect). Up to twice the tier's top is now

@@ -269,6 +269,7 @@ Once installed, the skill directory looks like this:
 | `references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~360 |
 | `references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~340 |
 | `tools/fidelity_check.py` | Renders a model under a studio HDRI and measures shape and material gaps against its reference | ~245 |
+| `tools/template_profile.py` | Reads a turned object's real profile off a 3D template (a generated mesh, a scan), to model from | ~120 |
 | `references/validation-checklist.md` | Geometry cleanup + material export audit | ~250 |
 | `references/ai-generation.md` | Hunyuan3D 2.x (local + cloud), TRELLIS.2 local (measured), concept art (FLUX.1-schnell, nano-banana), free-quota and token rules | ~430 |
 | `references/export-targets.md` | GLB/FBX/USDZ settings, headless CLI, post-export checklist | ~240 |
@@ -312,9 +313,12 @@ shipped bug; this notices when a Blender release makes one wrong again.
 
 `tools/test_fidelity_check.py` runs in the same workflow and seeds what the review tool
 claims to measure — a model against its own render (IoU 0.998), the same model 20 % wider
-(measured +20.3 %), an unloaded texture (refused), a `.blend` (warned), a triangle limit,
-and `--view` and `--azimuth` on a 2 x 1 x 1 box — **12/12**. Its first run caught the tool framing views by
+(measured +20.3 %), an unloaded texture (refused), a `.blend` (warned), the triangle range
+(kept under twice its top, a reduction proposed past it), dark metal (reported; the same
+colour as non-metal, silent), and `--view` and `--azimuth` on a 2 x 1 x 1 box — **17/17**. Its first run caught the tool framing views by
 height only: anything wider than tall was clipped, a box measured 1:1 instead of 2:1.
+`tools/test_template_profile.py` reads a seeded turned part back through
+`template_profile.py` — radii, a free rod, a rod pressed against the body — **4/4**.
 
 ## Iron rules
 

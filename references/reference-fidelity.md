@@ -55,7 +55,25 @@ pentagon on a hinge clip — and the review had praised the wrong version.
 
 ## 2. Measure the silhouette
 
-The reference's own pixels give proportions in millimetres. For a turned object
+**When a 3D template exists, measure it instead** — a generated mesh of the same photo
+(TRELLIS.2, see `ai-generation.md`) or a scan. A photo bends proportions; the template
+holds them. `tools/template_profile.py` scales it to the real height, fits the axis on the
+foot, and prints per height the turned radius (what to lathe) and what stands around it —
+tubes, guard, bail — with its distance from the axis and angular coverage:
+
+```bash
+blender -b --factory-startup --python-exit-code 1 --python <skill>/tools/template_profile.py -- \
+  --template trellis.glb --height 0.294 --bands 40 --json profile.json
+```
+
+Measured on the bench's lantern: the TRELLIS.2 mesh read this way is within **0.6 mm**
+of the real object's profile (median, 1.6 mm at worst, 27 heights); the best photo-read
+reconstruction was at 1.1 mm and **9.7 mm** at worst, at the tank-to-burner step a 15°
+camera hides. **Model from the measures, never from the template's surface**: it is
+faceted, its texture smeared, and its thin parts break when decimated. Proportions come
+from the template; materials still come from the photo (§ 4).
+
+Without a template, the reference's own pixels give proportions in millimetres. For a turned object
 (lantern, bottle, vase, barrel) the profile is usable directly as a lathe profile.
 Take the **core width** — the opaque run through the vertical axis — not the full
 width, which at the top of a lantern measures the bail, not the body.

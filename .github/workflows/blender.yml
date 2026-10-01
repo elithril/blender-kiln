@@ -13,6 +13,7 @@ name: blender
 #   - geometry nodes need the modifier APPLIED, or the export loses everything
 #   - USDZ exports natively, but convert_world_material writes a non-conforming .exr
 #   - fidelity_check.py measures what it claims: seeded widths, views, refusals
+#   - template_profile.py reads known radii back, a wire pressed against the body included
 
 on:
   schedule:
@@ -26,6 +27,8 @@ on:
       - "tools/verify_blender.py"
       - "tools/fidelity_check.py"
       - "tools/test_fidelity_check.py"
+      - "tools/template_profile.py"
+      - "tools/test_template_profile.py"
 
 jobs:
   blender:
@@ -48,3 +51,7 @@ jobs:
       - name: Check the fidelity tool against seeded inputs
         run: |
           BLENDER=blender python3 tools/test_fidelity_check.py
+
+      - name: Check the template profile against a seeded part
+        run: |
+          BLENDER=blender python3 tools/test_template_profile.py

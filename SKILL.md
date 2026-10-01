@@ -499,7 +499,7 @@ A user-provided image (or generated concept art) is useful for ALL creation meth
 | Method | How the image is used |
 |---|---|
 | **Hunyuan3D** | Passed directly as generation input (image → 3D) |
-| **Scripted modeling** | **Load `references/reference-fidelity.md`** — inventory the details, measure the silhouette from the pixels, check every part is attached, sample materials from the image, review twice against it |
+| **Scripted modeling** | **Load `references/reference-fidelity.md`** — inventory the details, measure the silhouette from the pixels (or, given a generated mesh of the photo, its profile with `tools/template_profile.py` — never ship that mesh), check every part is attached, sample materials from the image, review twice against it |
 | **Geometry Nodes** | Analyze image to inform node parameters — spacing, density, pattern, scale |
 | **Marketplace** | Analyze image to refine search keywords and evaluate result similarity |
 
