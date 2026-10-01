@@ -172,11 +172,14 @@ v3 on texture detail (0.031 against 0.022 for the reference's 0.032):
 - **Give grime a direction.** Streaks run along a turned part's profile — vertical on a
   lathe. That needs **cylindrical UVs on turned parts** (u around, v along the height), not
   Smart UV Project, whose islands scatter any direction.
-- **Metal can be metal.** The image-to-code lantern is Metallic 0.92 all over with a dark,
-  warm colour field, and reads right; kiln's v3 split patina (Metallic ~0.2) from worn
-  edges (Metallic 1) and also reads right. What fails is a *dark colour at high metallic
-  without warmth*: it mirrors a grey studio. Choose either, and let `tools/fidelity_check.py`
-  judge saturation, warmth and highlights.
+- **A metal's base colour is its reflectance — it cannot be dark.** Age is painted as
+  NON-metal: rust, soot and dirt at Metallic 0, bare metal at 1, bright. The real Lantern_01
+  is 46 % metallic, and its metal's base colour is 0.30 (sRGB luminance, median; 0.25 for the
+  darkest tenth). Kiln's v7 was 100 % metal at 0.07–0.15 and rendered as near-black bronze,
+  23 % darker than the real object under the same light. The image-to-code lantern, 100 %
+  metal at 0.18, reads close (−3 %). `tools/fidelity_check.py` reports any material whose
+  metallic texels sit below **0.15** — calibrated on those three, with no false alarm on the
+  bench's truths (lantern, crate, chair) or on TRELLIS.2's output.
 - **Wear follows curvature — thresholded by percentile, on the part itself.** Cycles'
   Pointiness spans only 0.48–0.57 on a coarse mesh (measured on the tank), so a fixed
   threshold lands anywhere. Bake Pointiness, take the part's 90th and 99th percentiles as
@@ -314,6 +317,13 @@ Read it with its limits, measured on the lantern:
   not the preview's. So **saturation, detail and shape are targets; luminance and
   highlights are only alarms when far off.** A reconstruction at 2.5 % highlights matched
   the real object, not "too reflective".
+- **Never tune luminance to the photo.** Lantern v7 matched the photo's luminance to 0.003
+  — and was 23 % darker than the real object under the tool's light, because the real one
+  renders 28 % brighter there than in its own photo. The photo's light is unknown, so a
+  match proves nothing; when luminance is off, fix the MATERIAL (dark metal, base colour
+  range), never the number. Warmth over luminance is no way out either: it held on the
+  brass and broke on the painted crate (0.18 rendered for 0.50 in the photo), where a
+  dielectric's white sheen under a softbox dilutes the colour.
 - **Fine detail is what reads as real.** At 0.022–0.024 texture detail against the
   reference's 0.032 (the real asset measures 0.028 under the same light), surfaces read
   clean and new. Add it as **fine features** — scratches (thin lines along the part's u

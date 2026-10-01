@@ -12,6 +12,8 @@ test writes its own tiny HDRI. Cases:
 - a texture that is not loaded: refused, exit 1 — it would render black;
 - a .blend: measured, with the warning that the shipped file is what counts;
 - --max-tris: reported above the limit, silent below;
+- a metal with a dark base colour: reported — it renders as a black mirror (lantern v7);
+  the same colour as non-metal, and a bright metal, silent;
 - --view and --azimuth on a 2 x 1 x 1 box: 2:1 from the front, 1:1 from the side or at 90°,
   and 2.12:1 at 45° (2 cos 45° + sin 45°) — the 3/4 view most product photos are.
 """
@@ -57,6 +59,19 @@ m = bpy.data.materials.new("lost"); m.use_nodes = True
 t = m.node_tree.nodes.new("ShaderNodeTexImage"); t.image = bpy.data.images.new("lost", 8, 8)
 t.image.source = "FILE"; t.image.filepath = "/nonexistent/lost.png"; o.data.materials.append(m)
 bpy.ops.wm.save_as_mainfile(filepath=f"{d}/lost.blend")
+# metals: a dark metal — textured, as a bake ships, through the GLB — must be reported; the
+# same base colour as non-metal, and a bright metal, must not
+def metal_vase(name, base, metallic):
+    vase(1.0)
+    m = bpy.data.materials["m"]; nt = m.node_tree; b = nt.nodes["Principled BSDF"]
+    img = bpy.data.images.new(name, 8, 8); img.pixels = [*base, 1.0] * 64
+    img.filepath_raw = f"{d}/{name}.png"; img.file_format = "PNG"; img.save()
+    t = nt.nodes.new("ShaderNodeTexImage"); t.image = img; nt.links.new(t.outputs["Color"], b.inputs["Base Color"])
+    b.inputs["Metallic"].default_value = metallic
+    export(f"{d}/{name}.glb")
+metal_vase("dark_metal", (0.05, 0.04, 0.03), 1.0)
+metal_vase("dark_paint", (0.05, 0.04, 0.03), 0.0)
+metal_vase("bright_metal", (0.45, 0.35, 0.20), 1.0)
 # a 2 x 1 x 1 box: 2 m along X, so front is 2:1 and left is 1:1
 fresh(); bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, 0.5)); bpy.context.object.scale = (2, 1, 1)
 bpy.ops.object.transform_apply(scale=True); export(f"{d}/box.glb")
@@ -110,6 +125,12 @@ with tempfile.TemporaryDirectory() as d:
     _, under, _ = measure(d, f"{d}/vase.glb", "--max-tris", "100000")
     check("--max-tris: reported above the limit", any("triangles, above" in g for g in over["gaps"]), over["tris"])
     check("--max-tris: silent below it", not any("triangles, above" in g for g in under["gaps"]), under["tris"])
+
+    for name, flagged in (("dark_metal", True), ("dark_paint", False), ("bright_metal", False)):
+        _, r, _ = measure(d, f"{d}/{name}.glb")
+        hit = [g for g in r["gaps"] if "black mirror" in g]
+        check(f"{name}: dark-metal gap {'reported' if flagged else 'silent'}", bool(hit) == flagged,
+              [round(m["base_median"], 3) for m in r["metals"]])
 
     for label, extra, want in (("--view front", ("--view", "front"), 2.0),
                                ("--view left", ("--view", "left"), 1.0),

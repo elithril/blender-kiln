@@ -77,8 +77,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   box (a real crate against its own 3/4 preview: 0.573 level, 0.925 at 50°/20°); and
   openwork — a chair from the side, 0.12–0.16 at every orientation — is judged on
   proportions and by eye.
-- **`tools/test_fidelity_check.py`** seeds the review tool, 10/10, in the Blender CI. Its
+- **`tools/test_fidelity_check.py`** seeds the review tool, now 15/15, in the Blender CI. Its
   first run caught the views framed by height only: anything wider than tall was clipped.
+- **Dark metal is reported, and luminance is no longer something to match.** The bench's
+  final lantern read near-black: 100 % metal at a base colour of 0.07–0.15, 23 % darker than
+  the real object under the same light — while matching the photo's luminance to 0.003,
+  because the photo's own light was darker. `fidelity_check.py` now reads the model's
+  materials and reports metal below 0.15 (the real aged brass: 0.30, 46 % metallic, its rust
+  painted as non-metal); luminance and highlight gaps are labelled light-dependent.
 - **A float colour bake shipped black.** Measured on Blender 5.2.2 with a minimal repro:
   the glTF exporter writes a linear float base-colour image into its PNG without the sRGB
   transfer (linear 0.2 → byte 51, not 124). A lantern reviewed at saturation 0.30 shipped

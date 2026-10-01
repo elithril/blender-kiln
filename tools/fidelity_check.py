@@ -12,7 +12,9 @@ render under a studio HDRI — scales it to the reference's height, and compares
 
 - shape: silhouette IoU, and per height band the width difference (full and core);
 - material, per band: luminance, saturation, warmth (R−B), highlight share, texture
-  detail (high-pass energy) and value spread.
+  detail (high-pass energy) and value spread — luminance and highlights depend on the
+  photo's unknown light, so they are alarms, not targets;
+- the model's own materials: metal whose base colour is too dark to be physical.
 
 Prints one JSON line (`FIDELITY {...}`) and a ranked list of the largest gaps, and writes
 `overlay.png` (red: reference only, cyan: model only) and `side_by_side.png` into --out.
@@ -77,7 +79,72 @@ def open_model(path):
     cs = [o.matrix_world @ Vector(c) for o in meshes for c in o.bound_box]
     lo = Vector([min(c[i] for c in cs) for i in range(3)])
     hi = Vector([max(c[i] for c in cs) for i in range(3)])
-    return sc, lo, hi, tris, len(meshes)
+    return sc, lo, hi, tris, meshes
+
+
+DARK_METAL = 0.15
+
+
+def _image_channel(sock):
+    """The image behind a socket, the channel that feeds it (glTF packs metallic in B), and
+    any constant factor on the way (the glTF importer puts metallicFactor in a Math node)."""
+    if not sock.is_linked:
+        return None, 0, 1.0
+    link, ch, k = sock.links[0], 0, 1.0
+    while link.from_node.type != "TEX_IMAGE":
+        n = link.from_node
+        if n.type == "SEPARATE_COLOR":
+            ch = list(n.outputs).index(link.from_socket)
+        elif n.type == "MATH" and n.operation == "MULTIPLY":
+            k *= next((i.default_value for i in n.inputs[:2] if not i.is_linked), 1.0)
+        inputs = [i for i in n.inputs if i.is_linked]
+        if not inputs:
+            return None, 0, 1.0
+        link = inputs[0].links[0]
+    return link.from_node.image, ch, k
+
+
+def _texels(im, size=128):
+    c = im.copy(); c.scale(size, size)
+    a = np.array(c.pixels[:], dtype=np.float32).reshape(size, size, -1)
+    bpy.data.images.remove(c)
+    return a
+
+
+def dark_metals(meshes):
+    """Metallic texels whose base colour is too dark: physically impossible, they render black.
+
+    In the metal/roughness workflow a metal's base colour IS its reflectance. Darkening it to
+    paint age gives a black mirror under any light — the bench's lantern v7 measured 0.02-0.15
+    on its metal (sRGB luminance) and rendered 23 % darker than the real asset, while matching
+    the photo's luminance: the photo's own light was darker, and the session tuned to it. The
+    real aged brass (Poly Haven Lantern_01): 0.30 median, 0.25 for its darkest tenth, and only
+    48 % of its texels metallic — rust and soot are painted as NON-metal.
+    """
+    rows, seen = [], set()
+    for m in {sl.material for o in meshes for sl in o.material_slots if sl.material and sl.material.node_tree}:
+        b = next((n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
+        if b is None or m.name in seen:
+            continue
+        seen.add(m.name)
+        mi, mch, mk = _image_channel(b.inputs["Metallic"])
+        bi, _, _ = _image_channel(b.inputs["Base Color"])
+        if any(im and not im.size[0] for im in (mi, bi)):      # .size loads it; has_data stays False until then
+            continue
+        met = _texels(mi)[..., mch] * mk if mi else np.full((128, 128), b.inputs["Metallic"].default_value)
+        if bi:
+            base = _texels(bi)[..., :3]
+            if bi.is_float:                       # float images hold linear values; bytes hold sRGB
+                base = np.where(base <= 0.0031308, base * 12.92, 1.055 * np.power(np.clip(base, 0, None), 1 / 2.4) - 0.055)
+        else:
+            lin = np.array(b.inputs["Base Color"].default_value[:3])
+            base = np.broadcast_to(np.where(lin <= 0.0031308, lin * 12.92, 1.055 * lin ** (1 / 2.4) - 0.055), (128, 128, 3))
+        k = met > 0.8
+        if k.mean() < 0.05:
+            continue
+        lum = (base @ np.array([0.2126, 0.7152, 0.0722]))[k]
+        rows.append(dict(material=m.name, metal_share=float(k.mean()), base_median=float(np.median(lum))))
+    return rows
 
 
 def render(sc, lo, hi, path, engine, hdri=None, samples=64):
@@ -209,7 +276,8 @@ def main():
     if not o["model"].lower().endswith((".glb", ".gltf")):
         print("fidelity_check: WARNING — measuring a .blend. The final measure must be of the exported "
               "GLB: an export can change what you see (a linear float texture ships black).")
-    sc, lo, hi, tris, nmesh = open_model(o["model"])
+    sc, lo, hi, tris, meshes = open_model(o["model"])
+    nmesh, metals = len(meshes), dark_metals(meshes)
     sil, col = os.path.join(o["out"], "_silhouette.png"), os.path.join(o["out"], "_colour.png")
     render(sc, lo, hi, sil, "BLENDER_WORKBENCH")
     render(sc, lo, hi, col, "CYCLES", hdri=o["hdri"], samples=int(o["samples"]))
@@ -251,10 +319,20 @@ def main():
         # Tolerances from the bench's calibration: the real Lantern_01, measured against its
         # own preview under this HDRI, reads luminance +0.05 and highlights +0.010 — the light,
         # not the object. Saturation and detail held (0.33/0.32, 0.028/0.032).
+        # Luminance and highlights are ALARMS, never targets: the photo's light is unknown.
+        # Lantern v7 matched the photo's luminance to 0.003 and was 23 % darker than the real
+        # object under this HDRI — the real one is 28 % brighter than its own photo here. The
+        # material's own numbers (dark_metals) are what light cannot move.
         for k, tol in (("sat", 0.06), ("warm", 0.025), ("detail", 0.008), ("lum", 0.07), ("highlights", 0.02)):
             d = m[k] - r[k]
             if abs(d) > tol:
-                gaps.append((abs(d) / tol / 10, f"band {i + 1}: {k} {m[k]:.3f} vs reference {r[k]:.3f} ({d:+.3f})"))
+                note = " — light-dependent: check the material, do not tune to it" if k in ("lum", "highlights") else ""
+                gaps.append((abs(d) / tol / 10, f"band {i + 1}: {k} {m[k]:.3f} vs reference {r[k]:.3f} ({d:+.3f}){note}"))
+    for r in metals:
+        if r["base_median"] < DARK_METAL:
+            gaps.append((8, f"material {r['material']}: metal with a base colour of {r['base_median']:.2f} (sRGB luminance, "
+                            f"median over its {r['metal_share']:.0%} metallic texels; below {DARK_METAL}) — a black mirror under "
+                            f"any light. Brighten the metal, and paint rust, soot and dirt as NON-metal (real aged brass: 0.30, 48 % metal)"))
     if "max-tris" in o and tris > int(o["max-tris"]):
         gaps.append((9, f"{tris:,} triangles, above the tier's {int(o['max-tris']):,} (+{tris / int(o['max-tris']) - 1:.0%}) — rule 4: say so"))
     gaps.sort(key=lambda g: -g[0])
@@ -266,7 +344,7 @@ def main():
     save(np.concatenate([bg(pad_to(ref, W)), np.ones((H, 12, 4), np.float32), bg(pad_to(mod_c, W))], 1),
          os.path.join(o["out"], "side_by_side.png"))
 
-    print("FIDELITY " + json.dumps(dict(tris=tris, meshes=nmesh, iou=iou, shape=shape, material=dict(reference=mref, model=mmod),
+    print("FIDELITY " + json.dumps(dict(tris=tris, meshes=nmesh, iou=iou, shape=shape, material=dict(reference=mref, model=mmod), metals=metals,
                                         gaps=[g[1] for g in gaps])))
     print(f"\n{tris:,} tris in {nmesh} meshes · silhouette IoU {iou:.3f} (information, not a target: "
           f"a real object scores ~0.80 against its own photo) — gaps to close, largest first:")
