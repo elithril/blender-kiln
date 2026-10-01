@@ -267,7 +267,7 @@ Once installed, the skill directory looks like this:
 | `references/characters.md` | Rigging patterns, anti-patterns, export gotchas, Blender 5.x | ~640 |
 | `references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~460 |
 | `references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~360 |
-| `references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~340 |
+| `references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~400 |
 | `tools/fidelity_check.py` | Renders a model under a studio HDRI and measures shape and material gaps against its reference | ~245 |
 | `tools/template_profile.py` | Reads a turned object's real profile off a 3D template (a generated mesh, a scan), to model from | ~120 |
 | `references/validation-checklist.md` | Geometry cleanup + material export audit | ~250 |
@@ -316,8 +316,9 @@ claims to measure — a model against its own render (IoU 0.998), the same model
 (measured +20.3 %), an unloaded texture (refused), a `.blend` (warned), the triangle range
 (kept under twice its top, a reduction proposed past it), dark metal (reported; the same
 colour as non-metal, silent), metal in hard scattered islands (reported; one soft region,
-silent), metal painted mostly as non-metal (reported), joint close-ups (a rod resting on a
-sphere rendered; sunk or free, not), and `--view` and `--azimuth` on a 2 x 1 x 1 box — **24/24**. Its first run caught the tool framing views by
+silent), metal painted mostly as non-metal (reported), a plain surface against a grainy photo
+(too clean, reported), joint close-ups (a rod resting on a sphere rendered; sunk or free,
+not), and `--view` and `--azimuth` on a 2 x 1 x 1 box — **26/26**. Its first run caught the tool framing views by
 height only: anything wider than tall was clipped, a box measured 1:1 instead of 2:1.
 `tools/test_template_profile.py` reads a seeded turned part back through
 `template_profile.py` — radii, a free rod, a rod pressed against the body — **4/4**.

@@ -94,6 +94,28 @@ cells = [[random.random() < 0.35 for _ in range(32)] for _ in range(32)]   # 8-t
 masked_vase("confetti", [1.0 if cells[y // 8][x // 8] else 0.0 for y in range(256) for x in range(256)])
 masked_vase("soft_wear", [min(1.0, max(0.0, (200 - y) / 64)) for y in range(256) for x in range(256)])   # mean 0.66
 masked_vase("mostly_painted", [min(1.0, max(0.0, (90 - y) / 64)) for y in range(256) for x in range(256)])   # mean 0.23
+# grain: a vase textured with fine noise, rendered under the HDRI as the "photo"; the same
+# vase plain must read too clean against it, the textured one must not
+import random as _r
+_r.seed(3)
+noise = [0.25 + 0.5 * _r.random() for _ in range(256 * 256)]
+masked_vase("grainy", [1.0] * (256 * 256))
+m = bpy.data.materials["m"]; nt = m.node_tree; b = nt.nodes["Principled BSDF"]
+img = bpy.data.images.new("grain", 256, 256); img.pixels = [c for v in noise for c in (v, v * 0.8, v * 0.6, 1.0)]
+img.filepath_raw = f"{d}/grain.png"; img.file_format = "PNG"; img.save()
+t = nt.nodes.new("ShaderNodeTexImage"); t.image = img; nt.links.new(t.outputs["Color"], b.inputs["Base Color"])
+b.inputs["Metallic"].default_value = 0.0; b.inputs["Roughness"].default_value = 0.6
+export(f"{d}/grainy.glb")
+w = bpy.data.worlds.new("w"); bpy.context.scene.world = w
+env = w.node_tree.nodes.new("ShaderNodeTexEnvironment"); env.image = bpy.data.images.load(f"{d}/env.hdr")
+w.node_tree.links.new(env.outputs["Color"], w.node_tree.nodes["Background"].inputs["Color"])
+cam = bpy.data.objects.new("c", bpy.data.cameras.new("c")); bpy.context.scene.collection.objects.link(cam)
+cam.data.type = "ORTHO"; cam.data.ortho_scale = 0.46; cam.location = (0, -2, 0.225); cam.rotation_euler = (math.pi / 2, 0, 0)
+sc = bpy.context.scene; sc.camera = cam; sc.render.engine = "CYCLES"; sc.cycles.samples = 16; sc.render.film_transparent = True
+sc.render.resolution_x = sc.render.resolution_y = 512; sc.render.image_settings.color_mode = "RGBA"
+sc.view_settings.view_transform = "Standard"; sc.render.filepath = f"{d}/ref_grainy.png"; bpy.ops.render.render(write_still=True)
+vase(1.0); bpy.data.materials["m"].node_tree.nodes["Principled BSDF"].inputs["Roughness"].default_value = 0.6
+export(f"{d}/plain.glb")
 # joints: a rod whose flat end rests on a sphere (to render), one sunk into it, one free
 def rods(name, z_bottom):
     fresh()
@@ -117,9 +139,9 @@ def blender(*a, check=True):
     return r
 
 
-def measure(d, model, *extra, check=True):
-    out = os.path.join(d, "out_" + os.path.basename(model) + "_".join(extra).replace("-", ""))
-    r = blender("--python", TOOL, "--", "--reference", f"{d}/ref.png", "--model", model,
+def measure(d, model, *extra, check=True, ref="ref.png"):
+    out = os.path.join(d, "out_" + os.path.basename(model) + "_".join(extra).replace("-", "") + ref[:-4])
+    r = blender("--python", TOOL, "--", "--reference", f"{d}/{ref}", "--model", model,
                 "--hdri", f"{d}/env.hdr", "--out", out, "--samples", "2", *extra, check=check)
     line = next((l for l in r.stdout.splitlines() if l.startswith("FIDELITY ")), None)
     return r, (json.loads(line[len("FIDELITY "):]) if line else None), out
@@ -173,6 +195,12 @@ with tempfile.TemporaryDirectory() as d:
         hit = [g for g in r["gaps"] if "painted as non-metal" in g]
         check(f"{name}: mostly-non-metal gap {'reported' if flagged else 'silent'}", bool(hit) == flagged,
               [round(m.get("mask_mean", 1), 2) for m in r["metals"]])
+
+    for name, flagged in (("plain", True), ("grainy", False)):
+        _, r, _ = measure(d, f"{d}/{name}.glb", "--samples", "16", ref="ref_grainy.png")
+        hit = [g for g in r["gaps"] if "too clean" in g]
+        check(f"{name} vs a grainy photo: too-clean gap {'reported' if flagged else 'silent'}", bool(hit) == flagged,
+              [round(m["grain"], 3) for m in r["material"]["model"] if m and m.get("grain") is not None])
 
     for name, want in (("rod_resting", 2), ("rod_sunk", 0), ("rod_free", 0)):
         _, r, out = measure(d, f"{d}/{name}.glb")

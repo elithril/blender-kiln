@@ -77,7 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   box (a real crate against its own 3/4 preview: 0.573 level, 0.925 at 50°/20°); and
   openwork — a chair from the side, 0.12–0.16 at every orientation — is judged on
   proportions and by eye.
-- **`tools/test_fidelity_check.py`** seeds the review tool, now 24/24, in the Blender CI. Its
+- **`tools/test_fidelity_check.py`** seeds the review tool, now 26/26, in the Blender CI. Its
   first run caught the views framed by height only: anything wider than tall was clipped.
 - **TRELLIS.2 run locally and measured** (`references/ai-generation.md`): on an M4 Pro with
   24 GB, 5–7 min a model, 19.5–22.5 GB peak, 31 GB of weights; the best shape the bench has
@@ -88,6 +88,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   its thin parts to a 97 % decimation the score did not see: wires are now rebuilt, not
   decimated (a rule in SKILL.md's CLEANUP, where every session passes — the run had grepped
   the reference, not read it), and open edges are counted after.
+- **A surface too clean for its photo is reported; widths come from the template; glass
+  takes the photo's tint.** v11 fixed v10's joints and metals and overshot: one clean
+  bronze read new (grain 20 % of the photo's on the tank; the real object 74 %, the
+  image-to-code lantern 79 %, v10 57 %). `fidelity_check.py` now measures a band's grain —
+  fine variation deep inside solid areas, over its brightness — and reports it under 28 %
+  of the photo's (one truth, narrow margin: v10 sits at 31 %). Age is a layer inside the
+  material: AO-darkened cavities, worn edges, pits and dents. v11 also took widths from the
+  photo, whose perspective narrows (−6 %); the template now gives widths and the parts'
+  positions too. And the glass: clear in v8–v11 against a near-black photo — the
+  reference's own inventory example said "clear glass".
 - **Joints are rendered to be looked at, and patina stays metal** — what v10 got wrong
   where the numbers said it was fine. Its air tubes ended in a flat cut resting on the
   tank's slope, touching at one point and lifting 14.6 mm across their end, while the

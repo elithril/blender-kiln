@@ -14,8 +14,10 @@ render under a studio HDRI — scales it to the reference's height, and compares
 - material, per band: luminance, saturation, warmth (R−B), highlight share, texture
   detail (high-pass energy) and value spread — luminance and highlights depend on the
   photo's unknown light, so they are alarms, not targets;
-- the model's own materials: metal whose base colour is too dark to be physical, and a
-  metallic mask in scattered hard-edged islands (camouflage).
+- the model's own materials: metal whose base colour is too dark to be physical, a
+  metallic mask in scattered hard-edged islands (camouflage), metal painted mostly as
+  non-metal, and a surface too clean for the photo (grain, per band);
+- joints: every end of a long part that touches another, rendered up close to be looked at.
 
 Prints one JSON line (`FIDELITY {...}`) and a ranked list of the largest gaps, and writes
 `overlay.png` (red: reference only, cyan: model only) and `side_by_side.png` into --out.
@@ -88,6 +90,10 @@ CONFETTI_SOFT, CONFETTI_LARGEST = 0.60, 0.5
 # Calibrated on ONE truth: the real Lantern_01's brass averages 0.63; v8, v9 and v10, which
 # read grey or dull, 0.20-0.57. A warning about what light does, not a share to reach.
 MOSTLY_PAINTED = 0.5
+# Grain, model over photo, per band. ONE truth again, and a narrow margin: the real
+# Lantern_01 0.52-0.84, the image-to-code lantern 0.38+, v10 0.31+; v8 and v11, which read
+# dull or new, 0.21-0.22 on the tank.
+TOO_CLEAN = 0.28
 
 
 def _image_channel(sock):
@@ -384,15 +390,26 @@ def material(a):
     hp = np.abs(lum - blur(lum))
     mx, mn = rgb.max(-1), rgb.min(-1)
     sat = np.where(mx > 1e-4, (mx - mn) / np.maximum(mx, 1e-4), 0)
+    # Grain: the surface's fine variation inside solid areas, relative to their brightness —
+    # deep inside the mask (6 px), so silhouettes and wire edges do not count, and divided by
+    # the band's mean so the photo's exposure does not either. A clean-looking metal has
+    # none: lantern v11 read new at 20 % of its photo's grain on the tank, v8 dull at 31 %;
+    # the real object renders at 74 %, the image-to-code lantern 79 %, v10 57 %.
+    deep = m.copy()
+    for _ in range(6):
+        deep[1:] &= deep[:-1].copy(); deep[:-1] &= deep[1:].copy(); deep[:, 1:] &= deep[:, :-1].copy(); deep[:, :-1] &= deep[:, 1:].copy()
+    fine = lum - blur(lum, 2)
     H, out = a.shape[0], []
     for i in range(BANDS):
-        k = np.zeros_like(m); k[i * H // BANDS:(i + 1) * H // BANDS] = True; k &= e
+        k = np.zeros_like(m); k[i * H // BANDS:(i + 1) * H // BANDS] = True
+        kd = k & deep; k &= e
         L = lum[k]
         out.append(None if L.size < 50 else dict(
             lum=float(L.mean()), sat=float(sat[k].mean()),
             warm=float((rgb[..., 0] - rgb[..., 2])[k].mean()),
             highlights=float((L > 0.55).mean()), detail=float(hp[k].mean()),
-            spread=float(np.percentile(L, 95) - np.percentile(L, 5))))
+            spread=float(np.percentile(L, 95) - np.percentile(L, 5)),
+            grain=float(fine[kd].std() / max(lum[kd].mean(), 1e-4)) if kd.sum() >= 200 else None))
     return out
 
 
@@ -459,6 +476,11 @@ def main():
             if abs(d) > tol:
                 note = " — light-dependent: check the material, do not tune to it" if k in ("lum", "highlights") else ""
                 gaps.append((abs(d) / tol / 10, f"band {i + 1}: {k} {m[k]:.3f} vs reference {r[k]:.3f} ({d:+.3f}){note}"))
+    for i, (r, m) in enumerate(zip(mref, mmod)):
+        if r and m and r.get("grain") and m.get("grain") is not None and m["grain"] < TOO_CLEAN * r["grain"]:
+            gaps.append((5, f"band {i + 1}: the surface reads too clean — grain {m['grain'] / r['grain']:.0%} of the photo's. "
+                            f"Age is a layer inside the material: darker in cavities and under rims (AO), worn light on "
+                            f"edges, fine pits and dents in the relief"))
     for r in metals:
         if r.get("mask_soft", 1) < CONFETTI_SOFT and r.get("mask_largest", 1) < CONFETTI_LARGEST:
             gaps.append((7, f"material {r['material']}: metal in scattered hard-edged islands (largest {r['mask_largest']:.0%} of "

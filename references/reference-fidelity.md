@@ -32,7 +32,7 @@ detail that will be forgotten.
 - top loop: pentagon wire, legs INSERTED into the cap          → SM_<Asset>_TopLoop, parent Cap
 - bail: wide wire arch, shallow DIP at the peak, ends hooked in the air tubes → Bail
 - vent slots: dark rectangular slots under the cap, all around → Chimney
-- globe: clear glass, faint frosting and scratches             → Globe (its own material)
+- globe: glass, tint and frosting AS THE PHOTO SHOWS (here dark, smoked) → Globe (its own material)
 ```
 
 Write *how* parts meet ("inserted", "hooked", "welded", "resting") — that is what
@@ -74,7 +74,10 @@ of the real object's profile (median, 1.6 mm at worst, 27 heights); the best pho
 reconstruction was at 1.1 mm and **9.7 mm** at worst, at the tank-to-burner step a 15°
 camera hides. **Model from the measures, never from the template's surface**: it is
 faceted, its texture smeared, and its thin parts break when decimated. Proportions come
-from the template; materials still come from the photo (§ 4).
+from the template — **heights AND widths, and where the parts around stand** (tubes, guard,
+bail: their distance from the axis). v11 took heights from the template and widths from
+the photo's pixels, whose perspective narrows the object: it came out 6 % narrow, its air
+tubes set in. Materials and small details still come from the photo (§ 4).
 
 Without a template, the reference's own pixels give proportions in millimetres. For a turned object
 (lantern, bottle, vase, barrel) the profile is usable directly as a lathe profile.
@@ -207,6 +210,12 @@ v3 on texture detail (0.031 against 0.022 for the reference's 0.032):
   vertical on a lathe. That needs **cylindrical UVs on turned parts** (u around, v along
   the height), not Smart UV Project, whose islands scatter any direction. They modulate
   the patina; they are not stripes: v10's regular vertical streaks read as wood grain.
+- **Age is a layer INSIDE the material, never an absence of it.** Darker in cavities and
+  under rims (bake AO into the colour and roughness), worn light on the edges (curvature),
+  mottled at three scales, and a relief of fine pits and broad dents in the normal map. v11,
+  one clean bronze everywhere, read new: its grain was 20 % of the photo's on the tank, the
+  real object 74 %, and its relief 0.4° against the real object's 8°. `fidelity_check.py`
+  reports a band whose grain falls under 28 % of the photo's (one truth, narrow margin).
 - **A metal's base colour is its reflectance — it cannot be dark.** Tarnish and patina
   STAY METAL — a darker base colour (the real brass: around 0.30) and a higher roughness;
   only crusts — thick rust, soot, caked dirt — are non-metal, on a minority of the
@@ -265,7 +274,10 @@ def to_srgb_byte(float_img):
 - **Glass, the recipe that read right:** smooth shell (≥ 64 segments), roughness ~0.1, a
   clear coat (Principled *Coat* weight 1), alpha ~0.65, and a **frost texture** — sparse
   bright specks from high-frequency noise, gathered by a broad blotch field — in colour and
-  alpha. Neutral tint unless the reference shows one.
+  alpha. **Tint and darkness from the photo**, sampled like any region (§ 4): a dark smoked
+  globe is a dark tinted glass — base colour from the region's palette, a higher alpha —
+  never clear by default. v8 to v11 all shipped it clear, against a photo that shows it
+  near-black; the inventory example said "clear glass".
 
 Pack every generated image into the .blend (`bpy.ops.file.pack_all()`) before measuring or
 exporting: an unpacked texture renders black, and `fidelity_check.py` now refuses it.
