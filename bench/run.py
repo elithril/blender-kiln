@@ -9,7 +9,7 @@ session left behind. Results land in bench/runs/<label>/<brief-id>/.
 
 Nothing here decides pass or fail: report.py compares two labels.
 """
-import json, os, shutil, socket, subprocess, sys, time
+import json, os, re, shutil, socket, subprocess, sys, time
 from pathlib import Path
 
 BENCH = Path(__file__).resolve().parent
@@ -28,6 +28,16 @@ PORT = 9876
 # to measure a branch without switching this one (the runner and the results
 # stay here, so labels from different branches sit side by side).
 PLUGIN = Path(os.environ.get("BENCH_PLUGIN_DIR", REPO)).resolve()
+# Each session runs in a sandbox OUTSIDE every repository. Before 2026-10-01 it ran in
+# bench/runs/<label>/, and v12 of the lantern listed bench/results/ and read a README
+# holding the real object's measurements — the answer key. The sandbox holds only what the
+# brief names (refs/), a copy of the skill's runtime files (skill/: no README, CHANGELOG
+# or docs, which quote the bench's measurements), and the work folder.
+SANDBOX = Path(os.environ.get("BENCH_SANDBOX", "/private/tmp/kiln-bench"))
+SKILL_RUNTIME = (".claude-plugin", "SKILL.md", "references", "tools", "examples", "LICENSE")
+# Any of these in a session's tool calls voids its comparison: the repositories, the
+# published results, the truth assets, the archive.
+FORBIDDEN = [str(REPO), str(PLUGIN), "_refs/gt", "bench/results", "bench-archive", "blender-kiln-bench"]
 
 
 def sh(cmd, **kw):
@@ -103,17 +113,54 @@ def tool_stats(transcript):
 
 
 def skill_fingerprint():
-    """Hash of every tracked file. The session's work folder sits inside this
-    checkout and permissions are bypassed, so nothing but this stops a session
-    from editing the skill it is being measured on."""
+    """Hash of every tracked file. Permissions are bypassed, and the sandbox is a
+    convention, not a wall: nothing but this stops a session from editing the
+    skill it is being measured on."""
     return "".join(sh(["git", "-C", str(d), "ls-files", "-s"]) + sh(["git", "-C", str(d), "diff", "HEAD"])
                    for d in {REPO, PLUGIN})
 
 
+def sandbox_for(brief, outdir):
+    box = SANDBOX / outdir.parent.name / outdir.name
+    shutil.rmtree(box, ignore_errors=True)
+    refs, skill, work = box / "refs", box / "skill", box / "work"
+    for d in (refs, skill, work):
+        d.mkdir(parents=True)
+    for rel in sorted(set(re.findall(r"<REFS>/([\w./-]+?)(?=[\s:,;]|\.(?:\s|$)|$)", brief["prompt"]))):
+        src = BENCH / "runs" / "_refs" / rel
+        if not src.is_file():
+            sys.exit(f"{brief['id']}: the prompt names <REFS>/{rel}, which does not exist")
+        (refs / rel).parent.mkdir(parents=True, exist_ok=True); shutil.copy2(src, refs / rel)
+    tracked = sh(["git", "-C", str(PLUGIN), "ls-files"]).splitlines()
+    for rel in tracked:
+        if rel.split("/")[0] in SKILL_RUNTIME and (PLUGIN / rel).is_file():
+            (skill / rel).parent.mkdir(parents=True, exist_ok=True); shutil.copy2(PLUGIN / rel, skill / rel)
+    return box, refs, skill, work
+
+
+def audit(transcript):
+    """Tool calls that reached outside the sandbox, toward anything that holds an answer."""
+    hits = []
+    for i, line in enumerate(transcript.read_text().splitlines()):
+        try:
+            ev = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if ev.get("type") != "assistant":
+            continue
+        for block in ev.get("message", {}).get("content", []):
+            if block.get("type") == "tool_use":
+                text = json.dumps(block.get("input", {}))
+                for f in FORBIDDEN:
+                    if f in text:
+                        hits.append({"line": i, "tool": block["name"], "matched": f, "input": text[:300]})
+                        break
+    return hits
+
+
 def run_brief(brief, outdir):
     outdir.mkdir(parents=True, exist_ok=True)
-    work = outdir / "work"
-    work.mkdir(exist_ok=True)
+    box, refs, skill_copy, work = sandbox_for(brief, outdir)
     if MCP == "lab":
         server = {"command": "uvx", "args": ["--from", str(LAB_DIR / "mcp"), "blender-mcp"],
                   "env": {"BLENDER_PATH": BLENDER}}
@@ -128,11 +175,11 @@ def run_brief(brief, outdir):
         t0 = time.time()
         try:
             with open(outdir / "transcript.jsonl", "w") as tr, open(outdir / "claude.err", "w") as err:
-                prompt = (brief["prompt"].replace("<REFS>", str(BENCH / "runs" / "_refs"))
+                prompt = (brief["prompt"].replace("<REFS>", str(refs))
                           + f"\n\nOutput folder (absolute): {work / 'generated-assets'}")
                 r = subprocess.run(
                     ["claude", "-p", prompt,
-                     "--plugin-dir", str(PLUGIN),
+                     "--plugin-dir", str(skill_copy),
                      "--mcp-config", str(outdir / "mcp.json"), "--strict-mcp-config",
                      "--setting-sources", "project",
                      "--permission-mode", "bypassPermissions",
@@ -154,6 +201,13 @@ def run_brief(brief, outdir):
     if skill_fingerprint() != before:
         sys.exit(f"{brief['id']}: the session modified tracked files of the repository — "
                  "the measurement is void. See `git status` before anything else.")
+    # Bring the work back next to the transcript; the sandbox is left for inspection.
+    shutil.copytree(work, outdir / "work", dirs_exist_ok=True)
+    work = outdir / "work"
+    leaks = audit(outdir / "transcript.jsonl")
+    if leaks:
+        print(f"!!! {brief['id']}: CONTAMINATED — {len(leaks)} tool call(s) reached outside the sandbox "
+              f"(first: {leaks[0]['matched']}). Its numbers are not a measurement.", flush=True)
 
     result = {}
     for line in (outdir / "transcript.jsonl").read_text().splitlines():
@@ -184,6 +238,8 @@ def run_brief(brief, outdir):
                                   ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")),
         "tool_calls": tool_stats(outdir / "transcript.jsonl"),
         "final_text": (result.get("result") or "")[-2000:],
+        "sandbox": str(box),
+        "contamination": leaks,
     }
 
     finals = sorted((work).rglob("*_final.glb"))

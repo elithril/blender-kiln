@@ -45,6 +45,7 @@ object rendered under the same light as the witness.
 | **v9 — + TRELLIS.2 template** | **0.921** | **0.8 / 4.8 mm** | +2 % | **−6 %** | 0.226 | +0.079 | 0.27–0.31 | 9,964 | $5.19 |
 | **v10 — + metal mask fixed** | 0.914 | **0.8 / 4.0 mm** | 0 % † | **−4 %** | 0.244 | +0.093 | — | 9,738 | $4.52 |
 | v11 — joints rendered, patina metal, one metal ‡ | 0.897 | 1.0 / 4.9 mm | +1 % | +1 % | 0.221 | +0.086 | — | 12,418 | $7.64 |
+| ~~v12~~ — **contaminated, not a measurement** § | 0.914 | — | +2 % | −3 % | — | — | — | 10,852 | $8.43 |
 | TRELLIS.2 raw (local, free) | 0.952 | 0.6 / 1.6 mm | 1 m | +1 % | 0.207 | +0.137 | 0.32 | 191,520 | $0 |
 | TRELLIS.2 finished by kiln, try 1 | 0.926 | — | +2 % | +1 % | 0.214 | +0.078 | — | 5,070 | $4.81 |
 | TRELLIS.2 finished by kiln, try 2 | 0.866 | — | 0 % | +6 % | 0.222 | +0.088 | — | 6,092 | $4.84 |
@@ -83,7 +84,19 @@ height before comparing and are not affected; v10's height column is.
   non-metal. ‡ The account's usage limit cut the session after EXPORT and its own
   verification, during the final message: the file and log are complete.
 
-Images: `v10-v11-compare.webp`, `v11-closeups-texture-joint.webp`, `v8-v9-v10-compare.webp`, `progression-v1-v8.webp` (all versions, same render), `v7-v8-v9-compare.webp`,
+- § **v12 read the answer key.** Sessions ran inside the bench's own repository; v12
+  listed `bench/results/` and read this README — the real object's height, base share,
+  profile errors and metal values — and v11's log. Its numbers are kept, struck out, as
+  a record. The runner now puts every session in a sandbox outside every repository
+  (`bench/run.py`: only the files the brief names, the skill's runtime files without its
+  README, CHANGELOG or docs) and audits each transcript for calls that reach outside it.
+  Of the earlier runs, the targeted audit found no read of the truth or of results;
+  TRELLIS.2 try 2 listed the truth folder's name without opening it.
+- **And a caveat no sandbox fixes**: the skill's own references now carry lessons
+  measured on THIS lantern. Its improvement on the lantern overstates how it generalises;
+  the crate and the chair are the test of that.
+
+Images: `v12-contaminated-compare.webp`, `v12-contaminated-closeups.webp`, `v10-v11-compare.webp`, `v11-closeups-texture-joint.webp`, `v8-v9-v10-compare.webp`, `progression-v1-v8.webp` (all versions, same render), `v7-v8-v9-compare.webp`,
 `trellis-finish-compare.webp`, `trellis-finish-front-diff.webp` (red: truth only, blue:
 model only — try 2's wires are intact and a few pixels out, which empties a thin band's
 overlap).
