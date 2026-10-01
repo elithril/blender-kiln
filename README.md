@@ -270,7 +270,7 @@ Once installed, the skill directory looks like this:
 | `references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~340 |
 | `tools/fidelity_check.py` | Renders a model under a studio HDRI and measures shape and material gaps against its reference | ~245 |
 | `references/validation-checklist.md` | Geometry cleanup + material export audit | ~250 |
-| `references/ai-generation.md` | Hunyuan3D 2.x (local + cloud), concept art (FLUX.1-schnell, nano-banana), free-quota and token rules | ~340 |
+| `references/ai-generation.md` | Hunyuan3D 2.x (local + cloud), TRELLIS.2 local (measured), concept art (FLUX.1-schnell, nano-banana), free-quota and token rules | ~430 |
 | `references/export-targets.md` | GLB/FBX/USDZ settings, headless CLI, post-export checklist | ~240 |
 | `references/cli-tools.md` | gltf-transform, gltfpack, LOD workflow, metrics | ~210 |
 | `references/uv-materials.md` | UV unwrapping, PBR channel packing | ~150 |

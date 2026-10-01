@@ -79,6 +79,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   proportions and by eye.
 - **`tools/test_fidelity_check.py`** seeds the review tool, now 15/15, in the Blender CI. Its
   first run caught the views framed by height only: anything wider than tall was clipped.
+- **TRELLIS.2 run locally and measured** (`references/ai-generation.md`): on an M4 Pro with
+  24 GB, 5–7 min a model, 19.5–22.5 GB peak, 31 GB of weights; the best shape the bench has
+  measured (0.952 from five sides, scripted: 0.861) but always 1 m tall, 160–190k triangles
+  and one material. Five install fixes the project does not make, and an MIT-only run: the
+  non-commercial RMBG-2.0 swapped for BiRefNet, which needed a float32 cast the lantern's
+  cut-out photo never exercised. Finished by kiln it took the real asset's colour — and lost
+  its thin parts to a 97 % decimation the score did not see: wires are now rebuilt, not
+  decimated, and open edges are counted after.
 - **Dark metal is reported, and luminance is no longer something to match.** The bench's
   final lantern read near-black: 100 % metal at a base colour of 0.07–0.15, 23 % darker than
   the real object under the same light — while matching the photo's luminance to 0.003,

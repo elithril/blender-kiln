@@ -1,12 +1,13 @@
 # AI Generation Reference
 
-**Three backends, in order of preference:**
+**Four backends, in order of preference:**
 
 | Backend | How | Needs | When |
 |---|---|---|---|
 | **Blender MCP native** | `generate_hunyuan3d_model` / `generate_hyper3d_model_via_text` / `_via_images` | a checkbox in the addon panel | default — nothing to install |
 | **Local Hunyuan3D-2** | `hy3dgen` in your own Python | ~25 GB, ideally CUDA | offline work, or full control of the model variant |
 | **HF Spaces** | `gradio_client` | network, tolerance for queues | neither of the above is set up |
+| **Local TRELLIS.2** | `trellis-mac` on Apple Silicon | 31 GB of weights, 24 GB of memory, five install fixes | best shape measured, offline, free — see below |
 
 ---
 
@@ -283,12 +284,82 @@ window, concept art included.**
 So the free cloud path is **one or two generations a day**. Say so before a batch
 of AI assets, never promise it, and never suggest the paid PRO plan (rule 5).
 
-## TRELLIS.2 — candidate, not yet the default
+## TRELLIS.2 — locally on Apple Silicon (measured)
 
 `microsoft/TRELLIS.2` (MIT) outputs a mesh **with baked PBR textures**, which is
-exactly what the Hunyuan3D Space's broken `/generation_all` no longer gives. Its
-Space API, read live on 2026-09-29 (a generation has NOT completed yet — the
-quota above ran out first):
+exactly what the Hunyuan3D Space's broken `/generation_all` no longer gives. Measured
+on 2026-10-01 through `shivampkumar/trellis-mac` (`d58628f`), on an M4 Pro with 24 GB:
+
+| | Lantern (photo, alpha) | Mushrooms (FLUX concept, no alpha) |
+|---|---:|---:|
+| wall time, pipeline load included | 5 min | 7 min |
+| peak memory | 19.5 GB | **22.5 GB** — a 24 GB machine is the floor |
+| output | 191k tris, 10.9 MB GLB, one material, 1024² PBR | 164k tris, 11.8 MB GLB |
+| scored from five sides against the real asset | **0.952** (scripted kiln: 0.861) | — |
+
+Disk: **31 GB of weights** (TRELLIS.2-4B 28 GB, DINOv3 2.3 GB, BiRefNet 0.8 GB), plus a
+1 GB venv — not the 15 GB the project's README states.
+
+**What it gives, and what it does not.** The shape is the best the bench has measured,
+proportions included (base share +1 %). But the raw output is a *starting mesh*, never
+an asset — on both objects:
+
+- **always 1 m tall** — set the real size (rule from the BRIEF phase);
+- **far above any tier**: 160–190k triangles, 13.7k non-manifold edges on the lantern,
+  54k open edges on the mushrooms' grass — decimate (rule 6) and clean;
+- **one material**: the lantern's glass globe came out opaque gold metal — split it and
+  rebuild glass by hand;
+- **a drawn concept's ink lines are baked into the texture** as black cracks and blots —
+  ask for a concept without outlines, or repaint.
+
+**Finished by kiln** (balanced tier, auto mode, decimation approved — one bench run,
+$4.81, 17 min): real height to 2 %, 5,070 triangles, 0.6 MB, glass rebuilt as its own
+material, and the colour of the real asset (warmth +0.078 for +0.076, saturation 0.33 for
+0.37) — which neither the scripted path nor the raw output had. Five sides: 0.926. **But
+the score hides the damage**: decimating 97 % of the mesh broke every thin part — the
+bail jagged and broken, the top loop open, tears at the globe's foot, shards at the base
+(1,089 open edges, 836 non-manifold). Silhouettes do not see a hole. So:
+
+- **thin parts are rebuilt, not decimated** — trace wires, bails and loops from the
+  high-poly as curves (`trace_wire` in reference-fidelity.md) and decimate only the
+  solid body;
+- **after decimating, count open and non-manifold edges** and look at a close render of
+  every thin part before reporting — a score of 0.9 against the truth is not a pass.
+
+### Install — five fixes the project's `setup.sh` does not make
+
+Measured, in the order they failed:
+
+1. **Metal toolchain** absent from a fresh Xcode: `xcodebuild -downloadComponent MetalToolchain`
+   (or `SKIP_METAL=1` — texture baking then falls back to CPU).
+2. **C++20**: the Metal extensions (`deps/mtldiffrast`, `deps/mtlgemm`, …) build with
+   `-std=c++17` and fail against the current PyTorch headers; set `-std=c++20` in their
+   `setup.py`.
+3. **Eigen** for `o-voxel`: `brew install eigen`, and build with
+   `CPATH=$(brew --prefix eigen)/include/eigen3`.
+4. **`einops`** — needed by BiRefNet, missing from the requirements: `.venv/bin/pip install einops`, inside trellis-mac's own venv.
+5. **`PYTORCH_ENABLE_MPS_FALLBACK=1`** at run time: `aten::segment_reduce` has no MPS kernel
+   and the run aborts without it.
+
+### Licences — run it MIT-only
+
+TRELLIS.2 is MIT, but its `pipeline.json` loads two models that are not:
+
+- **RMBG-2.0** (background removal) — **CC BY-NC 4.0, non-commercial**, and gated. Swap it
+  for **`ZhengPeng7/BiRefNet` (MIT)**, the model RMBG-2.0 is built on, by wrapping the
+  pipeline's `BiRefNet` class rather than editing the clone. That model loads with
+  float16 weights while the class feeds float32 — *"Input type (float) and bias type
+  (c10::Half) should be the same"* on the first image without alpha — so cast it with
+  `.float()` after loading. An image that already has an alpha channel skips removal, so a
+  photo with a cut-out never exercises this path: **test with an opaque image.**
+- **DINOv3** (image encoder) — Meta's own licence, gated on Hugging Face. Accepting it is
+  the user's call, on their account; say so before recommending the local path for
+  anything commercial.
+
+Never fetch these weights with the user's token without saying whose account it is
+(see *Whose account pays the quota* above).
+
+### Its Space, for reference
 
 | Endpoint | Takes | Note |
 |---|---|---|
@@ -297,11 +368,7 @@ quota above ran out first):
 | `/image_to_3d` | `image`, `seed`, `resolution` ("1024"), sampler settings | |
 | `/extract_glb` | `decimation_target`, `texture_size` | **rejects a target under 100,000** — decimate in Blender after (rule 6) |
 
-**Locally on Apple Silicon**, `shivampkumar/trellis-mac` reports ~5 min a model on
-an M4 Pro with 24 GB, 18 GB peak, 15 GB of weights — its numbers, not measured
-here. **Licences**: TRELLIS.2 is MIT, but that pipeline also pulls **DINOv3**
-(Meta's own licence) and **RMBG-2.0 (CC BY-NC 4.0 — non-commercial)**. Say so
-before recommending it for anything commercial.
+Read live on 2026-09-29; no Space generation has completed on the free quota.
 
 ## Concept Art
 
