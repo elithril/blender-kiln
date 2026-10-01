@@ -1,4 +1,4 @@
-# Lantern iterations — one reference, seven versions
+# Lantern iterations — one reference, nine versions
 
 Reference: Poly Haven `Lantern_01` preview (CC0), photographed from ~15° above. The session
 only ever sees the photo; the real asset (29.4 cm, 33,902 tris) is the bench's marking
@@ -23,3 +23,47 @@ and converting float colour bakes to sRGB before export (v6 shipped near black; 
 
 Still open: fine texture detail (~0.018 against 0.032) and triangle count (+51 % over the
 balanced tier, reported by the session, not reduced).
+
+## After the colour fix — v8, v9, and TRELLIS.2 (2026-10-01)
+
+v7 read near-black next to the real object: 100 % metal at a base colour of 0.07–0.15,
+tuned to the photo's luminance while the photo's own light was darker. `fidelity_check.py`
+now reports dark metal (`c390e22`); v8 is the same brief on that skill. v9 adds one
+sentence: a local TRELLIS.2 mesh of the same photo, to measure proportions from
+(`tools/template_profile.py`, `8d6121a`).
+
+All rows re-measured together — one render setting (Cycles, 32 samples, studio HDRI, 15°):
+**not comparable with the table above for detail**, which rises with render noise (v7 reads
+0.018 there, 0.035 here). Warmth (R−B) and luminance are under the review HDRI, the real
+object rendered under the same light as the witness.
+
+| | truth, 5 views | profile vs truth (median / worst) | height | base (truth 13.9 %) | luminance | warmth | metal base colour | tris | cost |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| real object (witness) | — | — | 29.4 cm | — | 0.198 | +0.076 | 0.30, 46 % metal | 33,902 | — |
+| v7 | 0.861 | — | +2 % | −10 % | 0.152 | +0.040 | **0.07–0.15** | 7,552 | $3.52 |
+| v8 — dark metal reported | 0.905 | 1.1 / 9.7 mm | +20 % | −24 % | 0.228 | +0.081 | 0.35 | 9,514 | $4.02 |
+| **v9 — + TRELLIS.2 template** | **0.921** | **0.8 / 4.8 mm** | +2 % | **−6 %** | 0.226 | +0.079 | 0.27–0.31 | 9,964 | $5.19 |
+| TRELLIS.2 raw (local, free) | 0.952 | 0.6 / 1.6 mm | 1 m | +1 % | 0.207 | +0.137 | 0.32 | 191,520 | $0 |
+| TRELLIS.2 finished by kiln, try 1 | 0.926 | — | +2 % | +1 % | 0.214 | +0.078 | — | 5,070 | $4.81 |
+| TRELLIS.2 finished by kiln, try 2 | 0.866 | — | 0 % | +6 % | 0.222 | +0.088 | — | 6,092 | $4.84 |
+
+Height is an assumption in every brief: none gives the size, and the template is 1 m tall.
+
+**What these say, and what they do not.**
+
+- **The colour fix holds**: metal base colour from 0.07–0.15 to ~0.30, warmth from half the
+  real object's to within 0.005 of it.
+- **The template moves the proportions where the photo lied**: the tank-to-burner step a
+  15° camera hides, read 9.7 mm off by v8, 4.8 mm by v9. Base share from −24 % to −6 %.
+- **v9's surface regressed**: bright copper islands on a dark patina — v1's "camouflage".
+  The skill's new dark-metal text cited the real brass as "48 % metal", and the session
+  made it a target, thresholding a noise into bare-metal islands. Being corrected for v10.
+- **Finishing a TRELLIS.2 mesh is not the way**: try 1 scored 0.926 with every wire
+  broken by a 97 % decimation (silhouettes do not see holes); try 2, wires rebuilt as
+  curves, is intact but faceted, its texture smeared. TRELLIS.2 is worth its
+  proportions, not its surface — hence the template.
+
+Images: `progression-v1-v8.webp` (all versions, same render), `v7-v8-v9-compare.webp`,
+`trellis-finish-compare.webp`, `trellis-finish-front-diff.webp` (red: truth only, blue:
+model only — try 2's wires are intact and a few pixels out, which empties a thin band's
+overlap).

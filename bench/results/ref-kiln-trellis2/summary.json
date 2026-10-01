@@ -1,0 +1,93 @@
+{
+  "ref-lantern-trellis": {
+    "brief": "ref-lantern-trellis",
+    "mcp": "ahujasid",
+    "blender": "Blender 5.2.2 LTS",
+    "skill": "e3c462a fix/baseline-findings",
+    "claude_exit": 0,
+    "wall_s": 939.5,
+    "is_error": false,
+    "num_turns": 103,
+    "duration_ms": 937948,
+    "cost_usd_equiv": 4.8397948,
+    "output_tokens": 83801,
+    "input_tokens_total": 8657767,
+    "tool_calls": {
+      "ToolSearch": 1,
+      "Bash": 16,
+      "Read": 7,
+      "mcp__blender__get_addon_status": 1,
+      "mcp__blender__get_scene_info": 1,
+      "mcp__blender__execute_blender_code": 55,
+      "mcp__blender__get_viewport_screenshot": 19,
+      "Write": 1,
+      "Edit": 1
+    },
+    "final_text": "rmal) map put fake silver patches on the bell; I fixed it, and you can see it's clean in the final renders.\n\n**How close to the reference**\n- **Shape:** heights match part by part. Widths are 9\u201315 % wider than the photo; that's TRELLIS's proportions, which I kept as you asked.\n- **Colour:** the metal first came out orange-copper. After the two correction rounds I allow myself, the glass, guard and wires match the reference within a few hundredths. The bell and tank are still slightly warmer and more saturated (bell 0.41 against 0.33); I stopped rather than over-correct.\n- **Every detail is present:** pentagon loop, stepped cap with vent slots, bell ridge, air tubes, handle, X guard, wick lever, filler cap, burner ring, small side bracket.\n- **Weakest spot:** the air tubes look flatter and more jagged than the reference's round tubes, a result of the reduction. Rebuilding them as smooth tubes would fix that.\n\n**Points to check**\n- **Over budget:** 6,092 triangles is 22 % above the balanced range (1,500\u20135,000). Most of the excess is the wire parts, which can't be reduced without breaking.\n- **Draco:** the file needs a Draco decoder in your engine or viewer. Optimisation took it from 3.9 MB to 0.74 MB.\n- **Shortcut:** I used automatic UV unwrapping instead of the cylindrical layout the method recommends for round parts. It doesn't matter here, because the colours are transferred from the original, not painted along the part.\n- **Licence:** I didn't check TRELLIS.2's licence; the log flags it.\n- **Extra folder:** compact mode keeps four files, but I also kept a `review/` folder with the comparison images.\n\nNothing was committed to git.\n\nFiles are in `generated-assets/hurricane-lantern/`:\n- `hurricane-lantern_final.glb`\n- `hurricane-lantern_original.glb` (the untouched TRELLIS file)\n- `hurricane-lantern.blend` (includes the hidden original mesh and the editable wire curves)\n- `hurricane-lantern_log.md`\n- `review/` (`overlay.png`, `side_by_side.png`, `fidelity_final.txt`)",
+    "finals": 1,
+    "measures": [
+      {
+        "file": "generated-assets/hurricane-lantern/hurricane-lantern_final.glb",
+        "bytes": 737744,
+        "extensions_used": [
+          "EXT_texture_webp",
+          "KHR_draco_mesh_compression",
+          "KHR_materials_clearcoat"
+        ],
+        "gltf_meshes": 3,
+        "gltf_materials": 3,
+        "gltf_images": 7,
+        "gltf_skins": 0,
+        "gltf_joints": 0,
+        "gltf_animations": 0,
+        "objects_mesh": 3,
+        "object_names": [
+          "SM_HurricaneLantern_Body",
+          "SM_HurricaneLantern_Globe",
+          "SM_HurricaneLantern_Wire"
+        ],
+        "tris": 6092,
+        "verts": 6707,
+        "non_manifold_edges": 0,
+        "boundary_edges": 128,
+        "loose_edges": 0,
+        "degenerate_faces": 0,
+        "dims_m": [
+          0.1274,
+          0.1006,
+          0.2943
+        ],
+        "z_min_m": -0.0003,
+        "centre_xy_m": [
+          0.0002,
+          0.0001
+        ],
+        "materials": {
+          "M_Lantern_Body": {
+            "images": 3,
+            "max_px": 1024
+          },
+          "M_Lantern_Glass": {
+            "images": 1,
+            "max_px": 512
+          },
+          "M_Lantern_Wire": {
+            "images": 3,
+            "max_px": 512
+          }
+        },
+        "empty_material_slots": 0,
+        "rigs": [],
+        "render": "render-hurricane-lantern_final.png"
+      }
+    ],
+    "glbs": [
+      {
+        "file": "hurricane-lantern_final.glb",
+        "bytes": 737744,
+        "sha256": "a57cd632de281cb9bf9417abdfaac2046a02529eecad0e33a4d9ae5ef01dcde8",
+        "published": true
+      }
+    ]
+  }
+}
