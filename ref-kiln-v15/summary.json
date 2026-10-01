@@ -1,0 +1,104 @@
+{
+  "ref-lantern-template": {
+    "brief": "ref-lantern-template",
+    "mcp": "ahujasid",
+    "blender": "Blender 5.2.2 LTS",
+    "skill": "66e0b08 fix/baseline-findings",
+    "claude_exit": 0,
+    "wall_s": 1273.8,
+    "is_error": false,
+    "num_turns": 76,
+    "duration_ms": 1271756,
+    "cost_usd_equiv": 5.036049599999999,
+    "output_tokens": 98815,
+    "input_tokens_total": 7539634,
+    "tool_calls": {
+      "Bash": 28,
+      "Read": 16,
+      "ToolSearch": 1,
+      "mcp__blender__get_addon_status": 1,
+      "mcp__blender__get_scene_info": 1,
+      "mcp__blender__execute_blender_code": 20,
+      "Write": 4,
+      "mcp__blender__get_viewport_screenshot": 4
+    },
+    "final_text": "wear on rims, ribs and tube seams\n  - darker tarnish in cavities\n  - faint grime streaks\n  - the fuel stain under the filler cap\n  - dark vent slots on the chimney neck\n\n**Comparison with the photo.** I made two correction rounds and took the last measurement on the exported file. Silhouette overlap went from 0.76 to 0.85.\n- **Remaining shape gap:** the cap and upper bell are still about 9% wider than the photo.\n- **The checker's one material flag is wrong:** it says the frame metal is mostly non-metal. Sampled on the parts themselves, every frame part is fully metal; the average is dragged down by empty space in that texture sheet.\n- **Visible differences:**\n  - the photo's metal is darker and more scratched\n  - its glass is more frosted\n  - the hanging loop reads as eight-sided where the photo's has five or six sides\n\n**Optimize.** Textures went to WebP and the mesh to Draco compression, in separate steps, with no change to the geometry: 3.94 MB \u2192 229 KB. Your engine or viewer needs a Draco decoder to load it.\n\n**Decision for you: the triangle count.** About 2.5K of the 12.3K triangles are in the chimney, roughly 1.5K each in the base, burner and globe, and about 1.2K each in the tubes and guard wires. I haven't reduced anything. Options:\n1. **Keep it as is.** Fine for a desktop or console prop.\n2. **Lower the segment counts and rebuild** (32 \u2192 24 round turned parts, 16 \u2192 12 round the tubes): about 8\u20139K triangles, with no decimation.\n3. **Add LODs with gltfpack** (50% and 25%), keeping this as the full-detail version.\n\nFiles are in `/private/tmp/kiln-bench/ref-kiln-v15/ref-lantern-template/work/generated-assets/hurricane-lantern/`:\n- `hurricane-lantern_final.glb`\n- `hurricane-lantern_original.glb`\n- `hurricane-lantern.blend`\n- `hurricane-lantern_log.md`\n\nThere are also `scripts/` and `review/` folders with the build scripts and the comparison renders. I deleted the downloaded scan folder after packing the scans into the .blend, and Blender's `.blend1` backup copy.",
+    "sandbox": "/private/tmp/kiln-bench/ref-kiln-v15/ref-lantern-template",
+    "contamination": [],
+    "finals": 1,
+    "measures": [
+      {
+        "file": "generated-assets/hurricane-lantern/hurricane-lantern_final.glb",
+        "bytes": 229048,
+        "extensions_used": [
+          "EXT_texture_webp",
+          "KHR_draco_mesh_compression",
+          "KHR_materials_clearcoat"
+        ],
+        "gltf_meshes": 13,
+        "gltf_materials": 3,
+        "gltf_images": 8,
+        "gltf_skins": 0,
+        "gltf_joints": 0,
+        "gltf_animations": 0,
+        "objects_mesh": 13,
+        "object_names": [
+          "SM_HurricaneLantern_Bail",
+          "SM_HurricaneLantern_Burner",
+          "SM_HurricaneLantern_Chimney",
+          "SM_HurricaneLantern_FillerCap",
+          "SM_HurricaneLantern_Font",
+          "SM_HurricaneLantern_Globe",
+          "SM_HurricaneLantern_GlobeGuard",
+          "SM_HurricaneLantern_Lever_L",
+          "SM_HurricaneLantern_Lever_R",
+          "SM_HurricaneLantern_TopLoop",
+          "SM_HurricaneLantern_Tube_L",
+          "SM_HurricaneLantern_Tube_R",
+          "SM_HurricaneLantern_WickRod"
+        ],
+        "tris": 12314,
+        "verts": 8724,
+        "non_manifold_edges": 2,
+        "boundary_edges": 184,
+        "loose_edges": 0,
+        "degenerate_faces": 0,
+        "dims_m": [
+          0.1322,
+          0.1148,
+          0.3494
+        ],
+        "z_min_m": 0.0,
+        "centre_xy_m": [
+          0.0,
+          0.0
+        ],
+        "materials": {
+          "M_Metal_AgedBronze_Frame": {
+            "images": 3,
+            "max_px": 1024
+          },
+          "M_Metal_AgedBronze_Body": {
+            "images": 3,
+            "max_px": 1024
+          },
+          "M_Glass_Smoked": {
+            "images": 2,
+            "max_px": 512
+          }
+        },
+        "empty_material_slots": 0,
+        "rigs": [],
+        "render": "render-hurricane-lantern_final.png"
+      }
+    ],
+    "glbs": [
+      {
+        "file": "hurricane-lantern_final.glb",
+        "bytes": 229048,
+        "sha256": "8a4b85cc38f11b254a63b302c285cd1b799edd8a09e30cbc00d484e626c8f7ba",
+        "published": true
+      }
+    ]
+  }
+}

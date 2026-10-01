@@ -1,4 +1,4 @@
-# Lantern iterations — one reference, fourteen versions
+# Lantern iterations — one reference, fifteen versions
 
 Reference: Poly Haven `Lantern_01` preview (CC0), photographed from ~15° above. The session
 only ever sees the photo; the real asset (29.4 cm, 33,902 tris) is the bench's marking
@@ -48,6 +48,7 @@ object rendered under the same light as the witness.
 | ~~v12~~ — **contaminated, not a measurement** § | 0.914 | — | +2 % | −3 % | — | — | — | 10,852 | $8.43 |
 | **v13 — v11 + template widths + tinted glass, sandboxed** | **0.924** | 0.7 / 10.8 mm | +2 % | +1 % | 0.235 | +0.074 | — | 9,208 | $5.63 |
 | **v14 — no measured figure in the skill, sandboxed** | 0.880 | — | +22 % | +11 % | 0.205 | +0.070 | 0.61–0.97 metal | 12,018 | $5.29 |
+| **v15 — scanned texture sets** | 0.897 | — | +19 % | **−1 %** | 0.246 | +0.082 | 0.36–0.84 metal | 12,314 | $5.04 |
 | TRELLIS.2 raw (local, free) | 0.952 | 0.6 / 1.6 mm | 1 m | +1 % | 0.207 | +0.137 | 0.32 | 191,520 | $0 |
 | TRELLIS.2 finished by kiln, try 1 | 0.926 | — | +2 % | +1 % | 0.214 | +0.078 | — | 5,070 | $4.81 |
 | TRELLIS.2 finished by kiln, try 2 | 0.866 | — | 0 % | +6 % | 0.222 | +0.088 | — | 6,092 | $4.84 |
@@ -113,7 +114,13 @@ height before comparing and are not affected; v10's height column is.
   assumption came out 36 cm (+22 %). One run per version: how much of v13 → v14 is the
   skill and how much is chance is not measured.
 
-Images: `v14-compare.webp`, `v14-closeups.webp`, `v13-compare.webp`, `v13-closeups.webp`, `v12-contaminated-compare.webp`, `v12-contaminated-closeups.webp`, `v10-v11-compare.webp`, `v11-closeups-texture-joint.webp`, `v8-v9-v10-compare.webp`, `progression-v1-v8.webp` (all versions, same render), `v7-v8-v9-compare.webp`,
+- **v15, scanned texture sets** (`66e0b08`, audit 0): no brass among Poly Haven's scans, so
+  the session took `metal_plate_02`'s luminance, roughness and relief and recoloured them
+  from the photo's palette. The tank finally has matter — worn bands, bright rims, a drip
+  — and the base share is right (−1 %). But the frame (tubes, guard) came out darker and
+  half non-metal, flagged by the tool and left as is: two metals again. Relief still weak.
+
+Images: `v15-compare.webp`, `v15-closeups.webp`, `v14-compare.webp`, `v14-closeups.webp`, `v13-compare.webp`, `v13-closeups.webp`, `v12-contaminated-compare.webp`, `v12-contaminated-closeups.webp`, `v10-v11-compare.webp`, `v11-closeups-texture-joint.webp`, `v8-v9-v10-compare.webp`, `progression-v1-v8.webp` (all versions, same render), `v7-v8-v9-compare.webp`,
 `trellis-finish-compare.webp`, `trellis-finish-front-diff.webp` (red: truth only, blue:
 model only — try 2's wires are intact and a few pixels out, which empties a thin band's
 overlap).
