@@ -1,0 +1,86 @@
+{
+  "ref-lantern-trellis": {
+    "brief": "ref-lantern-trellis",
+    "mcp": "ahujasid",
+    "blender": "Blender 5.2.2 LTS",
+    "skill": "c390e22 fix/baseline-findings",
+    "claude_exit": 0,
+    "wall_s": 1044.0,
+    "is_error": false,
+    "num_turns": 113,
+    "duration_ms": 1042077,
+    "cost_usd_equiv": 4.808411600000001,
+    "output_tokens": 81883,
+    "input_tokens_total": 8882937,
+    "tool_calls": {
+      "ToolSearch": 1,
+      "Read": 7,
+      "Bash": 23,
+      "mcp__blender__get_addon_status": 1,
+      "mcp__blender__get_scene_info": 3,
+      "mcp__blender__execute_blender_code": 58,
+      "mcp__blender__get_object_info": 1,
+      "mcp__blender__get_viewport_screenshot": 18
+    },
+    "final_text": "d simplifying three parts separately with gltfpack: body (2,528 triangles), wires (1,390) and glass. I rebuilt the globe as a smooth 64-segment shell on TRELLIS's own measured profile (1,664 triangles), because the simplified one showed facets.\n\n**Materials:**\n- **Metal:** the TRELLIS colours are baked onto the low-poly. I lowered the saturation in two steps toward the reference and added a dark patina in the creases, painted as non-metal.\n- **Glass:** dark smoky glass in its own material, with frost specks, a clear coat and transparency.\n- **Normal map:** the first bake had large black patches because about half the high-poly faces point inward. Re-orienting them fixed most of it. The 6.8% of texels still pointing inward I reset to flat, which loses a little detail there.\n\n**What doesn't match the reference:**\n- The top loop is no longer a closed pentagon: one side was lost in decimation, so it reads as an open hook.\n- The guard wires over the globe are thin and broken in places.\n- The filler cap on the tank isn't in the TRELLIS mesh, and I didn't invent it.\n- Surface detail is about 30% below the reference's, which is expected after removing 97% of the geometry.\n- The glass shows a stronger reflection and fainter frost than the photo. The skill caps colour tuning at two correction rounds, and I used both.\n\n**Licences:** TRELLIS.2 is MIT, but its usual pipeline includes RMBG-2.0, which is non-commercial (CC BY-NC). Check which background-removal step your local run used before any commercial use. Nothing paid was used.\n\n**Housekeeping:** compact storage, except I kept the `review/` comparison images (about 3 MB) as evidence. I deleted my scratch files and nothing is committed. The working branch is still `bench/quality-baseline`.\n\nFiles are in `generated-assets/hurricane-lantern/`:\n- `hurricane-lantern_final.glb`\n- `hurricane-lantern_original.glb` (the TRELLIS input, unchanged)\n- `hurricane-lantern.blend` (includes the hidden high-poly)\n- `hurricane-lantern_log.md`",
+    "finals": 1,
+    "measures": [
+      {
+        "file": "generated-assets/hurricane-lantern/hurricane-lantern_final.glb",
+        "bytes": 598096,
+        "extensions_used": [
+          "EXT_texture_webp",
+          "KHR_draco_mesh_compression",
+          "KHR_materials_clearcoat"
+        ],
+        "gltf_meshes": 1,
+        "gltf_materials": 2,
+        "gltf_images": 4,
+        "gltf_skins": 0,
+        "gltf_joints": 0,
+        "gltf_animations": 0,
+        "objects_mesh": 1,
+        "object_names": [
+          "SM_HurricaneLantern"
+        ],
+        "tris": 5070,
+        "verts": 8459,
+        "non_manifold_edges": 836,
+        "boundary_edges": 1089,
+        "loose_edges": 0,
+        "degenerate_faces": 0,
+        "dims_m": [
+          0.1261,
+          0.099,
+          0.2997
+        ],
+        "z_min_m": 0.0,
+        "centre_xy_m": [
+          0.0,
+          0.0002
+        ],
+        "materials": {
+          "M_Metal_AgedBronze": {
+            "images": 3,
+            "max_px": 1024
+          },
+          "M_Glass_Smoked": {
+            "images": 1,
+            "max_px": 512
+          }
+        },
+        "empty_material_slots": 0,
+        "rigs": [],
+        "render": "render-hurricane-lantern_final.png"
+      }
+    ],
+    "glbs": [
+      {
+        "file": "hurricane-lantern_final.glb",
+        "bytes": 598096,
+        "sha256": "4c42e7be44978e25e11aec88ac6720d4f9f14eea1913c1b58053e32e5a9cdc1b",
+        "published": true
+      }
+    ]
+  }
+}
