@@ -77,7 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   box (a real crate against its own 3/4 preview: 0.573 level, 0.925 at 50°/20°); and
   openwork — a chair from the side, 0.12–0.16 at every orientation — is judged on
   proportions and by eye.
-- **`tools/test_fidelity_check.py`** seeds the review tool, now 19/19, in the Blender CI. Its
+- **`tools/test_fidelity_check.py`** seeds the review tool, now 24/24, in the Blender CI. Its
   first run caught the views framed by height only: anything wider than tall was clipped.
 - **TRELLIS.2 run locally and measured** (`references/ai-generation.md`): on an M4 Pro with
   24 GB, 5–7 min a model, 19.5–22.5 GB peak, 31 GB of weights; the best shape the bench has
@@ -88,6 +88,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   its thin parts to a 97 % decimation the score did not see: wires are now rebuilt, not
   decimated (a rule in SKILL.md's CLEANUP, where every session passes — the run had grepped
   the reference, not read it), and open edges are counted after.
+- **Joints are rendered to be looked at, and patina stays metal** — what v10 got wrong
+  where the numbers said it was fine. Its air tubes ended in a flat cut resting on the
+  tank's slope, touching at one point and lifting 14.6 mm across their end, while the
+  inventory read "inserted"; no distance can judge it (the real tubes lift 8.6 mm under a
+  sheet-metal foot), so `fidelity_check.py` renders every end of a long part that touches
+  another — the two parts alone, flat grey, two views, `review/joints/` — and the rule is
+  that a part joining another enters it or sits on a shaped foot. Its tank read grey
+  pewter: most of the brass was painted as non-metal patina (metallic 0.20–0.38 on
+  average, the real brass 0.63), and a non-metal reflects white. Tarnish now stays metal,
+  darker and rougher; only crusts are non-metal; the tool warns when a metal is mostly
+  painted (calibrated on one truth, said so). And one material per PHYSICAL material —
+  the reference had said the opposite ("never one material for every metal part"), and
+  v10's five metals read as five alloys. Round parts keep 16+ sides (its tubes, 10–11,
+  read as bars); grime streaks modulate, they do not stripe (they read as wood grain).
 - **A metallic mask in scattered hard islands is reported.** Lantern v9's surface came out
   as copper islands on a dark patina — the skill's dark-metal text had quoted the real brass
   as "48 % metal", and the session thresholded a noise to reach it. The number is gone; the

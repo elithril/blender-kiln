@@ -27,7 +27,7 @@ read differences of a few percent as noise, and large ones as the fix list.
 """
 import bpy, json, math, os, sys
 import numpy as np
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 BANDS = 5
 VIEW = "front"
@@ -85,6 +85,9 @@ def open_model(path):
 
 DARK_METAL = 0.15
 CONFETTI_SOFT, CONFETTI_LARGEST = 0.60, 0.5
+# Calibrated on ONE truth: the real Lantern_01's brass averages 0.63; v8, v9 and v10, which
+# read grey or dull, 0.20-0.57. A warning about what light does, not a share to reach.
+MOSTLY_PAINTED = 0.5
 
 
 def _image_channel(sock):
@@ -171,11 +174,108 @@ def dark_metals(meshes):
             fine = _texels(mi, 256)[..., mch] * mk
             if 0.05 < (fine > 0.5).mean() < 0.95:
                 row["mask_soft"], row["mask_largest"] = mask_shape(fine)
+                row["mask_mean"] = float(fine.mean())
         if k.mean() >= 0.05:
             row["base_median"] = float(np.median((base @ np.array([0.2126, 0.7152, 0.0722]))[k]))
         if "base_median" in row or "mask_soft" in row:
             rows.append(row)
     return rows
+
+
+def contact_ends(meshes, tol=0.0005):
+    """Ends of elongated parts (tubes, rods, legs, handles) that touch another part.
+
+    A joint is where a part must ENTER another, or sit on a shaped foot — a flat cut resting
+    on a curved surface touches at one point and passes every distance check: lantern v10's
+    air tubes did, and read as unconnected. No threshold can judge it (the real Lantern_01's
+    tubes lift 8.6 mm off the tank too, under a sheet-metal foot), so the tool renders each
+    one up close and the session LOOKS. Loose parts are the connected pieces of the model."""
+    import bmesh
+    from mathutils.bvhtree import BVHTree
+    dg = bpy.context.evaluated_depsgraph_get(); bm = bmesh.new()
+    for ob in meshes:
+        m = ob.evaluated_get(dg).to_mesh(); m.transform(ob.matrix_world); bm.from_mesh(m)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+    bm.verts.ensure_lookup_table(); comp = [-1] * len(bm.verts); n = 0
+    for v in bm.verts:
+        if comp[v.index] >= 0:
+            continue
+        stack = [v]
+        while stack:
+            x = stack.pop()
+            if comp[x.index] >= 0:
+                continue
+            comp[x.index] = n
+            stack.extend(e.other_vert(x) for e in x.link_edges)
+        n += 1
+    parts = {}
+    for f in bm.faces:
+        parts.setdefault(comp[f.verts[0].index], []).append(f)
+    parts = {k: fs for k, fs in parts.items() if len(fs) >= 10}     # a plain 8-sided rod has 10
+
+    def tree(faces):
+        b = bmesh.new()
+        for f in faces:
+            try:
+                b.faces.new([b.verts.new(v.co) for v in f.verts])
+            except ValueError:
+                pass
+        return BVHTree.FromBMesh(b)
+    ends = []
+    for k, fs in parts.items():
+        P = np.array([v.co[:] for v in {v for f in fs for v in f.verts}])
+        c = P.mean(0); ax = np.linalg.svd(P - c, full_matrices=False)[2][0]
+        t = (P - c) @ ax; L = float(t.max() - t.min())
+        rad = float(np.sqrt(np.median(np.sum(((P - c) - np.outer(t, ax)) ** 2, 1))))
+        if L < 4 * rad:
+            continue
+        trees = {j: tree(g) for j, g in parts.items() if j != k}
+        if not trees:                              # a single part: nothing to join
+            continue
+        for sel in (t < t.min() + 0.04 * L, t > t.max() - 0.04 * L):
+            E = P[sel]
+            near = [(min(tr.find_nearest(Vector(q))[3] for q in E), j) for j, tr in trees.items()]
+            d, j = min(near)
+            if d <= tol:
+                pair = [[v.co.copy() for v in f.verts] for f in fs + parts[j]]
+                ends.append(dict(at=E.mean(0), axis=ax, radius=rad, faces=pair))
+    return ends
+
+
+def render_joints(sc, ends, out, centre):
+    """Two close renders of every contact end, into out/: the two parts in contact ONLY, in
+    flat grey (Workbench) — a joint is judged on its shape, and anything else in the frame
+    hid it (a lantern's guard wires behind its tubes). From outside the object, and 60° round."""
+    os.makedirs(out, exist_ok=True)
+    hidden = [ob for ob in sc.objects if ob.type == "MESH" and not ob.hide_render]
+    for ob in hidden:
+        ob.hide_render = True
+    cam = bpy.data.objects.new("_joint_cam", bpy.data.cameras.new("_joint_cam")); sc.collection.objects.link(cam)
+    sc.camera = cam; cam.data.type = "ORTHO"
+    sc.render.engine = "BLENDER_WORKBENCH"; sc.display.shading.light = "STUDIO"; sc.display.shading.color_type = "SINGLE"
+    sc.display.shading.show_cavity = True
+    sc.render.resolution_x = sc.render.resolution_y = 420
+    files = []
+    for i, e in enumerate(ends):
+        me = bpy.data.meshes.new(f"_joint_{i}"); verts, polys = [], []
+        for f in e["faces"]:
+            polys.append(list(range(len(verts), len(verts) + len(f)))); verts.extend(f)
+        me.from_pydata(verts, [], polys); me.update()
+        ob = bpy.data.objects.new(me.name, me); sc.collection.objects.link(ob)
+        at = Vector(e["at"]); cam.data.ortho_scale = max(6 * e["radius"], 0.01)
+        out_dir = at - centre; out_dir.z = 0
+        if out_dir.length < 1e-4:
+            out_dir = Vector((0, -1, 0))
+        out_dir.normalize()
+        for name, turn in (("a", 0.0), ("b", math.radians(60))):
+            d = out_dir.copy(); d.rotate(Matrix.Rotation(turn, 3, "Z")); d.z = 0.35; d.normalize()
+            cam.location = at + d * 1.0; cam.rotation_euler = (-d).to_track_quat("-Z", "Y").to_euler()
+            sc.render.filepath = os.path.join(out, f"joint_{i + 1:02d}{name}.png")
+            bpy.ops.render.render(write_still=True); files.append(sc.render.filepath)
+        bpy.data.objects.remove(ob)
+    for ob in hidden:
+        ob.hide_render = False
+    return files
 
 
 def render(sc, lo, hi, path, engine, hdri=None, samples=64):
@@ -364,6 +464,10 @@ def main():
             gaps.append((7, f"material {r['material']}: metal in scattered hard-edged islands (largest {r['mask_largest']:.0%} of "
                             f"the metal, {r['mask_soft']:.0%} of texels in between) — reads as camouflage. Wear is one "
                             f"region following the form (edges, handled parts) with soft transitions; never a thresholded noise"))
+        if r.get("mask_mean", 1.0) < MOSTLY_PAINTED:
+            gaps.append((6, f"material {r['material']}: most of this metal is painted as non-metal (metallic {r['mask_mean']:.2f} "
+                            f"on average) — a non-metal reflects white, and the part reads grey. Keep tarnish and patina "
+                            f"metallic (darker, rougher); only crusts — thick rust, soot, dirt — are non-metal"))
         if r.get("base_median", 1.0) < DARK_METAL:
             gaps.append((8, f"material {r['material']}: metal with a base colour of {r['base_median']:.2f} (sRGB luminance, "
                             f"median over its {r['metal_share']:.0%} metallic texels; below {DARK_METAL}) — a black mirror under "
@@ -385,14 +489,19 @@ def main():
     save(np.concatenate([bg(pad_to(ref, W)), np.ones((H, 12, 4), np.float32), bg(pad_to(mod_c, W))], 1),
          os.path.join(o["out"], "side_by_side.png"))
 
+    ends = contact_ends(meshes)
+    joints = render_joints(sc, ends, os.path.join(o["out"], "joints"), (lo + hi) / 2) if ends else []
     print("FIDELITY " + json.dumps(dict(tris=tris, meshes=nmesh, iou=iou, shape=shape, material=dict(reference=mref, model=mmod), metals=metals,
-                                        gaps=[g[1] for g in gaps])))
+                                        joints=joints, gaps=[g[1] for g in gaps])))
     print(f"\n{tris:,} tris in {nmesh} meshes · silhouette IoU {iou:.3f} (information, not a target: "
           f"a real object scores ~0.80 against its own photo) — gaps to close, largest first:")
     for _, g in gaps[:12]:
         print("  -", g)
     if not gaps:
         print("  - none above tolerance")
+    if joints:
+        print(f"\n{len(ends)} joints where a long part ends on another — LOOK at each ({o['out']}/joints/, two views):"
+              " it must enter the other part or sit on a shaped foot; a flat cut resting on a curve reads unconnected")
 
 
 main()

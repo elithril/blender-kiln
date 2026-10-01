@@ -158,13 +158,26 @@ def floating_parts(objs, tol=0.0005):
 ```
 
 Contact is not insertion: a loop that touches its cap at one point passes this
-check and still reads wrong. Step 1's "inserted" is checked in step 5, by eye.
+check and still reads wrong. **A part that joins another ENTERS it** — its end runs past
+the surface by at least its own radius — **or sits on a modelled foot** shaped to that
+surface (the real lantern's air tubes land in a sheet-metal saddle). Never a flat cut
+resting on a curve: v10's tubes touched the tank at one point and lifted 14.6 mm off it
+across their end, and the session's inventory had ticked them "inserted". No distance
+can judge it (the real tubes lift 8.6 mm under their foot), so `fidelity_check.py`
+renders every end of a long part that touches another — the two parts alone, flat grey,
+two views, in `review/joints/` — and **each one is looked at before the inventory line
+is ticked**.
 
 ## 4. Materials from the reference, not from memory
 
-**One material per visually distinct region** of the inventory — glass, the body's
-patina, wire, soot — never one material for every metal part. And **one texture set
-per major part**: a single Smart UV atlas over 19 parts left the tank 14 % of it.
+**One material per PHYSICAL material** — all of the body's sheet metal is one metal, the
+glass another, a steel cap another if the photo shows it. Wear, patina and soot are
+layers WITHIN that material, not materials of their own. v10 gave its tank, hood, tubes,
+burner and cap five metals, their base colour from 0.11 to 0.21: the tubes read darker
+than the bell and the cap a different alloy, where the real lantern and the image-to-code
+one each have one. **Texture sets may still be per major part** — a single Smart UV
+atlas over 19 parts left the tank 14 % of it — but baked from that one shader, so the
+parts read as one metal.
 
 Sample each region's **range**, not only its median — blotches live between a dark and a
 light that the image shows. Measured on the lantern's tank: `#120f0c` / `#241e19` / `#4b3f33`.
@@ -190,11 +203,16 @@ v3 on texture detail (0.031 against 0.022 for the reference's 0.032):
   sparse bright wear specks toward its light. Roughness: *its own* noise, over a range
   (0.16–0.64 there), not the colour's inverse. Relief: fine pits plus broad dents. Cavity:
   AO. A single noise driving all four reads as the flat, blotchy "camouflage" of kiln's v1.
-- **Give grime a direction.** Streaks run along a turned part's profile — vertical on a
-  lathe. That needs **cylindrical UVs on turned parts** (u around, v along the height), not
-  Smart UV Project, whose islands scatter any direction.
-- **A metal's base colour is its reflectance — it cannot be dark.** Age is painted as
-  NON-metal: rust, soot and dirt at Metallic 0, bare metal at 1, bright. The real Lantern_01's
+- **Give grime a direction — faintly.** Streaks run along a turned part's profile —
+  vertical on a lathe. That needs **cylindrical UVs on turned parts** (u around, v along
+  the height), not Smart UV Project, whose islands scatter any direction. They modulate
+  the patina; they are not stripes: v10's regular vertical streaks read as wood grain.
+- **A metal's base colour is its reflectance — it cannot be dark.** Tarnish and patina
+  STAY METAL — a darker base colour (the real brass: around 0.30) and a higher roughness;
+  only crusts — thick rust, soot, caked dirt — are non-metal, on a minority of the
+  surface. A non-metal reflects WHITE: v10 painted most of its brass as non-metal patina
+  (metallic 0.20–0.38 on average, the real one 0.63) and its tank read grey pewter under
+  the studio light, where the image-to-code lantern, all metal, read warm bronze. The real Lantern_01's
   metal has a base colour of 0.30 (sRGB luminance, median; 0.25 for the darkest tenth). Kiln's v7 was 100 % metal at 0.07–0.15 and rendered as near-black bronze,
   23 % darker than the real object under the same light. The image-to-code lantern, 100 %
   metal at 0.18, reads close (−3 %). `tools/fidelity_check.py` reports any material whose
@@ -335,6 +353,9 @@ Read it with its limits, measured on the lantern:
   gap (IoU 0.72 → the red bands of the overlay).
 - **Model how parts meet as the inventory says**: an open loop whose legs enter the cap
   is not a closed ring on a clip.
+- **Round parts need enough sides to stay round up close.** v10's air tubes, at 10–11
+  sides, read as faceted bars in the joint renders. 16 or more around a tube, 32 or more
+  round a turned body, shade smooth; the triangle range is a guide, not a cap.
 - **Curved glass needs ≥ 64 segments and one smooth shell.** At 264 faces, a uniform
   semi-transparent globe shows its facets as bands, its back faces blending through.
   Take the frosting from the reference as an alpha/roughness texture; keep the tint

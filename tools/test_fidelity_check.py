@@ -16,7 +16,9 @@ test writes its own tiny HDRI. Cases:
 - a metal with a dark base colour: reported — it renders as a black mirror (lantern v7);
   the same colour as non-metal, and a bright metal, silent;
 - a metallic mask in hard-edged scattered islands: reported (lantern v9's camouflage); one
-  soft region, silent;
+  soft region, silent; a metal painted mostly as non-metal: reported (v10's grey tank);
+- joints: a rod's flat end resting on a sphere is rendered up close (two views); a rod sunk
+  into it, and a free one, are not;
 - --view and --azimuth on a 2 x 1 x 1 box: 2:1 from the front, 1:1 from the side or at 90°,
   and 2.12:1 at 45° (2 cos 45° + sin 45°) — the 3/4 view most product photos are.
 """
@@ -90,7 +92,17 @@ def masked_vase(name, mask):
 random.seed(1)
 cells = [[random.random() < 0.35 for _ in range(32)] for _ in range(32)]   # 8-texel islands, at 256 px
 masked_vase("confetti", [1.0 if cells[y // 8][x // 8] else 0.0 for y in range(256) for x in range(256)])
-masked_vase("soft_wear", [min(1.0, max(0.0, (160 - y) / 64)) for y in range(256) for x in range(256)])
+masked_vase("soft_wear", [min(1.0, max(0.0, (200 - y) / 64)) for y in range(256) for x in range(256)])   # mean 0.66
+masked_vase("mostly_painted", [min(1.0, max(0.0, (90 - y) / 64)) for y in range(256) for x in range(256)])   # mean 0.23
+# joints: a rod whose flat end rests on a sphere (to render), one sunk into it, one free
+def rods(name, z_bottom):
+    fresh()
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.1, location=(0, 0, 0.1))
+    bpy.ops.mesh.primitive_cylinder_add(vertices=16, radius=0.008, depth=0.2, location=(0, 0, z_bottom + 0.1))
+    export(f"{d}/{name}.glb")
+rods("rod_resting", 0.1993)   # the UV sphere is faceted: 0.8 mm under its pole at 8 mm out
+rods("rod_sunk", 0.17)
+rods("rod_free", 0.25)
 # a 2 x 1 x 1 box: 2 m along X, so front is 2:1 and left is 1:1
 fresh(); bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, 0.5)); bpy.context.object.scale = (2, 1, 1)
 bpy.ops.object.transform_apply(scale=True); export(f"{d}/box.glb")
@@ -155,6 +167,17 @@ with tempfile.TemporaryDirectory() as d:
         hit = [g for g in r["gaps"] if "black mirror" in g]
         check(f"{name}: dark-metal gap {'reported' if flagged else 'silent'}", bool(hit) == flagged,
               [round(m["base_median"], 3) for m in r["metals"]])
+
+    for name, flagged in (("mostly_painted", True), ("soft_wear", False)):
+        _, r, _ = measure(d, f"{d}/{name}.glb")
+        hit = [g for g in r["gaps"] if "painted as non-metal" in g]
+        check(f"{name}: mostly-non-metal gap {'reported' if flagged else 'silent'}", bool(hit) == flagged,
+              [round(m.get("mask_mean", 1), 2) for m in r["metals"]])
+
+    for name, want in (("rod_resting", 2), ("rod_sunk", 0), ("rod_free", 0)):
+        _, r, out = measure(d, f"{d}/{name}.glb")
+        check(f"{name}: {want} joint render(s)", len(r["joints"]) == want and all(os.path.exists(f) for f in r["joints"]),
+              len(r["joints"]))
 
     for name, flagged in (("confetti", True), ("soft_wear", False)):
         _, r, _ = measure(d, f"{d}/{name}.glb")
