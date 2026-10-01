@@ -64,3 +64,25 @@ photo's palette, masked the rust by the form, baked to UVs and credited Poly Hav
   are missing.
 - A stats script of mine read the paint as 100 % metal: it ignored `metallicFactor: 0`.
   The review tool applies the factor, which is why it raised nothing.
+
+## The chair with scanned texture sets (skill `66e0b08`, 2026-10-01)
+
+Sandboxed (audit 0), one run, $6.13 (one correction round over the limit, declared).
+
+| | truth (front, back, top) | width / height | depth / height | height | materials |
+|---|---:|---:|---:|---:|---:|
+| real chair | — | 0.30 | 0.29 | 227 cm | 1 |
+| before the lantern loop | 0.445 | 0.34 | 0.31 | −22 % | — |
+| mid-way (`bee8c30`) | 0.673 | 0.27 | 0.24 | −8 % | 4 |
+| **scanned sets** | **0.750** | 0.33 | **0.29** | **−29 %** | **1** |
+
+- **The wood reads as wood**: one mahogany from Poly Haven's `dark_wood`, its grain visible,
+  rendered warmth +0.077 for the real chair's +0.077.
+- **The tracery is there** — pointed arch, rose, lancets, finials, turned legs.
+- **The size is wrong**: a tall-backed chair assumed at an ordinary chair's height. The
+  case where the session should have asked rather than assumed.
+- The apron's round arches came out saw-toothed; the rose is simplified.
+
+**Three objects, one skill (`66e0b08`)**: crate 0.950, lantern 0.897, chair 0.750 against
+their real assets, every surface one material per physical material. Scanned sets made
+rust and wood credible; brass, which has no scan, gained less.
