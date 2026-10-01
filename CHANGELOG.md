@@ -100,7 +100,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   mesh is within 0.6 mm of the real profile (median; 1.6 mm at worst), the best photo-read
   reconstruction 1.1 mm and 9.7 mm at worst, at the step a 15° camera hides. Seeded by
   `tools/test_template_profile.py` (4/4, in the Blender CI), whose first run caught the
-  axis pulled off-centre by a tube reaching the floor.
+  axis pulled off-centre by a tube reaching the floor. Its first example command carried
+  the bench lantern's real height (0.294 m) — the answer key — and a session copied it as
+  its "assumption": the example now names the argument, and the reference says where the
+  real height comes from.
 - **The triangle range is a guide, not a cap.** The review tool ranked any overshoot as
   its first gap, and sessions spent their review cutting round parts (a lantern at 9.5k
   for a 5k top read "90 % over" as its main defect). Up to twice the tier's top is now

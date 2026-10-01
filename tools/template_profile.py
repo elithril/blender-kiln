@@ -1,7 +1,7 @@
 """Read a turned object's real profile off a 3D template — a generated mesh, a scan.
 
     blender -b --factory-startup --python-exit-code 1 --python tools/template_profile.py -- \\
-        --template trellis.glb --height 0.294 [--bands 40] [--json out.json]
+        --template trellis.glb --height <real height, m> [--bands 40] [--json out.json]
 
 A photo bends proportions: a camera 15° above makes every disc's top an ellipse and every
 base taller than it is — the bench's lanterns came out with bases 13-30 % off reading the

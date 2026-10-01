@@ -63,8 +63,11 @@ tubes, guard, bail — with its distance from the axis and angular coverage:
 
 ```bash
 blender -b --factory-startup --python-exit-code 1 --python <skill>/tools/template_profile.py -- \
-  --template trellis.glb --height 0.294 --bands 40 --json profile.json
+  --template trellis.glb --height <real height, m> --bands 40 --json profile.json
 ```
+
+`--height` is the object's REAL height — asked, or the usual size stated as an assumption
+(§ 1). The template cannot give it: a generated mesh is always 1 m tall.
 
 Measured on the bench's lantern: the TRELLIS.2 mesh read this way is within **0.6 mm**
 of the real object's profile (median, 1.6 mm at worst, 27 heights); the best photo-read
