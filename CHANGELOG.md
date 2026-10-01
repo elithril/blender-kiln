@@ -77,7 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   box (a real crate against its own 3/4 preview: 0.573 level, 0.925 at 50°/20°); and
   openwork — a chair from the side, 0.12–0.16 at every orientation — is judged on
   proportions and by eye.
-- **`tools/test_fidelity_check.py`** seeds the review tool, now 26/26, in the Blender CI. Its
+- **`tools/test_fidelity_check.py`** seeds the review tool, now 27/27, in the Blender CI. Its
   first run caught the views framed by height only: anything wider than tall was clipped.
 - **TRELLIS.2 run locally and measured** (`references/ai-generation.md`): on an M4 Pro with
   24 GB, 5–7 min a model, 19.5–22.5 GB peak, 31 GB of weights; the best shape the bench has
@@ -88,6 +88,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   its thin parts to a 97 % decimation the score did not see: wires are now rebuilt, not
   decimated (a rule in SKILL.md's CLEANUP, where every session passes — the run had grepped
   the reference, not read it), and open edges are counted after.
+- **Scanned CC0 texture sets before procedural noise** (`reference-fidelity.md` § 4). Two
+  objects, one verdict: the geometry tools work, the surfaces do not — the crate's rust
+  came out a soft orange gradient along its edges, the lantern's patina even and clean.
+  Noise makes a smear where a scan has flakes, pits, runs and chips. The skill now starts
+  from a Poly Haven texture set of the material family (CC0, no key; tags and thumbnails
+  to choose by eye against the photo's crop), tints it to the photo's palette, wears it
+  with a second set masked by the form, and bakes it to the UVs. `fetch_texture_set` and
+  `scanned_layer` were run on Blender 5.2.2 against the live API.
+- **Grain is information, not a gap.** Its lantern-calibrated threshold flagged the real
+  crate against its own photo (22–28 %); it stays in the JSON only.
 - **Every generation starts from nothing: no figure from a measured object in what a
   session reads.** The references and the review tool's own messages quoted the bench
   lantern's real values as illustrations — its height, its brass's base colour (0.30), its

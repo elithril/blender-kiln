@@ -16,7 +16,7 @@ render under a studio HDRI — scales it to the reference's height, and compares
   photo's unknown light, so they are alarms, not targets;
 - the model's own materials: metal whose base colour is too dark to be physical, a
   metallic mask in scattered hard-edged islands (camouflage), metal painted mostly as
-  non-metal, and a surface too clean for the photo (grain, per band);
+  non-metal; and per band the grain (in the JSON only — information, not a gap);
 - joints: every end of a long part that touches another, rendered up close to be looked at.
 
 Prints one JSON line (`FIDELITY {...}`) and a ranked list of the largest gaps, and writes
@@ -91,7 +91,6 @@ CONFETTI_SOFT, CONFETTI_LARGEST = 0.60, 0.5
 # in the repository's CHANGELOG, not here: a figure quoted next to a check becomes a value
 # a session aims at.
 MOSTLY_PAINTED = 0.5
-TOO_CLEAN = 0.28
 
 
 def _image_channel(sock):
@@ -463,11 +462,8 @@ def main():
             if abs(d) > tol:
                 note = " — light-dependent: check the material, do not tune to it" if k in ("lum", "highlights") else ""
                 gaps.append((abs(d) / tol / 10, f"band {i + 1}: {k} {m[k]:.3f} vs reference {r[k]:.3f} ({d:+.3f}){note}"))
-    for i, (r, m) in enumerate(zip(mref, mmod)):
-        if r and m and r.get("grain") and m.get("grain") is not None and m["grain"] < TOO_CLEAN * r["grain"]:
-            gaps.append((-0.5, f"band {i + 1}: the surface reads cleaner than the photo — grain {m['grain'] / r['grain']:.0%} "
-                            f"of the photo's (information). If the crop agrees, add the ONE ageing layer the photo shows "
-                            f"most, then measure — never several at once"))
+    # Grain (model vs photo) stays in the JSON, never in the gap list: a threshold on it
+    # flagged a real object against its own photo, so as a gap it misleads.
     for r in metals:
         if r.get("mask_soft", 1) < CONFETTI_SOFT and r.get("mask_largest", 1) < CONFETTI_LARGEST:
             gaps.append((7, f"material {r['material']}: metal in scattered hard-edged islands (largest {r['mask_largest']:.0%} of "

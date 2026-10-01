@@ -667,7 +667,7 @@ fails silently: no error, no movement.
 
 ### [5b] TEXTURING
 
-Load `references/texturing-strategy.md`. With a reference image, also `references/reference-fidelity.md` § 4: one material per region, a palette sampled from the image, independent colour / roughness / relief fields with grime along the part's direction, relief baked to a normal map, and the glass recipe.
+Load `references/texturing-strategy.md`. With a reference image, also `references/reference-fidelity.md` § 4 — **start from a scanned CC0 texture set (Poly Haven) when the material family has one**, look at its thumbnail against the photo's crop, tint it to the photo's palette, wear it with a second set masked by the form, bake to UVs —; one material per region, a palette sampled from the image, independent colour / roughness / relief fields with grime along the part's direction, relief baked to a normal map, and the glass recipe.
 
 **Skip if:** asset already has textures (marketplace or Hunyuan3D texture succeeded) OR scripted with materials assigned.
 

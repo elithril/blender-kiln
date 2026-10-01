@@ -177,7 +177,73 @@ def region_palette(path, x, y, w, h):
 
 Convert to linear (`s/12.92` below 0.04045, `((s+0.055)/1.055)**2.4` above) before
 Principled. **The base colour comes from this palette** — the photo's own dark, mid and
-light — not from a figure about the material in general. Then:
+light — not from a figure about the material in general.
+
+**Start from a scanned texture set whenever the material family has one** — rust, chipped
+or worn paint, galvanised or corroded metal, wood, plaster, stone, fabric. Procedural
+noise makes a smear where a scan has flakes, pits, runs and chips; that is the difference
+between "dirty" and "rust". Poly Haven's textures are CC0, free, and reachable without a
+key (`https://api.polyhaven.com/assets?type=textures&categories=metal` lists them with
+their tags). **Look before choosing**: each one has a thumbnail at
+`https://cdn.polyhaven.com/asset_img/thumbs/<id>.png?width=256&height=256` — open it next
+to the photo's crop of that region, and keep the one whose surface reads like it.
+
+```python
+import bpy, json, os, sys, urllib.request
+
+UA = {"User-Agent": "blender-kiln"}              # Poly Haven ToS 2.4: a unique User-Agent
+
+def fetch_texture_set(asset_id, folder, res="1k"):
+    """Download a Poly Haven texture set (CC0): colour, roughness, OpenGL normal, AO.
+    Returns {channel: path}. Credit 'Poly Haven (polyhaven.com)' in the asset log (ToS 2.5)."""
+    req = urllib.request.Request(f"https://api.polyhaven.com/files/{asset_id}", headers=UA)
+    files = json.load(urllib.request.urlopen(req))
+    os.makedirs(folder, exist_ok=True); out = {}
+    for ch, key in (("color", "Diffuse"), ("rough", "Rough"), ("normal", "nor_gl"), ("ao", "AO")):
+        if key not in files:
+            continue
+        url = files[key][res]["jpg"]["url"]; path = os.path.join(folder, os.path.basename(url))
+        if not os.path.exists(path):
+            with urllib.request.urlopen(urllib.request.Request(url, headers=UA)) as r, open(path, "wb") as f:
+                f.write(r.read())
+        out[ch] = path
+    return out
+
+def scanned_layer(nt, maps, scale=4.0, tint=None):
+    """Nodes that read a scanned set by box projection on the object's coordinates, so it
+    needs no UVs while you build; bake it to the asset's UVs before export. Returns the
+    colour, roughness and normal output sockets. `tint`: a linear RGB to multiply the
+    colour toward (the photo's palette), or None."""
+    tc = nt.nodes.new("ShaderNodeTexCoord"); mp = nt.nodes.new("ShaderNodeMapping")
+    mp.inputs["Scale"].default_value = (scale,) * 3; nt.links.new(tc.outputs["Object"], mp.inputs["Vector"])
+    def tex(path, data):
+        t = nt.nodes.new("ShaderNodeTexImage"); t.image = bpy.data.images.load(path, check_existing=True)
+        t.projection = "BOX"; t.projection_blend = 0.2
+        if data:
+            t.image.colorspace_settings.name = "Non-Color"
+        nt.links.new(mp.outputs["Vector"], t.inputs["Vector"]); return t
+    col = tex(maps["color"], False).outputs["Color"]
+    if tint is not None:
+        mix = nt.nodes.new("ShaderNodeMix"); mix.data_type = "RGBA"; mix.blend_type = "MULTIPLY"
+        mix.inputs["Factor"].default_value = 1.0; mix.inputs["B"].default_value = (*tint, 1)
+        nt.links.new(col, mix.inputs["A"]); col = mix.outputs["Result"]
+    rough = tex(maps["rough"], True).outputs["Color"]
+    nm = nt.nodes.new("ShaderNodeNormalMap"); nt.links.new(tex(maps["normal"], True).outputs["Color"], nm.inputs["Color"])
+    return col, rough, nm.outputs["Normal"]
+```
+
+Then: the **base layer** is the set that matches the region's main surface (the paint, the
+bare metal), **tinted** toward the photo's palette mid (`tint`); the **wear layer** is a
+second set (rust, bare metal) **masked by the form** — curvature for edges, AO for
+cavities and seams, with noise only breaking the mask's border, never making it. Scale
+each set to the asset's real size (a scan covers roughly a metre; a 30 cm part repeats it
+a few times). Box projection needs no UVs while you build; **bake** the result to the
+asset's UVs (the Emission bake below, then `to_srgb_byte`) before export — glTF carries
+textures, not node trees. Credit `Source: Poly Haven (polyhaven.com), via the public API`
+in the asset log (ToS 2.5). No set fits a material (polished brass, a specific alloy)?
+Build it procedurally as below.
+
+Building it procedurally, or adding to a scanned base:
 
 - **Colour, roughness and metal vary TOGETHER, in the same places.** That is what makes a
   surface read aged rather than new: cavities and the undersides of rims darker, rougher

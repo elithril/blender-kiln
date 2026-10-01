@@ -196,11 +196,14 @@ with tempfile.TemporaryDirectory() as d:
         check(f"{name}: mostly-non-metal gap {'reported' if flagged else 'silent'}", bool(hit) == flagged,
               [round(m.get("mask_mean", 1), 2) for m in r["metals"]])
 
-    for name, flagged in (("plain", True), ("grainy", False)):
+    grains = {}
+    for name in ("plain", "grainy"):
         _, r, _ = measure(d, f"{d}/{name}.glb", "--samples", "16", ref="ref_grainy.png")
-        hit = [g for g in r["gaps"] if "cleaner than the photo" in g]
-        check(f"{name} vs a grainy photo: too-clean gap {'reported' if flagged else 'silent'}", bool(hit) == flagged,
-              [round(m["grain"], 3) for m in r["material"]["model"] if m and m.get("grain") is not None])
+        g = [m["grain"] for m in r["material"]["model"] if m and m.get("grain") is not None]
+        grains[name] = sum(g) / len(g) if g else 0
+        check(f"{name}: grain in the JSON, never in the gaps", bool(g) and not any("grain" in x for x in r["gaps"]), round(grains[name], 3))
+    check("grain: a plain surface reads far below a noise-textured one", grains["plain"] < 0.2 * grains["grainy"],
+          {k: round(v, 3) for k, v in grains.items()})
 
     for name, want in (("rod_resting", 2), ("rod_sunk", 0), ("rod_free", 0)):
         _, r, out = measure(d, f"{d}/{name}.glb")
