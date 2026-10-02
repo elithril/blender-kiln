@@ -6,6 +6,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] — 2026-10-02
+
+kiln now rebuilds an object **from a photo** — read in crops, textured from CC0 scans,
+measured against the photo and checked joint by joint — and runs on both Blender MCP
+servers, the Blender Foundation's official one included. Every claim below was measured by
+a new quality bench that scores each rebuild against the real 3D asset it was photographed
+from: shape **0.830 → 0.897** (lantern), **0.854 → 0.950** (ammo box), **0.445 → 0.750**
+(gothic chair); text briefs ship **32.9 MB → 0.96 MB**. The method, what each fix broke and
+how the bench was kept honest: [`docs/benchmarks.md`](docs/benchmarks.md).
+
+### Breaking
+
+- **`_final.glb` is compressed by default.** The OPTIMIZE phase now runs in auto mode
+  with the glTF preset: Draco geometry and WebP textures (`KHR_draco_mesh_compression`,
+  `EXT_texture_webp`). A loader needs a Draco decoder and WebP support — three.js through
+  `DRACOLoader`; check your engine's glTF importer. `_final.glb` is written only after
+  this phase.
+- **The triangle range is a guide, not a cap.** Up to twice a tier's top is kept and
+  reported, with where the triangles go; a reduction is proposed only past that (batch
+  mode decimates to the tier's top, not its midpoint). The same tier ships heavier assets
+  than 1.x did when the detail is visible.
+- **Rule 6 now covers thin parts**: wires, bails and loops are rebuilt as curves, never
+  decimated — a generated mesh with thin parts is no longer simplified as a whole.
+
+### Upgrading from 1.x
+
+- **Need uncompressed files?** `_original.glb` is still written next to `_final.glb` —
+  ship it if your loader cannot decode Draco or WebP — or run in guided mode, where the
+  optimization is proposed and can be declined.
+- **Want a tighter budget?** Give the triangle count in the brief: a reduction to it is
+  proposed, with before/after (rule 6 asks before any decimation).
+- **Nothing to migrate** in commands, the brief format, the output layout or the log —
+  `/kiln`, `/kiln setup`, `/kiln cleanup` and the rest are unchanged.
+- **Optional**: Blender 5.1+ to use the official Lab MCP; a free local TRELLIS.2 setup on
+  Apple Silicon (24 GB) for 3D templates — see `references/ai-generation.md`.
+
 ### Added — a quality bench, and a baseline to hold every change against
 
 - **Nothing had measured an end-to-end `/kiln` session.** `bench/` runs the skill
