@@ -49,10 +49,15 @@ import bmesh
 obj = bpy.context.active_object
 bm = bmesh.new()
 bm.from_mesh(obj.data)
-non_manifold = [e for e in bm.edges if not e.is_manifold]
+bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=1e-5)
+# Two different things hide under "non-manifold", and only one is a defect:
+fused = [e for e in bm.edges if len(e.link_faces) > 2]    # ALWAYS a defect
+open_ = [e for e in bm.edges if len(e.link_faces) == 1]   # fine on a leaf or a cloth
 bm.free()
-# Log: "{len(non_manifold)} non-manifold edges"
-# Alert if > 0 and asset needs to be watertight
+# Log both counts. fused > 0 → fix before export, in every mode: parts joined
+# and welded into internal faces — invisible in renders, and the glTF validator
+# passes them.
+# open_ > 0 → alert only if the asset must be watertight (3D print, physics).
 ```
 
 ---
@@ -215,7 +220,7 @@ else:
 obj = bpy.context.active_object
 face_count = len(obj.data.polygons)
 # Compare against tier range
-# If > 50% above range → propose decimate (ALWAYS interactive)
+# Past 2x the tier's top → propose decimate (ALWAYS interactive); below, report and keep
 ```
 
 ### Decimate (if needed)
@@ -236,14 +241,15 @@ bpy.ops.object.modifier_apply(modifier="Decimate")
 2. Recalculate Normals
 3. Remove Loose
 4. Degenerate Dissolve
-5. Apply All Transforms
-6. Set Origin (center of base)
-7. Scale verification
-8. Naming conventions
-9. Clean orphans
-10. Materials check
-11. Poly count check → decimate if needed (interactive)
-12. `get_viewport_screenshot()` → final validation
+5. Check Manifold — fused edges (> 2 faces) must be 0
+6. Apply All Transforms
+7. Set Origin (center of base)
+8. Scale verification
+9. Naming conventions
+10. Clean orphans
+11. Materials check
+12. Poly count check → decimate if needed (interactive)
+13. `get_viewport_screenshot()` → final validation
 
-**Auto mode:** steps 1-10 automatic, step 11 always interactive.
+**Auto mode:** steps 1-11 automatic, step 12 always interactive.
 **Guided mode:** validate after each step.

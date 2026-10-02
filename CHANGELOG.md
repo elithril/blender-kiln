@@ -6,6 +6,260 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — a quality bench, and a baseline to hold every change against
+
+- **Nothing had measured an end-to-end `/kiln` session.** `bench/` runs the skill
+  headless on six fixed briefs, one per pipeline path, and measures each shipped
+  GLB after re-importing it — topology, grounding, surviving textures, rig
+  structure, and a deformation probe that sees a rig which validates yet produces
+  mush. Baseline on 1.1.2: `bench/results/baseline-2026-09-29.md`.
+
+### Changed — concept art no longer depends on Pollinations
+
+- **Pollinations answers HTTP 402 `Payment-Required` after one image** (measured
+  2026-09-29), and the session then painted over its watermark. The default is now
+  the `black-forest-labs/FLUX.1-schnell` HF Space: Apache-2.0, same `gradio_client`
+  venv, 5.6 s for a 1024×1024 image, no watermark. `references/ai-generation.md`
+  gains the concept-art section `SKILL.md` had been pointing at all along.
+- **Rule 5** now says a 402 means switch source, and forbids removing a watermark.
+
+### Added — the official Blender Lab MCP, and PolyHaven without an integration
+
+- **Kiln runs on the Blender Foundation's MCP** — the server behind Claude's Blender
+  connector. Measured: 1.1.2 shipped the same 7 GLBs on it for 10% less. `SKILL.md`
+  now maps its tools one by one, gives the setup facts that each cost a failed start
+  (the add-on's `5.1.0` floor, online access, a package name that collides with
+  ahujasid's on PyPI), and says *when* to capture on it — its sessions took one
+  screenshot each.
+- **PolyHaven's public API**, for a server with no PolyHaven tools: endpoints
+  verified live, and what its Terms of Service require that the sessions had not
+  done — a unique User-Agent and a visible credit.
+- **The Khronos validator after every export**, through the already-required
+  `gltf-transform validate`: exit 1 on a seeded broken GLB, exit 0 on all 16 bench
+  GLBs. It checks the format, not the mesh.
+
+### Added — measuring a model against its reference image
+
+- **`references/reference-fidelity.md`**, for scripted modeling from an image: a detail
+  inventory, the silhouette measured from the pixels, a surface-to-surface attachment
+  check, materials sampled from the image, and two review rounds at most.
+- **`tools/fidelity_check.py`** renders the model front-on as a silhouette and under a
+  Poly Haven studio HDRI, and prints the gaps against the reference, largest first:
+  silhouette IoU per height band, widths, and per band luminance, saturation, warmth,
+  highlights and texture detail. It reproduced the bench's hand analysis (IoU 0.713
+  and 0.772 against 0.717 and 0.773). Judging by eye, sessions over-corrected twice —
+  too bright and blotchy, then grey and flat at half the reference's saturation.
+- **Texture and wire techniques read from an image-to-code tool's own output**: wires
+  traced from the pixels (a bail within 0.7 mm of its hand-measured points), a three-tone
+  palette per region, independent colour / roughness / relief fields with grime along a
+  turned part's direction, relief baked to a normal map (glTF has no bump — measured to
+  export as `normalTexture`), and a frosted-glass recipe. `fidelity_check.py` now counts
+  triangles against `--max-tris` and refuses a model with unloaded textures, which had
+  rendered black and skewed a measure.
+- **What one photo cannot say is settled before modeling**: the real size (asked, or the
+  usual size stated as an assumption — five reconstructions of one lantern came out
+  23–52 % too tall), more views for an asset whose back will be seen, and the camera's
+  elevation read on a rim's ellipse. `fidelity_check.py` takes `--view` and `--elevation`.
+  Scored from five sides against the real Poly Haven asset, the version that best fitted
+  the ~15° photo from the front was the *worst* against the object: it had copied the
+  photo's perspective into the geometry, its base 30 % too tall.
+- **What the lantern loop got wrong, corrected before other objects** (commit after 7 trials):
+  the review no longer chases the photo score — the real object scores ~0.80 against its own
+  photo, and the version that reached 0.898 was the worst against it; shape gaps are local
+  (a band's width off by more than 8 %), and wire bands are judged by width, not IoU. Detail
+  comes from fine features, never relief amplitude (a session made its lantern read as
+  lumpy cast iron). Traced wires become smooth splines, not polylines (a bail came out
+  kinked). The inventory is ticked line by line at the final review (a pentagon loop turned
+  into a teardrop no number flagged). The procedure scales with the tier — the lantern's
+  cost had gone from $1.90 to $3.52. The float bake and its sRGB conversion are one rule.
+- **3/4 photos and openwork objects**, found by testing on a crate and a chair: the review
+  camera now takes `--azimuth` as well as `--elevation`, framing by projecting the bounding
+  box (a real crate against its own 3/4 preview: 0.573 level, 0.925 at 50°/20°); and
+  openwork — a chair from the side, 0.12–0.16 at every orientation — is judged on
+  proportions and by eye.
+- **`tools/test_fidelity_check.py`** seeds the review tool, now 27/27, in the Blender CI. Its
+  first run caught the views framed by height only: anything wider than tall was clipped.
+- **TRELLIS.2 run locally and measured** (`references/ai-generation.md`): on an M4 Pro with
+  24 GB, 5–7 min a model, 19.5–22.5 GB peak, 31 GB of weights; the best shape the bench has
+  measured (0.952 from five sides, scripted: 0.861) but always 1 m tall, 160–190k triangles
+  and one material. Five install fixes the project does not make, and an MIT-only run: the
+  non-commercial RMBG-2.0 swapped for BiRefNet, which needed a float32 cast the lantern's
+  cut-out photo never exercised. Finished by kiln it took the real asset's colour — and lost
+  its thin parts to a 97 % decimation the score did not see: wires are now rebuilt, not
+  decimated (a rule in SKILL.md's CLEANUP, where every session passes — the run had grepped
+  the reference, not read it), and open edges are counted after.
+- **Scanned CC0 texture sets before procedural noise** (`reference-fidelity.md` § 4). Two
+  objects, one verdict: the geometry tools work, the surfaces do not — the crate's rust
+  came out a soft orange gradient along its edges, the lantern's patina even and clean.
+  Noise makes a smear where a scan has flakes, pits, runs and chips. The skill now starts
+  from a Poly Haven texture set of the material family (CC0, no key; tags and thumbnails
+  to choose by eye against the photo's crop), tints it to the photo's palette, wears it
+  with a second set masked by the form, and bakes it to the UVs. `fetch_texture_set` and
+  `scanned_layer` were run on Blender 5.2.2 against the live API.
+- **Grain is information, not a gap.** Its lantern-calibrated threshold flagged the real
+  crate against its own photo (22–28 %); it stays in the JSON only.
+- **Every generation starts from nothing: no figure from a measured object in what a
+  session reads.** The references and the review tool's own messages quoted the bench
+  lantern's real values as illustrations — its height, its brass's base colour (0.30), its
+  metal share, its profile errors, what each version did. Each one a session could find
+  became a value it aimed at: the metal share (48 %), the height (0.294 m), and the base
+  colour — v11 and v13 logged "median 0.27–0.30 (the doc's real brass is 0.30)" and came
+  out light, even and clean, where the real brass's look comes from colour, roughness and
+  metal varying TOGETHER. `reference-fidelity.md` is rewritten as a method (403 → 330
+  lines, every snippet kept), the tools' docstrings, comments and gap messages keep their
+  thresholds without the figures behind them, and the base colour comes from the photo's
+  palette, with 0.15 as a floor only. The calibration record stays here and in the bench.
+- **v12's lessons, kept as limits rather than more rules.** Told a joining part "sits on a
+  shaped foot", v12 flared its tubes into flat tongues: a part now enters with its section
+  unchanged, a foot only where the photo clearly shows one, judged against the photo's
+  crop. It tackled six material problems in one round and its surface regressed (grain
+  28 → 24 % of the photo's — not the WebP step, measured 28 → 26 %): one material problem
+  per round now, and ageing added one layer at a time. The too-clean grain line is listed
+  as information, not ranked as a gap.
+- **A surface too clean for its photo is reported; widths come from the template; glass
+  takes the photo's tint.** v11 fixed v10's joints and metals and overshot: one clean
+  bronze read new (grain 20 % of the photo's on the tank; the real object 74 %, the
+  image-to-code lantern 79 %, v10 57 %). `fidelity_check.py` now measures a band's grain —
+  fine variation deep inside solid areas, over its brightness — and reports it under 28 %
+  of the photo's (one truth, narrow margin: v10 sits at 31 %). Age is a layer inside the
+  material: AO-darkened cavities, worn edges, pits and dents. v11 also took widths from the
+  photo, whose perspective narrows (−6 %); the template now gives widths and the parts'
+  positions too. And the glass: clear in v8–v11 against a near-black photo — the
+  reference's own inventory example said "clear glass".
+- **Joints are rendered to be looked at, and patina stays metal** — what v10 got wrong
+  where the numbers said it was fine. Its air tubes ended in a flat cut resting on the
+  tank's slope, touching at one point and lifting 14.6 mm across their end, while the
+  inventory read "inserted"; no distance can judge it (the real tubes lift 8.6 mm under a
+  sheet-metal foot), so `fidelity_check.py` renders every end of a long part that touches
+  another — the two parts alone, flat grey, two views, `review/joints/` — and the rule is
+  that a part joining another enters it or sits on a shaped foot. Its tank read grey
+  pewter: most of the brass was painted as non-metal patina (metallic 0.20–0.38 on
+  average, the real brass 0.63), and a non-metal reflects white. Tarnish now stays metal,
+  darker and rougher; only crusts are non-metal; the tool warns when a metal is mostly
+  painted (calibrated on one truth, said so). And one material per PHYSICAL material —
+  the reference had said the opposite ("never one material for every metal part"), and
+  v10's five metals read as five alloys. Round parts keep 16+ sides (its tubes, 10–11,
+  read as bars); grime streaks modulate, they do not stripe (they read as wood grain).
+- **A metallic mask in scattered hard islands is reported.** Lantern v9's surface came out
+  as copper islands on a dark patina — the skill's dark-metal text had quoted the real brass
+  as "48 % metal", and the session thresholded a noise to reach it. The number is gone; the
+  rule is one worn region following the form, soft-edged. `fidelity_check.py` flags a mask
+  both scattered (largest island < 50 % of the metal) and hard (< 60 % in-between texels):
+  v9 on 9 of 9 materials, none of the bench's truths, v8, img2threejs or TRELLIS.2. A mean
+  texel jump was tried first and dropped — it counts edges, not their hardness.
+- **`tools/template_profile.py` reads proportions off a 3D template** — a generated mesh of
+  the photo, a scan — to model from, never to ship. On the bench's lantern the TRELLIS.2
+  mesh is within 0.6 mm of the real profile (median; 1.6 mm at worst), the best photo-read
+  reconstruction 1.1 mm and 9.7 mm at worst, at the step a 15° camera hides. Seeded by
+  `tools/test_template_profile.py` (4/4, in the Blender CI), whose first run caught the
+  axis pulled off-centre by a tube reaching the floor. Its first example command carried
+  the bench lantern's real height (0.294 m) — the answer key — and a session copied it as
+  its "assumption": the example now names the argument, and the reference says where the
+  real height comes from.
+- **The triangle range is a guide, not a cap.** The review tool ranked any overshoot as
+  its first gap, and sessions spent their review cutting round parts (a lantern at 9.5k
+  for a 5k top read "90 % over" as its main defect). Up to twice the tier's top is now
+  reported last and kept, with where the triangles go; a reduction is proposed past
+  twice the top — batch mode decimates to the top there, not to the midpoint.
+- **Dark metal is reported, and luminance is no longer something to match.** The bench's
+  final lantern read near-black: 100 % metal at a base colour of 0.07–0.15, 23 % darker than
+  the real object under the same light — while matching the photo's luminance to 0.003,
+  because the photo's own light was darker. `fidelity_check.py` now reads the model's
+  materials and reports metal below 0.15 (the real aged brass: 0.30, 46 % metallic, its rust
+  painted as non-metal); luminance and highlight gaps are labelled light-dependent.
+- **A float colour bake shipped black.** Measured on Blender 5.2.2 with a minimal repro:
+  the glTF exporter writes a linear float base-colour image into its PNG without the sRGB
+  transfer (linear 0.2 → byte 51, not 124). A lantern reviewed at saturation 0.30 shipped
+  at 0.12. `to_srgb_byte()` converts first (byte 124, 0.202 back); the last review measure
+  must now be of `_final.glb`, and `fidelity_check.py` warns when given a `.blend`. The
+  float bake itself came from this release's own advice.
+- **The camera's elevation is read, then fixed — never picked by the score.** A session
+  that chose among 10 / 15 / 20° the angle its own model fitted best kept 20°, and shipped a
+  base 27 % flatter than the real one. Reviews are now capped at three measures, correct
+  half-way toward a target (saturation had jumped 0.17 → 0.38 for 0.33), and keep every
+  working file in the asset folder — the same session had written into `/tmp`.
+- **Luminance and highlights depend on the light.** The real asset, measured against its
+  own preview under the tool's HDRI, reads luminance +0.05 and highlights 2.5 % for
+  1.5 %; saturation held (0.33 for 0.32). Those two are now alarms, not targets.
+- **The skill replies in the language of the request.** Two sessions had answered in French
+  to an English brief.
+
+### Changed — the skill now fires on files people bring, not only on assets they order
+
+- **The frontmatter `description` decides whether kiln exists for a user**, and it
+  only described producing an asset. Measured with `bench/trigger.py` on 12 prompts
+  written as users write: the old one fired on **6 of 8** that should trigger it —
+  it missed "shrink this 40 MB GLB" and "convert to USDZ", both of which kiln does
+  — and on none of the 4 that should not. On 6 held-out prompts, written before
+  the new description was drafted, it scored 3 of 4 (it missed "generate LODs").
+  The new one: **12 of 12, 0 false positives in 6**. One run per prompt.
+
+### Changed — what a Space call spends, and whose
+
+- **The free cloud path is one or two generations a day.** ZeroGPU gives 2 minutes
+  without an account and 3.5 with a free one; one TRELLIS.2 run asks 60–120 s. A call
+  reserves the Space's declared duration (90 s for a 5.6 s FLUX image), and the quota
+  resets 24 h after the first call, not at midnight — measured: still refused the
+  next morning. A spent quota means no concept art either; the reference now lists
+  the free fallbacks, a PolyHaven CC0 preview among them.
+- **A Space call never uses a token silently.** `gradio_client` sends the saved
+  Hugging Face token by default (`token=None`; measured). The skill announces whose
+  account pays before the first call, offers `token=False`, and never reads, prints
+  or writes a token.
+- **TRELLIS.2 is documented as a candidate, not the default**: its Space API is
+  recorded as read live — `/extract_glb` rejects a target under 100,000 triangles —
+  but no generation has completed on it yet. The local Apple Silicon port is listed
+  with its licences, including a non-commercial background remover.
+
+### Fixed — what the baseline found
+
+- **Auto mode stopped before OPTIMIZE** on 3 of 6 briefs and named the result
+  `_final.glb` — a 16 MB file for a 724-triangle chair. Auto mode now applies the
+  default preset for glTF, and `_final.glb` is written only after the phase.
+- **Rule 2** measured at 2–4 screenshots for 6–17 edits; it is now anchored to
+  phases, with two opposite angles after texturing — a UV defect on one crate
+  corner passed every count.
+- **Rule 6**: the untouched factory Cube is removed and logged; anything else is
+  hidden, never deleted. Runs had done both.
+- **`gradio_client` 2.7.1 returns the Hunyuan3D mesh as a dict**; a `gradio_path()`
+  helper unwraps both shapes. The Space's textured endpoint fails server-side
+  today (`NameError`), and the reference says so.
+- **Rigs, measured on Blender 5.2.2**: the glTF exporter re-parents a deform bone
+  under a control bone to its nearest deforming ancestor, and binds unweighted
+  vertices to a synthetic `neutral_bone` — so validate before export, not after.
+- **Batch durations** are measured with timestamps, never estimated.
+- **The manifold check never ran**: it was missing from the cleanup's execution
+  order, and a lantern shipped 84 edges shared by 3–4 faces. It is step 5 now, and
+  separates fused edges (always a defect) from open ones (fine on a leaf).
+- **Web textures are capped at 1K**, as `uv-materials.md` already said. An earlier
+  fix in this release had set 2K for the balanced tier, and a chair doubled.
+- **The README's key-rules list** was a Markdown ordered list, which renumbers
+  itself: twelve of thirteen entries named the wrong rule. It now writes
+  `**Rule N**`, and `verify_docs.py` checks each entry against its rule and rejects
+  an ordered list in that section.
+- **The tool surface** now covers all 36 tools of `blender-mcp` 2.0.0, with what
+  each costs. It had cited rule 22 for integration status and rule 23 for
+  `get_object_info` — both one off after a renumbering. `verify_docs.py` now
+  checks tool-table rows against the rule they cite.
+
+### Fixed — a headless Blender crash exited 0, so a failed export read as a success
+
+- **Blender exits 0 when a `--python` script raises**, unless it is given
+  `--python-exit-code 1`. An explicit `sys.exit(1)` does propagate; an uncaught
+  exception does not. Measured on 5.0.1: the same raising script exits 0 without
+  the flag and 1 with it.
+- **Rule 21's fallback was the exposed path.** When an MCP export times out the
+  skill runs a headless export (`references/export-targets.md`), and a failure
+  there came back as success. The command now carries the flag, and the reference
+  says to check the exit code, then the file.
+- **The Blender CI step had the same hole**: a crash outside `verify_blender.py`'s
+  `try` blocks would have passed green. Run with the flag, it still reports 9/9 —
+  nothing had been hiding. The flag is also on the gallery script, the usage
+  docstrings and CONTRIBUTING.
+- **New `exitcode` check in `verify_docs.py`**: every headless Blender command in a
+  code fence, script or workflow must fail loud. Prose naming the command is left
+  alone. Three cases in `test_verify_docs.py` — **21/21**.
+
 ## [1.1.2] — 2026-08-26
 
 ### Fixed — the README stated two different Blender versions, and neither was measured

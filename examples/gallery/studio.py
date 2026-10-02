@@ -1,7 +1,7 @@
 """Shared studio rig for the gallery: lighting, framing, render, export, metrics.
 
 Run through Blender, never as plain Python:
-    blender --background --factory-startup --python build.py -- <asset> <outdir>
+    blender --background --factory-startup --python-exit-code 1 --python build.py -- <asset> <outdir>
 """
 import bpy, bmesh, json, math, os, time
 from mathutils import Vector

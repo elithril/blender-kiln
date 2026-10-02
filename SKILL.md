@@ -1,12 +1,18 @@
 ---
 name: kiln
-description: "3D asset production pipeline via Blender MCP — sourcing, AI generation, cleanup, texturing, optimization, export. Batch mode for autonomous multi-asset production."
-allowed-tools: Bash, Read, Edit, Write, Grep, Glob, WebFetch, WebSearch, mcp__blender__*, mcp__nano-banana__*, mcp__mcpollinations__*
+description: "Makes and fixes 3D assets in Blender, for games, the web and AR. Use when the user wants a 3D model, prop, character or GLB/glTF/FBX/USDZ file made — from a text brief, a reference image, a free marketplace (PolyHaven, Sketchfab) or AI generation — AND when they bring an existing 3D file to fix: too heavy or too many polygons (optimize, compress, LODs), broken normals, scale or origin, materials lost on glTF export, conversion between GLB, FBX and USDZ, texturing, rigging for animation, or inspection. Drives Blender through a Blender MCP server (ahujasid's or the official Blender Lab one). Batch mode produces many consistent assets unattended."
+allowed-tools: Bash, Read, Edit, Write, Grep, Glob, WebFetch, WebSearch, mcp__blender__*, mcp__nano-banana__*
 ---
 
 # blender-kiln — The 3D Asset Forge
 
 You are a 3D asset production expert. You pilot Blender via MCP to produce clean, optimized assets from brief to export.
+
+Keep every working file — scripts, crops, renders, bakes — inside the asset's output
+folder. Never write to `/tmp` or any shared path under a generic name: a bench session
+wrote `/tmp/top.png` and could not tell whether it had overwritten someone's file.
+
+Reply in the language the user wrote the request in — not the language of the machine, its paths or its locale. Measured: two bench sessions answered in French to an English brief.
 
 ---
 
@@ -58,12 +64,21 @@ nothing and the user gets no response.
 
 ```
  1. ALWAYS get_scene_info() before each PHASE of the pipeline.
- 2. ALWAYS get_viewport_screenshot() after each significant modification.
+ 2. ALWAYS get_viewport_screenshot() after each significant modification — at
+    minimum once at the end of every phase that changed geometry or materials
+    (SOURCE/IMPORT, CLEANUP, TEXTURING, OPTIMIZE if it re-imports), framed per
+    rule 22, and from TWO opposite angles after TEXTURING. A numeric check does
+    not replace it: a UV defect on one corner passed every count.
  3. ONE asset at a time — never an entire scene at once.
  4. NEVER hard-cap poly count — alert if out of range, never block.
- 5. NEVER spend money — no paid services, no credits consumed.
+ 5. NEVER spend money — no paid services, no credits consumed. A free service
+    that answers HTTP 402 has stopped being free: switch source, never pay.
+    NEVER remove or paint over a watermark or attribution on a generated image.
  6. NEVER silently destroy — decimate, simplify, delete = always propose,
-    show before/after, wait for user choice. Even in auto mode.
+    show before/after, wait for user choice. Even in auto mode. The one
+    exception is Blender's untouched factory scene (Cube, Camera, Light, nothing
+    else, no .blend loaded): remove the Cube before building and log it. Any
+    other pre-existing object is the user's — hide it, never delete it.
  7. ALWAYS keep the .blend file (contains full history). In compact mode,
     only keep original + final + .blend + log. In full mode, keep all
     intermediate GLBs. ALWAYS save the .blend — it's the recovery point.
@@ -100,7 +115,8 @@ nothing and the user gets no response.
 20. NEVER use `gltf-transform optimize` — it includes `simplify` which
     destroys mesh geometry. Always use individual steps (resize → webp → draco).
 21. If MCP export times out, fallback to headless CLI:
-    `blender --background "scene.blend" --python-expr "..."`.
+    `blender --background "scene.blend" --python-exit-code 1 --python-expr "..."`.
+    Without `--python-exit-code 1` a failed export still exits 0 — measured.
     See references/export-targets.md for the full command.
 22. ALWAYS frame the viewport on the subject before get_viewport_screenshot.
     An unframed view renders a 0.7 m prop as a few pixels at the origin, so the
@@ -128,30 +144,34 @@ nothing and the user gets no response.
 
 ## Blender MCP — tool surface
 
-All 25 tools exposed by `blender-mcp`, extracted from the server source and
-exercised live against the addon. Anything not
-listed here does not exist; the raw addon socket uses slightly different names
+All 36 tools exposed by `blender-mcp` **2.0.0** (bundled addon 1.7), extracted
+from the server source on 2026-09-29; the ones the quality bench called were
+exercised live. Anything not listed here does not exist; the raw addon socket uses slightly different names
 (`execute_code` for `execute_blender_code`), so always go through the MCP tool.
 
 | Tool | Use |
 |---|---|
 | `get_addon_status` | First call of a session — is the addon reachable, what is on |
 | `get_scene_info` | Rule 1, before each phase. Object count and names only — **no dimensions** |
-| `get_object_info` | Rule 23. Returns `world_bounding_box`, materials, vert/edge/poly counts |
-| `get_viewport_screenshot` | Rule 2, after each modification. `max_size`, `filepath`, `format` |
+| `get_object_info` | Rule 24. Returns `world_bounding_box`, materials, vert/edge/poly counts |
+| `get_viewport_screenshot` | Rule 2, per phase. `max_size`, `filepath`, `format` |
 | `execute_blender_code` | The workhorse: modelling, cleanup, export |
+| `bpy_api_lookup` / `describe_node_type` | Look a `bpy` API or a node's sockets up in the running Blender instead of recalling it — the API moves every release |
+| `export_scene` | Export to GLB/FBX from the server; still apply rule 18 and the rule 19 audit |
 | `set_texture` | Apply a downloaded PolyHaven texture to an object |
-| `get_polyhaven_status` / `get_sketchfab_status` | Rule 22, before any search |
-| `search_polyhaven_assets` / `download_polyhaven_asset` / `get_polyhaven_categories` | PolyHaven, only when enabled |
-| `search_sketchfab_models` / `download_sketchfab_model` / `get_sketchfab_model_preview` | Sketchfab, only when enabled |
-| `get_hunyuan3d_status` / `generate_hunyuan3d_model` / `poll_hunyuan_job_status` / `import_generated_asset_hunyuan` | Native Hunyuan3D generation — prefer over any local install |
-| `get_hyper3d_status` / `generate_hyper3d_model_via_text` / `generate_hyper3d_model_via_images` / `poll_rodin_job_status` / `import_generated_asset` | Native Hyper3D Rodin generation |
-| `disable_telemetry` / `record_trajectory_feedback` | Addon telemetry |
+| `get_polyhaven_status` / `get_sketchfab_status` / `get_polypizza_status` | Rule 23, before any search |
+| `search_polyhaven_assets` / `download_polyhaven_asset` / `get_polyhaven_categories` / `get_polyhaven_asset_preview` | PolyHaven, only when enabled |
+| `search_sketchfab_models` / `download_sketchfab_model` / `get_sketchfab_model_preview` | Sketchfab, only when enabled (free token) |
+| `search_polypizza_models` / `download_polypizza_model` | Poly Pizza low-poly models, only when enabled. Check each model's licence and record it (rule 17) |
+| `get_hunyuan3d_status` / `generate_hunyuan3d_model` / `poll_hunyuan_job_status` / `import_generated_asset_hunyuan` | Native Hunyuan3D — **needs Tencent Cloud keys or a local API**, and the licence excludes the EU |
+| `get_hyper3d_status` / `generate_hyper3d_model_via_text` / `generate_hyper3d_model_via_images` / `poll_rodin_job_status` / `import_generated_asset` | Native Hyper3D Rodin — paid API (rule 5) |
+| `get_tripo_status` / `generate_tripo_model` / `poll_tripo_job_status` / `import_generated_asset_tripo` | Native Tripo — paid (rule 5) |
+| `disable_telemetry` / `record_trajectory_feedback` | Addon telemetry — opt-in since 2.0, leave it off |
 
 **A disabled integration does not fail, it disappears.** The addon registers a
 command only while its checkbox is ticked, so calling it while off returns
 `Unknown command type: <name>` — indistinguishable from a version mismatch. The
-`get_*_status` tools are always registered and carry the fix. Hence rule 22.
+`get_*_status` tools are always registered and carry the fix. Hence rule 23.
 
 **Ticking a box takes effect immediately.** The addon's own remediation text ends
 with "Restart the connection to Claude". That step is not needed — the flags are
@@ -170,6 +190,43 @@ commands (`get_addon_info`, `get_world_state_snapshot`, `set_telemetry_consent`
 among them). The fix is `uvx blender-mcp install-addon`, then re-enable the addon
 in Blender.
 
+### On the official Blender Lab MCP
+
+The Blender Foundation's server (`projects.blender.org/lab/blender_mcp`, the one
+behind Claude's Blender connector) drives the same Blender with **different
+tools, and none for marketplaces or generation**. Measured by the quality bench
+(`bench/results/mcp-comparison-2026-09-29.md`): kiln 1.1.2 shipped the same 7 GLBs
+on it, for 10% less cost. Map the tools, and source around the gaps:
+
+| Skill says | On the Lab MCP |
+|---|---|
+| `get_scene_info` (rule 1) | `get_objects_summary` |
+| `get_object_info` (rule 24) | `get_object_detail_summary` |
+| `get_viewport_screenshot` (rule 2) | `get_screenshot_of_area_as_image(area_ui_type="VIEW_3D")`, or `render_viewport_to_path` |
+| frame the viewport (rule 22) | `jump_to_view3d_object_by_name` |
+| `bpy_api_lookup` | `search_api_docs` / `get_python_api_docs`, plus `search_manual_docs` |
+| `execute_blender_code` | same name |
+| `get_addon_status`, `get_*_status` (rule 23) | none — `get_objects_summary` answering is the connection check |
+| PolyHaven tools, `set_texture` | the public API from Bash — `references/sourcing-strategy.md` |
+| Sketchfab, Hunyuan3D, Rodin, Tripo, Poly Pizza | none — HF Spaces through `gradio_client`, `references/ai-generation.md` |
+| `export_scene` | `bpy.ops.export_scene.gltf` in `execute_blender_code` (rules 18, 19) |
+
+Setup, each point measured: the add-on's manifest sets
+`blender_version_min = "5.1.0"` — kiln's own floor stays 4.4, but this path needs
+at least that; it installs as an extension; **online access on** (Preferences → System,
+or `--online-mode`), or the add-on refuses to serve. Its PyPI-style package is
+**also named `blender-mcp`**, so `uvx blender-mcp` starts ahujasid's server —
+run it from git:
+`uvx --from "git+https://projects.blender.org/lab/blender_mcp.git#subdirectory=mcp" blender-mcp`.
+Register it under the MCP name `blender` so `mcp__blender__*` still matches.
+
+**Rule 2 needs saying twice on this server.** The bench's sessions knew the capture
+tool and called it right — then took **one screenshot per session** on 4 of 5
+briefs, and framed once in five. At the end of every phase that changed geometry
+or materials: `jump_to_view3d_object_by_name(name)`, then
+`get_screenshot_of_area_as_image(area_ui_type="VIEW_3D")`. After TEXTURING, a second
+angle too. A single-asset run therefore takes **at least four** captures.
+
 ---
 
 ## Dependencies
@@ -182,9 +239,14 @@ in Blender.
   here go through `action.layers[].strips[].channelbag()`, which does not exist
   before it. Measured on 5.0 and 5.2 LTS; 4.4-4.5 satisfy the API but are untested
 
-**Concept art (built-in, no install needed):**
-- Pollinations API — free, no key, used via curl (default)
+**Concept art:**
+- `black-forest-labs/FLUX.1-schnell` HF Space — free, Apache-2.0, through the same
+  `gradio_client` venv as the 3D Spaces (default). See `references/ai-generation.md`
 - User-provided image — local path, drag-and-drop, or URL
+- Every HF Space call uses the **current user's** saved Hugging Face token unless told
+  not to: announce the account before the first call and offer `token=False`
+  (anonymous). Never read or log a token. See `references/ai-generation.md`
+- Pollinations — **no longer free**: HTTP 402 after one image (measured 2026-09-29)
 
 **3D Generation (one of):**
 - **HF Spaces** — requires `gradio_client` in a venv (see `/kiln setup`; a bare
@@ -334,7 +396,7 @@ Collect these parameters. Only type and brief are mandatory — infer the rest f
 | **Auto-open links** | false | Configurable mid-session |
 | **Output folder** (absolute path) | `./generated-assets/` | Confirmed at launch |
 
-**Detail tier ranges:** see `references/topology-rules.md` § Detail Tiers. Soft ranges — alert if >50% above, never block.
+**Detail tier ranges:** see `references/topology-rules.md` § Detail Tiers. Soft ranges — up to 2× the top is fine when spent where it shows; report it, never block.
 
 **Scene:** auto-detected via `get_scene_info()` — not asked.
 
@@ -346,6 +408,12 @@ Collect these parameters. Only type and brief are mandatory — infer the rest f
 
 Reformulate the enriched brief for confirmation:
 > "OK: medieval wooden chair, stylized, for web (glTF), tier balanced (1.5-5K tris). From your reference image I also see: curved backrest, 4 turned legs, cross braces. Good?"
+
+**With a reference image, the confirmation also settles what one photo cannot say**
+(`references/reference-fidelity.md` § 1): the **real size** (ask, or state the usual size
+as an assumption), the **camera's elevation** read on a visible rim, and — for an asset
+whose back, sides or underside will be seen — **a request for side and top views**. In
+auto mode, do not block on them: state the assumptions and carry them into the log.
 
 ### [3] SOURCE — Marketplace or Create?
 
@@ -420,7 +488,7 @@ Ask: **"Do you have a reference image, or should I generate a concept from your 
 
 | Mode | How | Notes |
 |---|---|---|
-| **Text prompt** | Generate via Pollinations API (free, no key) | Default method |
+| **Text prompt** | Generate via the FLUX.1-schnell HF Space (free, Apache-2.0) | Default method |
 | **Image path / drag-and-drop** | User provides local file path | Used as reference for any method |
 | **Image URL** | User provides URL, downloaded via curl | Saved locally, used as reference |
 
@@ -431,13 +499,13 @@ A user-provided image (or generated concept art) is useful for ALL creation meth
 | Method | How the image is used |
 |---|---|
 | **Hunyuan3D** | Passed directly as generation input (image → 3D) |
-| **Scripted modeling** | Analyze image to guide Python modeling — match proportions, number of parts, shapes, structural details, relative sizes |
+| **Scripted modeling** | **Load `references/reference-fidelity.md`** — inventory the details, measure the silhouette from the pixels (or, given a generated mesh of the photo, its profile with `tools/template_profile.py` — never ship that mesh), check every part is attached — and LOOK at every joint the review renders (`review/joints/`): a part that joins another enters it, section unchanged (a foot only if the photo shows one) — sample materials from the image (one material per physical material; patina stays metal), review twice against it |
 | **Geometry Nodes** | Analyze image to inform node parameters — spacing, density, pattern, scale |
 | **Marketplace** | Analyze image to refine search keywords and evaluate result similarity |
 
-If nano-banana MCP is available, offer it as an alternative to Pollinations (supports iterative editing).
+If nano-banana MCP is available, offer it as an alternative (supports iterative editing) — it bills a Gemini key, so only on explicit request (rule 5).
 
-**Concept art & AI generation:** Load `references/ai-generation.md` for Pollinations commands, nano-banana usage, prompt rules, and Hunyuan3D details.
+**Concept art & AI generation:** Load `references/ai-generation.md` for the concept-art commands, prompt rules, and Hunyuan3D details.
 
 **Scripted modeling flow:**
 
@@ -547,7 +615,13 @@ Load `references/validation-checklist.md` and execute:
 
 Execute the full cleanup sequence from `references/validation-checklist.md` § Execution Order. Check poly budget against tier from `references/topology-rules.md`.
 
-**Poly check:** Out of range (>50%) → **propose decimate with before/after** (always interactive, even in auto mode).
+**Poly check:** report the count against the tier. Past **2× the tier's top** → **propose decimate with before/after** (always interactive, even in auto mode); below that, say where the triangles go and keep them.
+
+**Thin parts are never decimated** — wires, bails, loops: anything an order of magnitude
+thinner than the body. A simplifier breaks them whatever the budget, and silhouette scores do not see the
+holes it leaves. Rebuild each as a curve with a round bevel along the
+high-poly's centreline; decimate the body only. **After decimating, compare open and
+non-manifold edge counts with before, and look at a close render of every thin part.**
 
 **Auto mode:** non-destructive cleanup runs automatically. Decimate remains interactive.
 **Guided mode:** show each step, wait for validation.
@@ -593,7 +667,7 @@ fails silently: no error, no movement.
 
 ### [5b] TEXTURING
 
-Load `references/texturing-strategy.md`.
+Load `references/texturing-strategy.md`. With a reference image, also `references/reference-fidelity.md` § 4 — **start from a scanned CC0 texture set (Poly Haven) when the material family has one**, look at its thumbnail against the photo's crop, tint it to the photo's palette, wear it with a second set masked by the form, bake to UVs —; one material per region, a palette sampled from the image, independent colour / roughness / relief fields with grime along the part's direction, relief baked to a normal map, and the glass recipe.
 
 **Skip if:** asset already has textures (marketplace or Hunyuan3D texture succeeded) OR scripted with materials assigned.
 
@@ -608,9 +682,21 @@ Load `references/texturing-strategy.md`.
 3. **Assisted manual texturing** — skill prepares UVs + material slots, user textures manually
 4. **Try another Space** — if current Space doesn't support texture, offer to change URL
 
-### [6] OPTIMIZE (interactive)
+### [6] OPTIMIZE (interactive in guided mode)
 
-Propose options:
+**Auto mode, glTF target:** apply the default preset without asking — textures to
+WebP, resized to the target's cap from `references/uv-materials.md` § Texture
+Resolution per Use Case — **1024 for web/glTF, the default, whatever the tier**;
+2048 only when the brief asks for close-ups or targets console/PC — then Draco — as individual steps (rule 20). It does not touch
+geometry, and `_original.glb` survives, so it is not a destruction under rule 6.
+Report before/after sizes, and say that Draco needs a decoder on the client.
+Simplify, decimate and LOD stay interactive in every mode.
+
+Why: the quality bench measured auto mode stopping here on 3 of 6 briefs, leaving
+a 16 MB `_final.glb` for a 724-triangle chair. **`_final.glb` is written only after
+this phase** — before it, the export is `_original.glb`, scripted assets included.
+
+**Guided mode** — propose options:
 - `gltf-transform` → texture compression KTX2, meshopt
 - `gltfpack` → mesh simplification, auto LOD
 - Both
@@ -845,7 +931,7 @@ Each asset produces `{name}_log.md`:
 - Visual comparison: {verdict — "close match" / "partial match" / "loose interpretation" / "N/A"}
 
 ## Prompts (copy-paste ready)
-- Concept art: "{exact prompt}" (source: {pollinations|nano-banana|user image|user URL})
+- Concept art: "{exact prompt}" (source: {flux-schnell|nano-banana|user image|user URL})
 - Concept iterations: ["{edit1}", "{edit2}"]
 - Hunyuan3D params: steps={s}, guidance_scale={g}, seed={seed},
   octree_resolution={res}, mode={mode}
@@ -891,7 +977,7 @@ Axis conversion at export is automatic.
 |---|---|
 | Local install (models, commands, validation) | `references/setup-install.md` |
 | Marketplace search | `references/sourcing-strategy.md` |
-| AI generation (Hunyuan3D), concept art (Pollinations, nano-banana) | `references/ai-generation.md` |
+| AI generation (Hunyuan3D), concept art (FLUX.1-schnell Space, nano-banana) | `references/ai-generation.md` |
 | Topology rules, poly budgets | `references/topology-rules.md` |
 | UV, materials, PBR | `references/uv-materials.md` |
 | Texturing white meshes | `references/texturing-strategy.md` |

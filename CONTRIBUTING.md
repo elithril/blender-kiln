@@ -89,7 +89,7 @@ Both run in CI on every push. If you touch `SKILL.md`, `references/` or the
 gallery, the Blender workflow runs too:
 
 ```bash
-blender --background --factory-startup --python tools/verify_blender.py
+blender --background --factory-startup --python-exit-code 1 --python tools/verify_blender.py
 ```
 
 **If you add a check, add its regression case in the same change.** A checker that

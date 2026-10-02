@@ -121,6 +121,42 @@ def _(root: Path):
     p.write_text(p.read_text() + "\n| **Thing** | `pip3 install something` | note |\n")
 
 
+@case("tool table cites the rule next to the right one", "semantics")
+def _(root: Path):
+    p = root / "SKILL.md"
+    p.write_text(p.read_text().replace("| `get_object_info` | Rule 24.", "| `get_object_info` | Rule 23.", 1))
+
+
+@case("headless export fallback loses --python-exit-code", "exitcode")
+def _(root: Path):
+    p = root / "references" / "export-targets.md"
+    p.write_text(p.read_text().replace("  --python-exit-code 1 \\\n", "", 1))
+
+
+@case("Blender CI step loses --python-exit-code", "exitcode")
+def _(root: Path):
+    p = root / ".github" / "workflows" / "blender.yml"
+    p.write_text(p.read_text().replace(" --python-exit-code 1", "", 1))
+
+
+@case("prose naming blender --background --python is not a command", None)
+def _(root: Path):
+    p = root / "README.md"
+    p.write_text(p.read_text() + "\nThis is `blender --background --python`, the scripted path.\n")
+
+
+@case("README key rule points at the wrong number", "semantics")
+def _(root: Path):
+    p = root / "README.md"
+    p.write_text(p.read_text().replace("- **Rule 18** — never `export_apply=True`", "- **Rule 6** — never `export_apply=True`", 1))
+
+
+@case("README key rules go back to an ordered list", "semantics")
+def _(root: Path):
+    p = root / "README.md"
+    p.write_text(p.read_text().replace("- **Rule 1** — always", "1. Always", 1))
+
+
 @case("manifest source stops being a directory", "manifest")
 def _(root: Path):
     p = root / ".claude-plugin" / "marketplace.json"

@@ -37,7 +37,7 @@ Then ask: **"Do you have reference images for any of these assets? (paths, URLs,
 
 - User can provide one image per asset: local path, URL, or drag-and-drop
 - Format: `asset_name: /path/to/image.png` or `asset_name: https://...`
-- If "no" → concept art will be auto-generated from briefs (Pollinations)
+- If "no" → concept art will be auto-generated from briefs (FLUX.1-schnell Space)
 - Reference images are optional per asset — some assets can have images while others don't
 
 ### Step 3 — Materials
@@ -238,7 +238,7 @@ For each asset where `status` is `pending`, `failed`, or `redo` (in manifest ord
        IF reference image was analyzed:
          Use reference image directly as Hunyuan3D input (skip concept art generation).
        ELSE:
-         Generate concept art (Pollinations, auto prompt from brief).
+         Generate concept art (FLUX.1-schnell Space, auto prompt from brief).
        Then AI generation. Use config.backend.
      - marketplace → search PolyHaven/Sketchfab with brief keywords,
        auto-pick first result matching tier. If no result → status: failed.
@@ -253,7 +253,7 @@ For each asset where `status` is `pending`, `failed`, or `redo` (in manifest ord
 
    [CLEANUP] — Full auto cleanup per references/validation-checklist.md.
      Check poly budget against tier from references/topology-rules.md.
-     If poly count >50% above tier range → auto-decimate to tier midpoint.
+     If poly count is past 2x the tier's top → auto-decimate to the tier's top.
      Log before/after stats.
 
    [TEXTURING] — Load references/texturing-strategy.md. Apply materials from palette:
@@ -298,6 +298,9 @@ For each asset where `status` is `pending`, `failed`, or `redo` (in manifest ord
 6. Update manifest:
    status → "done"
    result: { faces, file_size, duration, screenshot }
+   duration = measured: record `date +%s` when the asset goes `running` and
+   when it goes `done`. Never estimate it — a report of estimates reads as
+   measurements. Always set `running` before starting an asset.
 
 7. Append to batch-report.md
 ```
@@ -328,7 +331,7 @@ All 26 core iron rules apply. Additional batch rules:
     integration flags in, silently disabling PolyHaven, Sketchfab, Hunyuan3D
     and Rodin for every remaining asset.
 31. BATCH EXCEPTION to Rule 6: In batch runner mode, auto-decimate replaces
-    the interactive proposal when poly count >50% above tier range. Log
+    the interactive proposal when poly count is past 2x the tier's top. Log
     before/after stats in the asset log for post-batch review. This is the
     only case where Rule 6 is overridden — Rule 28 (no prompts) takes
     precedence in batch mode.

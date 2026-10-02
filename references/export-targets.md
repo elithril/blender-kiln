@@ -46,9 +46,15 @@ bpy.ops.export_scene.gltf(
 
 The MCP server can **timeout on GLTF exports** (long-running operation). If the export via `execute_blender_code` fails or times out, use the headless CLI export:
 
+`--python-exit-code 1` is not optional: without it Blender exits **0** when the
+script raises, so a failed export reads as a successful one (measured on 5.0.1 —
+an explicit `sys.exit(1)` propagates, an uncaught exception does not). Check the
+exit code, then check the file exists.
+
 ```bash
 blender \
   --background "/path/to/scene.blend" \
+  --python-exit-code 1 \
   --python-expr "
 import bpy, os
 export_path = '/path/to/output.glb'
@@ -230,6 +236,11 @@ Before ANY export:
 
 After EVERY export, verify before delivering the GLB:
 
+0. ✅ **Khronos validator** — `gltf-transform validate final.glb` must exit **0**.
+   It exits 1 on a broken file and names the error (`ACCESSOR_TOO_LONG`,
+   `UNRESOLVED_REFERENCE` — both seeded and caught, 2026-09-29). Run it after each
+   optimization step too: re-encoding Draco is where files break. It checks the
+   *format*, not the mesh — a model with dozens of fused edges passes it clean.
 1. ✅ **Reasonable file size** — Raw GLB < 30 MB, optimized < 5 MB for web. Alert if exceeded.
 2. ✅ **Inspect gltf-transform** — `gltf-transform inspect final.glb` → check mesh count, texture count, texture sizes, animation count. No unexpected duplication.
 3. ✅ **Visual test Babylon.js Sandbox** — drag-and-drop onto sandbox.babylonjs.com. Verify: mesh visible, textures present, animations playing, no black/pink materials.

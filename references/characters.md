@@ -579,6 +579,15 @@ Two consequences for export, both easy to miss:
 
 - Pass `export_def_bones=True` to the glTF exporter. Without it every control and
   mechanism bone ships as a joint.
+- **A deform bone parented to a control bone is fine.** The exporter re-parents it
+  to its nearest deforming ancestor — measured on Blender 5.2.2: `DEF-tip` under
+  `CTRL-mid` under `DEF-root` exports as `DEF-tip` under `DEF-root`. Do not
+  re-parent by hand before export.
+- **The exporter hides unweighted vertices.** It binds them to a synthetic joint
+  named `neutral_bone` and the file validates — measured. Run the validator above
+  before exporting: after the export, a vertex with no weight no longer looks like
+  one. Automatic weights skip disconnected parts (a belt, a pouch — 48 vertices on
+  the bench's villager), which is exactly where this happens.
 - Rigify names bones `DEF-spine`, `MCH-torso`. Those hyphens are fine — verified
   through both glTF and FBX.
 
