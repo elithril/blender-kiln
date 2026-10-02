@@ -101,7 +101,13 @@ def _(root: Path):
 @case("the two manifests drift apart on version", "manifest")
 def _(root: Path):
     p = root / ".claude-plugin" / "plugin.json"
-    p.write_text(p.read_text().replace('"version": "1.1.2"', '"version": "9.9.9"'))
+    # Any current version, not a literal one: seeded on "1.1.2", this case went silent
+    # the day the manifests moved to 2.0.0 — a seed that changes nothing tests nothing.
+    old = p.read_text()
+    new = re.sub(r'"version": "[^"]+"', '"version": "9.9.9"', old, count=1)
+    if new == old:
+        raise RuntimeError("seed did not change plugin.json: no version field found")
+    p.write_text(new)
 
 
 @case("README image goes missing", "images")
