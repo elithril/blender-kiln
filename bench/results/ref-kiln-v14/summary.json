@@ -1,0 +1,123 @@
+{
+  "ref-lantern-template": {
+    "brief": "ref-lantern-template",
+    "mcp": "ahujasid",
+    "blender": "Blender 5.2.2 LTS",
+    "skill": "83ffb68 fix/baseline-findings",
+    "claude_exit": 0,
+    "wall_s": 1344.0,
+    "is_error": false,
+    "num_turns": 76,
+    "duration_ms": 1339335,
+    "cost_usd_equiv": 5.289773800000002,
+    "output_tokens": 99874,
+    "input_tokens_total": 8267275,
+    "tool_calls": {
+      "Bash": 31,
+      "Read": 14,
+      "ToolSearch": 1,
+      "mcp__blender__get_addon_status": 1,
+      "mcp__blender__get_scene_info": 1,
+      "mcp__blender__execute_blender_code": 18,
+      "Write": 3,
+      "mcp__blender__get_viewport_screenshot": 6
+    },
+    "final_text": "ked glass with frost specks. All of it is baked into textures that survive glTF export.\n\n**TRELLIS file.** I used it only to measure heights and widths. Nothing from its mesh or texture is in the files.\n\n**How close it is to the photo.** I compared renders against the photo three times, which is the limit I work to. The outline overlap went from 0.71 to 0.81. The tubes and handle had to move inward: the TRELLIS model is about 10% wider than the photo at the tubes and tank, though it matches at the globe. What's still different:\n- The tank surface is cleaner than the photo. The next thing to add would be dark grime patches on the tank.\n- The glass reflects more like a mirror and looks less milky than in the photo.\n- The fuel cap looks a little small.\n\n**Decision for you: triangle count.** 12,018 triangles is 2.4\u00d7 the top of the balanced range (5,000). They go mostly into round parts and thin wires: the glass alone takes 1,536, because a transparent shell needs 64 segments to look smooth. I didn't reduce it automatically. I can rebuild it at about 10,200 triangles by:\n- giving the wires 6 sides instead of 8\n- using 24 segments instead of 32 on the small round parts\n- making the tube bends a little coarser\n\nAlternatively I can add a lower-detail version for distance (an LOD). I wouldn't simplify the mesh directly, because that breaks the thin wires. Tell me if you want either.\n\n**Optimisation.** It ran automatically: textures at 1024 px or less, converted to WebP, then Draco mesh compression, taking the file from 9.97 MB to 459 KB. Draco and WebP need decoders on the client. Both GLBs pass the glTF validator with no errors.\n\n`hurricane-lantern.blend` keeps the procedural materials and bake setup, so the textures can be re-baked. The scripts and comparison renders are in `scripts/` and `review/`.\n\nFiles are in `generated-assets/hurricane-lantern/`:\n- `hurricane-lantern_final.glb`\n- `hurricane-lantern_original.glb`\n- `hurricane-lantern.blend`\n- `hurricane-lantern_log.md`",
+    "sandbox": "/private/tmp/kiln-bench/ref-kiln-v14/ref-lantern-template",
+    "contamination": [],
+    "finals": 1,
+    "measures": [
+      {
+        "file": "generated-assets/hurricane-lantern/hurricane-lantern_final.glb",
+        "bytes": 458548,
+        "extensions_used": [
+          "EXT_texture_webp",
+          "KHR_draco_mesh_compression",
+          "KHR_materials_clearcoat"
+        ],
+        "gltf_meshes": 24,
+        "gltf_materials": 5,
+        "gltf_images": 15,
+        "gltf_skins": 0,
+        "gltf_joints": 0,
+        "gltf_animations": 0,
+        "objects_mesh": 24,
+        "object_names": [
+          "SM_HurricaneLantern_Bail",
+          "SM_HurricaneLantern_Bell",
+          "SM_HurricaneLantern_Burner",
+          "SM_HurricaneLantern_BurnerNeck",
+          "SM_HurricaneLantern_FrameRod_L",
+          "SM_HurricaneLantern_FrameRod_R",
+          "SM_HurricaneLantern_FuelCap",
+          "SM_HurricaneLantern_Globe",
+          "SM_HurricaneLantern_GlobeCollar",
+          "SM_HurricaneLantern_GlobeSeat",
+          "SM_HurricaneLantern_GuardWire_0",
+          "SM_HurricaneLantern_GuardWire_1",
+          "SM_HurricaneLantern_GuardWire_2",
+          "SM_HurricaneLantern_GuardWire_3",
+          "SM_HurricaneLantern_Hinge",
+          "SM_HurricaneLantern_Lid",
+          "SM_HurricaneLantern_Tank",
+          "SM_HurricaneLantern_TopLoop",
+          "SM_HurricaneLantern_TubeClip",
+          "SM_HurricaneLantern_Tube_L",
+          "SM_HurricaneLantern_Tube_R",
+          "SM_HurricaneLantern_VentRing",
+          "SM_HurricaneLantern_WickKnob",
+          "SM_HurricaneLantern_WickSpindle"
+        ],
+        "tris": 12018,
+        "verts": 8276,
+        "non_manifold_edges": 0,
+        "boundary_edges": 192,
+        "loose_edges": 0,
+        "degenerate_faces": 0,
+        "dims_m": [
+          0.1388,
+          0.1156,
+          0.3599
+        ],
+        "z_min_m": 0.0,
+        "centre_xy_m": [
+          -0.0,
+          0.0
+        ],
+        "materials": {
+          "M_Metal_AgedBrass_Wires": {
+            "images": 3,
+            "max_px": 512
+          },
+          "M_Metal_AgedBrass_Top": {
+            "images": 3,
+            "max_px": 1024
+          },
+          "M_Metal_AgedBrass_Base": {
+            "images": 3,
+            "max_px": 1024
+          },
+          "M_Glass_Smoked": {
+            "images": 3,
+            "max_px": 1024
+          },
+          "M_Metal_AgedBrass_Tubes": {
+            "images": 3,
+            "max_px": 1024
+          }
+        },
+        "empty_material_slots": 0,
+        "rigs": [],
+        "render": "render-hurricane-lantern_final.png"
+      }
+    ],
+    "glbs": [
+      {
+        "file": "hurricane-lantern_final.glb",
+        "bytes": 458548,
+        "sha256": "ca7879bb329f9d4eb45c8101558946d346f7919350476b683e0fe44df52c9747",
+        "published": true
+      }
+    ]
+  }
+}

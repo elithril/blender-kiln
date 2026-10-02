@@ -1,0 +1,126 @@
+{
+  "ref-lantern-template": {
+    "brief": "ref-lantern-template",
+    "mcp": "ahujasid",
+    "blender": "Blender 5.2.2 LTS",
+    "skill": "a4808a7 fix/baseline-findings",
+    "claude_exit": 0,
+    "wall_s": 1160.7,
+    "is_error": false,
+    "num_turns": 69,
+    "duration_ms": 1159009,
+    "cost_usd_equiv": 4.523973400000001,
+    "output_tokens": 87193,
+    "input_tokens_total": 7011585,
+    "tool_calls": {
+      "ToolSearch": 1,
+      "Read": 10,
+      "Bash": 30,
+      "mcp__blender__get_addon_status": 1,
+      "mcp__blender__get_scene_info": 2,
+      "Write": 4,
+      "mcp__blender__execute_blender_code": 16,
+      "mcp__blender__get_viewport_screenshot": 4
+    },
+    "final_text": "Size:** `_original.glb` is 19.8 MB; resizing, WebP and Draco bring it to 1.51 MB (\u221292%). Draco needs a decoder in the app that loads it.\n\n**Comparison with the photo (measured on the shipped file)**\n- **Silhouette overlap:** 0.797. A real object scores about 0.80 against its own photo.\n- **Width:** the model is 5\u20137% wider than the photo at every height. That difference is between the TRELLIS.2 template and the photo; I kept the template's widths, as the brief said, and rescaled nothing.\n- **Colour:** saturation is 0.23\u20130.30 against 0.26\u20130.35 in the photo, and warmth is close to the photo's.\n- **Correction rounds:** I stopped after two. The first fixed a model that was too orange and shiny. The second fixed one that looked khaki-grey and dull.\n\n**Detail checklist, on enlarged crops**\n- **Present and right:**\n  - the pentagon top loop on its hinge\n  - the vent slots and the stepped cap\n  - the bail hooked into eyes on the tubes\n  - the crossed guard wires, the lift levers and the wick rod with its ring\n  - the ribs on the tank\n- **Partly right:**\n  - the oil drip below the filler cap is faint\n  - the band at the top of the globe is too prominent\n  - the filler cap is plain, without the bright rim\n  - the contrast between dark patina and bright worn edges is weaker than in the photo\n  - fine surface detail is lower: 0.024\u20130.031 against 0.029\u20130.040\n- **Missing:**\n  - the globe's frosting is baked in but too faint, so the glass reads clear\n  - the flared feet where the air tubes meet the tank are not modelled\n\nStorage is set to compact, but I didn't delete anything. Besides the four standard files, the folder holds `work/` (scripts, crops, profile, 2.7 MB), `review/` (comparison renders, 7 MB) and `hurricane-lantern.blend1`, Blender's automatic backup. Should I delete them?\n\nFiles are in `bench/runs/ref-kiln-v10/ref-lantern-template/work/generated-assets/`:\n- hurricane-lantern_final.glb\n- hurricane-lantern_original.glb\n- hurricane-lantern.blend\n- hurricane-lantern_log.md",
+    "finals": 1,
+    "measures": [
+      {
+        "file": "generated-assets/hurricane-lantern_final.glb",
+        "bytes": 1510012,
+        "extensions_used": [
+          "EXT_texture_webp",
+          "KHR_draco_mesh_compression",
+          "KHR_materials_clearcoat"
+        ],
+        "gltf_meshes": 13,
+        "gltf_materials": 9,
+        "gltf_images": 21,
+        "gltf_skins": 0,
+        "gltf_joints": 0,
+        "gltf_animations": 0,
+        "objects_mesh": 13,
+        "object_names": [
+          "SM_Lantern_AirTubes",
+          "SM_Lantern_Bail",
+          "SM_Lantern_Burner",
+          "SM_Lantern_ChimneyInner",
+          "SM_Lantern_FillerCap",
+          "SM_Lantern_Globe",
+          "SM_Lantern_GlobeCollar",
+          "SM_Lantern_Guard",
+          "SM_Lantern_Hinge",
+          "SM_Lantern_Hood",
+          "SM_Lantern_Tank",
+          "SM_Lantern_TopLoop",
+          "SM_Lantern_WickRod"
+        ],
+        "tris": 9738,
+        "verts": 5791,
+        "non_manifold_edges": 0,
+        "boundary_edges": 326,
+        "loose_edges": 0,
+        "degenerate_faces": 0,
+        "dims_m": [
+          0.1206,
+          0.0986,
+          0.2938
+        ],
+        "z_min_m": 0.0,
+        "centre_xy_m": [
+          0.0,
+          0.0
+        ],
+        "materials": {
+          "M_Lantern_AirTubes": {
+            "images": 3,
+            "max_px": 1024
+          },
+          "M_Lantern_WireBrass": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Lantern_Burner": {
+            "images": 3,
+            "max_px": 512
+          },
+          "M_Lantern_Soot": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Lantern_FillerCap": {
+            "images": 3,
+            "max_px": 256
+          },
+          "M_Lantern_Glass": {
+            "images": 3,
+            "max_px": 1024
+          },
+          "M_Lantern_GlobeCollar": {
+            "images": 3,
+            "max_px": 512
+          },
+          "M_Lantern_Hood": {
+            "images": 3,
+            "max_px": 1024
+          },
+          "M_Lantern_Tank": {
+            "images": 3,
+            "max_px": 1024
+          }
+        },
+        "empty_material_slots": 0,
+        "rigs": [],
+        "render": "render-hurricane-lantern_final.png"
+      }
+    ],
+    "glbs": [
+      {
+        "file": "hurricane-lantern_final.glb",
+        "bytes": 1510012,
+        "sha256": "b55f61c3186deaca5dd602af7832bedcc7e8e63b34511296bc745861e7e70fd5",
+        "published": false
+      }
+    ]
+  }
+}

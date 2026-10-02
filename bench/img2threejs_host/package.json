@@ -1,0 +1,4 @@
+{ "name": "img2threejs-bench-host", "private": true, "type": "module",
+  "scripts": { "dev": "vite --port 5173 --strictPort", "build": "vite build" },
+  "dependencies": { "three": "0.180.0" },
+  "devDependencies": { "vite": "7.1.7", "typescript": "5.9.2", "@types/three": "0.180.0" } }

@@ -1,0 +1,292 @@
+"""Run the skill on the fixed briefs, headless, and measure what it ships.
+
+    python3 bench/run.py <label> [brief-id ...]      # e.g. baseline, or lot2-trellis
+
+For each brief: a fresh Blender on a throwaway profile, the MCP server pinned,
+one `claude -p` session with the plugin loaded from this checkout and nothing
+from the user's own settings, then bench/measure.py on every *_final.glb the
+session left behind. Results land in bench/runs/<label>/<brief-id>/.
+
+Nothing here decides pass or fail: report.py compares two labels.
+"""
+import json, os, re, shutil, socket, subprocess, sys, time
+from pathlib import Path
+
+BENCH = Path(__file__).resolve().parent
+REPO = BENCH.parent
+BLENDER = os.environ.get("BLENDER", "/Applications/Blender.app/Contents/MacOS/Blender")
+MCP_VERSION = os.environ.get("BENCH_MCP_VERSION", "2.0.0")
+# Which Blender MCP the session drives: "ahujasid" (PyPI blender-mcp) or "lab",
+# the official Blender Lab server — whose package is ALSO named blender-mcp, so
+# it is always run from its git checkout, never resolved by name.
+MCP = os.environ.get("BENCH_MCP", "ahujasid")
+LAB_DIR = Path(os.environ.get("BENCH_LAB_DIR", BENCH / "runs" / "_deps" / "blender_mcp_lab"))
+MODEL = os.environ.get("BENCH_MODEL", "claude-opus-5-5")
+TIMEOUT_S = int(os.environ.get("BENCH_TIMEOUT_S", "3600"))
+PORT = 9876
+# The skill under test. Defaults to this checkout; point it at another worktree
+# to measure a branch without switching this one (the runner and the results
+# stay here, so labels from different branches sit side by side).
+PLUGIN = Path(os.environ.get("BENCH_PLUGIN_DIR", REPO)).resolve()
+# Each session runs in a sandbox OUTSIDE every repository. Before 2026-10-01 it ran in
+# bench/runs/<label>/, and v12 of the lantern listed bench/results/ and read a README
+# holding the real object's measurements — the answer key. The sandbox holds only what the
+# brief names (refs/), a copy of the skill's runtime files (skill/: no README, CHANGELOG
+# or docs, which quote the bench's measurements), and the work folder.
+SANDBOX = Path(os.environ.get("BENCH_SANDBOX", "/private/tmp/kiln-bench"))
+SKILL_RUNTIME = (".claude-plugin", "SKILL.md", "references", "tools", "examples", "LICENSE")
+# Any of these in a session's tool calls voids its comparison: the repositories, the
+# published results, the truth assets, the archive.
+FORBIDDEN = [str(REPO), str(PLUGIN), "_refs/gt", "bench/results", "bench-archive", "blender-kiln-bench"]
+
+
+def sh(cmd, **kw):
+    r = subprocess.run(cmd, capture_output=True, text=True, **kw)
+    if r.returncode != 0:
+        sys.exit(f"failed ({r.returncode}): {' '.join(map(str, cmd))}\n{r.stdout[-1500:]}\n{r.stderr[-1500:]}")
+    return r.stdout
+
+
+def bundled_addon():
+    """The addon that ships inside the pinned server package, so both halves match."""
+    out = sh(["uvx", "--from", f"blender-mcp=={MCP_VERSION}", "python", "-c",
+              "import blender_mcp, os; print(os.path.join(os.path.dirname(blender_mcp.__file__), 'bundled', 'addon.py'))"])
+    p = Path(out.strip().splitlines()[-1])
+    if not p.is_file():
+        sys.exit(f"no bundled addon in blender-mcp {MCP_VERSION}: {p}")
+    return p
+
+
+def port_open():
+    with socket.socket() as s:
+        s.settimeout(0.5)
+        return s.connect_ex(("localhost", PORT)) == 0
+
+
+def start_blender(profile, log):
+    if port_open():
+        sys.exit(f"port {PORT} is already taken — close the other Blender first, "
+                 "or the session would drive the wrong one")
+    if MCP == "lab":
+        ext = profile / "extensions" / "user_default" / "mcp"
+        shutil.rmtree(ext, ignore_errors=True)
+        shutil.copytree(LAB_DIR / "addon" / "blender_mcp_addon", ext)
+        start, extra = "blender_start_lab.py", ["--online-mode"]
+    else:
+        (profile / "scripts" / "addons").mkdir(parents=True, exist_ok=True)
+        shutil.copy(bundled_addon(), profile / "scripts" / "addons" / "blender_mcp.py")
+        start, extra = "blender_start.py", []
+    env = dict(os.environ,
+               BLENDER_USER_SCRIPTS=str(profile / "scripts"),
+               BLENDER_USER_CONFIG=str(profile / "config"),
+               BLENDER_USER_EXTENSIONS=str(profile / "extensions"),
+               BLENDER_USER_DATAFILES=str(profile / "datafiles"))
+    # GUI, not --background: get_viewport_screenshot needs a viewport, and
+    # rule 2 calls it after every change.
+    proc = subprocess.Popen([BLENDER, "--factory-startup", *extra, "--python-exit-code", "1",
+                             "--python", str(BENCH / start)],
+                            env=env, stdout=log, stderr=subprocess.STDOUT)
+    for _ in range(120):
+        if port_open():
+            return proc
+        if proc.poll() is not None:
+            sys.exit(f"Blender exited ({proc.returncode}) before serving — see {log.name}")
+        time.sleep(0.5)
+    proc.kill()
+    sys.exit(f"Blender never opened port {PORT} — see {log.name}")
+
+
+def tool_stats(transcript):
+    """Tool calls by name, from the stream-json transcript."""
+    calls = {}
+    for line in transcript.read_text().splitlines():
+        try:
+            ev = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if ev.get("type") != "assistant":
+            continue
+        for block in ev.get("message", {}).get("content", []):
+            if block.get("type") == "tool_use":
+                calls[block["name"]] = calls.get(block["name"], 0) + 1
+    return calls
+
+
+def skill_fingerprint():
+    """Hash of every tracked file. Permissions are bypassed, and the sandbox is a
+    convention, not a wall: nothing but this stops a session from editing the
+    skill it is being measured on."""
+    return "".join(sh(["git", "-C", str(d), "ls-files", "-s"]) + sh(["git", "-C", str(d), "diff", "HEAD"])
+                   for d in {REPO, PLUGIN})
+
+
+def sandbox_for(brief, outdir):
+    box = SANDBOX / outdir.parent.name / outdir.name
+    shutil.rmtree(box, ignore_errors=True)
+    refs, skill, work = box / "refs", box / "skill", box / "work"
+    for d in (refs, skill, work):
+        d.mkdir(parents=True)
+    for rel in sorted(set(re.findall(r"<REFS>/([\w./-]+?)(?=[\s:,;]|\.(?:\s|$)|$)", brief["prompt"]))):
+        src = BENCH / "runs" / "_refs" / rel
+        if not src.is_file():
+            sys.exit(f"{brief['id']}: the prompt names <REFS>/{rel}, which does not exist")
+        (refs / rel).parent.mkdir(parents=True, exist_ok=True); shutil.copy2(src, refs / rel)
+    tracked = sh(["git", "-C", str(PLUGIN), "ls-files"]).splitlines()
+    for rel in tracked:
+        if rel.split("/")[0] in SKILL_RUNTIME and (PLUGIN / rel).is_file():
+            (skill / rel).parent.mkdir(parents=True, exist_ok=True); shutil.copy2(PLUGIN / rel, skill / rel)
+    return box, refs, skill, work
+
+
+def audit(transcript):
+    """Tool calls that reached outside the sandbox, toward anything that holds an answer."""
+    hits = []
+    for i, line in enumerate(transcript.read_text().splitlines()):
+        try:
+            ev = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if ev.get("type") != "assistant":
+            continue
+        for block in ev.get("message", {}).get("content", []):
+            if block.get("type") == "tool_use":
+                text = json.dumps(block.get("input", {}))
+                for f in FORBIDDEN:
+                    if f in text:
+                        hits.append({"line": i, "tool": block["name"], "matched": f, "input": text[:300]})
+                        break
+    return hits
+
+
+def run_brief(brief, outdir):
+    outdir.mkdir(parents=True, exist_ok=True)
+    box, refs, skill_copy, work = sandbox_for(brief, outdir)
+    if MCP == "lab":
+        server = {"command": "uvx", "args": ["--from", str(LAB_DIR / "mcp"), "blender-mcp"],
+                  "env": {"BLENDER_PATH": BLENDER}}
+    else:
+        server = {"command": "uvx", "args": [f"blender-mcp=={MCP_VERSION}"]}
+    # Named "blender" either way: the skill's allowed-tools is mcp__blender__*.
+    (outdir / "mcp.json").write_text(json.dumps({"mcpServers": {"blender": server}}))
+
+    before = skill_fingerprint()
+    with open(outdir / "blender.log", "w") as blog:
+        blender = start_blender(outdir / "profile", blog)
+        t0 = time.time()
+        try:
+            with open(outdir / "transcript.jsonl", "w") as tr, open(outdir / "claude.err", "w") as err:
+                prompt = (brief["prompt"].replace("<REFS>", str(refs))
+                          + f"\n\nOutput folder (absolute): {work / 'generated-assets'}")
+                r = subprocess.run(
+                    ["claude", "-p", prompt,
+                     "--plugin-dir", str(skill_copy),
+                     "--mcp-config", str(outdir / "mcp.json"), "--strict-mcp-config",
+                     "--setting-sources", "project",
+                     "--permission-mode", "bypassPermissions",
+                     "--model", MODEL,
+                     "--no-session-persistence",
+                     "--output-format", "stream-json", "--verbose"],
+                    cwd=work, stdout=tr, stderr=err, timeout=TIMEOUT_S)
+                code = r.returncode
+        except subprocess.TimeoutExpired:
+            code = "timeout"
+        finally:
+            wall = round(time.time() - t0, 1)
+            blender.terminate()
+            try:
+                blender.wait(20)
+            except subprocess.TimeoutExpired:
+                blender.kill()
+
+    if skill_fingerprint() != before:
+        sys.exit(f"{brief['id']}: the session modified tracked files of the repository — "
+                 "the measurement is void. See `git status` before anything else.")
+    # Bring the work back next to the transcript; the sandbox is left for inspection.
+    shutil.copytree(work, outdir / "work", dirs_exist_ok=True)
+    work = outdir / "work"
+    leaks = audit(outdir / "transcript.jsonl")
+    if leaks:
+        print(f"!!! {brief['id']}: CONTAMINATED — {len(leaks)} tool call(s) reached outside the sandbox "
+              f"(first: {leaks[0]['matched']}). Its numbers are not a measurement.", flush=True)
+
+    result = {}
+    for line in (outdir / "transcript.jsonl").read_text().splitlines():
+        try:
+            ev = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if ev.get("type") == "result":
+            result = ev
+
+    usage = result.get("usage", {})
+    session = {
+        "brief": brief["id"],
+        "mcp": MCP if MCP != "lab" else f"lab@{sh(['git', '-C', str(LAB_DIR), 'rev-parse', '--short', 'HEAD']).strip()}",
+        "blender": sh([BLENDER, "--version"]).splitlines()[0],
+        "skill": sh(["git", "-C", str(PLUGIN), "rev-parse", "--short", "HEAD"]).strip()
+                 + " " + sh(["git", "-C", str(PLUGIN), "branch", "--show-current"]).strip(),
+        "claude_exit": code,
+        "wall_s": wall,
+        "is_error": result.get("is_error"),
+        "num_turns": result.get("num_turns"),
+        "duration_ms": result.get("duration_ms"),
+        # Equivalent API price as the CLI reports it. On a subscription it is not
+        # billed; it is the only comparable measure of how much quota a run eats.
+        "cost_usd_equiv": result.get("total_cost_usd"),
+        "output_tokens": usage.get("output_tokens"),
+        "input_tokens_total": sum(usage.get(k) or 0 for k in
+                                  ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")),
+        "tool_calls": tool_stats(outdir / "transcript.jsonl"),
+        "final_text": (result.get("result") or "")[-2000:],
+        "sandbox": str(box),
+        "contamination": leaks,
+    }
+
+    finals = sorted((work).rglob("*_final.glb"))
+    measures = []
+    for glb in finals:
+        m = subprocess.run([BLENDER, "--background", "--factory-startup", "--python-exit-code", "1",
+                            "--python", str(BENCH / "measure.py"), "--", str(glb)],
+                           capture_output=True, text=True)
+        line = next((l for l in m.stdout.splitlines() if l.startswith("BENCH_JSON ")), None)
+        if m.returncode != 0 or line is None:
+            # Fail loud: a GLB we could not measure is a finding, not a gap to skip.
+            measures.append({"file": str(glb.relative_to(work)), "measure_error": m.stdout[-800:] + m.stderr[-800:]})
+        else:
+            d = json.loads(line[len("BENCH_JSON "):])
+            d["file"] = str(glb.relative_to(work))
+            png = outdir / f"render-{glb.stem}.png"
+            rr = subprocess.run([BLENDER, "--background", "--factory-startup", "--python-exit-code", "1",
+                                 "--python", str(BENCH / "render.py"), "--", str(glb), str(png)],
+                                capture_output=True, text=True)
+            d["render"] = png.name if rr.returncode == 0 else f"render failed: {rr.stdout[-400:]}"
+            measures.append(d)
+    session["finals"] = len(finals)
+    session["measures"] = measures
+    (outdir / "result.json").write_text(json.dumps(session, indent=2))
+    return session
+
+
+def main():
+    if len(sys.argv) < 2:
+        sys.exit(__doc__)
+    label, only = sys.argv[1], set(sys.argv[2:])
+    briefs = json.loads((BENCH / "briefs.json").read_text())["briefs"]
+    unknown = only - {b["id"] for b in briefs}
+    if unknown:
+        sys.exit(f"unknown brief id(s): {sorted(unknown)}")
+    for b in briefs:
+        if only and b["id"] not in only:
+            continue
+        outdir = BENCH / "runs" / label / b["id"]
+        if (outdir / "result.json").exists():
+            print(f"skip {b['id']}: already measured under '{label}' (delete the folder to rerun)")
+            continue
+        print(f"run  {b['id']} …", flush=True)
+        s = run_brief(b, outdir)
+        print(f"     exit={s['claude_exit']} turns={s['num_turns']} wall={s['wall_s']}s "
+              f"cost≈${s['cost_usd_equiv']} finals={s['finals']}", flush=True)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,136 @@
+{
+  "ref-lantern": {
+    "brief": "ref-lantern",
+    "mcp": "ahujasid",
+    "blender": "Blender 5.2.2 LTS",
+    "skill": "e3c462a fix/baseline-findings",
+    "claude_exit": 0,
+    "wall_s": 1042.6,
+    "is_error": false,
+    "num_turns": 62,
+    "duration_ms": 1040762,
+    "cost_usd_equiv": 4.022774399999999,
+    "output_tokens": 81354,
+    "input_tokens_total": 5500621,
+    "tool_calls": {
+      "Read": 10,
+      "Bash": 17,
+      "ToolSearch": 1,
+      "mcp__blender__get_addon_status": 1,
+      "mcp__blender__get_scene_info": 1,
+      "mcp__blender__execute_blender_code": 23,
+      "Write": 4,
+      "mcp__blender__get_viewport_screenshot": 3,
+      "mcp__blender__get_object_info": 1
+    },
+    "final_text": "s plain values, no texture.\n- **Optimize:** resize to 1024, then WebP, then Draco, run as separate steps: 22.6 MB \u2192 1.64 MB (\u221293%). Geometry was not touched. The client needs Draco and WebP decoder support.\n\n**How close it is to the reference**\n- **Shape:** silhouette match is 0.824, about what the real object scores against its own photo. Widths are within +2 to +7% per height band.\n- **Colour:** saturation matches the reference on the body (0.32\u20130.36 against 0.33\u20130.35), and the colour came through the export intact.\n\n**Gaps still open:** I stopped after the two correction rounds the method allows.\n- **Triangles:** 9,514, about 90% above the balanced prop range (1.5\u20135K). I didn't reduce anything. Cutting the round parts to 24 segments would bring it to about 6K if you want that.\n- **Surface detail:** about half the reference's, so the surfaces look cleaner and newer than the photo.\n- **Glass:** clearer and glossier than the dark, frosted globe in the photo.\n- **Simplified details:**\n  - the vent slots barely show from the front;\n  - the filler cap is narrower and taller than the reference;\n  - the tube bottoms join the tank without the flat sheet-metal flange.\n\n**Other things to know**\n- I removed Blender's default factory Cube before building. The Camera and Light are untouched and not exported.\n- The back, sides and underside aren't visible in the photo, so I assumed they're symmetric.\n- Besides the four compact-mode files, the folder holds `scripts/` (the build scripts) and `review/` (crops, the three measurements, and a free CC0 Poly Haven HDRI used only for review lighting). There is also `hurricane-lantern.blend1`, Blender's automatic save backup. You can delete these if you want only the four files.\n\nFiles are in `<repo>/bench/runs/ref-kiln-v8/ref-lantern/work/generated-assets/hurricane-lantern/`:\n- hurricane-lantern_final.glb\n- hurricane-lantern_original.glb\n- hurricane-lantern.blend\n- hurricane-lantern_log.md",
+    "finals": 1,
+    "measures": [
+      {
+        "file": "generated-assets/hurricane-lantern/hurricane-lantern_final.glb",
+        "bytes": 1641152,
+        "extensions_used": [
+          "EXT_texture_webp",
+          "KHR_draco_mesh_compression",
+          "KHR_materials_clearcoat"
+        ],
+        "gltf_meshes": 18,
+        "gltf_materials": 10,
+        "gltf_images": 25,
+        "gltf_skins": 0,
+        "gltf_joints": 0,
+        "gltf_animations": 0,
+        "objects_mesh": 18,
+        "object_names": [
+          "SM_Lantern_Bail",
+          "SM_Lantern_BracketL",
+          "SM_Lantern_BracketR",
+          "SM_Lantern_Burner",
+          "SM_Lantern_Cap",
+          "SM_Lantern_Collar",
+          "SM_Lantern_FillerCap",
+          "SM_Lantern_Globe",
+          "SM_Lantern_GuardA",
+          "SM_Lantern_GuardB",
+          "SM_Lantern_Hood",
+          "SM_Lantern_LeverEye",
+          "SM_Lantern_LiftLever",
+          "SM_Lantern_Tank",
+          "SM_Lantern_TopHinge",
+          "SM_Lantern_TopLoop",
+          "SM_Lantern_TubeL",
+          "SM_Lantern_TubeR"
+        ],
+        "tris": 9514,
+        "verts": 6720,
+        "non_manifold_edges": 0,
+        "boundary_edges": 128,
+        "loose_edges": 0,
+        "degenerate_faces": 0,
+        "dims_m": [
+          0.139,
+          0.1175,
+          0.3542
+        ],
+        "z_min_m": 0.0,
+        "centre_xy_m": [
+          0.0,
+          0.0
+        ],
+        "materials": {
+          "M_Lantern_WireBrass": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Lantern_Burner": {
+            "images": 3,
+            "max_px": 512
+          },
+          "M_Lantern_Cap": {
+            "images": 3,
+            "max_px": 512
+          },
+          "M_Lantern_Collar": {
+            "images": 3,
+            "max_px": 512
+          },
+          "M_Lantern_FillerCap": {
+            "images": 3,
+            "max_px": 512
+          },
+          "M_Lantern_Glass": {
+            "images": 1,
+            "max_px": 1024
+          },
+          "M_Lantern_Hood": {
+            "images": 3,
+            "max_px": 1024
+          },
+          "M_Lantern_Tank": {
+            "images": 3,
+            "max_px": 1024
+          },
+          "M_Lantern_TubeL": {
+            "images": 3,
+            "max_px": 1024
+          },
+          "M_Lantern_TubeR": {
+            "images": 3,
+            "max_px": 1024
+          }
+        },
+        "empty_material_slots": 0,
+        "rigs": [],
+        "render": "render-hurricane-lantern_final.png"
+      }
+    ],
+    "glbs": [
+      {
+        "file": "hurricane-lantern_final.glb",
+        "bytes": 1641152,
+        "sha256": "b9cbcd8a2800f915cadc91a00005d68430af019d4a88cc4897af6841f3a8bef3",
+        "published": false
+      }
+    ]
+  }
+}
