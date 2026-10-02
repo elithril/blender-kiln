@@ -1,6 +1,6 @@
 # Two MCPs, one skill — 2026-09-29
 
-Skill 1.1.2 unchanged (main 9815b94) · Blender 5.2.2 LTS · claude-opus-5-5 · one run per brief. `baseline-52` drives ahujasid's blender-mcp 2.0.0 (addon 1.7); `lab-52` drives the official Blender Lab server at `dbbf836`. The 5.0.1 baseline is kept in `baseline-2026-09-29.md`.
+Skill 1.1.2 unchanged (main 9815b94) · Blender 5.2.2 LTS · claude-opus-5-5 · one run per brief. `baseline-52` drives ahujasid's blender-mcp 2.0.0 (addon 1.7); `lab-52` drives the official Blender Lab server at `dbbf836`. An earlier baseline on Blender 5.0.1 was superseded by these runs on 5.2.2 and removed from the published results (raw files in the bench archive).
 
 ### baseline-52
 
