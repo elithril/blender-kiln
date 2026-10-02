@@ -13,8 +13,8 @@
   <a href="https://github.com/elithril/blender-kiln/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/elithril/blender-kiln?style=flat" /></a>
 </p>
 
-**A Claude Code skill that turns a text brief into a production-ready GLB through
-Blender.** Blender MCP servers give an agent hands in Blender; kiln gives it the
+**A Claude Code skill that turns a text brief — or a photo — into a production-ready GLB
+through Blender.** Blender MCP servers give an agent hands in Blender; kiln gives it the
 production method on top — sourcing, cleanup, texturing, optimization, validation,
 export — and works on both of them: [ahujasid's `mcp-for-blender`](https://github.com/ahujasid/mcp-for-blender)
 and the Blender Foundation's [official Blender Lab MCP](https://projects.blender.org/lab/blender_mcp),
@@ -23,8 +23,11 @@ the server behind Claude's Blender connector.
 <sub>Cited in <a href="https://arxiv.org/abs/2606.01057"><i>3DCodeBench: Benchmarking Agentic Procedural 3D Modeling Via Code</i></a> (Google DeepMind, USC, 2026), §1.</sub>
 
 <p align="center">
-  <img src="examples/gallery/renders/gallery.webp" alt="Fifteen reference assets across three themes: forge, sci-fi modular and stylised nature" width="100%" />
+  <img src="docs/images/photo-to-asset.webp" alt="Three reference photos — a hurricane lantern, an ammo box, a gothic chair — and below each, the GLB kiln 2.0 shipped from it, turning" width="100%" />
 </p>
+<p align="center"><sub>From one photo each, no marketplace, no AI generation: scripted in Blender, textured from CC0 scans,
+measured against the real object. Shape scores against the real assets: <b>0.897</b>, <b>0.950</b>, <b>0.750</b> —
+<a href="docs/benchmarks.md">how they are measured</a>.</sub></p>
 
 ## Quickstart
 
@@ -37,24 +40,57 @@ the server behind Claude's Blender connector.
 
 `/kiln setup` detects Blender, the MCP server and the optional tools, and says what
 is missing. Blender 4.4+ with a Blender MCP running — see [Requirements](#requirements).
+Give it a photo and it rebuilds the object: `/kiln Rebuild the lamp in ./lamp.png as a game asset`.
+
+## How it works, from a photo
+
+<p align="center">
+  <img src="docs/images/how-it-works.webp" alt="Five steps from a real session on an ammo box: the photo read in crops, eight scanned textures compared, the silhouette overlay, every joint rendered, the shipped GLB" width="100%" />
+</p>
+<p align="center"><sub>Every panel is a file the session itself wrote while rebuilding the ammo box above — nothing re-staged.</sub></p>
+
+1. **Read the photo before modeling.** An inventory of every part and how it meets the next,
+   from enlarged crops; the real size, the camera's height and angle — asked, or stated as
+   assumptions. Given a 3D mesh generated from the same photo, its proportions are measured
+   instead ([TRELLIS.2, locally](references/ai-generation.md)) — never shipped.
+2. **Texture from scans, not noise.** A Poly Haven CC0 texture set of the material family,
+   chosen by eye against the photo, tinted to its palette, worn by the form.
+3. **Measure against the photo.** [`tools/fidelity_check.py`](tools/fidelity_check.py) renders
+   the model at the photo's camera under a studio light and lists the gaps — silhouette per
+   height band, materials, metal that cannot exist.
+4. **Look at every joint.** Each end of a long part that touches another is rendered alone: a
+   part that joins another enters it.
+5. **Ship, and measure the file that ships.** Optimized (Draco, WebP), validated, re-measured
+   as a GLB — what the user gets, not the `.blend`.
 
 ## Measured, not claimed
 
-A [quality bench](bench/README.md) runs the skill headless on fixed briefs and
-measures every GLB it ships after re-importing it: topology, grounding, surviving
-textures, rig structure and a deformation probe. Five briefs, before and after
-the fixes it found (Blender 5.2.2, Opus 5.5, one run per brief):
+A [quality bench](bench/README.md) runs the skill headless, each session in a sandbox,
+and measures every GLB it ships after re-importing it. Photo references are Poly Haven
+previews, so the real 3D asset exists: each rebuild is scored against it from five sides —
+an asset the session never sees. Blender 5.2.2, Opus 5.5, one run each:
 
-| Same five briefs | ahujasid MCP | Official Lab MCP |
+| From a photo | before the photo method | **kiln 2.0** | shipped | cost |
+|---|---:|---:|---:|---:|
+| Hurricane lantern | 0.830 | **0.897** | 229 KB | $5.04 |
+| Ammo box | 0.854 | **0.950** | 187 KB | $3.80 |
+| Gothic chair | 0.445 | **0.750** | 239 KB | $6.13 |
+
+| Five text briefs, before → after | ahujasid MCP | Official Lab MCP |
 |---|---:|---:|
-| Shipped, before → after | 32.9 MB → **2.2 MB** | 3.9 MB → **1.5 MB** |
+| Shipped | 32.9 MB → **0.96 MB** | 3.9 MB → **0.75 MB** |
 | Final GLBs compressed (Draco, WebP) | 0 of 7 → **7 of 7** | 0 of 7 → **7 of 7** |
-| Defects the measure found | 2 → **0** | 2 → **0** |
-| Cost per run (API-equivalent) | $6.49 → $7.50 | $5.82 → $7.37 |
+| Defects the measure found | 2 → 1 | 2 → **0** |
+| Cost for the five (API-equivalent) | $6.49 → $7.34 | $5.82 → $7.81 |
 
-The skill does work it used to skip, and that is paid in turns. Every number, the
-renders and the GLBs under 1 MB are in [`bench/results/`](bench/results/) — including
-what did not improve.
+<sub>Shape score: silhouette overlap with the real asset from front, back, sides and top, 1 = identical;
+openwork views left out for the chair. The text briefs were measured on the skill mid-way through
+2.0 (`2b313d2`), the photo rebuilds on the final one. Size is assumed when a brief gives none —
+the chair came out at an ordinary chair's height, 29 % short.</sub>
+
+What did not improve is published too: the [benchmarks](docs/benchmarks.md) — fifteen
+versions of one lantern, what each fix broke, how the bench was kept honest — and every
+number, render and GLB under 1 MB in [`bench/results/`](bench/results/).
 
 ## What it does
 
@@ -79,6 +115,10 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 
 ### Key features
 
+- **Rebuild from a photo, measured**: an inventory from enlarged crops, the size and camera settled first, the silhouette and materials measured against the photo, every joint rendered and looked at, the last measure on the shipped GLB ([how](references/reference-fidelity.md))
+- **Textures from CC0 scans**: Poly Haven texture sets chosen against the photo, tinted to its palette, worn by the form, baked to UVs — procedural only when no scan fits
+- **A 3D template when one exists**: proportions read off a mesh generated from the same photo (TRELLIS.2, run locally) with `tools/template_profile.py` — measured, never shipped
+- **Both Blender MCP servers**: ahujasid's `mcp-for-blender` and the Blender Foundation's official Lab MCP, the one behind Claude's Blender connector
 - **Multi-method creation**: AI generation (Hunyuan3D 2.x — local or cloud), scripted modeling (Blender Python), geometry nodes, or marketplace sourcing
 - **Local AI generation**: run Hunyuan3D-2 Mini on your machine — NVIDIA GPU for full pipeline, Apple Silicon for shape generation
 - **Environment auto-detection**: `/kiln setup` scans your system and guides installation
@@ -86,6 +126,7 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 - **Concept art input**: text prompt (FLUX.1-schnell HF Space, free), image path, image URL, or nano-banana (optional)
 - **Smart recommendations**: auto-suggests the best creation method based on asset type and style
 - **Material audit**: detects procedural nodes that will be lost on GLTF export, proposes bake workflow
+- **Optimized by default**: `_final.glb` ships with Draco geometry and WebP textures, re-measured after compression; the uncompressed `_original.glb` is kept
 - **Post-export validation**: 8-point checklist (Babylon.js sandbox, Three.js console, material spot-check)
 - **Character support**: T-pose enforcement, rigging patterns, bone validation, Blender 5.x bone collections
 - **Multi-asset sessions**: cross-asset coherence (scale, materials, poly budget)
@@ -128,6 +169,10 @@ step — including the Sketchfab API key, which nothing else surfaces. **Iron ru
 <br clear="all" />
 
 ## Gallery
+
+<p align="center">
+  <img src="examples/gallery/renders/gallery.webp" alt="Fifteen reference assets across three themes: forge, sci-fi modular and stylised nature" width="100%" />
+</p>
 
 Fifteen props across three themes, modelled from scratch by script, cleaned,
 audited, rendered and exported — all headless, on one laptop, with no cloud
