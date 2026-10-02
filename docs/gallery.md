@@ -70,7 +70,7 @@ Audited against the iron rules and `references/`, honestly:
 | Rule | Status | How |
 |---|---|---|
 | 3 — one asset at a time | yes | `build.py` handles exactly one per process |
-| 4 — never hard-cap polys, alert out of range | yes | `studio.poly_budget()` classifies each asset into a `references/topology-rules.md` tier — 9 lightweight, 5 balanced, 1 detailed — and alerts only above the top ceiling. Nothing is ever blocked |
+| 4 — never hard-cap polys, alert out of range | yes | `studio.poly_budget()` classifies each asset into a `plugin/references/topology-rules.md` tier — 9 lightweight, 5 balanced, 1 detailed — and alerts only above the top ceiling. Nothing is ever blocked |
 | 5 — never spend money | yes | everything local; no marketplace, no generation service |
 | 7 / 16 — always keep the .blend, in the asset folder | yes | `<asset>/<asset>.blend` |
 | 10 — apply transforms, merge doubles, recalc normals before export | yes | `studio.cleanup()`, in that order, before any export |

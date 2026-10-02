@@ -25,7 +25,7 @@ jobs:
           python-version: "3.12"
 
       - name: Verify the documentation is self-consistent
-        run: python3 tools/verify_docs.py
+        run: python3 plugin/tools/verify_docs.py
 
       - name: Verify the verifier still catches regressions
-        run: python3 tools/test_verify_docs.py
+        run: python3 plugin/tools/test_verify_docs.py

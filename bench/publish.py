@@ -1,5 +1,8 @@
 """Copy what a bench label proves into bench/results/<label>/, small and clean.
 
+bench/results/ is a worktree of the `bench-results` branch (`git worktree add
+bench/results bench-results`): commit and push the published label there, not on main.
+
     python3 bench/publish.py baseline-52
 
 bench/runs/ is git-ignored and weighs hundreds of MB: transcripts full of

@@ -21,14 +21,14 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - "SKILL.md"
-      - "references/**"
+      - "plugin/SKILL.md"
+      - "plugin/references/**"
       - "examples/gallery/**"
-      - "tools/verify_blender.py"
-      - "tools/fidelity_check.py"
-      - "tools/test_fidelity_check.py"
-      - "tools/template_profile.py"
-      - "tools/test_template_profile.py"
+      - "plugin/tools/verify_blender.py"
+      - "plugin/tools/fidelity_check.py"
+      - "plugin/tools/test_fidelity_check.py"
+      - "plugin/tools/template_profile.py"
+      - "plugin/tools/test_template_profile.py"
 
 jobs:
   blender:
@@ -46,12 +46,12 @@ jobs:
       - name: Re-check the Blender-side findings
         run: |
           blender --background --factory-startup --python-exit-code 1 \
-            --python tools/verify_blender.py
+            --python plugin/tools/verify_blender.py
 
       - name: Check the fidelity tool against seeded inputs
         run: |
-          BLENDER=blender python3 tools/test_fidelity_check.py
+          BLENDER=blender python3 plugin/tools/test_fidelity_check.py
 
       - name: Check the template profile against a seeded part
         run: |
-          BLENDER=blender python3 tools/test_template_profile.py
+          BLENDER=blender python3 plugin/tools/test_template_profile.py

@@ -45,11 +45,11 @@ Concrete gaps, roughly in order of value:
   Sketchfab sourcing. The first two consume credits and the third needs an API
   key, which is why they are untested — if you have access, running them once and
   reporting what actually happens is the most useful thing you can do here.
-- **Token cost.** `SKILL.md` is around 15.7k tokens on invoke, up 50% over the
-  audit. The measured tables it now carries could move into `references/`, where
+- **Token cost.** `plugin/SKILL.md` is around 15.7k tokens on invoke, up 50% over the
+  audit. The measured tables it now carries could move into `plugin/references/`, where
   loading is lazy, without losing the decisions.
 - **The FK/IK, twist-bone and facial-rigging sections** of
-  `references/characters.md` need an actual animated character and a human eye on
+  `plugin/references/characters.md` need an actual animated character and a human eye on
   the deformation. A synthetic rig cannot judge them.
 - **Anything the CI does not cover.** It was written after the audit, so it guards
   the mistakes already made. New classes are welcome — with a regression case, see
@@ -63,7 +63,7 @@ Required to work on the skill itself:
   [Blender MCP](https://github.com/ahujasid/blender-mcp) addon. Install the addon
   with `uvx blender-mcp install-addon` — `addon_utils.enable()` is not enough, it
   leaves property groups incomplete and failures name nothing relevant.
-- **Python 3.10+** for `tools/`. No dependencies.
+- **Python 3.10+** for `plugin/tools/`. No dependencies.
 
 Additionally, to regenerate the gallery:
 
@@ -81,15 +81,15 @@ from the README's, say so in the pull request — it means something changed.
 Before opening a pull request:
 
 ```bash
-python3 tools/verify_docs.py        # documentation self-consistency
-python3 tools/test_verify_docs.py   # and the checker's own regressions
+python3 plugin/tools/verify_docs.py        # documentation self-consistency
+python3 plugin/tools/test_verify_docs.py   # and the checker's own regressions
 ```
 
-Both run in CI on every push. If you touch `SKILL.md`, `references/` or the
+Both run in CI on every push. If you touch `plugin/SKILL.md`, `plugin/references/` or the
 gallery, the Blender workflow runs too:
 
 ```bash
-blender --background --factory-startup --python-exit-code 1 --python tools/verify_blender.py
+blender --background --factory-startup --python-exit-code 1 --python plugin/tools/verify_blender.py
 ```
 
 **If you add a check, add its regression case in the same change.** A checker that
@@ -113,7 +113,7 @@ during the audit, twice inside the checkers themselves. Test both directions.
 
 ## Adding or changing an iron rule
 
-`SKILL.md` and `references/batch-mode.md` hold one numbered sequence: core rules
+`plugin/SKILL.md` and `plugin/references/batch-mode.md` hold one numbered sequence: core rules
 first, batch-specific after. Adding a core rule means renumbering the batch ones.
 
 Three renumberings happened here and **two left a citation pointing at a rule that

@@ -132,9 +132,17 @@ def sandbox_for(brief, outdir):
             sys.exit(f"{brief['id']}: the prompt names <REFS>/{rel}, which does not exist")
         (refs / rel).parent.mkdir(parents=True, exist_ok=True); shutil.copy2(src, refs / rel)
     tracked = sh(["git", "-C", str(PLUGIN), "ls-files"]).splitlines()
-    for rel in tracked:
-        if rel.split("/")[0] in SKILL_RUNTIME and (PLUGIN / rel).is_file():
-            (skill / rel).parent.mkdir(parents=True, exist_ok=True); shutil.copy2(PLUGIN / rel, skill / rel)
+    # Since 2.0.2 the skill lives in plugin/ — exactly what an install ships, so the
+    # sandbox gets that folder as is. Older checkouts kept it at the repository root.
+    if (PLUGIN / "plugin" / ".claude-plugin" / "plugin.json").is_file():
+        files = [(rel, rel[len("plugin/"):]) for rel in tracked if rel.startswith("plugin/")]
+    else:
+        files = [(rel, rel) for rel in tracked if rel.split("/")[0] in SKILL_RUNTIME]
+    for rel, dst in files:
+        if (PLUGIN / rel).is_file() and not (PLUGIN / rel).is_symlink():
+            (skill / dst).parent.mkdir(parents=True, exist_ok=True); shutil.copy2(PLUGIN / rel, skill / dst)
+    if not (skill / ".claude-plugin" / "plugin.json").is_file() or not (skill / "SKILL.md").is_file():
+        sys.exit("sandbox: the skill copy has no plugin.json or SKILL.md — the layout changed")
     return box, refs, skill, work
 
 

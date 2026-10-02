@@ -52,10 +52,10 @@ Give it a photo and it rebuilds the object: `/kiln Rebuild the lamp in ./lamp.pn
 1. **Read the photo before modeling.** An inventory of every part and how it meets the next,
    from enlarged crops; the real size, the camera's height and angle — asked, or stated as
    assumptions. Given a 3D mesh generated from the same photo, its proportions are measured
-   instead ([TRELLIS.2, locally](references/ai-generation.md)) — never shipped.
+   instead ([TRELLIS.2, locally](plugin/references/ai-generation.md)) — never shipped.
 2. **Texture from scans, not noise.** A Poly Haven CC0 texture set of the material family,
    chosen by eye against the photo, tinted to its palette, worn by the form.
-3. **Measure against the photo.** [`tools/fidelity_check.py`](tools/fidelity_check.py) renders
+3. **Measure against the photo.** [`plugin/tools/fidelity_check.py`](plugin/tools/fidelity_check.py) renders
    the model at the photo's camera under a studio light and lists the gaps — silhouette per
    height band, materials, metal that cannot exist.
 4. **Look at every joint.** Each end of a long part that touches another is rendered alone: a
@@ -90,7 +90,8 @@ the chair came out at an ordinary chair's height, 29 % short.</sub>
 
 What did not improve is published too: the [benchmarks](docs/benchmarks.md) — fifteen
 versions of one lantern, what each fix broke, how the bench was kept honest — and every
-number, render and GLB under 1 MB in [`bench/results/`](bench/results/).
+number, render and GLB under 1 MB on the [`bench-results`](https://github.com/elithril/blender-kiln/tree/bench-results) branch — kept
+out of `main` so that installing the plugin does not download them.
 
 ## What it does
 
@@ -115,9 +116,9 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 
 ### Key features
 
-- **Rebuild from a photo, measured**: an inventory from enlarged crops, the size and camera settled first, the silhouette and materials measured against the photo, every joint rendered and looked at, the last measure on the shipped GLB ([how](references/reference-fidelity.md))
+- **Rebuild from a photo, measured**: an inventory from enlarged crops, the size and camera settled first, the silhouette and materials measured against the photo, every joint rendered and looked at, the last measure on the shipped GLB ([how](plugin/references/reference-fidelity.md))
 - **Textures from CC0 scans**: Poly Haven texture sets chosen against the photo, tinted to its palette, worn by the form, baked to UVs — procedural only when no scan fits
-- **A 3D template when one exists**: proportions read off a mesh generated from the same photo (TRELLIS.2, run locally) with `tools/template_profile.py` — measured, never shipped
+- **A 3D template when one exists**: proportions read off a mesh generated from the same photo (TRELLIS.2, run locally) with `plugin/tools/template_profile.py` — measured, never shipped
 - **Both Blender MCP servers**: ahujasid's `mcp-for-blender` and the Blender Foundation's official Lab MCP, the one behind Claude's Blender connector
 - **Multi-method creation**: AI generation (Hunyuan3D 2.x — local or cloud), scripted modeling (Blender Python), geometry nodes, or marketplace sourcing
 - **Local AI generation**: run Hunyuan3D-2 Mini on your machine — NVIDIA GPU for full pipeline, Apple Silicon for shape generation
@@ -279,15 +280,21 @@ Then run `/kiln setup` to detect your environment and install what's missing.
 git clone https://github.com/elithril/blender-kiln.git ~/.claude/skills/blender-kiln
 ```
 
-Restart Claude Code, then run `/kiln setup`.
+Restart Claude Code, then run `/kiln setup`. The skill itself lives in `plugin/`; the
+repository root links `SKILL.md`, `references` and `tools` to it, so a clone works as a
+skill directory as it is. On Windows, enable symlinks in git (`core.symlinks`) or install
+as a plugin.
 
 ### Layout
 
-Once installed, the skill directory looks like this:
+A plugin install ships only `plugin/` — about 0.7 MB:
 
 ```
-~/.claude/skills/blender-kiln/
+plugin/
+├── .claude-plugin/plugin.json
 ├── SKILL.md
+├── LICENSE
+├── tools/                        # fidelity_check, template_profile, and the doc and Blender checks
 └── references/
     ├── ai-generation.md
     ├── batch-mode.md
@@ -308,32 +315,32 @@ Once installed, the skill directory looks like this:
 
 | File | Content | Lines |
 |---|---|---|
-| `SKILL.md` | Main pipeline, iron rules, MCP tool surface, commands, setup | ~880 |
-| `references/characters.md` | Rigging patterns, anti-patterns, export gotchas, Blender 5.x | ~640 |
-| `references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~460 |
-| `references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~360 |
-| `references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~400 |
-| `tools/fidelity_check.py` | Renders a model under a studio HDRI and measures shape and material gaps against its reference | ~245 |
-| `tools/template_profile.py` | Reads a turned object's real profile off a 3D template (a generated mesh, a scan), to model from | ~120 |
-| `references/validation-checklist.md` | Geometry cleanup + material export audit | ~250 |
-| `references/ai-generation.md` | Hunyuan3D 2.x (local + cloud), TRELLIS.2 local (measured), concept art (FLUX.1-schnell, nano-banana), free-quota and token rules | ~430 |
-| `references/export-targets.md` | GLB/FBX/USDZ settings, headless CLI, post-export checklist | ~240 |
-| `references/cli-tools.md` | gltf-transform, gltfpack, LOD workflow, metrics | ~210 |
-| `references/uv-materials.md` | UV unwrapping, PBR channel packing | ~150 |
-| `references/naming-conventions.md` | Blender + GLTF name mapping + file conventions | ~150 |
-| `references/topology-rules.md` | Poly budgets, quad rules, edge flow | ~90 |
-| `references/setup-install.md` | Model selection, install commands, post-install validation | ~70 |
-| `references/sourcing-strategy.md` | PolyHaven (MCP or public API) + Sketchfab search patterns | ~120 |
+| `plugin/SKILL.md` | Main pipeline, iron rules, MCP tool surface, commands, setup | ~880 |
+| `plugin/references/characters.md` | Rigging patterns, anti-patterns, export gotchas, Blender 5.x | ~640 |
+| `plugin/references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~460 |
+| `plugin/references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~360 |
+| `plugin/references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~400 |
+| `plugin/tools/fidelity_check.py` | Renders a model under a studio HDRI and measures shape and material gaps against its reference | ~245 |
+| `plugin/tools/template_profile.py` | Reads a turned object's real profile off a 3D template (a generated mesh, a scan), to model from | ~120 |
+| `plugin/references/validation-checklist.md` | Geometry cleanup + material export audit | ~250 |
+| `plugin/references/ai-generation.md` | Hunyuan3D 2.x (local + cloud), TRELLIS.2 local (measured), concept art (FLUX.1-schnell, nano-banana), free-quota and token rules | ~430 |
+| `plugin/references/export-targets.md` | GLB/FBX/USDZ settings, headless CLI, post-export checklist | ~240 |
+| `plugin/references/cli-tools.md` | gltf-transform, gltfpack, LOD workflow, metrics | ~210 |
+| `plugin/references/uv-materials.md` | UV unwrapping, PBR channel packing | ~150 |
+| `plugin/references/naming-conventions.md` | Blender + GLTF name mapping + file conventions | ~150 |
+| `plugin/references/topology-rules.md` | Poly budgets, quad rules, edge flow | ~90 |
+| `plugin/references/setup-install.md` | Model selection, install commands, post-install validation | ~70 |
+| `plugin/references/sourcing-strategy.md` | PolyHaven (MCP or public API) + Sketchfab search patterns | ~120 |
 
 **Total: ~4,400 lines** of production-tested 3D pipeline knowledge.
 
 ## Continuous checks
 
-`tools/verify_docs.py` runs on every push (`.github/workflows/verify.yml`) and
+`plugin/tools/verify_docs.py` runs on every push (`.github/workflows/verify.yml`) and
 checks that this documentation is still true — text only, no Blender, a few
 seconds:
 
-- iron rules form one unbroken 1..N sequence across `SKILL.md` and `batch-mode.md`
+- iron rules form one unbroken 1..N sequence across `plugin/SKILL.md` and `batch-mode.md`
 - every cited `rule N` exists **and means what the citation claims**
 - the rule count above matches reality, and every line count in the structure
   table is within 15% of the file it describes
@@ -343,11 +350,11 @@ seconds:
 - the plugin manifest is valid and its `source` is a real directory
 - documented commands use the invocable `/kiln <sub>` form
 
-`tools/test_verify_docs.py` seeds each of those regressions and asserts the
+`plugin/tools/test_verify_docs.py` seeds each of those regressions and asserts the
 checker catches it — **12/12**. Every case is a mistake that was actually made
 here, including two renumberings that left a reference pointing at the wrong rule.
 
-`tools/verify_blender.py` (`.github/workflows/blender.yml`, weekly and on demand)
+`plugin/tools/verify_blender.py` (`.github/workflows/blender.yml`, weekly and on demand)
 re-checks what needed Blender to establish — the documented `bpy` API still exists,
 the Principled sockets the docs name are real, Rigify's deform-bone counts still
 match the tiers PHASE 5c routes on, geometry nodes still need the modifier applied
@@ -356,7 +363,7 @@ Blender `DeprecationWarning` reached by the docs or the gallery — its first ru
 surfaced `Material.use_nodes`, slated for removal in 6.0. Each check guards a
 shipped bug; this notices when a Blender release makes one wrong again.
 
-`tools/test_fidelity_check.py` runs in the same workflow and seeds what the review tool
+`plugin/tools/test_fidelity_check.py` runs in the same workflow and seeds what the review tool
 claims to measure — a model against its own render (IoU 0.998), the same model 20 % wider
 (measured +20.3 %), an unloaded texture (refused), a `.blend` (warned), the triangle range
 (kept under twice its top, a reduction proposed past it), dark metal (reported; the same
@@ -365,13 +372,13 @@ silent), metal painted mostly as non-metal (reported), grain measured but never 
 joint close-ups (a rod resting on a sphere rendered; sunk or free,
 not), and `--view` and `--azimuth` on a 2 x 1 x 1 box — **27/27**. Its first run caught the tool framing views by
 height only: anything wider than tall was clipped, a box measured 1:1 instead of 2:1.
-`tools/test_template_profile.py` reads a seeded turned part back through
+`plugin/tools/test_template_profile.py` reads a seeded turned part back through
 `template_profile.py` — radii, a free rod, a rod pressed against the body — **4/4**.
 
 ## Iron rules
 
 The skill enforces 31 rules (26 core + 5 batch-specific). Key ones, by their real
-number — the full text is in `SKILL.md` and `references/batch-mode.md`:
+number — the full text is in `plugin/SKILL.md` and `plugin/references/batch-mode.md`:
 
 - **Rule 1** — always `get_scene_info()` before each phase
 - **Rule 2** — always `get_viewport_screenshot()` at the end of every phase that

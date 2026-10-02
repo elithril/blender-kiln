@@ -6,6 +6,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.2] — 2026-10-02
+
+### Changed — an install downloads 0.7 MB of skill, not 46 MB of repository
+
+- **The plugin now lives in `plugin/`**, and the marketplace's source points there
+  (`"source": "./plugin"`, documented). Measured in a clean Claude Code profile, a 2.0.1
+  install held the whole repository twice — a 30 MB marketplace clone and a 16 MB plugin
+  copy, 11 MB of it benchmark results — for a skill that needs `SKILL.md`, `references/`
+  and `tools/`.
+- **The bench's published results moved to the `bench-results` branch**, history kept
+  (`git subtree split`); `docs/benchmarks.md` links there. Locally, `bench/results/` is a
+  worktree of that branch.
+- **Standalone clones keep working**: the repository root links `SKILL.md`, `references`
+  and `tools` to `plugin/`. On Windows, git needs `core.symlinks`, or install as a plugin.
+- **For contributors**: the checks run as `python3 plugin/tools/verify_docs.py` and so on;
+  `verify_docs.py` resolves the README and repository files against the repository and
+  the skill's docs against the plugin, and checks the source folder holds a `SKILL.md`
+  and a `plugin.json`. The bench copies `plugin/` into each sandbox.
+
 ## [2.0.1] — 2026-10-02
 
 ### Changed

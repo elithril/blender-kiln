@@ -16,7 +16,9 @@ Results go to `bench/runs/<label>/<brief>/` (git-ignored, hundreds of MB): the
 transcript, the Blender log, the session's output folder, and `result.json`.
 
 `python3 bench/publish.py <label>` copies what proves the claims into
-`bench/results/<label>/` — about 0.5–1 MB a label, and committed:
+`bench/results/<label>/` — about 0.5–1 MB a label. `bench/results/` is a worktree of the
+`bench-results` branch, kept out of `main` so a plugin install does not download it:
+`git worktree add bench/results bench-results` once, then commit and push there:
 `summary.json`, renders as WebP, the logs the skill wrote, and every shipped GLB
 under 1 MB (larger ones listed with size and sha256). No transcript, no `.blend`,
 no concept art. Local paths become `<repo>` / `<home>`, and the export fails if a
