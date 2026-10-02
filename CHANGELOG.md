@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.1] — 2026-10-02
+
+### Changed
+
+- **The plugin's description says what 2.0 does.** The manifests still described 1.x —
+  "from text brief to optimized GLB", Hunyuan3D only — in the `/plugin` menu. They now
+  name the photo method, the CC0 scans, the local TRELLIS.2 templates and both MCP
+  servers. No change to the skill.
+
 ## [2.0.0] — 2026-10-02
 
 kiln now rebuilds an object **from a photo** — read in crops, textured from CC0 scans,
