@@ -111,6 +111,8 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 | **IMPORT** | Import into Blender, verify scale (1 unit = 1m), center origin |
 | **CLEANUP** | Merge doubles, recalc normals, apply transforms, check poly budget |
 | **TEXTURING** | Geometric analysis + PolyHaven PBR, procedural materials, or bake from procedural |
+| **RIG** | Characters: a skeleton sized to the mesh, joints at the bends, weights checked on a bent pose |
+| **ANIMATE** | Optional: keep the asset's clips, retarget Mixamo, or generate from text with UniMate (experimental, non-commercial weights) |
 | **OPTIMIZE** | gltf-transform (resize, WebP, Draco) and/or gltfpack (simplify, LOD) |
 | **EXPORT** | GLB, FBX, USDZ — with validation checklist |
 
@@ -294,9 +296,10 @@ plugin/
 ├── .claude-plugin/plugin.json
 ├── SKILL.md
 ├── LICENSE
-├── tools/                        # fidelity_check, template_profile, and the doc and Blender checks
+├── tools/                        # fidelity_check, template_profile, unimate (+ its patch), the doc and Blender checks
 └── references/
     ├── ai-generation.md
+    ├── animation.md
     ├── batch-mode.md
     ├── setup-install.md
     ├── characters.md
@@ -315,8 +318,10 @@ plugin/
 
 | File | Content | Lines |
 |---|---|---|
-| `plugin/SKILL.md` | Main pipeline, iron rules, MCP tool surface, commands, setup | ~880 |
+| `plugin/SKILL.md` | Main pipeline, iron rules, MCP tool surface, commands, setup | ~1,020 |
 | `plugin/references/characters.md` | Rigging patterns, animation-ready skeleton, export gotchas, Blender 5.x | ~750 |
+| `plugin/references/animation.md` | Routes to motion by input, UniMate install / version check / prompts, measured | ~100 |
+| `plugin/tools/unimate.py` | Installs UniMate at the tested version, reports newer upstream, runs rigged GLB + prompt → animated GLBs | ~300 |
 | `plugin/references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~460 |
 | `plugin/references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~360 |
 | `plugin/references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~400 |
@@ -332,7 +337,7 @@ plugin/
 | `plugin/references/setup-install.md` | Model selection, install commands, post-install validation | ~70 |
 | `plugin/references/sourcing-strategy.md` | PolyHaven (MCP or public API) + Sketchfab search patterns | ~120 |
 
-**Total: ~4,400 lines** of production-tested 3D pipeline knowledge.
+**Total: ~4,800 lines** of production-tested 3D pipeline knowledge.
 
 ## Continuous checks
 
@@ -351,17 +356,24 @@ seconds:
 - documented commands use the invocable `/kiln <sub>` form
 
 `plugin/tools/test_verify_docs.py` seeds each of those regressions and asserts the
-checker catches it — **12/12**. Every case is a mistake that was actually made
+checker catches it — **24/24** (20 seeded regressions, 4 that must stay silent). Every case is a mistake that was actually made
 here, including two renumberings that left a reference pointing at the wrong rule.
 
 `plugin/tools/verify_blender.py` (`.github/workflows/blender.yml`, weekly and on demand)
 re-checks what needed Blender to establish — the documented `bpy` API still exists,
 the Principled sockets the docs name are real, Rigify's deform-bone counts still
 match the tiers PHASE 5c routes on, geometry nodes still need the modifier applied
-before export, and USDZ still exports natively into a conforming archive. It also fails on any
+before export, USDZ still exports natively into a conforming archive, and the welded-proxy
+weighting code in `characters.md` — run as written — still closes the tear a split-edge mesh
+opens at its first pose (a test tube: 1.6 cm as shipped, 0 through the proxy). It also fails on any
 Blender `DeprecationWarning` reached by the docs or the gallery — its first run
 surfaced `Material.use_nodes`, slated for removal in 6.0. Each check guards a
 shipped bug; this notices when a Blender release makes one wrong again.
+
+`plugin/tools/unimate.py drift` (`.github/workflows/unimate-drift.yml`, weekly) clones
+UniMate's upstream HEAD and checks kiln's patch still applies to it — the text-to-motion
+model of phase 5d is a research project that changed its pipeline, checkpoints and licence
+within days of kiln first measuring it.
 
 `plugin/tools/test_fidelity_check.py` runs in the same workflow and seeds what the review tool
 claims to measure — a model against its own render (IoU 0.998), the same model 20 % wider

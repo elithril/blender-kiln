@@ -1,0 +1,32 @@
+name: unimate-drift
+
+# UniMate (phase 5d, text-to-motion) is an external research project that moves
+# weekly — its preprocessing, checkpoints and licence all changed within days of
+# kiln first measuring it. kiln pins the tested commit and ships a patch on top
+# (tools/unimate.patch: Apple MPS, a fixed-step solver, Blender 5 actions).
+#
+# This job clones upstream HEAD and checks the patch still applies, so a breaking
+# upstream change turns this red before a user's `setup --update` meets it.
+# Network only: no install, no weights, no GPU.
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"        # Mondays
+  push:
+    paths:
+      - "plugin/tools/unimate.py"
+      - "plugin/tools/unimate.patch"
+  workflow_dispatch:
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Does kiln's patch still apply to UniMate's upstream HEAD?
+        run: python3 plugin/tools/unimate.py drift

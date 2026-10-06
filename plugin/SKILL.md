@@ -372,7 +372,7 @@ User can switch model or backend at any time during a session.
 ## Pipeline — `/kiln`
 
 ```
-[1] CONFIG → [2] BRIEF → [3] SOURCE → [4] IMPORT → [5] CLEANUP → [5b] TEXTURING → [5c] RIG (characters) → [6] OPTIMIZE → [7] EXPORT
+[1] CONFIG → [2] BRIEF → [3] SOURCE → [4] IMPORT → [5] CLEANUP → [5b] TEXTURING → [5c] RIG (characters) → [5d] ANIMATE (optional) → [6] OPTIMIZE → [7] EXPORT
 ```
 
 ### [1] CONFIG — Collect Parameters
@@ -631,9 +631,10 @@ non-manifold edge counts with before, and look at a close render of every thin p
 ### [5c] RIG SELECTION — characters only (rule 26)
 
 Runs after CLEANUP, once the mesh is final. **Measure before choosing**, never the
-other way round — and measure a **welded proxy**, not the shipped mesh. Low-poly
-exports split every edge for their shading; weighted as-is, each copy gets its own
-weights and the mesh opens at every joint (rule 26). Welding the shipped mesh is not
+other way round. If CLEANUP welded the mesh (rule 10), weight it directly. If its
+split edges were kept for their shading, measure and weight a **welded proxy**:
+weighted as-is, each copy of a vertex gets its own weights and the mesh opens at
+every joint (rule 26). Welding the shipped mesh is not
 the fix either: it re-smooths the shading (26.7% → 94.5% of corners bent > 5°). Weight
 a welded copy and copy the weights back by position — `references/characters.md`
 § Animation-ready skeleton has the code:
@@ -671,6 +672,26 @@ Then run the validator in `references/characters.md` § Validation Script.
 **Posing a generated Rigify rig?** Its limbs ship in IK, so the FK controls do
 nothing until you flip them — see `references/characters.md` § FK/IK System. This
 fails silently: no error, no movement.
+
+### [5d] ANIMATE — optional, rigged characters only
+
+Only when the user asks for motion. Pick the route from what they have — the asset's
+own clips, the Mixamo library, a text prompt, or hand keyframes; the table and the
+measurements are in `references/animation.md`. For a text prompt on any skeleton
+(UniMate):
+
+```bash
+python3 tools/unimate.py status      # exit 2 = not installed, 10 = newer upstream than installed
+```
+
+- **Not installed:** ask first — the install is 3.2 GB — then `tools/unimate.py setup`.
+- **Newer upstream (exit 10):** tell the user, and offer `setup --update`. It stays
+  on the version kiln tested when its patch no longer applies.
+- **The weights are non-commercial (CC BY-NC 4.0).** Say so before generating
+  anything that may ship commercially.
+- Prompts start with "An object", one motion each. "walks in place", not "walks
+  forward" (measured: 8 of 8 against 0 of 8 — forward slides with the feet still).
+  4 samples per prompt (the default); show them before keeping one.
 
 ### [5b] TEXTURING
 
@@ -993,4 +1014,5 @@ Axis conversion at export is automatic.
 | Export settings per format | `references/export-targets.md` |
 | CLI tools (gltf-transform, gltfpack) | `references/cli-tools.md` |
 | Characters, rigging (phase 2) | `references/characters.md` |
+| Animation: routes, UniMate install and prompts | `references/animation.md` |
 | Batch mode (wizard, runner, manifest) | `references/batch-mode.md` |
