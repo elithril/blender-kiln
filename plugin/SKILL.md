@@ -137,7 +137,9 @@ nothing and the user gets no response.
     the automatic weights have nothing to localise with and the deformation is
     mush that weight-painting will not cheaply fix. Measured: a 370-vertex figure
     on a Rigify human gives 2.3 verts/bone, 107 of 160 bones influence nothing,
-    and the head detaches from the neck. See the RIG SELECTION gate in PHASE 5c.
+    and the head detaches from the neck. Count on a welded copy: a low-poly cat
+    arrives with 1,856 vertices, is 466 welded, and weighted unwelded it tears
+    12.5 cm open at the first pose. See PHASE 5c.
 ```
 
 ---
@@ -629,10 +631,15 @@ non-manifold edge counts with before, and look at a close render of every thin p
 ### [5c] RIG SELECTION — characters only (rule 26)
 
 Runs after CLEANUP, once the mesh is final. **Measure before choosing**, never the
-other way round:
+other way round — and measure a **welded proxy**, not the shipped mesh. Low-poly
+exports split every edge for their shading; weighted as-is, each copy gets its own
+weights and the mesh opens at every joint (rule 26). Welding the shipped mesh is not
+the fix either: it re-smooths the shading (26.7% → 94.5% of corners bent > 5°). Weight
+a welded copy and copy the weights back by position — `references/characters.md`
+§ Animation-ready skeleton has the code:
 
 ```python
-verts  = len(mesh.data.vertices)
+verts  = len(proxy.data.vertices)   # the welded copy
 budget = verts / 20          # deform bones this mesh can actually carry
 ```
 
