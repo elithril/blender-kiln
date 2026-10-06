@@ -201,6 +201,62 @@ try:
 except Exception as e:
     fail("usdz", f"native export failed, export-targets.md prescribes it: {e}")
 
+# ── 5b. Split-edge meshes still tear unless weighted through a welded proxy.
+# references/characters.md § Animation-ready skeleton ships the fix as code; run that
+# code itself, so the doc cannot drift from what works. A low-poly cat weighted as
+# shipped opened 12.5 cm at the first pose.
+def _split_tube():
+    import bmesh
+    reset()
+    bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=0.1, depth=2, location=(0, 0, 1))
+    tube = bpy.context.object
+    bm = bmesh.new(); bm.from_mesh(tube.data)
+    side = [e for e in bm.edges if abs(e.verts[0].co.z - e.verts[1].co.z) > 1e-6]
+    bmesh.ops.subdivide_edges(bm, edges=side, cuts=9, use_grid_fill=True)
+    bmesh.ops.split_edges(bm, edges=bm.edges[:])          # what a flat-shaded export does
+    bm.to_mesh(tube.data); bm.free()
+    arm_data = bpy.data.armatures.new("probe"); arm = bpy.data.objects.new("probe", arm_data)
+    bpy.context.scene.collection.objects.link(arm)
+    bpy.context.view_layer.objects.active = arm; bpy.ops.object.mode_set(mode='EDIT')
+    a = arm_data.edit_bones.new("Upper"); a.head, a.tail = (0, 0, 2), (0, 0, 1)
+    b = arm_data.edit_bones.new("Lower"); b.head, b.tail = (0, 0, 1), (0, 0, 0); b.parent = a; b.use_connect = True
+    bpy.ops.object.mode_set(mode='OBJECT')
+    return tube, arm
+
+
+def _bend(arm):
+    arm.pose.bones["Lower"].rotation_mode = 'XYZ'
+    arm.pose.bones["Lower"].rotation_euler.x = math.radians(45)
+    bpy.context.view_layer.update()
+
+
+try:
+    sec = (ROOT / "references" / "characters.md").read_text()
+    sec = sec[sec.index("### Animation-ready skeleton"):sec.index("### Rigify from Python")]
+    for block in re.findall(r"```python\n(.*?)```", sec, re.S):
+        exec(block, globals())
+    tube, arm = _split_tube()
+    bpy.ops.object.select_all(action='DESELECT'); tube.select_set(True); arm.select_set(True)
+    bpy.context.view_layer.objects.active = arm
+    bpy.ops.object.parent_set(type='ARMATURE_AUTO')
+    _bend(arm)
+    as_shipped = widest_tear(tube)
+    tube, arm = _split_tube()
+    n_faces = len(tube.data.polygons)
+    weight_through_welded_proxy(tube, arm)
+    _bend(arm)
+    proxied = widest_tear(tube)
+    if as_shipped < 1e-3:
+        fail("weld", f"a split mesh weighted as shipped no longer tears ({as_shipped:.4f} m): "
+                     "the proxy step in characters.md may be unnecessary now")
+    elif proxied > 1e-6 or len(tube.data.polygons) != n_faces:
+        fail("weld", f"the welded-proxy code in characters.md leaves a {proxied:.4f} m tear "
+                     f"or changes the face count ({n_faces} -> {len(tube.data.polygons)})")
+    else:
+        ok(f"weld: split tube tears {as_shipped:.3f} m as shipped, 0 through the proxy")
+except Exception as e:
+    fail("weld", f"the code in characters.md § Animation-ready skeleton does not run: {e}")
+
 # ── 6. Nothing the checks touched is on a removal path.
 if _deprecations:
     for d in sorted(set(_deprecations)):

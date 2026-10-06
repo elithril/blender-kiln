@@ -316,7 +316,7 @@ plugin/
 | File | Content | Lines |
 |---|---|---|
 | `plugin/SKILL.md` | Main pipeline, iron rules, MCP tool surface, commands, setup | ~880 |
-| `plugin/references/characters.md` | Rigging patterns, anti-patterns, export gotchas, Blender 5.x | ~640 |
+| `plugin/references/characters.md` | Rigging patterns, animation-ready skeleton, export gotchas, Blender 5.x | ~750 |
 | `plugin/references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~460 |
 | `plugin/references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~360 |
 | `plugin/references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~400 |

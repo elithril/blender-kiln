@@ -553,6 +553,108 @@ first; it costs one line.
 ratio = len(mesh.data.vertices) / sum(1 for b in rig.data.bones if b.use_deform)
 ```
 
+### Animation-ready skeleton
+
+A rig that only has to hold a pose can be coarse. A rig that will be **animated** —
+by hand, by a motion library, or by a text-to-motion model — needs a joint at every
+place the animal actually bends. A leg made of one bone cannot fold a knee, whatever
+drives it: on a free low-poly cat rigged that way (one bone per leg, one for the
+body), every generated crouch had to rotate the whole leg about the hip.
+
+Place the joints at the bends, and name them the way motion data names them:
+
+| Part | Chain (Mixamo-style names) |
+|---|---|
+| Spine | `Hips` → `Spine` → `Spine1` → `Neck` → `Head` → `HeadTop_End` |
+| Hind / leg | `LeftUpLeg` → `LeftLeg` → `LeftFoot` → `LeftToeBase` (and `Right…`) |
+| Fore / arm | `LeftArm` → `LeftForeArm` → `LeftHand` → `LeftFingers` (parented to `Spine1`) |
+| Tail | `Tail1` → `Tail2` → … (parented to `Hips`) |
+
+Names matter beyond tidiness: motion models condition on them. UniMate's offline
+labeller read 24 of these 26 names directly (`LeftUpLeg` → *Left Thigh*) and guessed
+the other 2 (`…Fingers` → *Finger*). For a four-legged animal, 4 labels still need a
+hand: the training data labels a hind leg *Thigh / Shin / Fetlock / Foot*, so
+`…Foot` → *Fetlock* and `…ToeBase` → *Foot*.
+
+To place the joints on a mesh you did not model, take the centroid of the leg's
+vertices in thin horizontal slices at the heights of the bends — on the cat, slices
+at 22 cm (knee and elbow), 9-10 cm (hock and wrist) and 3 cm (paw).
+
+Measured on a 466-vertex low-poly cat with this 26-bone skeleton: **17.9 vertices per
+deform bone, 0 bones influencing nothing** — inside rule 26.
+
+**Weight a welded proxy, then copy the weights back.** Low-poly exports split every
+edge so each face can carry its own normal. Weighted as shipped, every copy of a
+vertex gets its own weights, and the first pose opens the mesh at each joint. Welding
+the shipped mesh is no better: it destroys the shading the split was there for.
+
+| Same cat, same 26 bones, same pose | Vertices | Faces | Corners bent > 5° (shading) | Coincident pairs torn apart | Widest tear |
+|---|---:|---:|---:|---:|---:|
+| Weighted as shipped | 1,856 | 928 | 26.7% | 2,798 | **12.5 cm** (14.4% of the cat) |
+| Welded, then weighted | 466 | 928 | **94.5%** — re-smoothed | 0 | 0 |
+| **Welded proxy, weights copied back** | 1,856 | 928 | 26.7% — unchanged | 0 | **0** |
+
+Weld with a distance in the mesh's *own* units, after applying its scale. This cat
+imports at object scale 100, so `dist=1e-4` before applying the scale merged real
+geometry and deleted 108 of 928 faces.
+
+```python
+import bpy, bmesh, mathutils
+
+def weight_through_welded_proxy(mesh, armature):
+    """Automatic weights computed on a welded copy, copied back onto `mesh` by
+    position, so split-edge duplicates share weights and the shading is untouched."""
+    bpy.ops.object.select_all(action='DESELECT'); mesh.select_set(True)
+    bpy.context.view_layer.objects.active = mesh
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    proxy = mesh.copy(); proxy.data = mesh.data.copy()
+    bpy.context.scene.collection.objects.link(proxy)
+    bm = bmesh.new(); bm.from_mesh(proxy.data)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)   # exact duplicates only
+    bm.to_mesh(proxy.data); bm.free()
+
+    bpy.ops.object.select_all(action='DESELECT')
+    proxy.select_set(True); armature.select_set(True)
+    bpy.context.view_layer.objects.active = armature
+    bpy.ops.object.parent_set(type='ARMATURE_AUTO')
+
+    kd = mathutils.kdtree.KDTree(len(proxy.data.vertices))
+    for v in proxy.data.vertices:
+        kd.insert(v.co, v.index)
+    kd.balance()
+    names = {g.index: g.name for g in proxy.vertex_groups}
+    for n in names.values():
+        mesh.vertex_groups.new(name=n)
+    for v in mesh.data.vertices:
+        _, i, _ = kd.find(v.co)
+        for g in proxy.data.vertices[i].groups:
+            mesh.vertex_groups[names[g.group]].add([v.index], g.weight, 'REPLACE')
+
+    mesh.parent = armature
+    mesh.modifiers.new("Armature", 'ARMATURE').object = armature
+    bpy.data.objects.remove(proxy)
+```
+
+**Then pose it before trusting it.** Bend every leg joint, the spine and the tail
+about 40°, and measure — a screenshot hides a tear the width of a face:
+
+```python
+import numpy as np
+from collections import defaultdict
+
+def widest_tear(mesh):
+    """Largest distance, once posed, between vertices that coincide at rest."""
+    rest = np.array([v.co[:] for v in mesh.data.vertices])
+    dg = bpy.context.evaluated_depsgraph_get()
+    posed = np.array([v.co[:] for v in mesh.evaluated_get(dg).data.vertices])
+    same = defaultdict(list)
+    for i, p in enumerate(np.round(rest, 5)):
+        same[tuple(p)].append(i)
+    gaps = [np.linalg.norm(posed[a] - posed[b])
+            for g in same.values() if len(g) > 1 for a in g for b in g if a < b]
+    return max(gaps, default=0.0)          # 0.0 on a correctly weighted mesh
+```
+
 ### Rigify from Python
 
 The only free, built-in, offline option. Three calls:
