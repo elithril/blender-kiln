@@ -583,8 +583,9 @@ at 22 cm (knee and elbow), 9-10 cm (hock and wrist) and 3 cm (paw).
 Measured on a 466-vertex low-poly cat with this 26-bone skeleton: **17.9 vertices per
 deform bone, 0 bones influencing nothing** — inside rule 26.
 
-**Weight a welded proxy, then copy the weights back.** Low-poly exports split every
-edge so each face can carry its own normal. Weighted as shipped, every copy of a
+**Weight a welded proxy, then copy the weights back** — whenever the mesh reaching
+the rig still has split edges (kept for their shading rather than welded by CLEANUP,
+rule 10). Low-poly exports split every edge so each face can carry its own normal. Weighted as shipped, every copy of a
 vertex gets its own weights, and the first pose opens the mesh at each joint. Welding
 the shipped mesh is no better: it destroys the shading the split was there for.
 

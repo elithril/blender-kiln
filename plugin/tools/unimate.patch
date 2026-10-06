@@ -1,0 +1,73 @@
+diff --git a/data_process/utils/blender_export.py b/data_process/utils/blender_export.py
+index 923de90..b985ea9 100644
+--- a/data_process/utils/blender_export.py
++++ b/data_process/utils/blender_export.py
+@@ -185,11 +185,19 @@ def discover_clip_actions(armature):
+     return [action.name], {action.name: action_frame_range(action)}
+ 
+ 
++def action_fcurves(action):
++    """Blender 5 compat: legacy action.fcurves was removed (layered actions)."""
++    if hasattr(action, "fcurves"):
++        return list(action.fcurves)
++    return [fc for layer in action.layers for strip in layer.strips
++            for cb in strip.channelbags for fc in cb.fcurves]
++
++
+ def action_is_relevant_pose(action) -> bool:
+     """Return True if the action has fcurves that animate pose bones."""
+-    if action is None or len(action.fcurves) == 0:
++    if action is None or len(action_fcurves(action)) == 0:
+         return False
+-    return any(fc.data_path.startswith("pose.bones[") for fc in action.fcurves)
++    return any(fc.data_path.startswith("pose.bones[") for fc in action_fcurves(action))
+ 
+ 
+ def discover_pose_actions(min_frames: int = 0, max_frames: int = float('inf')):
+diff --git a/data_process/utils/blender_rig.py b/data_process/utils/blender_rig.py
+index 6f319c0..66d0ee3 100644
+--- a/data_process/utils/blender_rig.py
++++ b/data_process/utils/blender_rig.py
+@@ -325,7 +325,12 @@ def _add_fcurves(action, bone_name, attr, n_components, keyframes):
+     """Create per-channel fcurves for one pose-bone attribute."""
+     data_path = f'pose.bones["{bone_name}"].{attr}'
+     for i in range(n_components):
+-        fc = action.fcurves.new(data_path=data_path, index=i)
++        if hasattr(action, "fcurves"):
++            fc = action.fcurves.new(data_path=data_path, index=i)
++        else:  # Blender 5: create through the bound armature's slot
++            owner = next(o for o in bpy.data.objects
++                         if o.animation_data and o.animation_data.action == action)
++            fc = action.fcurve_ensure_for_datablock(owner, data_path, index=i)
+         fc.keyframe_points.add(len(keyframes))
+         for idx, (frame, val) in enumerate(keyframes):
+             kp = fc.keyframe_points[idx]
+diff --git a/unimate/inference/generate.py b/unimate/inference/generate.py
+index 5a44305..0bea8dc 100644
+--- a/unimate/inference/generate.py
++++ b/unimate/inference/generate.py
+@@ -110,7 +110,10 @@ def generate_samples(
+ 
+     if diff_model == "flow":
+         assert gen_diffusion is not None, "gen_diffusion (Sampler) required for flow sampling"
+-        model_fn = gen_diffusion.sample_ode()
++        import os as _os
++        _m = _os.environ.get("UNIMATE_ODE")  # mac test: e.g. "euler:50"
++        model_fn = (gen_diffusion.sample_ode(sampling_method=_m.split(':')[0], num_steps=int(_m.split(':')[1]))
++                    if _m else gen_diffusion.sample_ode())
+         samples = model_fn(noise, sample_model, **model_kwargs)[-1]
+     elif diff_model == "diffusion":
+         samples = diffusion.p_sample_loop(
+diff --git a/unimate/models/flow/integrators.py b/unimate/models/flow/integrators.py
+index 44dbc13..c075c1e 100644
+--- a/unimate/models/flow/integrators.py
++++ b/unimate/models/flow/integrators.py
+@@ -107,5 +107,7 @@ class ode:
+         samples = odeint(
+             _fn, x, t,
+             method=self.sampler_type, atol=atol, rtol=rtol,
++            # MPS has no float64; torchdiffeq's adaptive solvers default to it.
++            options={'dtype': th.float32} if device.type == 'mps' else None,
+         )
+         return samples
+\ No newline at end of file
