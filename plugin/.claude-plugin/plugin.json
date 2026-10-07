@@ -1,8 +1,8 @@
 {
   "name": "blender-kiln",
   "displayName": "blender-kiln — The 3D Asset Forge",
-  "version": "2.0.2",
-  "description": "3D asset production pipeline for Claude Code — from a text brief or a photo to an optimized, validated GLB. Scripted modeling measured against the photo, textures from CC0 scans (Poly Haven), AI generation (Hunyuan3D, local TRELLIS.2 templates), marketplace search (PolyHaven, Sketchfab), optimization and multi-format export, on both Blender MCP servers.",
+  "version": "2.1.0",
+  "description": "3D asset production pipeline for Claude Code — from a text brief or a photo to an optimized, validated GLB, rigged and animated when asked. Scripted modeling measured against the photo, textures from CC0 scans (Poly Haven), AI generation (Hunyuan3D, local TRELLIS.2 templates), animation routed by subject (scripted quadruped cycles, UniMate text-to-motion, keyed props), marketplace search (PolyHaven, Sketchfab), optimization and multi-format export, on both Blender MCP servers.",
   "author": {
     "name": "Nicolas Dolphens",
     "url": "https://github.com/elithril"
@@ -24,6 +24,8 @@
     "rigging",
     "optimization",
     "hunyuan3d",
-    "threejs"
+    "threejs",
+    "animation",
+    "text-to-motion"
   ]
 }
