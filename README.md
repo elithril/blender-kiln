@@ -296,7 +296,7 @@ plugin/
 ├── .claude-plugin/plugin.json
 ├── SKILL.md
 ├── LICENSE
-├── tools/                        # fidelity_check, template_profile, unimate (+ its patch), the doc and Blender checks
+├── tools/                        # fidelity_check, template_profile, quadruped, unimate (+ its patch), the doc and Blender checks
 └── references/
     ├── ai-generation.md
     ├── animation.md
@@ -321,6 +321,7 @@ plugin/
 | `plugin/SKILL.md` | Main pipeline, iron rules, MCP tool surface, commands, setup | ~1,020 |
 | `plugin/references/characters.md` | Rigging patterns, animation-ready skeleton, export gotchas, Blender 5.x | ~750 |
 | `plugin/references/animation.md` | Routes to motion by input, UniMate install / version check / prompts, measured | ~100 |
+| `plugin/tools/quadruped.py` | Procedural quadruped idle + walk, IK-planted, measured before export (legs bent, paws in step, exact loop) | ~200 |
 | `plugin/tools/unimate.py` | Installs UniMate at the tested version, reports newer upstream, runs rigged GLB + prompt → animated GLBs | ~300 |
 | `plugin/references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~460 |
 | `plugin/references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~360 |
