@@ -41,7 +41,8 @@ cycle went through review until it read as a real animal or object.
 - **The animation showcase** in the README: a villager walking and jumping and a dragon
   flapping (UniMate, the looped sample kept out of 4, approved on review), a cat walking
   and idling (`quadruped.py`), a desk lamp and a chest modelled, rigged and keyed by
-  script. `examples/animation/showcase.sh` rebuilds all seven.
+  script. `examples/animation/showcase.sh` rebuilds all seven, at 720 px (1.6 MB
+  together).
 - **`.github/workflows/unimate-drift.yml`**: weekly, checks kiln's patch still applies to
   UniMate's upstream HEAD — the project changed its pipeline, checkpoints and licence
   within days of kiln first measuring it.
@@ -71,6 +72,9 @@ cycle went through review until it read as a real animal or object.
   apart. `references/characters.md` § Animation-ready skeleton: joints at the bends,
   Mixamo-style names (UniMate's offline labeller read 24 of 26 directly), a measured pose
   test.
+- **The gallery's CLEANUP follows the new weld.** Measured on all 15 builders first: their
+  shading is unchanged either way (no split edges), and the regenerated gallery matches
+  `docs/gallery.md` row for row — 21,879 tris, 1456.2 kB raw → 132.7 kB.
 - `verify_blender.py` gains four checks, all on synthetic rigs built in the check: the weld
   (a split tube tears 1.6 cm, 0 welded; shading kept), the quadruped walk, rigid-part
   folding with the posture test, and loop extraction (a 13-frame swing cut at 48 frames loops back to
