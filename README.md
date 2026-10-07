@@ -254,6 +254,7 @@ goes to it: `unimate.py` recognises the posture and points at `quadruped.py`.
 | `/kiln inspect` | Inspect a 3D file (stats, poly count, materials, bbox) |
 | `/kiln cleanup` | Cleanup a mesh in Blender |
 | `/kiln texture` | Texture an untextured mesh |
+| `/kiln animate` | Animate a rigged asset — routed by subject ([Animate](#animate)) |
 | `/kiln optimize` | Optimize a GLB with gltf-transform/gltfpack |
 | `/kiln convert` | Convert between formats (GLB↔USDZ↔FBX) |
 | `/kiln help` | List all commands and usage |
