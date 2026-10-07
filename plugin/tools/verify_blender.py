@@ -339,6 +339,68 @@ try:
 except Exception as e:
     fail("quadruped", f"tools/quadruped.py does not run on a template-named rig: {e}")
 
+# ── 5d. Bone-parented parts survive skin-only pipelines; generated clips loop.
+# A Quaternius dragon's eyes hung off a bone by parenting: UniMate kept the skin and left
+# them floating. And UniMate's clips seam at 2.4-8.5x their own frame step.
+import subprocess
+def _blender_tool(script, *args):
+    r = subprocess.run([bpy.app.binary_path, "--background", "--factory-startup", "--python-exit-code", "1",
+                        "--python", str(ROOT / "tools" / script), "--", *args], capture_output=True, text=True)
+    return r.returncode, r.stdout
+
+try:
+    # rigid part: a cube parented to the synthetic quadruped's Head bone
+    _synthetic_quadruped("/tmp/_quad.glb")
+    reset(); bpy.ops.import_scene.gltf(filepath="/tmp/_quad.glb")
+    arm = next(o for o in bpy.data.objects if o.type == 'ARMATURE')
+    bpy.ops.mesh.primitive_cube_add(size=0.04, location=(0, -0.40, 0.58)); cube = bpy.context.object; cube.name = "Eye"
+    mw = cube.matrix_world.copy(); cube.parent = arm; cube.parent_type = 'BONE'; cube.parent_bone = "Head"; cube.matrix_world = mw
+    bpy.ops.object.select_all(action='SELECT'); bpy.ops.export_scene.gltf(filepath="/tmp/_quad_eye.glb", use_selection=True)
+    code, out = _blender_tool("bind_rigid_parts.py", "/tmp/_quad_eye.glb", "/tmp/_quad_bound.glb")
+    reset(); bpy.ops.import_scene.gltf(filepath="/tmp/_quad_bound.glb")
+    arm = next(o for o in bpy.data.objects if o.type == 'ARMATURE')
+    body = max((o for o in bpy.data.objects if o.type == 'MESH'), key=lambda o: len(o.data.vertices))
+    # the eye's own vertices, found once at rest and followed by index
+    bpy.context.view_layer.update(); e = body.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    eye = [i for i, v in enumerate(e.data.vertices) if ((e.matrix_world @ v.co) - Vector((0, -0.40, 0.58))).length < 0.04]
+    def eye_gap():
+        bpy.context.view_layer.update(); e = body.evaluated_get(bpy.context.evaluated_depsgraph_get())
+        c = sum((e.matrix_world @ e.data.vertices[i].co for i in eye), Vector()) / max(len(eye), 1)
+        return (c - arm.matrix_world @ arm.pose.bones["Head"].head).length
+    g0 = eye_gap(); arm.pose.bones["Head"].rotation_mode = 'XYZ'; arm.pose.bones["Head"].rotation_euler = (0.6, 0, 0.4); g1 = eye_gap()
+    if "1 rigid part(s)" not in out or len(eye) < 8 or abs(g1 - g0) > 1e-4:
+        fail("rigidparts", f"a bone-parented part was not folded in, or does not follow its bone (gap {g0:.4f} -> {g1:.4f})")
+    elif "posture quadruped" not in out:
+        fail("posture", "the synthetic quadruped is not recognised as one — the UniMate routing guard would not fire")
+    else:
+        ok(f"rigidparts: a bone-parented part follows its bone once folded in ({g0:.3f} m either way); posture: quadruped recognised")
+    # loop: a joint swinging with a 13-frame period, starting at its peak, cut at 48 frames — mid-swing
+    reset()
+    ad = bpy.data.armatures.new("osc"); arm = bpy.data.objects.new("osc", ad); bpy.context.scene.collection.objects.link(arm)
+    bpy.context.view_layer.objects.active = arm; bpy.ops.object.mode_set(mode='EDIT')
+    a = ad.edit_bones.new("Root"); a.head, a.tail = (0, 0, 0), (0, 0, 1)
+    b = ad.edit_bones.new("Arm"); b.head, b.tail = (0, 0, 1), (0, 0, 2); b.parent = a
+    bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.ops.mesh.primitive_cube_add(size=0.2, location=(0, 0, 1.5)); m = bpy.context.object
+    m.vertex_groups.new(name="Arm").add(list(range(8)), 1.0, 'REPLACE'); m.parent = arm; m.modifiers.new("A", 'ARMATURE').object = arm
+    arm.animation_data_create(); pb = arm.pose.bones["Arm"]; pb.rotation_mode = 'QUATERNION'
+    from mathutils import Euler
+    for f in range(48):
+        pb.rotation_quaternion = Euler((0.6 * math.cos(2 * math.pi * f / 13), 0, 0)).to_quaternion(); pb.keyframe_insert("rotation_quaternion", frame=f)
+        arm.pose.bones["Root"].rotation_mode = 'QUATERNION'; arm.pose.bones["Root"].keyframe_insert("rotation_quaternion", frame=f)
+    bpy.ops.object.select_all(action='SELECT'); bpy.ops.export_scene.gltf(filepath="/tmp/_osc.glb", use_selection=True, export_animations=True)
+    code, out = _blender_tool("motion_loop.py", "--out", "/tmp/_osc_loop.glb", "/tmp/_osc.glb")
+    rec = [json.loads(l.split("motion_loop: ", 1)[1]) for l in out.splitlines() if l.startswith("motion_loop: {")]
+    if code or not rec:
+        fail("loop", f"motion_loop.py found no loop in a clean 13-frame oscillation (exit {code})")
+    elif rec[0]["seam"] > 1.2 or rec[0]["seam_raw"] < 2:
+        fail("loop", f"seam {rec[0]['seam_raw']}x raw -> {rec[0]['seam']}x looped; expected a raw seam > 2x closing to <= 1.2x")
+    else:
+        ok(f"loop: a 13-frame swing cut at 48 frames seams {rec[0]['seam_raw']}x raw, {rec[0]['seam']}x looped "
+           f"({rec[0]['frames']} frames kept)")
+except Exception as e:
+    fail("rigidparts/loop", f"bind_rigid_parts.py or motion_loop.py does not run: {e}")
+
 # ── 6. Nothing the checks touched is on a removal path.
 if _deprecations:
     for d in sorted(set(_deprecations)):

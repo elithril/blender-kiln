@@ -260,10 +260,22 @@ def animate(args) -> int:
     if st["device"] != "cuda":
         env["UNIMATE_ODE"] = "euler:50"      # dopri5 takes 344 steps on CPU/MPS; 50 Euler steps look the same
 
+    # 0. fold bone-parented parts (eyes, props) into the skin, and read the posture
+    blender = st.get("blender") or find_blender()
+    work.mkdir(parents=True, exist_ok=True)
+    bound = work / f"{name}.bound.glb"
+    r = run([blender, "--background", "--factory-startup", "--python-exit-code", "1", "--python",
+             Path(__file__).resolve().parent / "bind_rigid_parts.py", "--", asset, bound], capture=True)
+    if "posture quadruped" in r.stdout and not args.force:
+        sys.exit("This rig stands on four legs. UniMate was measured unusable for quadruped "
+                 "locomotion (references/animation.md): use tools/quadruped.py for idle and walk, "
+                 "the asset's own clips or hand keys for the rest. --force runs it anyway.")
+    asset_in = bound
+
     # 1. skeleton → conditioning, labelled offline (no LLM key, no cost)
     rig = work / "asset"
     cond = rig / "cond.npy"
-    base = [py(), "-m", "data_process.rig_preprocess", "run", "--input", asset, "--output_dir", rig]
+    base = [py(), "-m", "data_process.rig_preprocess", "run", "--input", asset_in, "--output_dir", rig]
     if args.annotation:
         ann = Path(args.annotation).resolve()
         if cond.exists() and cond.stat().st_mtime >= max(ann.stat().st_mtime, asset.stat().st_mtime):
@@ -291,11 +303,21 @@ def animate(args) -> int:
         cwd=CODE, env=env)
     run(["bash", "scripts/run_animate_motion.sh", samples], cwd=CODE, env=env)
     out = Path(args.out).resolve()
-    out.mkdir(parents=True, exist_ok=True)
+    (out / "samples").mkdir(parents=True, exist_ok=True)
     glbs = sorted((samples / "animated").rglob("*.glb"))
     for g in glbs:
-        shutil.copy(g, out / g.name)
-    print(f"\n{len(glbs)} animated GLB(s) in {out}")
+        shutil.copy(g, out / "samples" / g.name)
+    print(f"\n{len(glbs)} animated GLB(s) in {out / 'samples'}")
+    if args.loop and glbs:
+        # one looped clip per prompt: the sample that loops best (tools/motion_loop.py)
+        by_prompt = {}
+        for g in glbs:
+            by_prompt.setdefault(re.sub(r"-rep_\d+-\d+$", "", g.stem), []).append(g)
+        for prompt, clips in by_prompt.items():
+            run([blender, "--background", "--factory-startup", "--python-exit-code", "1", "--python",
+                 Path(__file__).resolve().parent / "motion_loop.py", "--", "--out", out / f"{prompt}.loop.glb", *clips],
+                check=False)
+        print(f"looped: {len(by_prompt)} clip(s), one per prompt, in {out}")
     return 0 if glbs else 1
 
 
@@ -315,6 +337,8 @@ def main() -> int:
     a.add_argument("--out", default="animated")
     a.add_argument("--annotation", help="reviewed annotation.json from a previous run")
     a.add_argument("--no-review", action="store_true", help="skip the label review stop")
+    a.add_argument("--loop", action="store_true", help="also keep, per prompt, the sample that loops best (cycles)")
+    a.add_argument("--force", action="store_true", help="run on a quadruped despite the measured result")
     args = ap.parse_args()
     return {"status": status, "drift": drift, "setup": setup, "animate": animate}[args.cmd](args)
 
