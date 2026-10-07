@@ -583,58 +583,21 @@ at 22 cm (knee and elbow), 9-10 cm (hock and wrist) and 3 cm (paw).
 Measured on a 466-vertex low-poly cat with this 26-bone skeleton: **17.9 vertices per
 deform bone, 0 bones influencing nothing** — inside rule 26.
 
-**Weight a welded proxy, then copy the weights back** — whenever the mesh reaching
-the rig still has split edges (kept for their shading rather than welded by CLEANUP,
-rule 10). Low-poly exports split every edge so each face can carry its own normal. Weighted as shipped, every copy of a
-vertex gets its own weights, and the first pose opens the mesh at each joint. Welding
-the shipped mesh is no better: it destroys the shading the split was there for.
+**Rig the welded mesh, never the split one.** Low-poly exports split every edge so
+each face can carry its own normal. Weighted as shipped, every copy of a vertex gets
+its own weights, and the first pose opens the mesh at each joint. CLEANUP's weld
+(rule 10, `references/validation-checklist.md` § Merge by Distance) removes the split
+and keeps the shading, so a mesh that went through it is ready to weight:
 
-| Same cat, same 26 bones, same pose | Vertices | Faces | Corners bent > 5° (shading) | Coincident pairs torn apart | Widest tear |
-|---|---:|---:|---:|---:|---:|
-| Weighted as shipped | 1,856 | 928 | 26.7% | 2,798 | **12.5 cm** (14.4% of the cat) |
-| Welded, then weighted | 466 | 928 | **94.5%** — re-smoothed | 0 | 0 |
-| **Welded proxy, weights copied back** | 1,856 | 928 | 26.7% — unchanged | 0 | **0** |
+| Same cat, same 26 bones, same pose | Vertices | Corners bent > 5° (shading) | Widest tear |
+|---|---:|---:|---:|
+| Weighted as shipped (split edges) | 1,856 | 26.7% | **12.5 cm** — 2,798 vertex pairs pulled apart, 14.4% of the cat |
+| Plain merge, then weighted | 466 | **94.5%** — re-smoothed | 0 |
+| **Rule 10 weld (normals kept), then weighted** | 466 | 26.7% — unchanged | **0** |
 
-Weld with a distance in the mesh's *own* units, after applying its scale. This cat
-imports at object scale 100, so `dist=1e-4` before applying the scale merged real
-geometry and deleted 108 of 928 faces.
-
-```python
-import bpy, bmesh, mathutils
-
-def weight_through_welded_proxy(mesh, armature):
-    """Automatic weights computed on a welded copy, copied back onto `mesh` by
-    position, so split-edge duplicates share weights and the shading is untouched."""
-    bpy.ops.object.select_all(action='DESELECT'); mesh.select_set(True)
-    bpy.context.view_layer.objects.active = mesh
-    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-    proxy = mesh.copy(); proxy.data = mesh.data.copy()
-    bpy.context.scene.collection.objects.link(proxy)
-    bm = bmesh.new(); bm.from_mesh(proxy.data)
-    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)   # exact duplicates only
-    bm.to_mesh(proxy.data); bm.free()
-
-    bpy.ops.object.select_all(action='DESELECT')
-    proxy.select_set(True); armature.select_set(True)
-    bpy.context.view_layer.objects.active = armature
-    bpy.ops.object.parent_set(type='ARMATURE_AUTO')
-
-    kd = mathutils.kdtree.KDTree(len(proxy.data.vertices))
-    for v in proxy.data.vertices:
-        kd.insert(v.co, v.index)
-    kd.balance()
-    names = {g.index: g.name for g in proxy.vertex_groups}
-    for n in names.values():
-        mesh.vertex_groups.new(name=n)
-    for v in mesh.data.vertices:
-        _, i, _ = kd.find(v.co)
-        for g in proxy.data.vertices[i].groups:
-            mesh.vertex_groups[names[g.group]].add([v.index], g.weight, 'REPLACE')
-
-    mesh.parent = armature
-    mesh.modifiers.new("Armature", 'ARMATURE').object = armature
-    bpy.data.objects.remove(proxy)
-```
+The glTF exporter splits the vertices again where the kept normals differ (466 →
+1,875 in the file) and gives each copy the same weights, so the tear does not come
+back on export.
 
 **Then pose it before trusting it.** Bend every leg joint, the spine and the tail
 about 40°, and measure — a screenshot hides a tear the width of a face:

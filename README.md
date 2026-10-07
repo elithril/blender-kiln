@@ -327,7 +327,7 @@ plugin/
 | `plugin/references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~400 |
 | `plugin/tools/fidelity_check.py` | Renders a model under a studio HDRI and measures shape and material gaps against its reference | ~245 |
 | `plugin/tools/template_profile.py` | Reads a turned object's real profile off a 3D template (a generated mesh, a scan), to model from | ~120 |
-| `plugin/references/validation-checklist.md` | Geometry cleanup + material export audit | ~250 |
+| `plugin/references/validation-checklist.md` | Geometry cleanup (welding that keeps the shading) + material export audit | ~290 |
 | `plugin/references/ai-generation.md` | Hunyuan3D 2.x (local + cloud), TRELLIS.2 local (measured), concept art (FLUX.1-schnell, nano-banana), free-quota and token rules | ~430 |
 | `plugin/references/export-targets.md` | GLB/FBX/USDZ settings, headless CLI, post-export checklist | ~240 |
 | `plugin/references/cli-tools.md` | gltf-transform, gltfpack, LOD workflow, metrics | ~210 |
@@ -363,9 +363,9 @@ here, including two renumberings that left a reference pointing at the wrong rul
 re-checks what needed Blender to establish — the documented `bpy` API still exists,
 the Principled sockets the docs name are real, Rigify's deform-bone counts still
 match the tiers PHASE 5c routes on, geometry nodes still need the modifier applied
-before export, USDZ still exports natively into a conforming archive, and the welded-proxy
-weighting code in `characters.md` — run as written — still closes the tear a split-edge mesh
-opens at its first pose (a test tube: 1.6 cm as shipped, 0 through the proxy). It also fails on any
+before export, USDZ still exports natively into a conforming archive, and rule 10's weld —
+the code in `validation-checklist.md`, run as written — still keeps a faceted mesh's shading
+and closes the tear a split-edge mesh opens at its first pose. It also fails on any
 Blender `DeprecationWarning` reached by the docs or the gallery — its first run
 surfaced `Material.use_nodes`, slated for removal in 6.0. Each check guards a
 shipped bug; this notices when a Blender release makes one wrong again.

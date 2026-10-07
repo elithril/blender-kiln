@@ -201,10 +201,18 @@ try:
 except Exception as e:
     fail("usdz", f"native export failed, export-targets.md prescribes it: {e}")
 
-# ── 5b. Split-edge meshes still tear unless weighted through a welded proxy.
-# references/characters.md § Animation-ready skeleton ships the fix as code; run that
-# code itself, so the doc cannot drift from what works. A low-poly cat weighted as
-# shipped opened 12.5 cm at the first pose.
+# ── 5b. Rule 10's weld keeps the shading, and a welded mesh does not tear when posed.
+# validation-checklist.md and characters.md ship both as code; run that code itself,
+# so the docs cannot drift from what works. A low-poly cat weighted with its split
+# edges opened 12.5 cm at the first pose; a plain merge re-smoothed it (26.7% -> 94.5%
+# of corners bent > 5°).
+def _doc_code(path, start, end):
+    text = (ROOT / "references" / path).read_text()
+    text = text[text.index(start):text.index(end)]
+    for block in re.findall(r"```python\n(.*?)```", text, re.S):
+        exec(block, globals())
+
+
 def _split_tube():
     import bmesh
     reset()
@@ -213,7 +221,9 @@ def _split_tube():
     bm = bmesh.new(); bm.from_mesh(tube.data)
     side = [e for e in bm.edges if abs(e.verts[0].co.z - e.verts[1].co.z) > 1e-6]
     bmesh.ops.subdivide_edges(bm, edges=side, cuts=9, use_grid_fill=True)
-    bmesh.ops.split_edges(bm, edges=bm.edges[:])          # what a flat-shaded export does
+    bmesh.ops.split_edges(bm, edges=bm.edges[:])          # what a flat-shaded export does:
+    for f in bm.faces:                                     # faces marked smooth, the facets
+        f.smooth = True                                    # come from the split alone
     bm.to_mesh(tube.data); bm.free()
     arm_data = bpy.data.armatures.new("probe"); arm = bpy.data.objects.new("probe", arm_data)
     bpy.context.scene.collection.objects.link(arm)
@@ -224,38 +234,50 @@ def _split_tube():
     return tube, arm
 
 
-def _bend(arm):
-    arm.pose.bones["Lower"].rotation_mode = 'XYZ'
-    arm.pose.bones["Lower"].rotation_euler.x = math.radians(45)
-    bpy.context.view_layer.update()
-
-
-try:
-    sec = (ROOT / "references" / "characters.md").read_text()
-    sec = sec[sec.index("### Animation-ready skeleton"):sec.index("### Rigify from Python")]
-    for block in re.findall(r"```python\n(.*?)```", sec, re.S):
-        exec(block, globals())
-    tube, arm = _split_tube()
+def _weight_and_bend(tube, arm):
     bpy.ops.object.select_all(action='DESELECT'); tube.select_set(True); arm.select_set(True)
     bpy.context.view_layer.objects.active = arm
     bpy.ops.object.parent_set(type='ARMATURE_AUTO')
-    _bend(arm)
-    as_shipped = widest_tear(tube)
+    arm.pose.bones["Lower"].rotation_mode = 'XYZ'
+    arm.pose.bones["Lower"].rotation_euler.x = math.radians(45)
+    bpy.context.view_layer.update()
+    return widest_tear(tube)
+
+
+def _bent(me):
+    me.update()
+    n = [math.degrees(math.acos(max(-1.0, min(1.0, me.loops[i].normal.dot(p.normal)))))
+         for p in me.polygons for i in p.loop_indices]
+    return sum(x > 5 for x in n) / len(n)
+
+
+try:
+    _doc_code("validation-checklist.md", "### Merge by Distance", "### Recalculate Normals")
+    _doc_code("characters.md", "### Animation-ready skeleton", "### Rigify from Python")
     tube, arm = _split_tube()
-    n_faces = len(tube.data.polygons)
-    weight_through_welded_proxy(tube, arm)
-    _bend(arm)
-    proxied = widest_tear(tube)
+    as_shipped = _weight_and_bend(tube, arm)
+    tube, arm = _split_tube()
+    shading_before = _bent(tube.data)
+    import bmesh
+    plain = tube.data.copy(); bm = bmesh.new(); bm.from_mesh(plain)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4); bm.to_mesh(plain); bm.free()
+    shading_plain = _bent(plain)
+    weld_keep_shading(tube)
+    shading_kept = _bent(tube.data)
+    welded = _weight_and_bend(tube, arm)
     if as_shipped < 1e-3:
         fail("weld", f"a split mesh weighted as shipped no longer tears ({as_shipped:.4f} m): "
-                     "the proxy step in characters.md may be unnecessary now")
-    elif proxied > 1e-6 or len(tube.data.polygons) != n_faces:
-        fail("weld", f"the welded-proxy code in characters.md leaves a {proxied:.4f} m tear "
-                     f"or changes the face count ({n_faces} -> {len(tube.data.polygons)})")
+                     "the weld-before-rig step may be unnecessary now")
+    elif welded > 1e-6:
+        fail("weld", f"the rule 10 weld leaves a {welded:.4f} m tear on a posed split tube")
+    elif abs(shading_kept - shading_before) > 0.01 or shading_plain - shading_before < 0.5:
+        fail("weld", f"shading: before {shading_before:.0%}, plain merge {shading_plain:.0%}, "
+                     f"weld_keep_shading {shading_kept:.0%} — the doc's claim no longer holds")
     else:
-        ok(f"weld: split tube tears {as_shipped:.3f} m as shipped, 0 through the proxy")
+        ok(f"weld: split tube tears {as_shipped:.3f} m as shipped, 0 welded; corners bent "
+           f"{shading_before:.0%} -> plain merge {shading_plain:.0%}, normals kept {shading_kept:.0%}")
 except Exception as e:
-    fail("weld", f"the code in characters.md § Animation-ready skeleton does not run: {e}")
+    fail("weld", f"the weld or pose-test code in the docs does not run: {e}")
 
 # ── 6. Nothing the checks touched is on a removal path.
 if _deprecations:
