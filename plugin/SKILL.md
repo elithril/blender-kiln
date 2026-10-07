@@ -30,6 +30,7 @@ Reply in the language the user wrote the request in — not the language of the 
 | `/kiln inspect` | Inspect a 3D file (stats, poly count, materials, bbox) |
 | `/kiln cleanup` | Cleanup a mesh in Blender (standalone) |
 | `/kiln texture` | Texture an untextured mesh (standalone) |
+| `/kiln animate` | Animate a rigged asset, routed by subject: idle/walk cycles, text-to-motion, keyed props (standalone) |
 | `/kiln optimize` | Optimize a GLB with gltf-transform/gltfpack (standalone) |
 | `/kiln convert` | Convert between formats (GLB→USDZ, GLB→FBX, etc.) |
 | `/kiln help` | List all commands and usage |
@@ -838,6 +839,32 @@ Texture an untextured mesh (white mesh from AI generation, or any mesh without m
 6. `get_viewport_screenshot()` after applying materials
 
 **Note on monolithic meshes (AI-generated):** the geometric analysis clusters faces by normal direction, position, and curvature. This works on single-object meshes — it will identify zones (e.g. "top faces = seat", "vertical faces = legs") even without object separation. Results may need manual adjustment for complex shapes.
+
+### /kiln animate
+
+Animate a rigged asset (standalone PHASE 5d): `/kiln animate SK_Cat.glb walk, idle` or
+`/kiln animate dragon.glb "flaps its wings"`. Load `references/animation.md` first.
+
+1. **Inspect the rig** — `get_scene_info()`, then the bones. Run
+   `tools/bind_rigid_parts.py` on the file: it folds bone-parented parts into the skin and
+   prints `posture quadruped` for a four-legged rig.
+2. **No rig, or a coarse one** (a limb that must move on its own has no chain, one bone
+   per leg): say so, and offer PHASE 5c (`references/characters.md` § Animation-ready
+   skeleton) before going further. Do not animate a rig that cannot bend where asked.
+3. **Its own clips?** List the actions. If the asked-for moves already exist, offer them
+   first — hand-made clips beat every generator measured.
+4. **Route by subject** (`references/animation.md` § Pick the route from the subject):
+   - quadruped, idle or walk → `tools/quadruped.py --motions idle,walk`, then report the
+     root speed it prints: the game moves the character at that speed;
+   - quadruped, any other move → its own clips or hand keys; **not UniMate**;
+   - biped or winged → UniMate: `tools/unimate.py status` first (not installed: ask — 3.2
+     GB; newer upstream: offer `setup --update`), say the weights are **non-commercial**,
+     write each move as "An object … in place.", run `animate --loop --reps 4`, and stop
+     at the label review it prints (step 1 of its Run it section);
+   - articulated object → key the rigid parts, following § Rules for scripted animation.
+5. **Show every kept clip before calling it done** (rule 2): render it or play it in the
+   viewport, and say which route made it and, for UniMate, which sample was kept.
+6. **Export** (PHASE 7): one GLB with every action, or one per clip if asked.
 
 ### /kiln optimize
 

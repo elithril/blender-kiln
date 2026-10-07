@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] — 2026-10-07
+
+### Added — `/kiln animate`
+
+- **Animate a rigged asset without the full pipeline**: `/kiln animate SK_Cat.glb walk, idle`
+  or `/kiln animate dragon.glb "flaps its wings"`. It runs 2.1's PHASE 5d on its own:
+  inspects the rig and folds bone-parented parts into the skin, stops on a rig too
+  coarse to bend where asked and offers PHASE 5c, offers the asset's own clips first,
+  then routes by subject — `tools/quadruped.py` for a quadruped's idle and walk, UniMate
+  for bipeds and winged creatures (status checked, non-commercial weights stated, label
+  review kept), keyed parts for articulated objects — and shows every kept clip before
+  exporting.
+
 ## [2.1.0] — 2026-10-07
 
 kiln now **animates** what it rigs — routed by subject, because no single method held up
