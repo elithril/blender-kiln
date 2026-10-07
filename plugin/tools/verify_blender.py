@@ -279,6 +279,66 @@ try:
 except Exception as e:
     fail("weld", f"the weld or pose-test code in the docs does not run: {e}")
 
+# ── 5c. The quadruped walk stays measured: legs bent, paws in step, loop exact.
+# tools/quadruped.py replaced text-to-motion for four-legged locomotion; its first
+# cycle locked the legs at 101% of their length and moved the hips forward instead of
+# up. Run it on a synthetic quadruped built here, so no asset is downloaded.
+def _synthetic_quadruped(path):
+    reset()
+    def seg(a, b, r):
+        d = b - a
+        bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=r, depth=d.length, location=(a + b) / 2)
+        o = bpy.context.object; o.rotation_euler = d.to_track_quat('Z', 'Y').to_euler(); return o
+    V = lambda x, y, z: Vector((x, y, z))
+    bones, parts = [], []
+    def add(name, a, b, parent, r=0.03):
+        bones.append((name, a, b, parent)); o = seg(a, b, r); o["bone"] = name; parts.append(o)
+    add("Hips", V(0, 0.25, 0.40), V(0, 0.05, 0.40), None, 0.08)
+    add("Spine1", V(0, 0.05, 0.40), V(0, -0.20, 0.42), "Hips", 0.08)
+    add("Neck", V(0, -0.20, 0.42), V(0, -0.28, 0.52), "Spine1", 0.04)
+    add("Head", V(0, -0.28, 0.52), V(0, -0.38, 0.55), "Neck", 0.05)
+    for s, x in (("Left", 0.07), ("Right", -0.07)):
+        add(f"{s}UpLeg", V(x, 0.24, 0.36), V(x, 0.20, 0.22), "Hips")
+        add(f"{s}Leg", V(x, 0.20, 0.22), V(x, 0.25, 0.08), f"{s}UpLeg")
+        add(f"{s}Foot", V(x, 0.25, 0.08), V(x, 0.23, 0.01), f"{s}Leg", 0.025)
+        add(f"{s}Arm", V(x, -0.18, 0.36), V(x, -0.20, 0.20), "Spine1")
+        add(f"{s}ForeArm", V(x, -0.20, 0.20), V(x, -0.19, 0.07), f"{s}Arm")
+        add(f"{s}Hand", V(x, -0.19, 0.07), V(x, -0.21, 0.01), f"{s}ForeArm", 0.025)
+    ad = bpy.data.armatures.new("quad"); arm = bpy.data.objects.new("quad", ad); bpy.context.scene.collection.objects.link(arm)
+    bpy.context.view_layer.objects.active = arm; bpy.ops.object.mode_set(mode='EDIT')
+    for n, a, b, p in bones:
+        eb = ad.edit_bones.new(n); eb.head, eb.tail = a, b
+        if p: eb.parent = ad.edit_bones[p]
+    bpy.ops.object.mode_set(mode='OBJECT')
+    for o in parts:
+        bpy.ops.object.select_all(action='DESELECT'); o.select_set(True); bpy.context.view_layer.objects.active = o
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        o.vertex_groups.new(name=o["bone"]).add(list(range(len(o.data.vertices))), 1.0, 'REPLACE')
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in parts: o.select_set(True)
+    bpy.context.view_layer.objects.active = parts[0]; bpy.ops.object.join()
+    body = bpy.context.object; body.parent = arm; body.modifiers.new("Armature", 'ARMATURE').object = arm
+    bpy.ops.object.select_all(action='SELECT'); bpy.ops.export_scene.gltf(filepath=path, use_selection=True)
+
+
+try:
+    from mathutils import Vector
+    sys.path.insert(0, str(ROOT / "tools"))
+    import quadruped as Q
+    _synthetic_quadruped("/tmp/_quad.glb")
+    sc, arm, m = Q.make("/tmp/_quad.glb", "/tmp", "walk", 32, Q.walk, 0.11, 0.15)
+    if m["frames"] != 32:
+        fail("quadruped", f"walk has {m['frames']} frames, not 32 — the seam repeats a frame")
+    elif m["extension"] > Q.MAX_EXTENSION:
+        fail("quadruped", f"legs straighten to {m['extension']:.0%} of their length (limit {Q.MAX_EXTENSION:.0%})")
+    elif m["root_speed_m_s"] <= 0 or m["stance_speed_spread"] > 0.10:
+        fail("quadruped", f"planted paws are out of step: speed {m['root_speed_m_s']} m/s, spread {m['stance_speed_spread']}")
+    else:
+        ok(f"quadruped: walk on a synthetic rig — legs <= {m['extension']:.0%}, paws in step "
+           f"({m['root_speed_m_s']} m/s, spread {m['stance_speed_spread']}), {m['frames']} frames")
+except Exception as e:
+    fail("quadruped", f"tools/quadruped.py does not run on a template-named rig: {e}")
+
 # ── 6. Nothing the checks touched is on a removal path.
 if _deprecations:
     for d in sorted(set(_deprecations)):
