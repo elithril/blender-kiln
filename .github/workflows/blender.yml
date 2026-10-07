@@ -41,6 +41,9 @@ jobs:
         run: |
           set -euo pipefail
           sudo snap install blender --classic
+          # EEVEE renders through EGL. The runner image stopped shipping it in October
+          # 2026 and every render died with "Couldn't open libEGL.so.1" (exit -6).
+          sudo apt-get update -qq && sudo apt-get install -y -qq libegl1 libgl1
           blender --version
 
       - name: Re-check the Blender-side findings
