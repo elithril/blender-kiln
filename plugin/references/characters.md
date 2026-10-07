@@ -599,6 +599,12 @@ The glTF exporter splits the vertices again where the kept normals differ (466 �
 1,875 in the file) and gives each copy the same weights, so the tear does not come
 back on export.
 
+**Skin rigid parts, or fold them in.** Eyes, a helmet, a prop in a hand often hang off
+a bone by parenting. Blender moves them, but tools that read skin weights only drop
+them — UniMate's preprocessing left a dragon's eyes floating. `tools/bind_rigid_parts.py`
+joins them into the skin at rest pose, 100% to their bone (read posed, the bone's pose
+is applied twice: the eyes landed 1.5 m off the face).
+
 **Then pose it before trusting it.** Bend every leg joint, the spine and the tail
 about 40°, and measure — a screenshot hides a tear the width of a face:
 

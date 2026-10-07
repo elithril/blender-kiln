@@ -672,25 +672,25 @@ Then run the validator in `references/characters.md` § Validation Script.
 nothing until you flip them — see `references/characters.md` § FK/IK System. This
 fails silently: no error, no movement.
 
-### [5d] ANIMATE — optional, rigged characters only
+### [5d] ANIMATE — optional, rigged characters and articulated objects
 
-Only when the user asks for motion. Pick the route from what they have — the asset's
-own clips, the Mixamo library, a text prompt, or hand keyframes; the table and the
-measurements are in `references/animation.md`. For a text prompt on any skeleton
-(UniMate):
+Only when the user asks for motion. Route by **subject** — table and measurements in
+`references/animation.md`:
 
-```bash
-python3 tools/unimate.py status      # exit 2 = not installed, 10 = newer upstream than installed
-```
+- **Ships its own clips** → keep them.
+- **Four-legged, idle or walk** → `tools/quadruped.py` (scripted, measured, exact loop).
+  Other quadruped moves → the asset's clips or hand keys. **Never UniMate**: measured
+  unusable on four quadrupeds; `unimate.py` refuses one unless `--force`.
+- **Biped or winged, from a sentence** → UniMate:
+  `python3 tools/unimate.py status` first (exit 2 = not installed, 10 = newer upstream).
+  Not installed: ask first — 3.2 GB — then `setup`. The weights are **non-commercial
+  (CC BY-NC 4.0)**: say so. Prompts start "An object", one motion, "in place" rather
+  than "forward" (forward slid with the feet still, 0 of 8); `--loop` keeps the sample
+  that loops best.
+- **Articulated object** (lamp, chest, door) → keyframe the rigid parts.
 
-- **Not installed:** ask first — the install is 3.2 GB — then `tools/unimate.py setup`.
-- **Newer upstream (exit 10):** tell the user, and offer `setup --update`. It stays
-  on the version kiln tested when its patch no longer applies.
-- **The weights are non-commercial (CC BY-NC 4.0).** Say so before generating
-  anything that may ship commercially.
-- Prompts start with "An object", one motion each. "walks in place", not "walks
-  forward" (measured: 8 of 8 against 0 of 8 — forward slides with the feet still).
-  4 samples per prompt (the default); show them before keeping one.
+Whatever the route, follow `references/animation.md` § Rules for scripted animation —
+every rule there is a cycle that looked wrong until it was measured.
 
 ### [5b] TEXTURING
 
