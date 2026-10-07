@@ -84,7 +84,11 @@ nothing and the user gets no response.
     intermediate GLBs. ALWAYS save the .blend — it's the recovery point.
  8. ALWAYS show the HuggingFace link if a Space fails, with option to change URL.
  9. NEVER generate ground/environment with AI — only the requested asset.
-10. Apply transforms + merge doubles + recalc normals BEFORE any export.
+10. Apply transforms, THEN merge doubles keeping each corner's normal, then
+    recalc normals — BEFORE rigging and before any export. A plain merge re-smooths
+    a faceted low-poly mesh (26.7% → 94.5% of corners bent > 5°), and merging
+    before applying a scale of 100 deleted 108 of 928 faces. Code and numbers:
+    references/validation-checklist.md § Merge by Distance.
 11. ALWAYS generate concept images with no background (transparent).
     Fallback: solid white. Never environment/ground/context.
 12. SINGLE VIEW by default for AI generation. Multi-view only if user
@@ -137,8 +141,8 @@ nothing and the user gets no response.
     the automatic weights have nothing to localise with and the deformation is
     mush that weight-painting will not cheaply fix. Measured: a 370-vertex figure
     on a Rigify human gives 2.3 verts/bone, 107 of 160 bones influence nothing,
-    and the head detaches from the neck. Count on a welded copy: a low-poly cat
-    arrives with 1,856 vertices, is 466 welded, and weighted unwelded it tears
+    and the head detaches from the neck. Count after the rule 10 weld: a low-poly
+    cat arrives with 1,856 vertices, is 466 welded, and weighted unwelded it tears
     12.5 cm open at the first pose. See PHASE 5c.
 ```
 
@@ -630,17 +634,12 @@ non-manifold edge counts with before, and look at a close render of every thin p
 
 ### [5c] RIG SELECTION — characters only (rule 26)
 
-Runs after CLEANUP, once the mesh is final. **Measure before choosing**, never the
-other way round. If CLEANUP welded the mesh (rule 10), weight it directly. If its
-split edges were kept for their shading, measure and weight a **welded proxy**:
-weighted as-is, each copy of a vertex gets its own weights and the mesh opens at
-every joint (rule 26). Welding the shipped mesh is not
-the fix either: it re-smooths the shading (26.7% → 94.5% of corners bent > 5°). Weight
-a welded copy and copy the weights back by position — `references/characters.md`
-§ Animation-ready skeleton has the code:
+Runs after CLEANUP, once the mesh is final and **welded** (rule 10). Never weight a
+mesh with split edges: each copy of a vertex gets its own weights and the mesh opens
+at every joint (rule 26). **Measure before choosing**, never the other way round:
 
 ```python
-verts  = len(proxy.data.vertices)   # the welded copy
+verts  = len(mesh.data.vertices)    # after the rule 10 weld
 budget = verts / 20          # deform bones this mesh can actually carry
 ```
 

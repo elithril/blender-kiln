@@ -6,14 +6,51 @@
 
 ## Geometry
 
-### Merge by Distance
+### Merge by Distance — and keep the shading
+
+Low-poly exports split every edge so each face can carry its own normal. A plain
+merge throws those normals away and Blender re-smooths the mesh. Two things fix it:
+apply the transforms **first** (the threshold is in the mesh's own units — a cat that
+imports at object scale 100 lost 108 of its 928 faces to `0.0001` in local space), and
+give every face corner its old normal back after the merge. The merge keeps faces and
+their corners in order, so that is a straight copy.
+
+Measured, share of face corners whose normal bends more than 5° off the face (the
+look a viewer reads as smooth):
+
+| Mesh | Before | Plain merge | Merge, normals kept |
+|---|---:|---:|---:|
+| Low-poly cat, 1,856 → 466 vertices | 26.7% | **94.5%** — re-smoothed | **26.7%** (largest change 0.05°) |
+| UV sphere with every edge split, 1,104 → 266 | 0.0% | 100.0% | 0.0% |
+| Cube, nothing to merge | 0.0% | 0.0% | 0.0% |
+
+The kept normals survive `normals_make_consistent` and a glTF round trip (26.7% after
+both). A welded mesh is also what rigging needs — see `references/characters.md`
+§ Animation-ready skeleton.
+
 ```python
-import bpy
-bpy.ops.object.mode_set(mode='EDIT')
-bpy.ops.mesh.select_all(action='SELECT')
-result = bpy.ops.mesh.remove_doubles(threshold=0.0001)
-bpy.ops.object.mode_set(mode='OBJECT')
-# Log: "{n} vertices merged"
+import bpy, bmesh, numpy as np
+
+def weld_keep_shading(obj, dist=1e-4):
+    """Rule 10: apply transforms, merge doubles, keep the shading the split edges carried."""
+    bpy.ops.object.select_all(action='DESELECT'); obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    me = obj.data
+    corners = np.empty(len(me.loops) * 3)
+    me.loops.foreach_get("normal", corners)
+    centres = np.array([p.center[:] for p in me.polygons])
+    bm = bmesh.new(); bm.from_mesh(me)
+    before = len(bm.verts)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=dist)
+    merged = before - len(bm.verts)
+    bm.to_mesh(me); bm.free()
+    if len(me.polygons) == len(centres) and np.allclose(
+            centres, [p.center[:] for p in me.polygons], atol=dist * 10):
+        me.normals_split_custom_set(corners.reshape(-1, 3).tolist())
+    else:   # the merge collapsed a face: say so rather than restore normals onto the wrong corners
+        print(f"weld: {len(centres) - len(me.polygons)} face(s) collapsed — shading not restored")
+    return merged      # log "{merged} vertices merged"
 ```
 
 ### Recalculate Normals
