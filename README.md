@@ -112,7 +112,7 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 | **CLEANUP** | Merge doubles, recalc normals, apply transforms, check poly budget |
 | **TEXTURING** | Geometric analysis + PolyHaven PBR, procedural materials, or bake from procedural |
 | **RIG** | Characters: a skeleton sized to the mesh, joints at the bends, weights checked on a bent pose |
-| **ANIMATE** | Optional: keep the asset's clips, retarget Mixamo, or generate from text with UniMate (experimental, non-commercial weights) |
+| **ANIMATE** | Optional, routed by subject: the asset's own clips; scripted idle/walk for quadrupeds; UniMate text-to-motion for bipeds and winged creatures, looped (non-commercial weights); keyed rigid parts for articulated objects |
 | **OPTIMIZE** | gltf-transform (resize, WebP, Draco) and/or gltfpack (simplify, LOD) |
 | **EXPORT** | GLB, FBX, USDZ — with validation checklist |
 
@@ -131,7 +131,8 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 - **Material audit**: detects procedural nodes that will be lost on GLTF export, proposes bake workflow
 - **Optimized by default**: `_final.glb` ships with Draco geometry and WebP textures, re-measured after compression; the uncompressed `_original.glb` is kept
 - **Post-export validation**: 8-point checklist (Babylon.js sandbox, Three.js console, material spot-check)
-- **Character support**: T-pose enforcement, rigging patterns, bone validation, Blender 5.x bone collections
+- **Character support**: T-pose enforcement, an animation-ready skeleton (joints at the bends, checked on a bent pose), bone validation, Blender 5.x bone collections
+- **Animation, routed by subject** ([see above](#animate)): scripted idle/walk cycles for quadrupeds, UniMate text-to-motion for bipeds and winged creatures — pinned version, weekly drift check, seamless loops — and keyed articulated props
 - **Multi-asset sessions**: cross-asset coherence (scale, materials, poly budget)
 - **Batch mode**: wizard collects scene/theme/palette/reference images upfront, generates a YAML manifest, runner executes autonomously — ideal for overnight production or large asset sets
 - **Full logging**: every asset produces a production log with copy-paste prompts
@@ -202,6 +203,42 @@ service and no paid API.
 > validation of the skill.
 
 The measured optimization sizes, the rule-by-rule audit of the gallery scripts and how to reproduce them are in [`docs/gallery.md`](docs/gallery.md).
+
+## Animate
+
+<p align="center">
+  <img src="docs/images/animate-character-walk.webp" width="32%" alt="A low-poly villager walking in place, looped" />
+  <img src="docs/images/animate-character-jump.webp" width="32%" alt="The villager jumping in place, looped" />
+  <img src="docs/images/animate-dragon-flap.webp"    width="32%" alt="A low-poly dragon flapping its wings, looped" />
+</p>
+<p align="center">
+  <img src="docs/images/animate-cat-walk.webp" width="24%" alt="A low-poly cat walking, looped" />
+  <img src="docs/images/animate-cat-idle.webp" width="24%" alt="The cat idling: breathing, glancing, tail swaying" />
+  <img src="docs/images/animate-lamp.webp"     width="24%" alt="An articulated desk lamp looking around" />
+  <img src="docs/images/animate-chest.webp"    width="24%" alt="A treasure chest popping open and slamming shut" />
+</p>
+
+Phase 5d picks the route from the subject, because no single method held up across
+all of them ([`references/animation.md`](plugin/references/animation.md) has every
+measurement):
+
+| Subject | Route | Shown above |
+|---|---|---|
+| Biped or winged, from a sentence | [UniMate](https://github.com/Friedrich-M/UniMate) text-to-motion, looped by `tools/motion_loop.py` | the villager, the dragon |
+| Four-legged, idle and walk | `tools/quadruped.py` — a scripted, measured cycle | the cat |
+| Articulated object | rigid parts keyed by script, every rotation's sign measured first | the lamp, the chest |
+
+UniMate was measured **unusable for quadruped walking** — on a cat, a Shiba, a horse
+and the model author's own robot dog, with the solver ruled out — so a quadruped never
+goes to it: `unimate.py` recognises the posture and points at `quadruped.py`.
+
+> **What this showcase is, and is not.** Each UniMate tile is the sample, out of 4,
+> that `motion_loop.py` kept for looping best, then **approved by a reviewer** —
+> samples vary, and some prompts tried (wave, dance, run) were left out. UniMate's
+> checkpoints are **CC BY-NC 4.0: non-commercial use only**. The scripted tiles are
+> deterministic. As with the gallery, these come from scripts
+> (`examples/animation/showcase.sh`, assets and credits alongside), not from an
+> interactive session of the skill.
 
 ## Commands
 
