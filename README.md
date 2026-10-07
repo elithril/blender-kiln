@@ -405,7 +405,9 @@ the Principled sockets the docs name are real, Rigify's deform-bone counts still
 match the tiers PHASE 5c routes on, geometry nodes still need the modifier applied
 before export, USDZ still exports natively into a conforming archive, and rule 10's weld —
 the code in `validation-checklist.md`, run as written — still keeps a faceted mesh's shading
-and closes the tear a split-edge mesh opens at its first pose. It also fails on any
+and closes the tear a split-edge mesh opens at its first pose; on synthetic rigs built in the check,
+the quadruped walk stays bent and in step, a bone-parented part follows its bone once folded,
+and a clip cut mid-swing loops back to its exact period. It also fails on any
 Blender `DeprecationWarning` reached by the docs or the gallery — its first run
 surfaced `Material.use_nodes`, slated for removal in 6.0. Each check guards a
 shipped bug; this notices when a Blender release makes one wrong again.

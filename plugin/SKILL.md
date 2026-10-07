@@ -1,6 +1,6 @@
 ---
 name: kiln
-description: "Makes and fixes 3D assets in Blender, for games, the web and AR. Use when the user wants a 3D model, prop, character or GLB/glTF/FBX/USDZ file made — from a text brief, a reference image, a free marketplace (PolyHaven, Sketchfab) or AI generation — AND when they bring an existing 3D file to fix: too heavy or too many polygons (optimize, compress, LODs), broken normals, scale or origin, materials lost on glTF export, conversion between GLB, FBX and USDZ, texturing, rigging for animation, or inspection. Drives Blender through a Blender MCP server (ahujasid's or the official Blender Lab one). Batch mode produces many consistent assets unattended."
+description: "Makes and fixes 3D assets in Blender, for games, the web and AR. Use when the user wants a 3D model, prop, character or GLB/glTF/FBX/USDZ file made — from a text brief, a reference image, a free marketplace (PolyHaven, Sketchfab) or AI generation — AND when they bring an existing 3D file to fix: too heavy or too many polygons (optimize, compress, LODs), broken normals, scale or origin, materials lost on glTF export, conversion between GLB, FBX and USDZ, texturing, rigging for animation, animating it (walk and idle cycles, text-to-motion, looping clips, articulated props), or inspection. Drives Blender through a Blender MCP server (ahujasid's or the official Blender Lab one). Batch mode produces many consistent assets unattended."
 allowed-tools: Bash, Read, Edit, Write, Grep, Glob, WebFetch, WebSearch, mcp__blender__*, mcp__nano-banana__*
 ---
 

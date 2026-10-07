@@ -6,6 +6,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] — 2026-10-07
+
+kiln now **animates** what it rigs — routed by subject, because no single method held up
+across all of them. Every route below was measured on real rigs, and every scripted
+cycle went through review until it read as a real animal or object.
+
+### Added — PHASE 5d ANIMATE, routed by subject
+
+- **`references/animation.md`**: the routing table, the measurements behind it, and
+  seven rules for scripted animation, each a cycle that looked wrong until measured —
+  drive a bone in its own rest frame (a cat's `Hips` lies along the body: a "vertical" bob
+  moved it 1.8 cm forward and 1 mm up), solve the IK pole angle from the rest pose (a
+  guessed −90° turned the elbows forward), keep legs ≤ 95% of their length (the rejected
+  walk peaked at 101%), measure a rotation's sign before using it, loop exactly, judge
+  motion in motion and in numbers, hold paws level.
+- **`tools/quadruped.py`**: scripted idle and lateral-sequence walk for a quadruped,
+  IK-planted, baked to FK. It measures the clip before writing it, shortens the stride
+  until the legs stay bent, and reports the root speed the planted paws share (0.106 m/s
+  on the showcase cat, the four paws in exact step).
+- **UniMate**, text-to-motion for any skeleton ([Friedrich-M/UniMate](https://github.com/Friedrich-M/UniMate)),
+  for bipeds and winged creatures. **`tools/unimate.py`** installs it at the commit and
+  checkpoint kiln measured (`status`, `setup`, `setup --update`, `drift`, `animate`),
+  3.2 GB; `tools/unimate.patch` (73 lines) runs it on Apple Silicon and on Blender 5 —
+  upstream supports NVIDIA only. 18 s per clip on an M4 Pro. Its checkpoints are
+  **CC BY-NC 4.0**, said wherever the route is offered.
+- **`tools/motion_loop.py`**: generated clip → seamless loop, keeping the sample that loops
+  best. Seams measured against the local frame step: 2.1-9.7x raw, 0.5-1.2x looped
+  (12 clips). It refuses still stretches and requires the same direction through the
+  seam — a swing matched its mirror image on the way back until it did.
+- **`tools/bind_rigid_parts.py`**: bone-parented parts (a dragon's eyes) folded into the
+  skin at rest pose, so skin-only pipelines keep them — read posed, the eyes landed
+  1.5 m off the face. It also reports a quadruped posture, right on 6 rigs.
+- **The animation showcase** in the README: a villager walking and jumping and a dragon
+  flapping (UniMate, the looped sample kept out of 4, approved on review), a cat walking
+  and idling (`quadruped.py`), a desk lamp and a chest modelled, rigged and keyed by
+  script. `examples/animation/showcase.sh` rebuilds all seven.
+- **`.github/workflows/unimate-drift.yml`**: weekly, checks kiln's patch still applies to
+  UniMate's upstream HEAD — the project changed its pipeline, checkpoints and licence
+  within days of kiln first measuring it.
+
+### Measured — what did not make it
+
+- **UniMate on quadrupeds: unusable for walking** on a cat, a Shiba, a horse and the
+  model author's own Go2 example; same result with upstream's adaptive solver, so the
+  fixed-step shortcut was ruled out. `unimate.py` recognises a quadruped and refuses it
+  unless `--force`.
+- **Prompt wording**: "walks in place" 8 of 8, "walks forward" 0 of 8 — it slides with
+  the feet still.
+- **MoCapAnything V2** (video → motion, MIT): excellent on rigs from its own training set,
+  unusable on two from outside it. Not shipped.
+- **Scripted trot, jump, sit and attack** for quadrupeds: rejected on review. Quadrupeds
+  keep their own clips or hand keys for those.
+
+### Changed
+
+- **Rule 10's weld keeps the shading.** A plain merge re-smoothed a faceted low-poly cat
+  (26.7% → 94.5% of face corners bent > 5°), and merging before applying an object scale
+  of 100 deleted 108 of 928 faces. The weld now applies transforms first and gives each
+  corner its old normal back: unchanged to 0.05°, through `normals_make_consistent` and
+  a glTF round trip (`references/validation-checklist.md` § Merge by Distance).
+- **Rigs are weighted on the welded mesh** (rule 26, PHASE 5c). Weighted with its split
+  edges, the same cat tore 12.5 cm open at the first pose — 2,798 vertex pairs pulled
+  apart. `references/characters.md` § Animation-ready skeleton: joints at the bends,
+  Mixamo-style names (UniMate's offline labeller read 24 of 26 directly), a measured pose
+  test.
+- `verify_blender.py` gains four checks, all on synthetic rigs built in the check: the weld
+  (a split tube tears 1.6 cm, 0 welded; shading kept), the quadruped walk, rigid-part
+  folding with the posture test, and loop extraction (a 13-frame swing cut at 48 frames loops back to
+  exactly 39).
+
 ## [2.0.2] — 2026-10-02
 
 ### Changed — an install downloads 0.7 MB of skill, not 46 MB of repository
