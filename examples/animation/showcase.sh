@@ -9,20 +9,23 @@
 #   cat-idle/-walk  tools/quadruped.py on the cat rigged by rig_cat.py
 #   lamp, chest     props.py: modelled, rigged and keyed from scratch
 # UniMate samples vary: each UniMate tile is the sample tools/motion_loop.py kept out of 4.
-# Needs Blender 4.4+ and libwebp's img2webp. Writes to a temporary dir, then docs/images/.
+# Needs Blender 4.4+ and libwebp's img2webp. Clips are kept in examples/animation/out/ (gitignored).
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$HERE/../.."
 BLENDER="${BLENDER:-blender}"
 TOOLS="$REPO/plugin/tools"
-work="$(mktemp -d)"
+work="$HERE/out"                      # kept (gitignored): re-render a tile without regenerating it
+mkdir -p "$work"
 run_bl() { "$BLENDER" --background --factory-startup --python-exit-code 1 --python "$@" >/dev/null; }
 
 tile() {   # tile <name> <clip.glb> [repeats]
   local name="$1" clip="$2" reps="${3:-2}"
-  run_bl "$HERE/render.py" -- "$clip" "$work/f_$name" --res 360 --step 1 --samples 24
+  # 720 px: a README tile shown a third wide covers ~600 device pixels on a 2x screen
+  rm -rf "$work/f_$name"
+  run_bl "$HERE/render.py" -- "$clip" "$work/f_$name" --res 720 --step 1 --samples 48
   local args=()
-  for _ in $(seq "$reps"); do for f in "$work/f_$name"/*.png; do args+=(-d 42 -lossy -q 72 "$f"); done; done
+  for _ in $(seq "$reps"); do for f in "$work/f_$name"/*.png; do args+=(-d 42 -lossy -q 85 -m 6 "$f"); done; done
   img2webp -loop 0 "${args[@]}" -o "$REPO/docs/images/animate-$name.webp" >/dev/null
   echo "animate-$name.webp  $(du -h "$REPO/docs/images/animate-$name.webp" | cut -f1)"
 }
@@ -38,10 +41,14 @@ tile cat-idle "$work/cat/idle.glb"
 
 # UniMate: skipped, not faked, when it is not installed
 if python3 "$TOOLS/unimate.py" status >/dev/null 2>&1 || [ $? -eq 10 ]; then
+  # the same calls, seed and batches that produced the tiles a reviewer approved
   python3 "$TOOLS/unimate.py" animate --asset "$HERE/assets/villager.glb" --no-review --loop \
-    --reps 4 --seed 0 --out "$work/villager" --prompt "An object walks in place." "An object jumps in place." >/dev/null 2>&1
-  tile character-walk "$(ls "$work"/villager/*walks_in_place.loop.glb)" 3
-  tile character-jump "$(ls "$work"/villager/*jumps_in_place.loop.glb)" 3
+    --reps 4 --seed 0 --out "$work/villager-walk" --prompt "An object walks in place." >/dev/null 2>&1
+  tile character-walk "$(ls "$work"/villager-walk/*walks_in_place.loop.glb)" 3
+  python3 "$TOOLS/unimate.py" animate --asset "$HERE/assets/villager.glb" --no-review --loop \
+    --reps 4 --seed 0 --out "$work/villager-set" --prompt "An object runs in place." "An object jumps in place." \
+    "An object waves its right hand." "An object dances in place." >/dev/null 2>&1
+  tile character-jump "$(ls "$work"/villager-set/*jumps_in_place.loop.glb)" 3
   python3 "$TOOLS/unimate.py" animate --asset "$HERE/assets/dragon_quaternius.glb" --loop --reps 4 --seed 0 \
     --annotation "$HERE/annotations/dragon_quaternius.json" --out "$work/dragon" \
     --prompt "An object flaps its wings." >/dev/null 2>&1
@@ -49,4 +56,3 @@ if python3 "$TOOLS/unimate.py" status >/dev/null 2>&1 || [ $? -eq 10 ]; then
 else
   echo "UniMate not installed: character-walk and dragon-flap kept as they are (python3 plugin/tools/unimate.py setup)"
 fi
-rm -rf "$work"

@@ -199,8 +199,21 @@ def apply_modifiers(obj):
 
 
 def cleanup(obj, merge=0.0004):
-    """The CLEANUP phase, headless: merge doubles, recalc normals, origin to base."""
+    """The CLEANUP phase, headless: merge doubles, recalc normals, origin to base.
+
+    Rule 10's order: transforms applied first, so `merge` is in metres whatever the
+    object's scale; each face corner keeps its normal through the merge when the faces
+    survive it (references/validation-checklist.md § Merge by Distance). Measured on
+    these 15 builders: shading unchanged either way — they have no split edges —
+    so this changes no output; it keeps the gallery doing what the rule says.
+    """
+    bpy.ops.object.select_all(action='DESELECT')
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
     me = obj.data
+    corners = [l.normal.copy() for l in me.loops]
+    centres = [p.center.copy() for p in me.polygons]
     bm = bmesh.new()
     bm.from_mesh(me)
     before = len(bm.faces)
@@ -209,6 +222,9 @@ def cleanup(obj, merge=0.0004):
     bm.to_mesh(me)
     bm.free()
     me.update()
+    if len(me.polygons) == len(centres) and all((p.center - c).length < merge * 10
+                                                 for p, c in zip(me.polygons, centres)):
+        me.normals_split_custom_set([tuple(n) for n in corners])
     bpy.context.view_layer.objects.active = obj
     bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='BOUNDS')
     obj.location = (0, 0, 0)
