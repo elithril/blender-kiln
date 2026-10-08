@@ -7,7 +7,8 @@
 #   character-walk/-jump  UniMate, looped (tools/unimate.py animate --loop) — needs `unimate.py setup`
 #   dragon-flap     UniMate, looped, eyes folded into the skin first
 #   cat-idle/-walk  tools/quadruped.py on the cat rigged by rig_cat.py
-#   lamp, chest     props.py: modelled, rigged and keyed from scratch
+#   lamp            props.py: modelled, rigged and keyed from scratch
+#   chest           chest.py: the same, textured with two Poly Haven CC0 scans it downloads
 # UniMate samples vary: each UniMate tile is the sample tools/motion_loop.py kept out of 4.
 # Needs Blender 4.4+ and libwebp's img2webp. Clips are kept in examples/animation/out/ (gitignored).
 set -euo pipefail
@@ -33,7 +34,8 @@ tile() {   # tile <name> <clip.glb> — one pass of the loop; a WebP loops by it
 # scripted: props and the quadruped cycles
 run_bl "$HERE/props.py" -- "$work/props"
 tile lamp  "$work/props/lamp_look.glb"
-tile chest "$work/props/chest_open.glb"
+run_bl "$HERE/chest.py" -- "$work/chest"
+tile chest "$work/chest/chest_open.glb"
 run_bl "$HERE/rig_cat.py" -- "$HERE/assets/cat_madtrollstudio.glb" "$work/cat.glb"
 run_bl "$TOOLS/quadruped.py" -- --asset "$work/cat.glb" --out "$work/cat"
 tile cat-walk "$work/cat/walk.glb"

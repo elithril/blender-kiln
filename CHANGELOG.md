@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The showcase chest is rebuilt** by its own script, `examples/animation/chest.py`: planks, a
+  barrel lid of staves, iron corners, bands, rivets, handles, lock and hasp, a heap of gold inside,
+  textured with two Poly Haven CC0 scans it downloads at run time. Three bones (body, lid, hasp),
+  every sign measured, an exact 4 s loop. The export now fails loudly if a texture is lost on the
+  way, which a relative image path did silently. `props.py` keeps the lamp.
+
 ## [2.2.0] — 2026-10-07
 
 ### Added — `/kiln animate`

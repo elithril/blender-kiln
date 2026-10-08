@@ -215,7 +215,7 @@ The measured optimization sizes, the rule-by-rule audit of the gallery scripts a
   <img src="docs/images/animate-cat-walk.webp" width="24%" alt="A low-poly cat walking, looped" />
   <img src="docs/images/animate-cat-idle.webp" width="24%" alt="The cat idling: breathing, glancing, tail swaying" />
   <img src="docs/images/animate-lamp.webp"     width="24%" alt="An articulated desk lamp looking around" />
-  <img src="docs/images/animate-chest.webp"    width="24%" alt="A treasure chest popping open and slamming shut" />
+  <img src="docs/images/animate-chest.webp"    width="24%" alt="A textured treasure chest: the hasp flips, the lid rattles, pops open on a heap of gold and slams shut" />
 </p>
 
 Phase 5d picks the route from the subject, because no single method held up across
@@ -226,7 +226,7 @@ measurement):
 |---|---|---|
 | Biped or winged, from a sentence | [UniMate](https://github.com/Friedrich-M/UniMate) text-to-motion, looped by `tools/motion_loop.py` | the villager, the dragon |
 | Four-legged, idle and walk | `tools/quadruped.py` — a scripted, measured cycle | the cat |
-| Articulated object | rigid parts keyed by script, every rotation's sign measured first | the lamp, the chest |
+| Articulated object | rigid parts keyed by script, every rotation's sign measured first | the lamp, the chest (planks, iron, Poly Haven CC0 scans) |
 
 UniMate was measured **unusable for quadruped walking** — on a cat, a Shiba, a horse
 and the model author's own robot dog, with the solver ruled out — so a quadruped never
