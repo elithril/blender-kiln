@@ -19,16 +19,20 @@ const S = m.scene;
         <li class:list={['step', i === 0 && 'on']} data-step={i}>
           <h3><span class="idx">{i + 1}.</span> {s.title}</h3>
           <p class="body">{s.body}</p>
-          <blockquote class="log measure"><p>{s.log}</p><cite>ammo-box_log.md</cite></blockquote>
-          {i === 0 && (
-            <figure class="read">
-              <img class="ph" src={`${base}${S.photo}`} alt="The ammo box reference photo kiln worked from" loading="lazy" />
-              {S.crops.map((c) => <img src={`${base}${c}`} alt="" loading="lazy" />)}
-              <figcaption class="measure">the photo and the crops the session read</figcaption>
-            </figure>
-          )}
           {i === 2 && <p class="figure measure"><span class="big">{S.iou.toFixed(3)}</span> silhouette overlap, photo camera</p>}
           {i === 4 && <p class="figure measure"><span class="big" data-mb>{S.rawMB.toFixed(2)} MB</span> {S.tris.toLocaleString('en-US')} triangles, Draco + WebP</p>}
+          <!-- phones keep the card short so the model keeps its size: the proofs open on demand -->
+          <button type="button" class="more measure" aria-expanded="false" aria-controls={`proofs-${i}`} data-more>From the session log</button>
+          <div class="proofs" id={`proofs-${i}`}>
+            <blockquote class="log measure"><p>{s.log}</p><cite>ammo-box_log.md</cite></blockquote>
+            {i === 0 && (
+              <figure class="read">
+                <img class="ph" src={`${base}${S.photo}`} alt="The ammo box reference photo kiln worked from" loading="lazy" />
+                {S.crops.map((c) => <img src={`${base}${c}`} alt="" loading="lazy" />)}
+                <figcaption class="measure">the photo and the crops the session read</figcaption>
+              </figure>
+            )}
+          </div>
         </li>
       ))}
     </ol>
@@ -130,6 +134,11 @@ const S = m.scene;
     if (!d) return; e.preventDefault();
     go(stepY(Math.min(n - 1, Math.max(0, cur + d))));
   });
+  root.querySelectorAll<HTMLButtonElement>('[data-more]').forEach((b) => b.addEventListener('click', () => {
+    const open = b.closest('.step')!.classList.toggle('open');
+    b.setAttribute('aria-expanded', String(open));
+    b.textContent = open ? 'Hide the log' : 'From the session log';
+  }));
   rail.forEach((b, i) => b.addEventListener('click', () => {
     go(stepY(i));
   }));
@@ -155,6 +164,11 @@ const S = m.scene;
   .read img { flex: 0 1 auto; min-width: 0; object-fit: cover; height: 44px; max-width: 16%; width: auto; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--line); background: var(--sweep); }
   .read .ph { height: 56px; max-width: 14%; object-fit: contain; background: none; }
   .read figcaption { flex-basis: 100%; font-size: 0.75rem; color: var(--ash-dim); }
+  .more { display: none; }
+  /* wide screens: the log reads before the figure, as it always did; phones put the figure first */
+  .step { display: flex; flex-direction: column; }
+  .proofs { order: 1; }
+  .figure { order: 2; }
   .figure { margin: 18px 0 0; font-size: 0.8125rem; color: var(--ash); }
   .big { display: block; font-size: clamp(3rem, 5.2vw, 4.75rem); font-weight: 500; line-height: 0.9; letter-spacing: -0.04em; color: var(--bone); margin-bottom: 6px; }
 
@@ -181,7 +195,14 @@ const S = m.scene;
     .head p { display: none; }
     .steps { top: auto; bottom: 76px; left: var(--gutter); right: var(--gutter); width: auto; height: 46svh; }
     .step { inset: auto 0 0 0; padding: 16px; border-radius: 1.5rem; background: rgb(11 9 8 / 0.82); }
-    .body { font-size: 0.9375rem; }
+    .step h3 { margin-bottom: 8px; }
+    .body { font-size: 0.9375rem; margin-bottom: 0; }
+    .figure { margin-top: 12px; }
+    .proofs { display: none; margin-top: 12px; order: 3; }
+    .figure { order: 1; }
+    .more { order: 2; align-self: flex-start; }
+    .step.open .proofs { display: block; }
+    .more { display: inline-block; margin-top: 12px; padding: 6px 12px; border: 0; border-radius: 999px; font-size: 0.75rem; color: var(--molten); background: rgb(255 238 220 / 0.06); box-shadow: inset 0 0 0 1px var(--line); cursor: pointer; }
     .read img { height: 38px; }
     .read .ph { height: 46px; }
     .figure .big { font-size: 2.25rem; }
