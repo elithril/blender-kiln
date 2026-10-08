@@ -118,13 +118,16 @@ const pct = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(Math.r
 
 <style>
   .theatre { position: relative; height: 560svh; }
-  .sticky { position: sticky; top: 0; height: 100svh; overflow: hidden; }
+  /* the pinned stage fills the LARGE viewport, so no strip of forge shows under it once Safari's toolbar
+     slides away on iOS; what reads keeps clear of the toolbar by --toolbar, the gap between the two heights */
+  .sticky { --toolbar: 0px; position: sticky; top: 0; height: 100svh; overflow: hidden; }
+  @supports (height: 100lvh) { .sticky { --toolbar: calc(100lvh - 100svh); height: 100lvh; } }
   .fallback { object-fit: cover; }
   /* the fire reads through a soft vignette, so the type always has night behind it */
   .sticky::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120% 90% at 50% 60%, transparent 40%, rgb(11 9 8 / 0.75) 100%); }
 
   /* the type sits left, the forge stands right of it (camera view offset in forge.ts) */
-  .hero { position: absolute; z-index: 2; inset: 0; display: grid; align-content: center; justify-items: start; text-align: left; padding: 96px var(--gutter) 40px; will-change: transform, opacity; }
+  .hero { position: absolute; z-index: 2; inset: 0; display: grid; align-content: center; justify-items: start; text-align: left; padding: 96px var(--gutter) calc(40px + var(--toolbar)); will-change: transform, opacity; }
   h1 { margin: 0; font-size: clamp(3rem, 6.4vw, 7.5rem); font-weight: 600; line-height: 0.92; letter-spacing: -0.03em; word-spacing: 0.08em; }
   .line { display: block; overflow: hidden; padding-bottom: 0.06em; }
   .line > span { display: inline-block; animation: rise 1.2s var(--ease-out) both; }
@@ -156,7 +159,7 @@ const pct = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(Math.r
   .chapter { text-shadow: 0 0 40px rgb(11 9 8 / 0.95), 0 0 12px rgb(11 9 8 / 0.9), 0 2px 2px rgb(11 9 8 / 0.8); }
   .chapter::before { content: ''; position: absolute; inset: -12% 6%; z-index: -1; background: radial-gradient(closest-side, rgb(11 9 8 / 0.72), transparent); }
 
-  .proof { position: absolute; z-index: 2; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 0 24vw; padding: 110px var(--gutter) 90px; opacity: 0; visibility: hidden; pointer-events: none; }
+  .proof { position: absolute; z-index: 2; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 0 24vw; padding: 110px var(--gutter) calc(90px + var(--toolbar)); opacity: 0; visibility: hidden; pointer-events: none; }
   .plate { position: relative; z-index: 1; justify-self: start; margin: 0; width: min(280px, 22vw); padding: 6px; border-radius: var(--radius); background: var(--char); box-shadow: inset 0 0 0 1px var(--line); transform: translate3d(calc((1 - var(--in, 0)) * -40px), 0, 0) rotate(-2deg); }
   .core { position: relative; border-radius: 18px; overflow: hidden; background: radial-gradient(circle at 50% 40%, #2a2420, #120f0d); box-shadow: inset 0 1px 1px rgb(255 238 220 / 0.12); aspect-ratio: 3 / 4; }
   .core img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 8%; filter: drop-shadow(0 20px 22px rgb(0 0 0 / 0.6)); }
@@ -170,7 +173,7 @@ const pct = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(Math.r
   .facts div { display: grid; gap: 2px; }
   .facts dt { color: var(--ash-dim); }
   .facts dd { margin: 0; color: var(--bone); }
-  .tally { position: absolute; z-index: 2; left: 0; right: 0; bottom: 28px; display: flex; justify-content: center; gap: 22px; margin: 0; font-size: 0.75rem; color: var(--ash-dim); opacity: 0; }
+  .tally { position: absolute; z-index: 2; left: 0; right: 0; bottom: calc(28px + var(--toolbar)); display: flex; justify-content: center; gap: 22px; margin: 0; font-size: 0.75rem; color: var(--ash-dim); opacity: 0; }
   .tally span { transition: color 0.3s; }
   .tally span.on { color: var(--molten); }
 
@@ -181,7 +184,7 @@ const pct = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(Math.r
     .actions { justify-content: center; margin-top: 22px; }
     .req { display: none; }
     /* phones: the object owns the top; the photo kiln saw becomes a chip above the reading, never over the object */
-    .proof { grid-template-columns: minmax(0, 1fr); align-content: end; gap: 0; padding: 96px 0 64px; background: linear-gradient(to top, rgb(11 9 8 / 0.94) 48%, transparent 70%); }
+    .proof { grid-template-columns: minmax(0, 1fr); align-content: end; gap: 0; padding: 96px 0 calc(64px + var(--toolbar)); background: linear-gradient(to top, rgb(11 9 8 / 0.94) 48%, transparent 70%); }
     .plate { justify-self: start; margin: 0 var(--gutter) 14px; width: auto; display: flex; align-items: center; gap: 12px; padding: 5px 14px 5px 5px; border-radius: 16px; transform: none; }
     .plate .core { width: 52px; border-radius: 1rem; }
     .chapter { top: 20%; font-size: 2.25rem; }

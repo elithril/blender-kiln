@@ -223,7 +223,7 @@ export function mountForge(canvas: HTMLCanvasElement, base: string, specimens: S
       const inn = smooth(a, a + 0.06, p), out = 1 - smooth(b - 0.06, b, p);
       const v = Math.min(inn, out) * (1 - back);
       s.obj.visible = v > 0.001;
-      s.obj.position.y = lerp(-1.3, 0, v);
+      s.obj.position.y = lerp(portrait ? -0.45 : -1.3, 0, v); // phones: a short rise, so it never passes under the readout below it
       s.obj.scale.setScalar(lerp(0.35, 1, v) * (portrait ? 0.72 : 1));
       s.obj.rotation.y = t * 0.35 + p * 9;
     });

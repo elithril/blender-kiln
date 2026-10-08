@@ -98,6 +98,10 @@ export function mountMethod(canvas: HTMLCanvasElement, base: string, cfg: Method
   });
 
   let s = 0, shown = 0, t0 = 0, spinAngle = 0;
+  // the free band the page leaves the model, in canvas pixels (between the heading and the step card on
+  // phones, right of the text column on wide screens); Method.astro measures it, null = the whole canvas
+  let band: { x0: number; y0: number; x1: number; y1: number } | null = null;
+  const bs = { x0: 0, y0: 0, x1: 1, y1: 1 }; // smoothed, so a card that grows never makes the model jump
   const az0 = THREE.MathUtils.degToRad(cfg.camera.azimuth), el0 = THREE.MathUtils.degToRad(cfg.camera.elevation);
 
   function resize() {
@@ -143,8 +147,14 @@ export function mountMethod(canvas: HTMLCanvasElement, base: string, cfg: Method
     box.position.set(cx * (1 - bell(2.0, 3.0, x, 0.1)), 0, 0);
 
     // camera: orbit framing; photo angle for the measure; dives for the joints
+    const W = canvas.clientWidth, Hh = canvas.clientHeight;
+    const b = band ?? { x0: 0, y0: 0, x1: W, y1: Hh };
+    const k = reduce ? 1 : 1 - Math.exp(-dt * 6);
+    bs.x0 = lerp(bs.x0, b.x0, k); bs.y0 = lerp(bs.y0, b.y0, k); bs.x1 = lerp(bs.x1, b.x1, k); bs.y1 = lerp(bs.y1, b.y1, k);
     const R = size.length() / 2, fovh = THREE.MathUtils.degToRad(camera.fov) / 2;
-    const r = (R / Math.sin(fovh)) * (portrait ? 3.1 : 1.85);
+    // distance that makes the bounding sphere fill FILL of the band's short side
+    const FILL = 0.86, side = Math.max(60, Math.min(bs.x1 - bs.x0, bs.y1 - bs.y0));
+    const r = (R * (Hh || 1)) / (FILL * side * Math.tan(fovh));
     let az = az0 - 0.25 + Math.sin(t0 * 0.12) * 0.05, el = el0 + 0.06;
     // (meas, declared above, also steers the camera to the photo angle)
     az = lerp(az, az0, meas); el = lerp(el, el0, meas);
@@ -158,18 +168,15 @@ export function mountMethod(canvas: HTMLCanvasElement, base: string, cfg: Method
       const j = js.length ? js[i0].clone().lerp(js[i1], f) : null;
       if (j) {
         const jw = j.clone().applyMatrix4(box.matrixWorld);
-        const near = jw.clone().add(new THREE.Vector3(Math.sin(az0), 0.45, Math.cos(az0)).normalize().multiplyScalar(R * (portrait ? 5.2 : 3.0)));
+        const near = jw.clone().add(new THREE.Vector3(Math.sin(az0), 0.45, Math.cos(az0)).normalize().multiplyScalar(r * (portrait ? 0.82 : 0.62))); // the dive, relative to the fitted distance: shallower in the short band of a phone
         pos.lerp(near, look); tgt.lerp(jw, look);
       }
     }
     camera.position.copy(pos); camera.lookAt(tgt);
     // composition: the text column owns the left on wide screens, so the scene is offset right and a
     // little down, clear of the heading; on phones it sits in the upper half, above the step card
-    const W = canvas.clientWidth, Hh = canvas.clientHeight;
-    if (W && Hh) {
-      if (portrait) camera.setViewOffset(W, Hh, 0, Hh * 0.16, W, Hh);
-      else camera.setViewOffset(W, Hh, -W * 0.17, -Hh * 0.06, W, Hh);
-    }
+    // composition: the look-at point lands on the centre of the free band, never under the text
+    if (W && Hh) camera.setViewOffset(W, Hh, W / 2 - (bs.x0 + bs.x1) / 2, Hh / 2 - (bs.y0 + bs.y1) / 2, W, Hh);
 
     // photo and crops: on stage for the read, the photo returns as the red silhouette for the measure
     const read = bell(-0.2, 1.05, x, 0.18);
@@ -223,5 +230,5 @@ export function mountMethod(canvas: HTMLCanvasElement, base: string, cfg: Method
     renderer.render(scene, camera);
   });
 
-  return { setStep(v: number) { s = v; }, ready: () => ready };
+  return { setStep(v: number) { s = v; }, setBand(v: typeof band) { const first = !band; band = v; if (first && v) Object.assign(bs, v); }, ready: () => ready };
 }
