@@ -16,6 +16,7 @@ const Y = (s: number) => PT + (1 - (s - lo) / (hi - lo)) * (H - PT - PB);
 const measured = V.filter((x) => !x.contaminated);
 const path = measured.map((x, i) => `${i ? 'L' : 'M'}${X(x.v).toFixed(1)},${Y(x.score).toFixed(1)}`).join(' ');
 const grid = [0.8, 0.85, 0.9, 0.95];
+const T = L.tradeoff;
 ---
 <section id="bench" class="lanterns" aria-labelledby="lanterns-h" data-lanterns data-stops={JSON.stringify(M)}>
   <div class="sticky">
@@ -76,6 +77,15 @@ const grid = [0.8, 0.85, 0.9, 0.95];
     <p class="note">{L.note} <a href={`${base}${L.more.href}`}>{L.more.label}</a>.</p>
   </div>
 </section>
+
+<!-- the price of a likeness: said plainly, outside the pinned section so phones read it too -->
+<aside class="tradeoff" aria-labelledby="tradeoff-h">
+  <h2 id="tradeoff-h">{T.headline}</h2>
+  <div class="tbody">
+    <p>{T.body.split(T.tool.label).map((part, i) => i === 0 ? part : <><a href={T.tool.href}>{T.tool.label}</a>{part}</>)}</p>
+    <p class="caveat">{T.caveat} <a href={`${base}${T.more.href}`}>{T.more.label}</a>.</p>
+  </div>
+</aside>
 
 <script>
   import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -183,7 +193,15 @@ const grid = [0.8, 0.85, 0.9, 0.95];
   .cursor { stroke: var(--molten); stroke-width: 1; vector-effect: non-scaling-stroke; opacity: 0.5; }
   .note { margin: 6px 0 0; font-size: 0.8125rem; color: var(--ash-dim); max-width: 120ch; }
 
+  .tradeoff { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 28px 64px; align-items: start;
+    padding: 120px var(--gutter) 24px; background: rgb(11 9 8 / 0.86); border-top: 1px solid var(--line); } /* the next section brings its own 160px */
+  .tradeoff h2 { margin: 0; font-size: clamp(2.25rem, 4.4vw, 4.75rem); line-height: 0.95; letter-spacing: -0.025em; word-spacing: 0.05em; max-width: 14ch; }
+  .tbody p { margin: 0; color: var(--ash); max-width: 60ch; }
+  .tbody a { color: var(--molten); }
+  .tbody .caveat { margin-top: 14px; font-size: 0.8125rem; color: var(--ash-dim); }
+
   @media (max-width: 960px) {
+    .tradeoff { grid-template-columns: minmax(0, 1fr); padding-top: 96px; }
     .lanterns { height: 480svh; }
     .head { display: block; }
     .head p { display: none; }

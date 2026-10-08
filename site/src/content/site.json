@@ -14,10 +14,10 @@
   ],
   "hero": {
     "headline": [
-      "Give it a photo.",
+      "A photo or a sentence.",
       "Get the object."
     ],
-    "lede": "A Claude Code skill that rebuilds your photo as a 3D object in Blender, then grades it against the real one."
+    "lede": "A Claude Code skill that builds a 3D object in Blender from a photo or a text brief, and from a photo, grades it against the real one."
   },
   "specimens": [
     {
@@ -373,7 +373,21 @@
       6,
       12,
       15
-    ]
+    ],
+    "tradeoff": {
+      "headline": "Close, not identical, on purpose.",
+      "body": "kiln stops at a few dollars per object. img2threejs, which rebuilds an image as Three.js code through eight vision-reviewed passes, keeps finer surface detail. On the same lantern its likeness was comparable, 0.866 against kiln's 0.861, at about three times the cost. Several of its techniques were measured and adopted in kiln: traced wires, layered texture fields, a frosted-glass recipe.",
+      "caveat": "Its cost is estimated, on a run stopped after three of its eight passes.",
+      "tool": {
+        "label": "img2threejs",
+        "href": "https://github.com/img2threejs/img2threejs"
+      },
+      "more": {
+        "label": "The comparison, in the bench",
+        "href": "/bench/#4-kiln-against-an-image-to-code-tool"
+      },
+      "source": "docs/benchmarks.md section 4: kiln v7 0.861, img2threejs 0.866, $3.52 against about $10, stopped after pass 3 of 8"
+    }
   },
   "animate": {
     "headline": "It moves, routed by subject.",

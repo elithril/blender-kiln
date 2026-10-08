@@ -88,6 +88,14 @@ openwork views left out for the chair. The text briefs were measured on the skil
 2.0 (`2b313d2`), the photo rebuilds on the final one. Size is assumed when a brief gives none —
 the chair came out at an ordinary chair's height, 29 % short.</sub>
 
+**Close, not identical, on purpose.** kiln stops at a few dollars per object.
+[img2threejs](https://github.com/img2threejs/img2threejs), which rebuilds an image as Three.js
+code through eight vision-reviewed passes, keeps finer surface detail: on the same lantern its
+likeness was comparable — 0.866 against kiln's 0.861 — at about three times the cost, estimated on
+a run stopped after three of its eight passes. Several of its techniques were measured and adopted
+in kiln: traced wires, layered texture fields, a frosted-glass recipe
+([benchmarks § 4](docs/benchmarks.md#4-kiln-against-an-image-to-code-tool)).
+
 What did not improve is published too: the [benchmarks](docs/benchmarks.md) — fifteen
 versions of one lantern, what each fix broke, how the bench was kept honest — and every
 number, render and GLB under 1 MB on the [`bench-results`](https://github.com/elithril/blender-kiln/tree/bench-results) branch — kept
