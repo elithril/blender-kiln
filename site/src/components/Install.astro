@@ -1,0 +1,57 @@
+---
+import site from '../content/site.json';
+import copyIcon from '@phosphor-icons/core/assets/light/copy-simple-light.svg?raw';
+---
+<!-- a double-bezel plate: the commands sit in a machined tray -->
+<div class="shell" data-install>
+  <div class="core">
+    <div class="head">
+      <p class="req">{site.requirements}</p>
+      <button class="copy" type="button" data-copy={site.install.join('\n')}>
+        <span data-label>Copy</span><span class="ic" aria-hidden="true" set:html={copyIcon} />
+      </button>
+    </div>
+    <ol class="measure" aria-label="Install in Claude Code">
+      {site.install.map((c) => <li><code>{c}</code></li>)}
+    </ol>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-install]').forEach((box) => {
+    const b = box.querySelector<HTMLButtonElement>('[data-copy]')!;
+    const label = b.querySelector<HTMLElement>('[data-label]')!;
+    b.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(b.dataset.copy!); label.textContent = 'Copied'; }
+      catch {
+        const range = document.createRange();
+        range.selectNodeContents(box.querySelector('ol')!);
+        getSelection()?.removeAllRanges(); getSelection()?.addRange(range);
+        label.textContent = 'Selected, copy it';
+      }
+      setTimeout(() => { label.textContent = 'Copy'; }, 2200);
+    });
+  });
+</script>
+
+<style>
+  .shell { padding: 6px; border-radius: 1.75rem; background: rgb(255 238 220 / 0.05); box-shadow: inset 0 0 0 1px var(--line); }
+  .core { border-radius: 22px; background: var(--char); box-shadow: inset 0 1px 1px rgb(255 238 220 / 0.1), 0 30px 60px -30px rgb(0 0 0 / 0.7); overflow: hidden; }
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 10px 10px 22px; border-bottom: 1px solid var(--line); }
+  .req { margin: 0; font-size: 0.8125rem; color: var(--ash-dim); }
+  ol { list-style: none; margin: 0; padding: 18px 22px 22px; font-size: clamp(0.8125rem, 1vw, 0.9375rem); line-height: 2; }
+  li { white-space: nowrap; }
+  li::before { content: '>'; color: var(--molten); margin-right: 1ch; }
+  code { font: inherit; color: var(--bone); }
+  .copy { flex: none; display: inline-flex; align-items: center; gap: 10px; padding: 6px 6px 6px 16px; border: 0; border-radius: 999px; font: 600 0.9375rem var(--face-text); color: var(--ink); background: var(--molten); cursor: pointer; transition: background 0.3s, transform 0.4s var(--ease-spring); }
+  .copy:hover { background: var(--bone); }
+  .copy:active { transform: scale(0.97); }
+  .ic { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; background: rgb(20 13 7 / 0.12); transition: transform 0.5s var(--ease-spring); }
+  .ic :global(svg) { width: 16px; height: 16px; fill: currentColor; }
+  .copy:hover .ic { transform: translate(1px, -1px) scale(1.06); }
+  @media (max-width: 560px) {
+    .head { padding: 8px 8px 8px 16px; gap: 12px; }
+    ol { padding: 12px 16px 14px; line-height: 1.75; }
+    li { white-space: normal; padding-left: 2ch; text-indent: -2ch; }
+  }
+</style>

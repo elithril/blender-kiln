@@ -1,0 +1,208 @@
+---
+import site from '../content/site.json';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const L = site.lanterns;
+const V = L.versions;
+const M = L.milestones as number[];
+const stops = M.map((n) => V.find((x) => x.v === n)!);
+const pct = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(Math.round(n * 100))}%`;
+
+// the curve: all fifteen truth scores, one axis, 0.80 to 0.95
+const W = 1000, H = 260, PL = 44, PR = 16, PT = 18, PB = 34;
+const lo = 0.8, hi = 0.95;
+const X = (v: number) => PL + ((v - 1) / 14) * (W - PL - PR);
+const Y = (s: number) => PT + (1 - (s - lo) / (hi - lo)) * (H - PT - PB);
+// v12 is not a measurement: the line goes from v11 straight to v13, v12 stands apart, hollow
+const measured = V.filter((x) => !x.contaminated);
+const path = measured.map((x, i) => `${i ? 'L' : 'M'}${X(x.v).toFixed(1)},${Y(x.score).toFixed(1)}`).join(' ');
+const grid = [0.8, 0.85, 0.9, 0.95];
+---
+<section id="bench" class="lanterns" aria-labelledby="lanterns-h" data-lanterns data-stops={JSON.stringify(M)}>
+  <div class="sticky">
+    <header class="head">
+      <h2 id="lanterns-h">{L.headline}</h2>
+      <p>{L.lede}</p>
+    </header>
+
+    <div class="stage">
+      <figure class="ref"><img src={`${base}${L.photo}`} alt="The reference photo of the hurricane lantern" width="304" height="760" loading="lazy" /><figcaption>The photo</figcaption></figure>
+      <figure class="book">
+        {stops.map((x, i) => <img data-page={i} class:list={[i === 0 && 'on']} src={`${base}${x.img}`} alt={`kiln version ${x.v}`} width="304" height="760" loading="lazy" decoding="async" />)}
+        <figcaption>kiln, <span data-cap>v{stops[0].v}</span></figcaption>
+      </figure>
+      <figure class="ref truthref"><img src={`${base}${L.truth}`} alt="The real Poly Haven lantern, never shown to kiln" width="304" height="760" loading="lazy" /><figcaption>The real one, never shown to kiln</figcaption></figure>
+
+      <div class="readout" aria-live="polite">
+        {stops.map((x, i) => (
+          <div class:list={['page', i === 0 && 'on']} data-read={i}>
+            <p class="vnum">v{x.v}</p>
+            <p class="score measure"><span class:list={[x.contaminated && 'struck']}>{x.score.toFixed(3)}</span></p>
+            <p class="figs measure"><span>height {pct(x.height)}</span><span>${x.cost.toFixed(2)}</span></p>
+            <p class="change">{x.change}</p>
+            <p class="result">{x.result}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <figure class="curve">
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-labelledby="curve-t" data-svg data-scores={JSON.stringify(V.map((x) => [x.v, x.score, !!x.contaminated]))}>
+        <title id="curve-t">Shape score against the real lantern, versions 1 to 15; v12 contaminated, not a measurement</title>
+        {grid.map((g) => (
+          <g>
+            <line x1={PL} x2={W - PR} y1={Y(g)} y2={Y(g)} class="grid" data-g={g} />
+            <text x={PL - 8} y={Y(g) + 4} class="tick measure" text-anchor="end" data-gt={g}>{g.toFixed(2)}</text>
+          </g>
+        ))}
+        <path d={path} class="line-all" />
+        <path d={path} class="line-on" pathLength="1" data-drawn />
+        {V.map((x) => (
+          <g class:list={['pt', M.includes(x.v) && 'stop', x.contaminated && 'bad']} data-pt={x.v}>
+            <circle cx={X(x.v)} cy={Y(x.score)} r={M.includes(x.v) ? 6 : 4} />
+            <circle cx={X(x.v)} cy={Y(x.score)} r="14" class="hit"><title>{`v${x.v}: ${x.score.toFixed(3)}${x.contaminated ? ', contaminated, not a measurement' : ''}`}</title></circle>
+            <text x={X(x.v)} y={H - 10} class="vx measure" text-anchor="middle">{x.v}</text>
+          </g>
+        ))}
+        <line class="cursor" data-cursor x1={X(1)} x2={X(1)} y1={PT} y2={H - PB} />
+      </svg>
+      <figcaption class="sr-only">
+        <table>
+          <caption>Shape score of each lantern version against the real object</caption>
+          <tr><th>version</th><th>score</th><th>note</th></tr>
+          {V.map((x) => <tr><td>v{x.v}</td><td>{x.score.toFixed(3)}</td><td>{x.contaminated ? 'contaminated, not a measurement' : x.change}</td></tr>)}
+        </table>
+      </figcaption>
+    </figure>
+    <p class="note">{L.note} <a href={`${base}${L.more.href}`}>{L.more.label}</a>.</p>
+  </div>
+</section>
+
+<script>
+  import { ScrollTrigger } from 'gsap/ScrollTrigger';
+  const root = document.querySelector<HTMLElement>('[data-lanterns]')!;
+  const stops = JSON.parse(root.dataset.stops!) as number[];
+  const pages = [...root.querySelectorAll<HTMLElement>('[data-page]')];
+  const reads = [...root.querySelectorAll<HTMLElement>('[data-read]')];
+  const cap = root.querySelector<HTMLElement>('[data-cap]')!;
+  const drawn = root.querySelector<SVGPathElement>('[data-drawn]')!;
+  const cursor = root.querySelector<SVGLineElement>('[data-cursor]')!;
+  const pts = new Map([...root.querySelectorAll<SVGGElement>('[data-pt]')].map((g) => [Number(g.dataset.pt), g]));
+  const xOf = (v: number) => Number(pts.get(v)!.querySelector('circle')!.getAttribute('cx'));
+  // lay the curve out at the SVG's real pixel size, so dots stay round and labels stay 12px
+  const svg = root.querySelector<SVGSVGElement>('[data-svg]')!;
+  const data = JSON.parse(svg.dataset.scores!) as [number, number, boolean][];
+  const all = svg.querySelector<SVGPathElement>('.line-all')!;
+  function layout() {
+    const W = svg.clientWidth, H = svg.clientHeight;
+    if (!W || !H) return;
+    const narrow = W < 600, PL = narrow ? 8 : 44, PR = 10, PT = 12, PB = 26;
+    const X = (v: number) => PL + ((v - 1) / 14) * (W - PL - PR);
+    const Y = (s: number) => PT + (1 - (s - 0.8) / 0.15) * (H - PT - PB);
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.querySelectorAll<SVGLineElement>('[data-g]').forEach((l) => { const y = Y(Number(l.dataset.g)); l.setAttribute('x1', String(PL)); l.setAttribute('x2', String(W - PR)); l.setAttribute('y1', String(y)); l.setAttribute('y2', String(y)); });
+    svg.querySelectorAll<SVGTextElement>('[data-gt]').forEach((t) => { t.setAttribute('x', String(PL - 8)); t.setAttribute('y', String(Y(Number(t.dataset.gt)) + 4)); });
+    const d = data.filter((x) => !x[2]).map((x, i) => `${i ? 'L' : 'M'}${X(x[0]).toFixed(1)},${Y(x[1]).toFixed(1)}`).join(' ');
+    all.setAttribute('d', d); drawn.setAttribute('d', d);
+    data.forEach(([v, s]) => {
+      const g = pts.get(v)!;
+      g.querySelectorAll('circle').forEach((c) => { c.setAttribute('cx', String(X(v))); c.setAttribute('cy', String(Y(s))); });
+      const t = g.querySelector('text')!; t.setAttribute('x', String(X(v))); t.setAttribute('y', String(H - 8));
+    });
+    cursor.setAttribute('y1', String(PT)); cursor.setAttribute('y2', String(H - PB));
+    paint(lastP);
+  }
+  let lastP = 0;
+  let cur = -1;
+  function show(i: number) {
+    if (i === cur) return;
+    cur = i;
+    pages.forEach((p, k) => p.classList.toggle('on', k === i));
+    reads.forEach((p, k) => p.classList.toggle('on', k === i));
+    cap.textContent = `v${stops[i]}`;
+    pts.forEach((g, v) => { g.classList.toggle('now', v === stops[i]); g.classList.toggle('past', v <= stops[i]); });
+  }
+  function paint(p: number) {
+    lastP = p;
+    // the cursor walks the fifteen versions; the reading holds the last turning point passed
+    const v = 1 + p * 14;
+    const x = xOf(1) + (xOf(15) - xOf(1)) * p;
+    cursor.setAttribute('x1', String(x)); cursor.setAttribute('x2', String(x));
+    drawn.style.strokeDashoffset = String(1 - p);
+    let i = 0;
+    stops.forEach((s, k) => { if (v >= s - 0.5) i = k; });
+    show(i);
+  }
+  new ResizeObserver(layout).observe(svg);
+  layout();
+  ScrollTrigger.create({ trigger: root, start: 'top top', end: 'bottom bottom', onUpdate: (s) => paint(s.progress) });
+</script>
+
+<style>
+  .lanterns { position: relative; height: 520svh; background: rgb(11 9 8 / 0.86); }
+  .sticky { position: sticky; top: 0; height: 100svh; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; padding: 100px var(--gutter) 18px; overflow: hidden;
+    background: radial-gradient(60% 55% at 38% 52%, rgb(255 90 20 / 0.10), transparent 70%); }
+  .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; }
+  .head h2 { margin: 0; font-size: clamp(2.25rem, 4.4vw, 4.75rem); line-height: 0.95; letter-spacing: -0.025em; word-spacing: 0.05em; max-width: 18ch; }
+  .head p { margin: 0; color: var(--ash); max-width: 46ch; }
+
+  .stage { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 0.6fr) minmax(0, 0.9fr) minmax(0, 0.6fr) minmax(0, 1.3fr); align-items: end; gap: clamp(8px, 1.6vw, 28px); min-height: 0; padding-top: 12px; }
+  figure { margin: 0; }
+  .stage figure { display: grid; justify-items: center; gap: 8px; min-height: 0; height: 100%; align-content: end; }
+  /* clean cut-outs on the night: a soft floor shadow under each, no plate */
+  .stage img { max-height: min(40svh, 400px); width: auto; max-width: 100%; filter: drop-shadow(0 24px 24px rgb(0 0 0 / 0.65));
+    -webkit-mask-image: linear-gradient(to bottom, #000 86%, transparent); mask-image: linear-gradient(to bottom, #000 86%, transparent); }
+  .ref img { max-height: min(30svh, 300px); opacity: 0.9; }
+  figcaption { font-size: 0.8125rem; color: var(--ash-dim); text-align: center; }
+  .book img { grid-area: 1 / 1; opacity: 0; transform: translateY(14px) scale(0.98); transition: opacity 0.45s var(--ease-out), transform 0.6s var(--ease-out); }
+  .book img.on { opacity: 1; transform: none; }
+  .book figcaption { grid-area: 2 / 1; color: var(--molten); }
+
+  .readout { position: relative; align-self: center; min-height: 300px; }
+  .page { position: absolute; inset: 0; opacity: 0; transform: translateY(18px); transition: opacity 0.35s var(--ease-out), transform 0.5s var(--ease-out); pointer-events: none; }
+  .page.on { opacity: 1; transform: none; }
+  .vnum { margin: 0; font: 600 clamp(1.5rem, 2.4vw, 2.25rem) var(--face-display); color: var(--molten); }
+  .score { margin: 0; font-size: clamp(3rem, 5.2vw, 4.75rem); font-weight: 500; line-height: 0.88; letter-spacing: -0.04em; }
+  .struck { text-decoration: line-through; text-decoration-thickness: 0.06em; color: var(--ash-dim); }
+  .figs { display: flex; gap: 22px; margin: 12px 0 14px; font-size: 0.875rem; color: var(--ash); }
+  .change { margin: 0 0 8px; font: 600 1.375rem/1.25 var(--face-display); max-width: 28ch; }
+  .result { margin: 0; color: var(--ash); max-width: 42ch; }
+
+  .curve { margin-top: 10px; }
+  .curve svg { display: block; width: 100%; height: clamp(110px, 17svh, 170px); overflow: visible; }
+  .grid { stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+  .tick, .vx { fill: var(--ash-dim); font-size: 12px; }
+  .line-all { fill: none; stroke: var(--line-strong); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
+  .line-on { fill: none; stroke: var(--molten); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; }
+  .pt circle:first-child { fill: var(--soot); stroke: var(--night); stroke-width: 2; vector-effect: non-scaling-stroke; transition: fill 0.3s; }
+  .pt.past circle:first-child { fill: var(--molten); }
+  .pt.stop circle:first-child { stroke: var(--molten); stroke-width: 2; }
+  .pt.bad circle:first-child { fill: var(--night); stroke: var(--ash-dim); stroke-dasharray: 2 2; }
+  .pt.now circle:first-child { fill: var(--bone); }
+  .pt.now .vx { fill: var(--bone); }
+  .hit { fill: transparent; stroke: none; cursor: help; }
+  .cursor { stroke: var(--molten); stroke-width: 1; vector-effect: non-scaling-stroke; opacity: 0.5; }
+  .note { margin: 6px 0 0; font-size: 0.8125rem; color: var(--ash-dim); max-width: 120ch; }
+
+  @media (max-width: 960px) {
+    .lanterns { height: 480svh; }
+    .head { display: block; }
+    .head p { display: none; }
+    .stage { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+    .stage .ref { display: none; }
+    .stage .truthref { display: grid; }
+    .readout { grid-column: 1 / -1; min-height: 210px; }
+    .stage img, .ref img { max-height: min(24svh, 210px); }
+    .note { display: none; }
+    .change { font-size: 1.0625rem; }
+    .result { font-size: 0.875rem; }
+    .score { font-size: 3rem; }
+    .curve svg { height: 96px; }
+    .tick { display: none; }
+  }
+  @media (max-width: 960px) and (max-height: 760px) {
+    .head h2 { font-size: 1.75rem; }
+    .stage img, .ref img { max-height: 18svh; }
+    .result { display: none; }
+    .readout { min-height: 160px; }
+  }
+</style>

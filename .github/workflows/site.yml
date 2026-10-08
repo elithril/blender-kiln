@@ -1,0 +1,45 @@
+name: Site
+
+# Builds site/ (Astro) and publishes it to GitHub Pages.
+# Rebuilt on every release too, so "New in" and the version follow the latest release notes.
+# Needs Settings > Pages > Source: GitHub Actions, enabled by the owner.
+
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", ".github/workflows/site.yml"]
+  release:
+    types: [published]
+  schedule:
+    - cron: "17 5 * * *"   # daily: the star count in the nav is read at build time
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: withastro/action@v6
+        with:
+          path: site
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

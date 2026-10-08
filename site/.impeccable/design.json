@@ -1,0 +1,1098 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-08T08:00:03+00:00",
+  "title": "Design System: blender-kiln",
+  "extensions": {
+    "colorMeta": {
+      "night": {
+        "role": "neutral",
+        "displayName": "Forge Night",
+        "canonical": "#0b0908",
+        "tonalRamp": [
+          "oklch(15% 0.004 50.5)",
+          "oklch(25% 0.004 50.5)",
+          "oklch(36% 0.004 50.5)",
+          "oklch(47% 0.004 50.5)",
+          "oklch(58% 0.004 50.5)",
+          "oklch(70% 0.004 50.5)",
+          "oklch(82% 0.004 50.5)",
+          "oklch(95% 0.004 50.5)"
+        ]
+      },
+      "char": {
+        "role": "neutral",
+        "displayName": "Char",
+        "canonical": "#14110f",
+        "tonalRamp": [
+          "oklch(15% 0.006 55.9)",
+          "oklch(25% 0.006 55.9)",
+          "oklch(36% 0.006 55.9)",
+          "oklch(47% 0.006 55.9)",
+          "oklch(58% 0.006 55.9)",
+          "oklch(70% 0.006 55.9)",
+          "oklch(82% 0.006 55.9)",
+          "oklch(95% 0.006 55.9)"
+        ]
+      },
+      "soot": {
+        "role": "neutral",
+        "displayName": "Soot",
+        "canonical": "#1e1a17",
+        "tonalRamp": [
+          "oklch(15% 0.009 59.2)",
+          "oklch(25% 0.009 59.2)",
+          "oklch(36% 0.009 59.2)",
+          "oklch(47% 0.009 59.2)",
+          "oklch(58% 0.009 59.2)",
+          "oklch(70% 0.009 59.2)",
+          "oklch(82% 0.009 59.2)",
+          "oklch(95% 0.009 59.2)"
+        ]
+      },
+      "bone": {
+        "role": "neutral",
+        "displayName": "Bone",
+        "canonical": "#f4ede4",
+        "tonalRamp": [
+          "oklch(15% 0.014 74.4)",
+          "oklch(25% 0.014 74.4)",
+          "oklch(36% 0.014 74.4)",
+          "oklch(47% 0.014 74.4)",
+          "oklch(58% 0.014 74.4)",
+          "oklch(70% 0.014 74.4)",
+          "oklch(82% 0.014 74.4)",
+          "oklch(95% 0.014 74.4)"
+        ]
+      },
+      "ash": {
+        "role": "neutral",
+        "displayName": "Ash",
+        "canonical": "#c4bbb1",
+        "tonalRamp": [
+          "oklch(15% 0.017 70.5)",
+          "oklch(25% 0.017 70.5)",
+          "oklch(36% 0.017 70.5)",
+          "oklch(47% 0.017 70.5)",
+          "oklch(58% 0.017 70.5)",
+          "oklch(70% 0.017 70.5)",
+          "oklch(82% 0.017 70.5)",
+          "oklch(95% 0.017 70.5)"
+        ]
+      },
+      "ash-dim": {
+        "role": "neutral",
+        "displayName": "Ash Dim",
+        "canonical": "#958c83",
+        "tonalRamp": [
+          "oklch(15% 0.017 67.5)",
+          "oklch(25% 0.017 67.5)",
+          "oklch(36% 0.017 67.5)",
+          "oklch(47% 0.017 67.5)",
+          "oklch(58% 0.017 67.5)",
+          "oklch(70% 0.017 67.5)",
+          "oklch(82% 0.017 67.5)",
+          "oklch(95% 0.017 67.5)"
+        ]
+      },
+      "ember": {
+        "role": "primary",
+        "displayName": "Ember",
+        "canonical": "#ff5a14",
+        "tonalRamp": [
+          "oklch(15% 0.212 38.8)",
+          "oklch(25% 0.212 38.8)",
+          "oklch(36% 0.212 38.8)",
+          "oklch(47% 0.212 38.8)",
+          "oklch(58% 0.212 38.8)",
+          "oklch(70% 0.212 38.8)",
+          "oklch(82% 0.212 38.8)",
+          "oklch(95% 0.212 38.8)"
+        ]
+      },
+      "molten": {
+        "role": "primary",
+        "displayName": "Molten",
+        "canonical": "#ffb547",
+        "tonalRamp": [
+          "oklch(15% 0.149 73.3)",
+          "oklch(25% 0.149 73.3)",
+          "oklch(36% 0.149 73.3)",
+          "oklch(47% 0.149 73.3)",
+          "oklch(58% 0.149 73.3)",
+          "oklch(70% 0.149 73.3)",
+          "oklch(82% 0.149 73.3)",
+          "oklch(95% 0.149 73.3)"
+        ]
+      },
+      "flame": {
+        "role": "secondary",
+        "displayName": "Kiln Flame",
+        "canonical": "#d67e2c",
+        "tonalRamp": [
+          "oklch(15% 0.142 58.7)",
+          "oklch(25% 0.142 58.7)",
+          "oklch(36% 0.142 58.7)",
+          "oklch(47% 0.142 58.7)",
+          "oklch(58% 0.142 58.7)",
+          "oklch(70% 0.142 58.7)",
+          "oklch(82% 0.142 58.7)",
+          "oklch(95% 0.142 58.7)"
+        ]
+      },
+      "flame-lit": {
+        "role": "secondary",
+        "displayName": "Flame Lit",
+        "canonical": "#f0954a",
+        "tonalRamp": [
+          "oklch(15% 0.141 57.6)",
+          "oklch(25% 0.141 57.6)",
+          "oklch(36% 0.141 57.6)",
+          "oklch(47% 0.141 57.6)",
+          "oklch(58% 0.141 57.6)",
+          "oklch(70% 0.141 57.6)",
+          "oklch(82% 0.141 57.6)",
+          "oklch(95% 0.141 57.6)"
+        ]
+      },
+      "slate": {
+        "role": "secondary",
+        "displayName": "Forge Slate",
+        "canonical": "#343c62",
+        "tonalRamp": [
+          "oklch(15% 0.066 273.7)",
+          "oklch(25% 0.066 273.7)",
+          "oklch(36% 0.066 273.7)",
+          "oklch(47% 0.066 273.7)",
+          "oklch(58% 0.066 273.7)",
+          "oklch(70% 0.066 273.7)",
+          "oklch(82% 0.066 273.7)",
+          "oklch(95% 0.066 273.7)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#140d07",
+        "tonalRamp": [
+          "oklch(15% 0.017 63.3)",
+          "oklch(25% 0.017 63.3)",
+          "oklch(36% 0.017 63.3)",
+          "oklch(47% 0.017 63.3)",
+          "oklch(58% 0.017 63.3)",
+          "oklch(70% 0.017 63.3)",
+          "oklch(82% 0.017 63.3)",
+          "oklch(95% 0.017 63.3)"
+        ]
+      },
+      "hearth-core-lit": {
+        "role": "neutral",
+        "displayName": "Hearth Core, lit",
+        "canonical": "#2a2420",
+        "tonalRamp": [
+          "oklch(15% 0.012 55.8)",
+          "oklch(25% 0.012 55.8)",
+          "oklch(36% 0.012 55.8)",
+          "oklch(47% 0.012 55.8)",
+          "oklch(58% 0.012 55.8)",
+          "oklch(70% 0.012 55.8)",
+          "oklch(82% 0.012 55.8)",
+          "oklch(95% 0.012 55.8)"
+        ]
+      },
+      "hearth-core-dark": {
+        "role": "neutral",
+        "displayName": "Hearth Core, dark",
+        "canonical": "#120f0d",
+        "tonalRamp": [
+          "oklch(15% 0.007 55.9)",
+          "oklch(25% 0.007 55.9)",
+          "oklch(36% 0.007 55.9)",
+          "oklch(47% 0.007 55.9)",
+          "oklch(58% 0.007 55.9)",
+          "oklch(70% 0.007 55.9)",
+          "oklch(82% 0.007 55.9)",
+          "oklch(95% 0.007 55.9)"
+        ]
+      },
+      "stage-lit": {
+        "role": "neutral",
+        "displayName": "Stage Well, lit",
+        "canonical": "#2a1d14",
+        "tonalRamp": [
+          "oklch(15% 0.026 55.8)",
+          "oklch(25% 0.026 55.8)",
+          "oklch(36% 0.026 55.8)",
+          "oklch(47% 0.026 55.8)",
+          "oklch(58% 0.026 55.8)",
+          "oklch(70% 0.026 55.8)",
+          "oklch(82% 0.026 55.8)",
+          "oklch(95% 0.026 55.8)"
+        ]
+      },
+      "stage-dark": {
+        "role": "neutral",
+        "displayName": "Stage Well, dark",
+        "canonical": "#120e0b",
+        "tonalRamp": [
+          "oklch(15% 0.009 59.0)",
+          "oklch(25% 0.009 59.0)",
+          "oklch(36% 0.009 59.0)",
+          "oklch(47% 0.009 59.0)",
+          "oklch(58% 0.009 59.0)",
+          "oklch(70% 0.009 59.0)",
+          "oklch(82% 0.009 59.0)",
+          "oklch(95% 0.009 59.0)"
+        ]
+      },
+      "sweep": {
+        "role": "neutral",
+        "displayName": "Studio Sweep (plates only)",
+        "canonical": "#404040",
+        "tonalRamp": [
+          "oklch(15% 0.000 89.9)",
+          "oklch(25% 0.000 89.9)",
+          "oklch(36% 0.000 89.9)",
+          "oklch(47% 0.000 89.9)",
+          "oklch(58% 0.000 89.9)",
+          "oklch(70% 0.000 89.9)",
+          "oklch(82% 0.000 89.9)",
+          "oklch(95% 0.000 89.9)"
+        ]
+      },
+      "truth": {
+        "role": "tertiary",
+        "displayName": "Truth Red (bench overlay only)",
+        "canonical": "#e5484d",
+        "tonalRamp": [
+          "oklch(15% 0.193 23.0)",
+          "oklch(25% 0.193 23.0)",
+          "oklch(36% 0.193 23.0)",
+          "oklch(47% 0.193 23.0)",
+          "oklch(58% 0.193 23.0)",
+          "oklch(70% 0.193 23.0)",
+          "oklch(82% 0.193 23.0)",
+          "oklch(95% 0.193 23.0)"
+        ]
+      },
+      "kiln": {
+        "role": "tertiary",
+        "displayName": "Kiln Cyan (bench overlay only)",
+        "canonical": "#2bb5d6",
+        "tonalRamp": [
+          "oklch(15% 0.120 218.6)",
+          "oklch(25% 0.120 218.6)",
+          "oklch(36% 0.120 218.6)",
+          "oklch(47% 0.120 218.6)",
+          "oklch(58% 0.120 218.6)",
+          "oklch(70% 0.120 218.6)",
+          "oklch(82% 0.120 218.6)",
+          "oklch(95% 0.120 218.6)"
+        ]
+      },
+      "both": {
+        "role": "tertiary",
+        "displayName": "Both (bench overlay only)",
+        "canonical": "#f6e6ea",
+        "tonalRamp": [
+          "oklch(15% 0.018 0.4)",
+          "oklch(25% 0.018 0.4)",
+          "oklch(36% 0.018 0.4)",
+          "oklch(47% 0.018 0.4)",
+          "oklch(58% 0.018 0.4)",
+          "oklch(70% 0.018 0.4)",
+          "oklch(82% 0.018 0.4)",
+          "oklch(95% 0.018 0.4)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Bone tint 9%",
+        "canonical": "rgb(255 238 220 / 0.09)",
+        "tonalRamp": [
+          "rgb(255 238 220 / 0.04)",
+          "rgb(255 238 220 / 0.06)",
+          "rgb(255 238 220 / 0.09)",
+          "rgb(255 238 220 / 0.12)",
+          "rgb(255 238 220 / 0.18)",
+          "rgb(255 238 220 / 0.25)",
+          "rgb(255 238 220 / 0.45)",
+          "rgb(255 238 220 / 0.7)"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Bone tint 18%",
+        "canonical": "rgb(255 238 220 / 0.18)",
+        "tonalRamp": [
+          "rgb(255 238 220 / 0.04)",
+          "rgb(255 238 220 / 0.06)",
+          "rgb(255 238 220 / 0.09)",
+          "rgb(255 238 220 / 0.12)",
+          "rgb(255 238 220 / 0.18)",
+          "rgb(255 238 220 / 0.25)",
+          "rgb(255 238 220 / 0.45)",
+          "rgb(255 238 220 / 0.7)"
+        ]
+      },
+      "bone-04": {
+        "role": "neutral",
+        "displayName": "Bone tint 4%",
+        "canonical": "rgb(255 238 220 / 0.04)",
+        "tonalRamp": [
+          "rgb(255 238 220 / 0.04)",
+          "rgb(255 238 220 / 0.06)",
+          "rgb(255 238 220 / 0.09)",
+          "rgb(255 238 220 / 0.12)",
+          "rgb(255 238 220 / 0.18)",
+          "rgb(255 238 220 / 0.25)",
+          "rgb(255 238 220 / 0.45)",
+          "rgb(255 238 220 / 0.7)"
+        ]
+      },
+      "bone-06": {
+        "role": "neutral",
+        "displayName": "Bone tint 6%",
+        "canonical": "rgb(255 238 220 / 0.06)",
+        "tonalRamp": [
+          "rgb(255 238 220 / 0.04)",
+          "rgb(255 238 220 / 0.06)",
+          "rgb(255 238 220 / 0.09)",
+          "rgb(255 238 220 / 0.12)",
+          "rgb(255 238 220 / 0.18)",
+          "rgb(255 238 220 / 0.25)",
+          "rgb(255 238 220 / 0.45)",
+          "rgb(255 238 220 / 0.7)"
+        ]
+      },
+      "bone-07": {
+        "role": "neutral",
+        "displayName": "Bone tint 7%",
+        "canonical": "rgb(255 238 220 / 0.07)",
+        "tonalRamp": [
+          "rgb(255 238 220 / 0.04)",
+          "rgb(255 238 220 / 0.06)",
+          "rgb(255 238 220 / 0.09)",
+          "rgb(255 238 220 / 0.12)",
+          "rgb(255 238 220 / 0.18)",
+          "rgb(255 238 220 / 0.25)",
+          "rgb(255 238 220 / 0.45)",
+          "rgb(255 238 220 / 0.7)"
+        ]
+      },
+      "bone-08": {
+        "role": "neutral",
+        "displayName": "Bone tint 8%",
+        "canonical": "rgb(255 238 220 / 0.08)",
+        "tonalRamp": [
+          "rgb(255 238 220 / 0.04)",
+          "rgb(255 238 220 / 0.06)",
+          "rgb(255 238 220 / 0.09)",
+          "rgb(255 238 220 / 0.12)",
+          "rgb(255 238 220 / 0.18)",
+          "rgb(255 238 220 / 0.25)",
+          "rgb(255 238 220 / 0.45)",
+          "rgb(255 238 220 / 0.7)"
+        ]
+      },
+      "bone-10": {
+        "role": "neutral",
+        "displayName": "Bone tint 10%",
+        "canonical": "rgb(255 238 220 / 0.1)",
+        "tonalRamp": [
+          "rgb(255 238 220 / 0.04)",
+          "rgb(255 238 220 / 0.06)",
+          "rgb(255 238 220 / 0.09)",
+          "rgb(255 238 220 / 0.12)",
+          "rgb(255 238 220 / 0.18)",
+          "rgb(255 238 220 / 0.25)",
+          "rgb(255 238 220 / 0.45)",
+          "rgb(255 238 220 / 0.7)"
+        ]
+      },
+      "bone-12": {
+        "role": "neutral",
+        "displayName": "Bone tint 12%",
+        "canonical": "rgb(255 238 220 / 0.12)",
+        "tonalRamp": [
+          "rgb(255 238 220 / 0.04)",
+          "rgb(255 238 220 / 0.06)",
+          "rgb(255 238 220 / 0.09)",
+          "rgb(255 238 220 / 0.12)",
+          "rgb(255 238 220 / 0.18)",
+          "rgb(255 238 220 / 0.25)",
+          "rgb(255 238 220 / 0.45)",
+          "rgb(255 238 220 / 0.7)"
+        ]
+      },
+      "ember-glow-10": {
+        "role": "neutral",
+        "displayName": "Ember tint 10%",
+        "canonical": "rgb(255 90 20 / 0.10)",
+        "tonalRamp": [
+          "rgb(255 90 20 / 0.04)",
+          "rgb(255 90 20 / 0.06)",
+          "rgb(255 90 20 / 0.09)",
+          "rgb(255 90 20 / 0.12)",
+          "rgb(255 90 20 / 0.18)",
+          "rgb(255 90 20 / 0.25)",
+          "rgb(255 90 20 / 0.45)",
+          "rgb(255 90 20 / 0.7)"
+        ]
+      },
+      "ember-glow-12": {
+        "role": "neutral",
+        "displayName": "Ember tint 12%",
+        "canonical": "rgb(255 90 20 / 0.12)",
+        "tonalRamp": [
+          "rgb(255 90 20 / 0.04)",
+          "rgb(255 90 20 / 0.06)",
+          "rgb(255 90 20 / 0.09)",
+          "rgb(255 90 20 / 0.12)",
+          "rgb(255 90 20 / 0.18)",
+          "rgb(255 90 20 / 0.25)",
+          "rgb(255 90 20 / 0.45)",
+          "rgb(255 90 20 / 0.7)"
+        ]
+      },
+      "ember-glow-22": {
+        "role": "neutral",
+        "displayName": "Ember tint 22%",
+        "canonical": "rgb(255 90 20 / 0.22)",
+        "tonalRamp": [
+          "rgb(255 90 20 / 0.04)",
+          "rgb(255 90 20 / 0.06)",
+          "rgb(255 90 20 / 0.09)",
+          "rgb(255 90 20 / 0.12)",
+          "rgb(255 90 20 / 0.18)",
+          "rgb(255 90 20 / 0.25)",
+          "rgb(255 90 20 / 0.45)",
+          "rgb(255 90 20 / 0.7)"
+        ]
+      },
+      "ember-halo-45": {
+        "role": "neutral",
+        "displayName": "Ember tint 45%",
+        "canonical": "rgb(255 90 20 / 0.45)",
+        "tonalRamp": [
+          "rgb(255 90 20 / 0.04)",
+          "rgb(255 90 20 / 0.06)",
+          "rgb(255 90 20 / 0.09)",
+          "rgb(255 90 20 / 0.12)",
+          "rgb(255 90 20 / 0.18)",
+          "rgb(255 90 20 / 0.25)",
+          "rgb(255 90 20 / 0.45)",
+          "rgb(255 90 20 / 0.7)"
+        ]
+      },
+      "ember-halo-60": {
+        "role": "neutral",
+        "displayName": "Ember tint 60%",
+        "canonical": "rgb(255 90 20 / 0.6)",
+        "tonalRamp": [
+          "rgb(255 90 20 / 0.04)",
+          "rgb(255 90 20 / 0.06)",
+          "rgb(255 90 20 / 0.09)",
+          "rgb(255 90 20 / 0.12)",
+          "rgb(255 90 20 / 0.18)",
+          "rgb(255 90 20 / 0.25)",
+          "rgb(255 90 20 / 0.45)",
+          "rgb(255 90 20 / 0.7)"
+        ]
+      },
+      "ember-halo-70": {
+        "role": "neutral",
+        "displayName": "Ember tint 70%",
+        "canonical": "rgb(255 90 20 / 0.7)",
+        "tonalRamp": [
+          "rgb(255 90 20 / 0.04)",
+          "rgb(255 90 20 / 0.06)",
+          "rgb(255 90 20 / 0.09)",
+          "rgb(255 90 20 / 0.12)",
+          "rgb(255 90 20 / 0.18)",
+          "rgb(255 90 20 / 0.25)",
+          "rgb(255 90 20 / 0.45)",
+          "rgb(255 90 20 / 0.7)"
+        ]
+      },
+      "molten-ring-40": {
+        "role": "neutral",
+        "displayName": "Molten tint 40%",
+        "canonical": "rgb(255 181 71 / 0.4)",
+        "tonalRamp": [
+          "rgb(255 181 71 / 0.04)",
+          "rgb(255 181 71 / 0.06)",
+          "rgb(255 181 71 / 0.09)",
+          "rgb(255 181 71 / 0.12)",
+          "rgb(255 181 71 / 0.18)",
+          "rgb(255 181 71 / 0.25)",
+          "rgb(255 181 71 / 0.45)",
+          "rgb(255 181 71 / 0.7)"
+        ]
+      },
+      "molten-trail-45": {
+        "role": "neutral",
+        "displayName": "Molten tint 45%",
+        "canonical": "rgb(255 181 71 / 0.45)",
+        "tonalRamp": [
+          "rgb(255 181 71 / 0.04)",
+          "rgb(255 181 71 / 0.06)",
+          "rgb(255 181 71 / 0.09)",
+          "rgb(255 181 71 / 0.12)",
+          "rgb(255 181 71 / 0.18)",
+          "rgb(255 181 71 / 0.25)",
+          "rgb(255 181 71 / 0.45)",
+          "rgb(255 181 71 / 0.7)"
+        ]
+      },
+      "ink-10": {
+        "role": "neutral",
+        "displayName": "Ink tint 10%",
+        "canonical": "rgb(20 13 7 / 0.1)",
+        "tonalRamp": [
+          "rgb(20 13 7 / 0.04)",
+          "rgb(20 13 7 / 0.06)",
+          "rgb(20 13 7 / 0.09)",
+          "rgb(20 13 7 / 0.12)",
+          "rgb(20 13 7 / 0.18)",
+          "rgb(20 13 7 / 0.25)",
+          "rgb(20 13 7 / 0.45)",
+          "rgb(20 13 7 / 0.7)"
+        ]
+      },
+      "ink-12": {
+        "role": "neutral",
+        "displayName": "Ink tint 12%",
+        "canonical": "rgb(20 13 7 / 0.12)",
+        "tonalRamp": [
+          "rgb(20 13 7 / 0.04)",
+          "rgb(20 13 7 / 0.06)",
+          "rgb(20 13 7 / 0.09)",
+          "rgb(20 13 7 / 0.12)",
+          "rgb(20 13 7 / 0.18)",
+          "rgb(20 13 7 / 0.25)",
+          "rgb(20 13 7 / 0.45)",
+          "rgb(20 13 7 / 0.7)"
+        ]
+      },
+      "ink-18": {
+        "role": "neutral",
+        "displayName": "Ink tint 18%",
+        "canonical": "rgb(20 13 7 / 0.18)",
+        "tonalRamp": [
+          "rgb(20 13 7 / 0.04)",
+          "rgb(20 13 7 / 0.06)",
+          "rgb(20 13 7 / 0.09)",
+          "rgb(20 13 7 / 0.12)",
+          "rgb(20 13 7 / 0.18)",
+          "rgb(20 13 7 / 0.25)",
+          "rgb(20 13 7 / 0.45)",
+          "rgb(20 13 7 / 0.7)"
+        ]
+      },
+      "ink-20": {
+        "role": "neutral",
+        "displayName": "Ink tint 20%",
+        "canonical": "rgb(20 13 7 / 0.2)",
+        "tonalRamp": [
+          "rgb(20 13 7 / 0.04)",
+          "rgb(20 13 7 / 0.06)",
+          "rgb(20 13 7 / 0.09)",
+          "rgb(20 13 7 / 0.12)",
+          "rgb(20 13 7 / 0.18)",
+          "rgb(20 13 7 / 0.25)",
+          "rgb(20 13 7 / 0.45)",
+          "rgb(20 13 7 / 0.7)"
+        ]
+      },
+      "ink-25": {
+        "role": "neutral",
+        "displayName": "Ink tint 25%",
+        "canonical": "rgb(20 13 7 / 0.25)",
+        "tonalRamp": [
+          "rgb(20 13 7 / 0.04)",
+          "rgb(20 13 7 / 0.06)",
+          "rgb(20 13 7 / 0.09)",
+          "rgb(20 13 7 / 0.12)",
+          "rgb(20 13 7 / 0.18)",
+          "rgb(20 13 7 / 0.25)",
+          "rgb(20 13 7 / 0.45)",
+          "rgb(20 13 7 / 0.7)"
+        ]
+      },
+      "glass": {
+        "role": "neutral",
+        "displayName": "Nav Glass",
+        "canonical": "rgb(20 17 15 / 0.62)",
+        "tonalRamp": [
+          "rgb(20 17 15 / 0.04)",
+          "rgb(20 17 15 / 0.06)",
+          "rgb(20 17 15 / 0.09)",
+          "rgb(20 17 15 / 0.12)",
+          "rgb(20 17 15 / 0.18)",
+          "rgb(20 17 15 / 0.25)",
+          "rgb(20 17 15 / 0.45)",
+          "rgb(20 17 15 / 0.7)"
+        ]
+      },
+      "night-60": {
+        "role": "neutral",
+        "displayName": "Night tint 60%",
+        "canonical": "rgb(11 9 8 / 0.6)",
+        "tonalRamp": [
+          "rgb(11 9 8 / 0.04)",
+          "rgb(11 9 8 / 0.06)",
+          "rgb(11 9 8 / 0.09)",
+          "rgb(11 9 8 / 0.12)",
+          "rgb(11 9 8 / 0.18)",
+          "rgb(11 9 8 / 0.25)",
+          "rgb(11 9 8 / 0.45)",
+          "rgb(11 9 8 / 0.7)"
+        ]
+      },
+      "night-75": {
+        "role": "neutral",
+        "displayName": "Night tint 75%",
+        "canonical": "rgb(11 9 8 / 0.75)",
+        "tonalRamp": [
+          "rgb(11 9 8 / 0.04)",
+          "rgb(11 9 8 / 0.06)",
+          "rgb(11 9 8 / 0.09)",
+          "rgb(11 9 8 / 0.12)",
+          "rgb(11 9 8 / 0.18)",
+          "rgb(11 9 8 / 0.25)",
+          "rgb(11 9 8 / 0.45)",
+          "rgb(11 9 8 / 0.7)"
+        ]
+      },
+      "night-92": {
+        "role": "neutral",
+        "displayName": "Night tint 92%",
+        "canonical": "rgb(11 9 8 / 0.92)",
+        "tonalRamp": [
+          "rgb(11 9 8 / 0.04)",
+          "rgb(11 9 8 / 0.06)",
+          "rgb(11 9 8 / 0.09)",
+          "rgb(11 9 8 / 0.12)",
+          "rgb(11 9 8 / 0.18)",
+          "rgb(11 9 8 / 0.25)",
+          "rgb(11 9 8 / 0.45)",
+          "rgb(11 9 8 / 0.7)"
+        ]
+      },
+      "shadow-60": {
+        "role": "neutral",
+        "displayName": "Shadow tint 60%",
+        "canonical": "rgb(0 0 0 / 0.6)",
+        "tonalRamp": [
+          "rgb(0 0 0 / 0.04)",
+          "rgb(0 0 0 / 0.06)",
+          "rgb(0 0 0 / 0.09)",
+          "rgb(0 0 0 / 0.12)",
+          "rgb(0 0 0 / 0.18)",
+          "rgb(0 0 0 / 0.25)",
+          "rgb(0 0 0 / 0.45)",
+          "rgb(0 0 0 / 0.7)"
+        ]
+      },
+      "shadow-70": {
+        "role": "neutral",
+        "displayName": "Shadow tint 70%",
+        "canonical": "rgb(0 0 0 / 0.7)",
+        "tonalRamp": [
+          "rgb(0 0 0 / 0.04)",
+          "rgb(0 0 0 / 0.06)",
+          "rgb(0 0 0 / 0.09)",
+          "rgb(0 0 0 / 0.12)",
+          "rgb(0 0 0 / 0.18)",
+          "rgb(0 0 0 / 0.25)",
+          "rgb(0 0 0 / 0.45)",
+          "rgb(0 0 0 / 0.7)"
+        ]
+      },
+      "shadow-80": {
+        "role": "neutral",
+        "displayName": "Shadow tint 80%",
+        "canonical": "rgb(0 0 0 / 0.8)",
+        "tonalRamp": [
+          "rgb(0 0 0 / 0.04)",
+          "rgb(0 0 0 / 0.06)",
+          "rgb(0 0 0 / 0.09)",
+          "rgb(0 0 0 / 0.12)",
+          "rgb(0 0 0 / 0.18)",
+          "rgb(0 0 0 / 0.25)",
+          "rgb(0 0 0 / 0.45)",
+          "rgb(0 0 0 / 0.7)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display-close": {
+        "displayName": "Display Close",
+        "purpose": "The closing word set across the fire gradient, ink on molten."
+      },
+      "display-hero": {
+        "displayName": "Display Hero",
+        "purpose": "The two-line hero headline beside the forge; each line rises out of its own mask."
+      },
+      "display-hero-narrow": {
+        "displayName": "Display Hero Narrow",
+        "purpose": "The hero headline under 760px, centred above the forge."
+      },
+      "display-bench": {
+        "displayName": "Display Bench",
+        "purpose": "The bench page title."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section heads (Animate, Close briefs) and the theatre chapter lines."
+      },
+      "headline-method": {
+        "displayName": "Headline Method",
+        "purpose": "The Method intro head in the horizontal pan."
+      },
+      "headline-lanterns": {
+        "displayName": "Headline Lanterns",
+        "purpose": "The Lanterns flip-book head."
+      },
+      "title-version": {
+        "displayName": "Title Version",
+        "purpose": "The lantern version number, molten."
+      },
+      "title-prose": {
+        "displayName": "Title Prose",
+        "purpose": "h2 in the bench long-form prose."
+      },
+      "title-step": {
+        "displayName": "Title Step",
+        "purpose": "Method step titles under each plate."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Route titles and the left-out head in Animate."
+      },
+      "subtitle": {
+        "displayName": "Subtitle",
+        "purpose": "The lantern change line."
+      },
+      "name": {
+        "displayName": "Name",
+        "purpose": "Specimen name above the score, molten."
+      },
+      "name-sm": {
+        "displayName": "Name Sm",
+        "purpose": "Brief names above the measured bars."
+      },
+      "wordmark": {
+        "displayName": "Wordmark",
+        "purpose": "The nav wordmark."
+      },
+      "lede": {
+        "displayName": "Lede",
+        "purpose": "Hero lede beside the forge."
+      },
+      "body-lg": {
+        "displayName": "Body Lg",
+        "purpose": "Method intro paragraph."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Page default reading size."
+      },
+      "body-md": {
+        "displayName": "Body Md",
+        "purpose": "Method step text, hero actions, narrow lede."
+      },
+      "control": {
+        "displayName": "Control",
+        "purpose": "Nav links, chips, copy button, close links."
+      },
+      "small": {
+        "displayName": "Small",
+        "purpose": "Lantern figures, bench TOC and tables, requirements."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Figcaptions, footnotes, disclosures, facts."
+      },
+      "score": {
+        "displayName": "Score",
+        "purpose": "Truth score of a specimen in the theatre, mono."
+      },
+      "score-lantern": {
+        "displayName": "Score Lantern",
+        "purpose": "Lantern version score, mono."
+      },
+      "score-narrow": {
+        "displayName": "Score Narrow",
+        "purpose": "Theatre score under 760px."
+      },
+      "score-lantern-narrow": {
+        "displayName": "Score Lantern Narrow",
+        "purpose": "Lantern score under 560px."
+      },
+      "ratio": {
+        "displayName": "Ratio",
+        "purpose": "The ÷N weight ratio in the Close rows, molten with an ember glow."
+      },
+      "command": {
+        "displayName": "Command",
+        "purpose": "Install command list."
+      },
+      "measure": {
+        "displayName": "Measure",
+        "purpose": "Tallies, tick labels, bar keys."
+      }
+    },
+    "shadows": [
+      {
+        "name": "inset-ring",
+        "value": "inset 0 0 0 1px var(--line)",
+        "purpose": "Plates, chips, viewport, command blocks."
+      },
+      {
+        "name": "core-highlight",
+        "value": "inset 0 1px 1px rgb(255 238 220 / 0.12)",
+        "purpose": "The inner core of a double bezel."
+      },
+      {
+        "name": "nav-float",
+        "value": "inset 0 1px 0 rgb(255 238 220 / 0.06), 0 18px 40px -20px rgb(0 0 0 / 0.8)",
+        "purpose": "The floating glass nav pill."
+      },
+      {
+        "name": "ember-lift",
+        "value": "0 0 0 1px rgb(255 181 71 / 0.4), 0 20px 50px -18px rgb(255 90 20 / 0.7)",
+        "purpose": "Primary action only."
+      },
+      {
+        "name": "flipbook-glow",
+        "value": "0 40px 80px -30px rgb(255 90 20 / 0.45)",
+        "purpose": "The current lantern in the flip-book."
+      },
+      {
+        "name": "bar-glow",
+        "value": "0 0 18px rgb(255 90 20 / 0.6)",
+        "purpose": "The ember-to-molten after bars."
+      },
+      {
+        "name": "ratio-glow",
+        "value": "text-shadow: 0 0 60px rgb(255 90 20 / 0.45)",
+        "purpose": "The ÷N ratio text."
+      },
+      {
+        "name": "install-drop",
+        "value": "inset 0 1px 1px rgb(255 238 220 / 0.1), 0 30px 60px -30px rgb(0 0 0 / 0.7)",
+        "purpose": "Install core sitting on the fire."
+      },
+      {
+        "name": "specimen-drop",
+        "value": "filter: drop-shadow(0 20px 22px rgb(0 0 0 / 0.6))",
+        "purpose": "A specimen render standing in its plate core."
+      }
+    ],
+    "gradients": [
+      {
+        "name": "after-bar",
+        "value": "linear-gradient(90deg, var(--ember), var(--molten))",
+        "purpose": "Measured after bars."
+      },
+      {
+        "name": "ember-floor",
+        "value": "radial-gradient(60% 55% at 42% 62%, rgb(255 90 20 / 0.10), transparent 70%)",
+        "purpose": "Floor light under Lanterns (0.12 under Animate, 0.22 under the bench header)."
+      },
+      {
+        "name": "hearth-core",
+        "value": "radial-gradient(circle at 50% 40%, #2a2420, #120f0d)",
+        "purpose": "Plate core behind a theatre specimen."
+      },
+      {
+        "name": "stage-well",
+        "value": "radial-gradient(60% 50% at 50% 70%, #2a1d14, #120e0b 70%)",
+        "purpose": "Live creature viewport."
+      },
+      {
+        "name": "theatre-vignette",
+        "value": "radial-gradient(120% 90% at 50% 60%, transparent 40%, rgb(11 9 8 / 0.75) 100%)",
+        "purpose": "Keeps night behind the type over the forge."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Reveals: headline rise (1.2s), fades, flip-book cross-fades (0.35s opacity, 0.5s transform)."
+      },
+      {
+        "name": "ease-spring",
+        "value": "cubic-bezier(0.32, 0.72, 0, 1)",
+        "purpose": "Control states: pill fills (0.3s), icon-well nudge (0.4 to 0.5s), press scale."
+      },
+      {
+        "name": "lenis",
+        "value": "Lenis lerp 0.1, driven by the GSAP ticker, lagSmoothing 0",
+        "purpose": "One smooth scroll for the site; not started under reduced motion."
+      },
+      {
+        "name": "theatre-scrub",
+        "value": "ScrollTrigger scrub on a 560svh section, 100svh sticky stage; camera eases toward progress at 0.12",
+        "purpose": "The forge scene, chapters, specimens and tally."
+      },
+      {
+        "name": "method-pan",
+        "value": "ScrollTrigger pin + scrub 0.6, horizontal translate of the track; images scale 1.12 to 1",
+        "purpose": "The session's files; above 760px with motion only."
+      },
+      {
+        "name": "lanterns-flipbook",
+        "value": "ScrollTrigger over 700svh (600svh under 960px), steps through 15 versions",
+        "purpose": "Lantern flip-book, ticks and readout pages."
+      },
+      {
+        "name": "close-grow",
+        "value": "ScrollTrigger scrub 0.8, bars scaleX 0 to 1, ratio counts up",
+        "purpose": "Measured bars in Close; static under reduced motion."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation and transition durations 0.01ms; no Lenis; no embers or flicker; Method becomes a native snap row; creature mixer frozen",
+        "purpose": "Every scene keeps a readable static form."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "narrow",
+        "value": "560px"
+      },
+      {
+        "name": "portrait",
+        "value": "760px"
+      },
+      {
+        "name": "tablet",
+        "value": "960px"
+      }
+    ],
+    "scene": {
+      "forge": "kiln-made forge.glb (the logo in 3D) on a sticky canvas; ACES filmic tone mapping; fog on night; fire point light, cool rim, warm fill; ~420 additive embers recycled from the mouth; UnrealBloomPass (0.55, 0.5, 0.82) on emissive things; camera view offset of 22% of width (landscape) or 20% of height (portrait) so the type never covers the forge; still image fallback without WebGL.",
+      "creatures": "Animated kiln GLBs in a live viewport, each a SkeletonUtils clone so the skin follows its own skeleton; drag to orbit, auto-spin after 1.5s idle.",
+      "grain": "Fixed SVG fractal-noise overlay, opacity 0.07, mix-blend overlay, z-index 30."
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Molten pill with an icon well; the install and hero call to action.",
+      "html": "<a class=\"ds-cta\" href=\"#\">Copy install <span class=\"ds-ic\"><svg viewBox=\"0 0 24 24\"><path d=\"M7 17 17 7M9 7h8v8\" stroke=\"currentColor\" stroke-width=\"2\" fill=\"none\"/></svg></span></a>",
+      "css": ".ds-cta { display: inline-flex; align-items: center; gap: 12px; padding: 8px 8px 8px 22px; border-radius: 999px; font: 600 1rem var(--face-text); text-decoration: none; color: var(--ink); background: var(--molten); box-shadow: 0 0 0 1px rgb(255 181 71 / 0.4), 0 20px 50px -18px rgb(255 90 20 / 0.7); transition: transform 0.5s var(--ease-spring), background 0.3s; } .ds-cta:hover { background: var(--bone); } .ds-cta:active { transform: scale(0.98); } .ds-cta:focus-visible { outline: 2px solid var(--molten); outline-offset: 3px; } .ds-ic { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 999px; background: rgb(20 13 7 / 0.12); transition: transform 0.5s var(--ease-spring); } .ds-ic svg { width: 18px; height: 18px; } .ds-cta:hover .ds-ic { transform: translate(2px, -1px) scale(1.06); }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Bone-wash pill beside the primary action (See the bench).",
+      "html": "<a class=\"ds-ghost\" href=\"#\">See the bench <span class=\"ds-ic\"><svg viewBox=\"0 0 24 24\"><path d=\"M5 12h14M13 6l6 6-6 6\" stroke=\"currentColor\" stroke-width=\"2\" fill=\"none\"/></svg></span></a>",
+      "css": ".ds-ghost { display: inline-flex; align-items: center; gap: 12px; padding: 8px 8px 8px 22px; border-radius: 999px; font: 600 1rem var(--face-text); text-decoration: none; color: var(--bone); background: rgb(255 238 220 / 0.06); box-shadow: inset 0 0 0 1px var(--line-strong); transition: transform 0.5s var(--ease-spring), background 0.3s; } .ds-ghost:hover { background: rgb(255 238 220 / 0.12); } .ds-ghost:active { transform: scale(0.98); } .ds-ghost:focus-visible { outline: 2px solid var(--molten); outline-offset: 3px; } .ds-ghost .ds-ic { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 999px; background: rgb(255 238 220 / 0.08); } .ds-ghost .ds-ic svg { width: 18px; height: 18px; }"
+    },
+    {
+      "name": "Route Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Pill toggle choosing which live creature plays.",
+      "html": "<div class=\"ds-pick\"><button class=\"ds-chip\" aria-pressed=\"true\">Fox</button><button class=\"ds-chip\" aria-pressed=\"false\">Crab</button></div>",
+      "css": ".ds-pick { display: flex; gap: 8px; } .ds-chip { padding: 9px 16px; border-radius: 999px; border: 0; font: 500 0.9375rem var(--face-text); color: var(--ash); background: rgb(255 238 220 / 0.06); box-shadow: inset 0 0 0 1px var(--line); cursor: pointer; transition: background 0.3s var(--ease-spring), color 0.3s, transform 0.4s var(--ease-spring); } .ds-chip:hover { color: var(--bone); background: rgb(255 238 220 / 0.1); } .ds-chip:active { transform: scale(0.97); } .ds-chip:focus-visible { outline: 2px solid var(--molten); outline-offset: 3px; } .ds-chip[aria-pressed='true'] { color: var(--ink); background: var(--molten); box-shadow: none; }"
+    },
+    {
+      "name": "Floating Pill Nav",
+      "kind": "nav",
+      "refersTo": "nav-pill",
+      "description": "Glass pill nav floating 16px from the top.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-mark\" href=\"#\">blender-kiln</a><a class=\"ds-link\" href=\"#\" aria-current=\"page\">Home</a><a class=\"ds-link\" href=\"#\">Bench</a><a class=\"ds-gh\" href=\"#\">GitHub</a></nav>",
+      "css": ".ds-nav { display: inline-flex; align-items: center; gap: 4px; padding: 6px 6px 6px 14px; border-radius: 999px; background: rgb(20 17 15 / 0.62); border: 1px solid var(--line); box-shadow: inset 0 1px 0 rgb(255 238 220 / 0.06), 0 18px 40px -20px rgb(0 0 0 / 0.8); backdrop-filter: blur(16px) saturate(140%); } .ds-mark { margin-right: 10px; font: 600 1rem var(--face-display); letter-spacing: -0.01em; color: var(--bone); text-decoration: none; } .ds-link, .ds-gh { padding: 8px 14px; border-radius: 999px; font-size: 0.9375rem; color: var(--ash); text-decoration: none; transition: color 0.3s var(--ease-spring), background 0.3s var(--ease-spring); } .ds-link:hover, .ds-link[aria-current='page'] { color: var(--bone); background: rgb(255 238 220 / 0.07); } .ds-gh { color: var(--ink); background: var(--molten); font-weight: 600; } .ds-gh:hover { background: var(--bone); } .ds-link:focus-visible, .ds-gh:focus-visible { outline: 2px solid var(--molten); outline-offset: 3px; }"
+    },
+    {
+      "name": "Double-Bezel Plate",
+      "kind": "card",
+      "refersTo": "plate",
+      "description": "Evidence on a stand: a 6px bone shell around a core whose radius is the shell's minus 6px.",
+      "html": "<figure class=\"ds-plate\"><div class=\"ds-core\"></div><figcaption><span>Lantern</span>photo rebuild</figcaption></figure>",
+      "css": ".ds-plate { margin: 0; width: 240px; padding: 6px; border-radius: var(--radius); background: rgb(255 238 220 / 0.04); box-shadow: inset 0 0 0 1px var(--line); transform: rotate(-2deg); } .ds-core { border-radius: calc(var(--radius) - 6px); aspect-ratio: 3 / 4; background: radial-gradient(circle at 50% 40%, #2a2420, #120f0d); box-shadow: inset 0 1px 1px rgb(255 238 220 / 0.12); } .ds-plate figcaption { padding: 10px 8px 4px; font-size: 0.8125rem; color: var(--ash-dim); } .ds-plate figcaption span { color: var(--bone); font-weight: 600; margin-right: 6px; }"
+    },
+    {
+      "name": "Measured Bars",
+      "kind": "custom",
+      "refersTo": "plate",
+      "description": "Before in soot, after in an ember-to-molten gradient with a glow; values in mono.",
+      "html": "<div class=\"ds-bars\"><div class=\"ds-bar\" style=\"--f:1\"><span class=\"ds-k\">before</span><span class=\"ds-run\"><i></i><span class=\"ds-v\">40.8 MB</span></span></div><div class=\"ds-bar ds-after\" style=\"--f:0.03\"><span class=\"ds-k\">after</span><span class=\"ds-run\"><i></i><span class=\"ds-v\">1.2 MB</span></span></div></div>",
+      "css": ".ds-bars { display: grid; gap: 10px; width: 420px; } .ds-bar { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); align-items: center; gap: 12px; } .ds-run { display: flex; align-items: center; gap: 12px; width: 100%; } .ds-bar i { flex: none; display: block; height: 14px; width: calc((100% - 6rem) * var(--f)); min-width: 4px; border-radius: 999px; background: var(--soot); box-shadow: inset 0 0 0 1px var(--line-strong); } .ds-after i { background: linear-gradient(90deg, var(--ember), var(--molten)); box-shadow: 0 0 18px rgb(255 90 20 / 0.6); } .ds-v { font-family: var(--face-measure); font-size: 0.875rem; color: var(--ash); } .ds-after .ds-v { color: var(--molten); } .ds-k { font-family: var(--face-measure); font-size: 0.75rem; color: var(--ash-dim); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Forge, Cinematic",
+    "overview": "The page is night, and the only light in it comes from the fire. A kiln-made forge (the logo, built in 3D by kiln itself) burns in a full-bleed WebGL scene; the scroll is the camera, falling into the forge, watching objects rise out of it and get graded against the real thing. The document is not a page with a 3D frame in it: the scene is the page, and the type stands beside the fire, never over it.\n\nEverything else is lit by that fire or sits in shadow. Ember and molten are light sources, not decoration: they glow (bloom on emissive meshes, ember halos on the primary action and the \"after\" bars, a text glow on the ratio), and the ground stays a warm near-black. Film grain lies fixed over the whole viewport. Clash Display is set huge and tight; Geist carries the reading; Geist Mono carries every measured number. Controls are pills, and evidence sits on double-bezel plates like objects on a stand.\n\nMotion is scroll-scrubbed and pinned (GSAP ScrollTrigger on Lenis smooth scroll), and every pinned scene has a reduced-motion form that is a plain, readable layout rather than a frozen frame.",
+    "keyCharacteristics": [
+      "Night ground (#0b0908) lit only by ember, molten and kiln's flame; slate is the forge's stone.",
+      "One continuous WebGL forge driving the first act; the camera view is offset so the headline never covers the fire.",
+      "Clash Display at cinematic sizes, Geist for text, Geist Mono for every number.",
+      "Pill controls and a floating pill nav; double-bezel plates (6px shell around a core).",
+      "Translucent bone and ember alphas as named tints, never opaque greys.",
+      "The page ends inside the fire: a radial fire gradient carries the closing install."
+    ],
+    "rules": [
+      {
+        "name": "The Only Light Rule",
+        "body": "Light comes from the fire. Bright surfaces are molten, ember or the fire gradient; there is no neutral light-grey panel anywhere on the page.",
+        "section": "colors"
+      },
+      {
+        "name": "The Plate Rule",
+        "body": "A render with a grey studio ground is an object on a stand: it sits in a plate core, never on the page ground.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Marks Rule",
+        "body": "Red and cyan are the bench's marking. They appear only in the bench overlay, never as accent, state or error color on the site.",
+        "section": "colors"
+      },
+      {
+        "name": "The Measured Number Rule",
+        "body": "Every number on the page is set in Geist Mono with tabular figures and comes from `src/content/site.json`; nothing is typed into a component.",
+        "section": "typography"
+      },
+      {
+        "name": "The Clean Copy Rule",
+        "body": "No em-dashes in visible copy.",
+        "section": "typography"
+      },
+      {
+        "name": "The Glow Is Heat Rule",
+        "body": "A glow is ember-colored and sits under something the fire lit. A grey drop shadow under a card is not part of this world.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Grain Rule",
+        "body": "Film grain (SVG fractal noise, opacity 0.07, overlay blend) is fixed over the whole viewport and never scrolls or repaints.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep the page ground night (#0b0908) and let only molten, ember and the fire gradient be bright.",
+      "Do set controls as pills (999px) and evidence as double-bezel plates (6px shell, core radius = shell minus 6px).",
+      "Do use the named bone and ember alpha tints for borders, washes and glows instead of opaque greys.",
+      "Do set every number in Geist Mono with tabular figures, sourced from `src/content/site.json`.",
+      "Do keep the forge visible beside the type: offset the camera view, never stack type over the fire.",
+      "Do give every pinned or scrubbed scene a reduced-motion layout (Method becomes a snap row; embers and flicker stop; Lenis is not started).",
+      "Do have kiln make every 3D asset on the page (the forge, specimens, creatures)."
+    ],
+    "donts": [
+      "Don't put a grey studio render on the page ground; it goes in a plate core.",
+      "Don't use red or cyan anywhere but the bench overlay marking.",
+      "Don't use em-dashes in visible copy.",
+      "Don't type a figure into a component, or show testimonials, user logos or \"trusted by\" claims.",
+      "Don't use grey drop shadows or hard offset shadows; depth is ember glow, inset rings and the scene's own light.",
+      "Don't pin a scene without a reduced-motion fallback."
+    ]
+  }
+}

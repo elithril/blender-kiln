@@ -1,0 +1,119 @@
+---
+import site from '../content/site.json';
+import Install from './Install.astro';
+import { latestRelease } from '../lib/release';
+const release = await latestRelease();
+const B = site.briefs;
+const max = Math.max(...B.servers.map((s) => s.beforeMB));
+const mb = (n: number) => (n >= 10 ? n.toFixed(1) : n.toFixed(2)) + ' MB';
+---
+<section class="briefs" aria-labelledby="briefs-h" data-briefs>
+  <header class="head">
+    <h2 id="briefs-h">{B.headline}</h2>
+    <p>{B.lede}</p>
+  </header>
+  <div class="rows">
+    {B.servers.map((s) => {
+      const r = Math.round(s.beforeMB / s.afterMB);
+      return (
+        <div class="row">
+          <p class="ratio measure" aria-label={`${r} times lighter`}><span aria-hidden="true">&divide;</span><span data-ratio={r} aria-hidden="true">{r}</span></p>
+          <div class="bars">
+            <p class="name"><a href={s.url}>{s.name}</a></p>
+            <div class="bar before" style={`--f:${s.beforeMB / max}`}><span class="k measure">before</span><span class="run"><i data-grow></i><span class="v measure">{mb(s.beforeMB)}</span></span></div>
+            <div class="bar after" style={`--f:${s.afterMB / max}`}><span class="k measure">after</span><span class="run"><i data-grow></i><span class="v measure">{mb(s.afterMB)}</span></span></div>
+            <p class="aside measure"><span>defects found {s.defects}</span><span>cost for the five {s.cost}</span></p>
+          </div>
+        </div>
+      );
+    })}
+  </div>
+  <p class="compressed">{B.compressed}</p>
+</section>
+
+<!-- the last screen: install and footer share one viewport, the footer pinned to its bottom -->
+<div class="end">
+<section class="close" aria-labelledby="close-h">
+  <h2 id="close-h">{site.close.headline}</h2>
+  <div class="install-wrap"><Install /></div>
+  <ul class="links">{site.close.links.map((l) => <li><a href={l.url}>{l.label}</a></li>)}</ul>
+</section>
+
+<footer class="foot">
+  <p class="cite"><a href={site.footer.citation.url}>{site.footer.citation.text}</a></p>
+  <p class="lic measure">blender-kiln {release.version}, {site.footer.license}</p>
+  <p class="credits">{site.footer.credits} Display type: Clash Display (Fontshare, ITF Free Font License).</p>
+</footer>
+</div>
+
+<script>
+  import { gsap } from 'gsap';
+  import { ScrollTrigger } from 'gsap/ScrollTrigger';
+  gsap.registerPlugin(ScrollTrigger);
+  const root = document.querySelector<HTMLElement>('[data-briefs]')!;
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    root.querySelectorAll<HTMLElement>('[data-ratio]').forEach((el) => {
+      const to = Number(el.dataset.ratio), o = { v: 1 };
+      gsap.to(o, { v: to, ease: 'power2.out', scrollTrigger: { trigger: el, start: 'top 85%', end: 'top 55%', scrub: 0.8 }, onUpdate: () => { el.textContent = String(Math.round(o.v)); } });
+    });
+    root.querySelectorAll<HTMLElement>('[data-grow]').forEach((el) => {
+      gsap.fromTo(el, { scaleX: 0 }, { scaleX: 1, ease: 'power3.out', scrollTrigger: { trigger: el, start: 'top 90%', end: 'top 55%', scrub: 0.8 } });
+    });
+  }
+</script>
+
+<style>
+  .briefs { padding: 180px var(--gutter) 140px; background: linear-gradient(rgb(11 9 8 / 0.86), rgb(11 9 8 / 0.6)); }
+  .head { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 32px 64px; align-items: end; margin-bottom: 72px; }
+  .head h2 { margin: 0; font-size: var(--h2); line-height: 0.95; letter-spacing: -0.025em; word-spacing: 0.05em; }
+  .head p { margin: 0; color: var(--ash); max-width: 46ch; }
+  .rows { display: grid; gap: 48px; }
+  .row { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 40px; align-items: center; padding-top: 40px; border-top: 1px solid var(--line); }
+  .ratio { margin: 0; display: flex; align-items: baseline; font-size: clamp(5rem, 13vw, 13rem); font-weight: 500; line-height: 0.8; letter-spacing: -0.04em; color: var(--molten); }
+  .ratio span:first-child { font-size: 0.6em; margin-right: 0.04em; color: var(--ember); }
+  .bars { display: grid; gap: 10px; min-width: 0; }
+  .name { margin: 0 0 6px; font: 600 1.125rem var(--face-display); }
+  .name a { text-decoration: none; }
+  .bar { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); align-items: center; gap: 12px; }
+  .run { display: flex; align-items: center; gap: 12px; min-width: 0; width: 100%; }
+  .bar i { flex: none; display: block; height: 14px; width: calc((100% - 6rem) * var(--f)); min-width: 4px; border-radius: 999px; transform-origin: left; }
+  .bar.before i { background: var(--soot); box-shadow: inset 0 0 0 1px var(--line-strong); }
+  .bar.after i { background: linear-gradient(90deg, var(--ember), var(--molten)); box-shadow: 0 0 18px rgb(255 90 20 / 0.6); }
+  .v { font-size: 0.875rem; white-space: nowrap; color: var(--ash); }
+  .bar.after .v { color: var(--molten); }
+  .k { font-size: 0.75rem; color: var(--ash-dim); }
+  .aside { margin: 6px 0 0 calc(4.5rem + 12px); display: flex; flex-wrap: wrap; gap: 4px 24px; font-size: 0.75rem; color: var(--ash-dim); }
+  .compressed { margin: 56px 0 0; color: var(--ash); }
+
+  /* the page ends at the real forge: the fixed WebGL fire flares again, right of the type */
+  .end { min-height: 100svh; display: grid; grid-template-rows: minmax(0, 1fr) auto; }
+  .close { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-content: center; gap: 28px 64px; padding: 160px var(--gutter) 140px;
+    background: linear-gradient(90deg, rgb(11 9 8 / 0.88) 0%, rgb(11 9 8 / 0.55) 45%, transparent 70%); }
+  .close > * { grid-column: 1; }
+  .close h2 { margin: 0; font-size: clamp(3.5rem, 9vw, 9rem); font-weight: 600; line-height: 0.86; letter-spacing: -0.04em; color: var(--bone); }
+  .install-wrap { min-width: 0; }
+  .links { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+  .links a { display: inline-block; padding: 9px 16px; border-radius: 999px; font-weight: 600; font-size: 0.9375rem; color: var(--bone); text-decoration: none; background: rgb(255 238 220 / 0.06); box-shadow: inset 0 0 0 1px var(--line-strong); transition: background 0.3s var(--ease-spring), color 0.3s; }
+  .links a:hover { color: var(--ink); background: var(--molten); }
+  .foot { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 32px; align-items: baseline; padding: 56px var(--gutter) 26px; background: linear-gradient(rgb(11 9 8 / 0), var(--night) 55%); font-size: 0.8125rem; color: var(--ash-dim); }
+  .foot p { margin: 0; }
+  .foot .credits { grid-column: 1 / -1; font-size: 0.75rem; max-width: 120ch; }
+  .foot .lic { white-space: nowrap; }
+  .foot a { color: var(--ash); }
+
+  @media (max-width: 960px) {
+    .head, .row, .close, .foot { grid-template-columns: minmax(0, 1fr); }
+    .close { background: linear-gradient(rgb(11 9 8 / 0.82), rgb(11 9 8 / 0.5) 45%, transparent 60%); align-content: start; padding-bottom: 48svh; }
+    /* phones: the forge needs its own room between the links and the footer */
+  }
+  @media (max-width: 560px) {
+    .briefs { padding-block: 120px; }
+    /* phones: the last screen is the whole install block, the forge just under the links and the footer laid
+       over its base, so a scroll to the end still shows how to install */
+    .close { padding-top: 104px; padding-bottom: 12px; gap: 16px; }
+    .foot { gap: 4px; padding: 32px var(--gutter) 14px; line-height: 1.45; font-size: 0.75rem; background: linear-gradient(rgb(11 9 8 / 0), rgb(11 9 8 / 0.9) 22%, var(--night)); }
+    .bar { grid-template-columns: 3.5rem minmax(0, 1fr); }
+    .v { font-size: 0.75rem; }
+    .aside { margin-left: 0; }
+  }
+</style>

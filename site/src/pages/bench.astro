@@ -1,0 +1,73 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import { benchmarks } from '../lib/bench';
+import { latestRelease } from '../lib/release';
+const b = benchmarks();
+const release = await latestRelease();
+---
+<Base title="blender-kiln: the benchmarks" description="Every number blender-kiln publishes, how it is measured, what did not improve, and how to reproduce it.">
+  <Header current="bench" />
+  <div class="top">
+    <header class="intro">
+      <h1>Measured, not claimed.</h1>
+      <p>The full record behind every number on the home page, rendered from <a href={b.source}>docs/benchmarks.md</a> in the repository, as of blender-kiln {release.version}.</p>
+    </header>
+  </div>
+
+  <main class="doc">
+    <nav class="toc" aria-label="On this page">
+      <p class="toc-h">On this page</p>
+      <ol>{b.toc.map((t) => <li><a href={`#${t.id}`}>{t.text}</a></li>)}</ol>
+    </nav>
+    <article class="prose" set:html={b.html} />
+  </main>
+</Base>
+
+<style>
+  .top { position: relative; padding: 150px 0 72px; background: radial-gradient(70% 90% at 85% 100%, rgb(255 90 20 / 0.22), transparent 70%), var(--night); border-bottom: 1px solid var(--line); }
+  .intro { padding: 0 var(--gutter); max-width: 72rem; }
+  .intro h1 { margin: 0 0 calc(var(--u) * 3); font-size: clamp(3rem, 8vw, 8.5rem); line-height: 0.95; letter-spacing: -0.035em; }
+  .intro p { margin: 0; color: var(--n8); max-width: 56ch; font-size: 1.0625rem; }
+
+  .doc { display: grid; grid-template-columns: minmax(0, 15rem) minmax(0, 1fr); gap: calc(var(--u) * 8); padding: calc(var(--u) * 8) var(--gutter) calc(var(--u) * 14); background: var(--night); }
+  .toc { position: sticky; top: 88px; align-self: start; font-size: 0.875rem; }
+  .toc-h { margin: 0 0 var(--u); color: var(--muted); font-size: 0.8125rem; }
+  .toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .toc a { color: var(--n8); text-decoration: none; }
+  .toc a:hover { color: var(--white); text-decoration: underline; }
+
+  /* reading column: the document's own words, the site's tokens */
+  .prose { max-width: 74ch; min-width: 0; color: var(--n8); }
+  .prose :global(h2) { margin: calc(var(--u) * 9) 0 calc(var(--u) * 2); font-size: clamp(1.5rem, 2.2vw, 2rem); line-height: 1.1; letter-spacing: -0.02em; color: var(--white); scroll-margin-top: 88px; }
+  .prose :global(h2:first-child) { margin-top: 0; }
+  .prose :global(h3) { margin: calc(var(--u) * 5) 0 var(--u); font-size: 1.25rem; color: var(--white); scroll-margin-top: 88px; }
+  .prose :global(p), .prose :global(li) { line-height: 1.65; }
+  .prose :global(strong) { color: var(--white); font-weight: 600; }
+  .prose :global(code) { font-family: var(--face-measure); font-size: 0.85em; color: var(--white); }
+  .prose :global(pre) { overflow-x: auto; padding: calc(var(--u) * 2); background: var(--black); border-radius: 2px; font-size: 0.8125rem; line-height: 1.7; }
+  .prose :global(pre code) { font-size: inherit; }
+  .prose :global(a) { color: var(--white); }
+  .prose :global(a:hover) { color: var(--flame-lit); }
+  .prose :global(del) { text-decoration-color: var(--n8); color: var(--muted); }
+  .prose :global(img) { width: 100%; height: auto; border-radius: 1rem; margin-block: calc(var(--u) * 2) 0; box-shadow: 0 0 0 6px rgb(255 238 220 / 0.04), 0 0 0 7px var(--line); }
+  .prose :global(sub) { display: block; font-size: 0.8125rem; line-height: 1.5; color: var(--muted); vertical-align: baseline; }
+  .prose :global(p[align='center']) { text-align: left; }
+  .prose :global(table) { width: 100%; border-collapse: collapse; margin-block: calc(var(--u) * 3); font-size: 0.875rem; display: block; overflow-x: auto; }
+  .prose :global(th), .prose :global(td) { padding: 8px 12px 8px 0; border-bottom: 1px solid var(--n35); text-align: left; vertical-align: top; }
+  .prose :global(th) { color: var(--muted); font-weight: 500; font-size: 0.8125rem; }
+  .prose :global(td) { font-variant-numeric: tabular-nums; }
+  .prose :global(td[align='right']) { white-space: nowrap; }
+  .prose :global(td:first-child) { min-width: 9rem; }
+  .prose :global(a.sheet) { display: block; position: relative; }
+  .prose :global(a.sheet)::after { content: 'Open full size'; position: absolute; right: 12px; bottom: 12px; padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; color: var(--ink); background: var(--molten); }
+  .prose :global(a.sheet:hover img) { box-shadow: 0 0 0 6px rgb(255 181 71 / 0.25), 0 0 0 7px var(--molten); }
+  .prose :global(th[align='right']) { text-align: right; padding-left: 12px; }
+  .prose :global(td[align='right']) { text-align: right; font-family: var(--face-measure); font-size: 0.8125rem; padding-left: 12px; }
+  .prose :global(td strong) { color: var(--white); }
+
+  @media (max-width: 960px) {
+    .doc { grid-template-columns: minmax(0, 1fr); gap: calc(var(--u) * 4); }
+    .toc { position: static; }
+  }
+</style>

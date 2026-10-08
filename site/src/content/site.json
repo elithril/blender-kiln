@@ -1,0 +1,526 @@
+{
+  "_sources": "Every figure here comes from docs/benchmarks.md, README.md, CHANGELOG.md or the bench-results branch (summary.json of each run). Update this file on a release; no section hard-codes a number.",
+  "release": {
+    "version": "2.2.0",
+    "date": "2026-10-07",
+    "title": "/kiln animate",
+    "url": "https://github.com/elithril/blender-kiln/releases/tag/v2.2.0"
+  },
+  "repo": "https://github.com/elithril/blender-kiln",
+  "install": [
+    "/plugin marketplace add elithril/blender-kiln",
+    "/plugin install blender-kiln@blender-kiln",
+    "/kiln setup"
+  ],
+  "hero": {
+    "headline": [
+      "Give it a photo.",
+      "Get the object."
+    ],
+    "lede": "A Claude Code skill that rebuilds your photo as a 3D object in Blender, then grades it against the real one."
+  },
+  "specimens": [
+    {
+      "id": "lantern",
+      "name": "Hurricane lantern",
+      "photo": "/assets/img/ref-Lantern_01.webp",
+      "photoAlt": "Reference photo: an old brass hurricane lantern with a glass globe and a wire bail, cut out on transparent background",
+      "photoCredit": "Poly Haven, Lantern_01 (CC0)",
+      "glb": "/assets/glb/lantern.glb",
+      "score": 0.897,
+      "scoreBefore": 0.83,
+      "shippedKB": 229,
+      "rawMB": 3.94,
+      "tris": 12314,
+      "minutes": 21,
+      "costUSD": 5.04,
+      "run": "ref-kiln-v15",
+      "truth": "/assets/glb/truth-lantern.glb",
+      "truthYaw": 0,
+      "fallback": "/assets/img/render-lantern.webp",
+      "views": {
+        "front": 0.827,
+        "back": 0.827,
+        "left": 0.929,
+        "right": 0.929,
+        "top": 0.971
+      },
+      "scoredViews": [
+        "front",
+        "back",
+        "left",
+        "right",
+        "top"
+      ],
+      "heightVsTruth": 0.19
+    },
+    {
+      "id": "ammo-box",
+      "name": "Ammo box",
+      "photo": "/assets/img/ref-ammo_box.webp",
+      "photoAlt": "Reference photo: a rusted olive-green ammunition box with a yellow stencil reading 200 CARTRIGES 7.62 MM",
+      "photoCredit": "Poly Haven, ammo_box (CC0)",
+      "glb": "/assets/glb/ammo-box.glb",
+      "score": 0.95,
+      "scoreBefore": 0.854,
+      "shippedKB": 187,
+      "rawMB": 5.54,
+      "tris": 3856,
+      "minutes": 15,
+      "costUSD": 3.8,
+      "run": "ref-kiln-v15gen",
+      "truth": "/assets/glb/truth-ammo-box.glb",
+      "truthYaw": 270,
+      "fallback": "/assets/img/render-ammo-box.webp",
+      "views": {
+        "front": 0.958,
+        "back": 0.956,
+        "left": 0.945,
+        "right": 0.945,
+        "top": 0.949
+      },
+      "scoredViews": [
+        "front",
+        "back",
+        "left",
+        "right",
+        "top"
+      ],
+      "heightVsTruth": 0.16
+    },
+    {
+      "id": "chair",
+      "name": "Gothic chair",
+      "photo": "/assets/img/ref-WoodenChair_01.webp",
+      "photoAlt": "Reference photo: a tall gothic wooden chair with a pointed arch, a rose and tracery in its back",
+      "photoCredit": "Poly Haven, WoodenChair_01 (CC0)",
+      "glb": "/assets/glb/chair.glb",
+      "score": 0.75,
+      "scoreBefore": 0.445,
+      "shippedKB": 239,
+      "rawMB": null,
+      "tris": 9908,
+      "minutes": 21,
+      "costUSD": 6.13,
+      "run": "ref-kiln-v15gen",
+      "truth": "/assets/glb/truth-chair.glb",
+      "truthYaw": 0,
+      "fallback": "/assets/img/render-chair.webp",
+      "views": {
+        "front": 0.696,
+        "back": 0.696,
+        "left": 0.462,
+        "right": 0.462,
+        "top": 0.859
+      },
+      "scoredViews": [
+        "front",
+        "back",
+        "top"
+      ],
+      "heightVsTruth": -0.29
+    }
+  ],
+  "scoreNote": "Silhouette overlap with the real object, 1 = identical. Each view is cropped and scaled to the same height, then compared.",
+  "bench": {
+    "model": "Opus 5.5",
+    "blender": "Blender 5.2.2",
+    "runsPerBrief": 1
+  },
+  "_gtSource": "views, yaw and heightVsTruth: bench/gt_compare.py re-run on 2026-10-07 on the shipped GLBs against the Poly Haven truth; it reproduces the published means exactly (0.897, 0.950, 0.750).",
+  "scoreBeforeLabel": "before 2.0's photo method",
+  "costNote": "API-equivalent",
+  "requirements": "Needs Blender 4.4+ with a Blender MCP server running.",
+  "method": {
+    "headline": "From a photo, in five steps you can audit.",
+    "lede": "The ammo box above, rebuilt again here from the session's own files: its parts, its scans, its measure, its joints, its export. Every quoted line is from that session's production log (… marks a cut).",
+    "source": "README.md, How it works, from a photo; panels cropped from docs/images/how-it-works.webp",
+    "steps": [
+      {
+        "verb": "Read",
+        "title": "Read the photo before modeling.",
+        "body": "Thirteen parts listed from enlarged crops, each with how it meets the next. What one photo cannot say is stated before modeling: the real size, the camera's angle.",
+        "log": "Real size: US M19A1 .30 cal / 7.62 mm can, as the stencil says … 0.280 L x 0.095 W x 0.180 H m"
+      },
+      {
+        "verb": "Texture",
+        "title": "Texture from scans, not noise.",
+        "body": "Two Poly Haven CC0 scans: green_metal_rust for the paint, tinted toward the photo's olive, and rust_coarse_01 for the wear, masked by the form.",
+        "log": "wear: Poly Haven rust_coarse_01 scan, tinted toward the photo's rust, masked by form (bevel-vs-normal edge mask, AO cavities, the bottom 35 mm, …)"
+      },
+      {
+        "verb": "Measure",
+        "title": "Measure against the photo.",
+        "body": "fidelity_check.py renders the model at the photo's camera and compares the two silhouettes. Red is the photo only, cyan the model only, white where they agree.",
+        "log": "Final (shipped _final.glb): IoU 0.918, identical to round 2 … export changed nothing."
+      },
+      {
+        "verb": "Look",
+        "title": "Look at every joint.",
+        "body": "Each end of a part that touches another is rendered alone and looked at. A part that joins another enters it; no distance can judge that.",
+        "log": "Joints: 22 joint renders looked at (review/r0/joints_sheet.png): staple legs enter mount plates, handle ends roll round the staple bars, bail hooks through the bracket ears, rivets sit on the strip."
+      },
+      {
+        "verb": "Ship",
+        "title": "Ship, and measure the file that ships.",
+        "body": "Draco and WebP in separate steps, no simplification, then re-measured as a GLB: what you get, not the .blend.",
+        "log": "Optimize: gltf-transform resize 1024 → webp → draco (separate steps, no simplify): 5.54 MB → 187 KB (-97%)."
+      }
+    ],
+    "scene": {
+      "glb": "/assets/glb/ammo-box.glb",
+      "photo": "/assets/img/method3d/photo.webp",
+      "mask": "/assets/img/method3d/photo-mask.webp",
+      "crops": [
+        "/assets/img/method3d/crop-1.webp",
+        "/assets/img/method3d/crop-2.webp",
+        "/assets/img/method3d/crop-3.webp",
+        "/assets/img/method3d/crop-4.webp",
+        "/assets/img/method3d/crop-5.webp"
+      ],
+      "scans": [
+        {
+          "name": "green_metal_rust",
+          "img": "/assets/img/method3d/green_metal_rust.webp"
+        },
+        {
+          "name": "rust_coarse_01",
+          "img": "/assets/img/method3d/rust_coarse_01.webp"
+        }
+      ],
+      "iou": 0.918,
+      "rawMB": 5.54,
+      "shippedKB": 187,
+      "tris": 3856,
+      "parts": 13,
+      "joints": [
+        "SM_AmmoBox_HandleStaple_01",
+        "SM_AmmoBox_LatchHinge",
+        "SM_AmmoBox_BailWire"
+      ],
+      "camera": {
+        "azimuth": 50,
+        "elevation": 20
+      }
+    }
+  },
+  "lanterns": {
+    "headline": "Fifteen lanterns. Five turning points.",
+    "lede": "One photo and the same brief, fifteen times, each version the skill after the previous one's findings, scored against the real lantern it never saw. The curve is all fifteen; the stops are where something changed.",
+    "note": "v1 to v8 and v8 to v15 come from two bench sheets rendered under the same studio light and camera; the shape score is measured the same way for all. One run per version: a few hundredths are not significant.",
+    "source": "bench-results: lantern-iterations/README.md and sheets; docs/benchmarks.md",
+    "photo": "/assets/img/lantern/photo.webp",
+    "truth": "/assets/img/lantern/truth.webp",
+    "versions": [
+      {
+        "v": 1,
+        "score": 0.83,
+        "height": 0.23,
+        "cost": 1.9,
+        "change": "Before the photo method.",
+        "result": "Too tall by almost a quarter.",
+        "contaminated": false,
+        "img": "/assets/img/lantern/v1.webp"
+      },
+      {
+        "v": 2,
+        "score": 0.865,
+        "height": 0.37,
+        "cost": 3.83,
+        "change": "Same brief, next skill.",
+        "result": "Grey and flat: saturation 0.20 for the photo's 0.32.",
+        "contaminated": false,
+        "img": null
+      },
+      {
+        "v": 3,
+        "score": 0.876,
+        "height": 0.33,
+        "cost": 2.83,
+        "change": "Measured review instead of eyeballing.",
+        "result": "The best shape of the first run, still a third too tall.",
+        "contaminated": false,
+        "img": null
+      },
+      {
+        "v": 4,
+        "score": 0.843,
+        "height": 0.29,
+        "cost": 4.06,
+        "change": "Traced wires, layered textures.",
+        "result": "Fitted the photo better than the real object: it copied the photo's perspective into the geometry, its base 30% too tall.",
+        "contaminated": false,
+        "img": "/assets/img/lantern/v4.webp"
+      },
+      {
+        "v": 5,
+        "score": 0.848,
+        "height": 0.02,
+        "cost": 5.63,
+        "change": "Size and camera angle settled before modeling.",
+        "result": "The height is right at last.",
+        "contaminated": false,
+        "img": null
+      },
+      {
+        "v": 6,
+        "score": 0.862,
+        "height": 0.02,
+        "cost": 4.15,
+        "change": "Reviewed at the right colour.",
+        "result": "Shipped near black: the exporter wrote linear values into an sRGB image.",
+        "contaminated": false,
+        "img": "/assets/img/lantern/v6.webp"
+      },
+      {
+        "v": 7,
+        "score": 0.861,
+        "height": 0.02,
+        "cost": 3.52,
+        "change": "The sRGB export fix.",
+        "result": "Right size, right silhouette, metal tuned to the photo's dim light: too dark.",
+        "contaminated": false,
+        "img": null
+      },
+      {
+        "v": 8,
+        "score": 0.905,
+        "height": 0.2,
+        "cost": 4.02,
+        "change": "Dark metal reported.",
+        "result": "The colour holds; the height drifts again.",
+        "contaminated": false,
+        "img": null
+      },
+      {
+        "v": 9,
+        "score": 0.921,
+        "height": 0.02,
+        "cost": 5.19,
+        "change": "A TRELLIS.2 mesh of the photo as a measuring template.",
+        "result": "Proportions right; the surface broke into bright copper islands.",
+        "contaminated": false,
+        "img": null
+      },
+      {
+        "v": 10,
+        "score": 0.914,
+        "height": 0.0,
+        "cost": 4.52,
+        "change": "Metal mask: one soft worn region.",
+        "result": "Its height came from an example in the skill, since removed. The shape score is not affected.",
+        "contaminated": false,
+        "img": null
+      },
+      {
+        "v": 11,
+        "score": 0.897,
+        "height": 0.01,
+        "cost": 7.64,
+        "change": "Every joint rendered and looked at.",
+        "result": "Tubes enter the tank cleanly; the bronze reads new and clean.",
+        "contaminated": false,
+        "img": null
+      },
+      {
+        "v": 12,
+        "score": 0.914,
+        "height": 0.02,
+        "cost": 8.43,
+        "change": "Contaminated: it read the bench's own results.",
+        "result": "Not a measurement. Kept, struck out; every session since runs in a sandbox.",
+        "contaminated": true,
+        "img": "/assets/img/lantern/v12.webp"
+      },
+      {
+        "v": 13,
+        "score": 0.924,
+        "height": 0.02,
+        "cost": 5.63,
+        "change": "First sandboxed run.",
+        "result": "The best shape of all; the texture is not there.",
+        "contaminated": false,
+        "img": null
+      },
+      {
+        "v": 14,
+        "score": 0.88,
+        "height": 0.22,
+        "cost": 5.29,
+        "change": "Every figure from this lantern removed from the skill.",
+        "result": "The texture finally varies like the real one; the shape fell to 0.880.",
+        "contaminated": false,
+        "img": null
+      },
+      {
+        "v": 15,
+        "score": 0.897,
+        "height": 0.19,
+        "cost": 5.04,
+        "change": "Scanned CC0 texture sets before procedural noise.",
+        "result": "The tank has matter. Brass has no scan, so the frame came out a second tone.",
+        "contaminated": false,
+        "img": "/assets/img/lantern/v15.webp"
+      }
+    ],
+    "more": {
+      "label": "The full record, every table and limit",
+      "href": "/bench/"
+    },
+    "milestones": [
+      1,
+      4,
+      6,
+      12,
+      15
+    ]
+  },
+  "animate": {
+    "headline": "It moves, routed by subject.",
+    "lede": "No single animation method held up across a cat, a villager and a desk lamp, so kiln picks the route from the subject, and shows every clip before exporting.",
+    "since": "2.1, one command since 2.2",
+    "commands": [
+      "/kiln animate SK_Cat.glb walk, idle",
+      "/kiln animate dragon.glb \"flaps its wings\""
+    ],
+    "routes": [
+      {
+        "subject": "Biped or winged, from a sentence",
+        "route": "UniMate text-to-motion, looped by motion_loop.py",
+        "detail": "Each clip is the sample out of 4 that loops best, approved on review. UniMate's weights are CC BY-NC 4.0: non-commercial use only.",
+        "clips": [
+          {
+            "src": "/assets/img/animate/character-walk.webp",
+            "still": "/assets/img/animate/character-walk-still.webp",
+            "alt": "A low-poly villager walking in place, looped",
+            "label": "villager, walk",
+            "bench": true,
+            "glb": "/assets/glb/anim/villager-walk.glb"
+          },
+          {
+            "src": "/assets/img/animate/character-jump.webp",
+            "still": "/assets/img/animate/character-jump-still.webp",
+            "alt": "The villager jumping in place, looped",
+            "label": "villager, jump",
+            "bench": true,
+            "glb": "/assets/glb/anim/villager-jump.glb"
+          },
+          {
+            "src": "/assets/img/animate/dragon-flap.webp",
+            "still": "/assets/img/animate/dragon-flap-still.webp",
+            "alt": "A low-poly dragon flapping its wings, looped",
+            "label": "dragon, wing flap",
+            "bench": true,
+            "glb": "/assets/glb/anim/dragon.glb"
+          }
+        ]
+      },
+      {
+        "subject": "Four-legged, idle and walk",
+        "route": "quadruped.py, a scripted cycle measured before export",
+        "detail": "Legs kept under 95% of their length, paws in exact step, an exact loop.",
+        "clips": [
+          {
+            "src": "/assets/img/animate/cat-walk.webp",
+            "still": "/assets/img/animate/cat-walk-still.webp",
+            "alt": "A low-poly cat walking, looped",
+            "label": "cat, walk",
+            "bench": true,
+            "glb": "/assets/glb/anim/cat-walk.glb"
+          },
+          {
+            "src": "/assets/img/animate/cat-idle.webp",
+            "still": "/assets/img/animate/cat-idle-still.webp",
+            "alt": "The cat idling: breathing, glancing, tail swaying",
+            "label": "cat, idle",
+            "bench": true,
+            "glb": "/assets/glb/anim/cat-idle.glb"
+          }
+        ]
+      },
+      {
+        "subject": "Articulated object",
+        "route": "Rigid parts keyed by script",
+        "detail": "Every rotation's sign measured before it is used. Both approved on first review.",
+        "clips": [
+          {
+            "src": "/assets/img/animate/lamp.webp",
+            "still": "/assets/img/animate/lamp-still.webp",
+            "alt": "An articulated desk lamp looking around",
+            "label": "desk lamp",
+            "bench": true,
+            "glb": "/assets/glb/anim/lamp.glb"
+          },
+          {
+            "src": "/assets/img/animate/chest.webp",
+            "still": "/assets/img/animate/chest-still.webp",
+            "alt": "A treasure chest: the hasp flips, the lid rattles, pops open on a heap of gold and slams shut",
+            "label": "chest",
+            "bench": true,
+            "glb": "/assets/glb/anim/chest.glb"
+          }
+        ]
+      }
+    ],
+    "rejected": [
+      "UniMate on quadrupeds: unusable for walking on a cat, a Shiba, a horse and the model author's own robot dog. kiln refuses to send a quadruped there.",
+      "\"Walks forward\": 0 of 8 samples usable; \"walks in place\": 8 of 8.",
+      "MoCapAnything V2, video to motion: excellent on rigs from its training set, unusable on two from outside it. Not shipped.",
+      "Scripted trot, jump, sit and attack for quadrupeds: rejected on review."
+    ],
+    "disclosure": "Every clip here was rebuilt for this site with kiln's own tools and rendered under the bench's studio light: the cat with quadruped.py, the lamp with props.py, the chest with chest.py (textured with Poly Haven CC0 wood and metal scans), the villager and the dragon with unimate.py (each the sample out of 4 that motion_loop.py kept, then checked by eye). Scripts, not an interactive session. Cat by madtrollstudio (CC BY 3.0) and dragon by Quaternius (CC0), both via Poly Pizza; the villager was built by kiln."
+  },
+  "briefs": {
+    "headline": "Text briefs ship light, too.",
+    "lede": "Five fixed briefs without AI, on both Blender MCP servers, before and after 2.0. The skill now does the work it used to skip, and pays for it in turns.",
+    "source": "README.md, Measured, not claimed; docs/benchmarks.md section 1",
+    "servers": [
+      {
+        "name": "ahujasid's mcp-for-blender",
+        "url": "https://github.com/ahujasid/mcp-for-blender",
+        "beforeMB": 32.85,
+        "afterMB": 0.96,
+        "cost": "$6.49 to $7.34",
+        "defects": "2 to 1"
+      },
+      {
+        "name": "Blender Lab MCP, behind Claude's Blender connector",
+        "url": "https://projects.blender.org/lab/blender_mcp",
+        "beforeMB": 3.87,
+        "afterMB": 0.75,
+        "cost": "$5.82 to $7.81",
+        "defects": "2 to 0"
+      }
+    ],
+    "compressed": "0 of 7 GLBs compressed with Draco and WebP before, 7 of 7 after, on both."
+  },
+  "close": {
+    "headline": "Install it.",
+    "links": [
+      {
+        "label": "Repository",
+        "url": "https://github.com/elithril/blender-kiln"
+      },
+      {
+        "label": "Benchmarks",
+        "url": "https://github.com/elithril/blender-kiln/blob/main/docs/benchmarks.md"
+      },
+      {
+        "label": "Every number, render and GLB",
+        "url": "https://github.com/elithril/blender-kiln/tree/bench-results"
+      },
+      {
+        "label": "Changelog",
+        "url": "https://github.com/elithril/blender-kiln/blob/main/CHANGELOG.md"
+      }
+    ]
+  },
+  "footer": {
+    "license": "MIT, Nicolas Dolphens",
+    "citation": {
+      "text": "Cited in 3DCodeBench: Benchmarking Agentic Procedural 3D Modeling Via Code (Google DeepMind, USC, 2026), section 1.",
+      "url": "https://arxiv.org/abs/2606.01057"
+    },
+    "credits": "Reference photos and real objects: Poly Haven (CC0). The forge, the three rebuilt objects and every animated model on this page were made with kiln."
+  }
+}
