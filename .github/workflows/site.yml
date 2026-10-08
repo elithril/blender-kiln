@@ -31,6 +31,7 @@ jobs:
       - uses: withastro/action@v6
         with:
           path: site
+          package-manager: npm
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
