@@ -63,15 +63,35 @@ const S = m.scene;
   new IntersectionObserver(async ([e], io) => {
     if (!e.isIntersecting) return;
     io.disconnect();
-    try { const { mountMethod } = await import('../scripts/method3d'); scene = mountMethod(root.querySelector('[data-canvas]')!, base, cfg); } catch { scene = null; }
+    try { const { mountMethod } = await import('../scripts/method3d'); scene = mountMethod(root.querySelector('[data-canvas]')!, base, cfg); scene?.setBand(measureBand(cur < 0 ? 0 : cur + 0.5)); } catch { scene = null; }
   }, { rootMargin: '400px' }).observe(root);
 
   let cur = -1;
+  // the free room the text leaves the model, in canvas pixels: under the heading and above the step card on
+  // phones (the card's top weighted by each step's opacity, so a crossfade moves it smoothly), right of the
+  // text column and above the timeline on wide screens
+  const canvasEl = root.querySelector<HTMLCanvasElement>('[data-canvas]')!;
+  const headEl = root.querySelector<HTMLElement>('.head')!, stepsEl = root.querySelector<HTMLElement>('.steps')!, timeEl = root.querySelector<HTMLElement>('.timeline')!;
+  let lastS = 0;
+  addEventListener('resize', () => scene?.setBand(measureBand(lastS)));
+  function measureBand(s: number) {
+    const c = canvasEl.getBoundingClientRect(), h = headEl.getBoundingClientRect(), tl = timeEl.getBoundingClientRect();
+    const y0 = h.bottom - c.top + 16;
+    if (c.width < c.height) {
+      let w = 0, top = 0;
+      steps.forEach((el, k) => { const o = 1 - Math.min(1, Math.max(0, (Math.abs(s - (k + 0.5)) - 0.28) / 0.22)); if (o > 0) { w += o; top += o * (el.getBoundingClientRect().top - c.top); } });
+      const y1 = (w ? top / w : tl.top - c.top) - 16;
+      return { x0: 0, y0, x1: c.width, y1: Math.max(y0 + 80, y1) };
+    }
+    const st = stepsEl.getBoundingClientRect();
+    return { x0: st.right - c.left + 40, y0, x1: c.width - 24, y1: tl.top - c.top - 24 };
+  }
   const fill = root.querySelector<HTMLElement>('[data-fill]')!;
   const head = root.querySelector<HTMLElement>('[data-head]')!;
   function paint(p: number) {
     const s = p * n; // 0..5
     scene?.setStep(s);
+    scene?.setBand(measureBand(s)); lastS = s;
     const i = Math.min(n - 1, Math.floor(s));
     // each step's text is fully in around its centre and crossfades with its neighbours in between
     steps.forEach((el, k) => {
