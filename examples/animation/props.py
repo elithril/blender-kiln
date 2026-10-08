@@ -1,11 +1,11 @@
-"""Model, rig and animate the showcase props: a desk lamp and a treasure chest.
+"""Model, rig and animate the showcase desk lamp (the chest has its own script, chest.py).
 
     blender --background --factory-startup --python-exit-code 1 --python props.py -- <out_dir>
 
 Each rigid part is weighted 100% to one bone, so parts move as solids. Every rotation's
 sign is measured on the rig before it is used (references/animation.md § Rules for
-scripted animation, rule 4) — both animations were approved on their first render.
-Writes lamp.glb / chest.glb (rest) and lamp_look.glb / chest_open.glb (looping).
+scripted animation, rule 4) — the animation was approved on its first render.
+Writes lamp.glb (rest) and lamp_look.glb (looping).
 """
 import bpy, bmesh, math, sys
 from pathlib import Path
@@ -75,38 +75,6 @@ lamp, _ = rigid_rig(parts, [("Base", B0, J1, None), ("ArmLow", J1, J2, "Base"), 
                             ("Head", J3, J3 + Vector((0, -0.12, -0.07)), "ArmUp")], "Lamp")
 export(f"{out}/lamp.glb"); print("MADE lamp")
 
-# ── treasure chest ──────────────────────────────────────────────────────────
-S.reset()
-wood = S.mat("wood", S.srgb("#7A4A25"), rough=0.7)
-iron = S.mat("iron", S.srgb("#3D3F44"), rough=0.45, metal=0.9)
-gold = S.mat("gold", S.srgb("#D9A441"), rough=0.3, metal=1.0)
-W, D, H = 0.60, 0.40, 0.30
-HINGE = Vector((0, D / 2, H))
-def box(loc, size):
-    bpy.ops.mesh.primitive_cube_add(location=loc); bpy.context.object.scale = (size[0] / 2, size[1] / 2, size[2] / 2)
-def lid():
-    bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=D / 2, depth=W, location=(0, 0, H))
-    o = bpy.context.object; o.rotation_euler = (0, math.radians(90), 0)
-    bm = bmesh.new(); bm.from_mesh(o.data)
-    bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.co.x > 1e-4], context='VERTS')   # half-cylinder, curved top
-    bm.to_mesh(o.data); bm.free()
-parts = [part("body", lambda: box((0, 0, H / 2), (W, D, H)), wood, "Body")]
-for x in (-0.22, 0.22):
-    parts.append(part(f"band{x}", lambda x=x: box((x, 0, H / 2), (0.04, D + 0.01, H + 0.005)), iron, "Body"))
-parts += [part("lid", lid, wood, "Lid"),
-          part("lock", lambda: box((0, -D / 2 - 0.01, H - 0.02), (0.07, 0.03, 0.09)), gold, "Lid")]
-for x in (-0.22, 0.22):
-    def strap(x=x):
-        bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=D / 2 + 0.008, depth=0.04, location=(x, 0, H))
-        o = bpy.context.object; o.rotation_euler = (0, math.radians(90), 0)
-        bm = bmesh.new(); bm.from_mesh(o.data)
-        bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.co.x > 1e-4], context='VERTS'); bm.to_mesh(o.data); bm.free()
-    parts.append(part(f"strap{x}", strap, iron, "Lid"))
-chest, _ = rigid_rig(parts, [("Body", Vector((0, 0, 0)), Vector((0, 0, H)), None),
-                             ("Lid", HINGE, HINGE + Vector((0, -D, 0)), "Body")], "Chest")
-export(f"{out}/chest.glb"); print("MADE chest")
-
-
 # ── animation ─────────────────────────────────────────────────────────────
 from mathutils import Euler
 
@@ -159,21 +127,3 @@ for f in range(P):
     PB["Head"].rotation_euler = (s_head * (-0.25 * peer + 0.30 * nod + 0.06 * math.sin(3 * w)), 0, 0.25 * math.sin(w + 0.6))
     for b in ("Base", "ArmLow", "ArmUp", "Head"): PB[b].keyframe_insert("rotation_euler", frame=f)
 finish(sc, arm, P, "lamp_look")
-
-# ── chest: anticipation, pops open with overshoot, holds, slams shut with a bounce — 3 s loop ──
-sc, arm = load_rig(f"{out}/chest.glb"); PB = arm.pose.bones; arm.animation_data_create()
-s_lid = up_sign(arm, "Lid", 0, "Lid"); print("SIGN chest", s_lid)
-OPEN = math.radians(105)
-P = 72
-for f in range(P):
-    n = f / P
-    if n < 0.10:   a = 0.06 * math.sin(math.pi * n / 0.10)                         # lid jiggles: something inside
-    elif n < 0.35: a = OPEN * ease_back((n - 0.10) / 0.25)                           # pops open, overshoots
-    elif n < 0.60: a = OPEN                                                          # holds
-    elif n < 0.72: a = OPEN * (1 - smooth((n - 0.60) / 0.12) ** 2)                   # falls shut, accelerating
-    elif n < 0.82: a = 0.10 * math.sin(math.pi * (n - 0.72) / 0.10)                  # bounces once
-    else:          a = 0.0
-    PB["Lid"].rotation_euler = (s_lid * a, 0, 0); PB["Lid"].keyframe_insert("rotation_euler", frame=f)
-    PB["Body"].rotation_euler = (0, 0, 0.015 * math.sin(math.pi * (n - 0.72) / 0.10) if 0.72 <= n < 0.82 else 0)
-    PB["Body"].keyframe_insert("rotation_euler", frame=f)
-finish(sc, arm, P, "chest_open")

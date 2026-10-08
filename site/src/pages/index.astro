@@ -1,0 +1,34 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import Theatre from '../components/Theatre.astro';
+import Method from '../components/Method.astro';
+import Lanterns from '../components/Lanterns.astro';
+import Animate from '../components/Animate.astro';
+import Close from '../components/Close.astro';
+import site from '../content/site.json';
+---
+<Base title="blender-kiln: a photo or a sentence in, a 3D asset out" description={site.hero.lede}>
+  <Header />
+  <!-- one WebGL forge behind the whole page: it burns in the theatre, banks low behind the reading
+       sections and flares again for the close -->
+  <div class="forge-layer" aria-hidden="true">
+    <canvas data-forge-canvas></canvas>
+    <img class="fallback" data-forge-fallback src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/assets/img/forge-still.webp`} alt="" hidden />
+  </div>
+  <main>
+    <Theatre />
+    <Method />
+    <Lanterns />
+    <Animate />
+  </main>
+  <Close />
+</Base>
+
+<style>
+  .forge-layer { position: fixed; inset: 0; z-index: 0; }
+  .forge-layer canvas, .forge-layer .fallback { width: 100%; height: 100%; display: block; }
+  .forge-layer .fallback { object-fit: cover; object-position: 75% 60%; }
+  /* everything that reads sits above the fixed forge layer */
+  main, :global(.briefs), :global(.close), :global(.foot) { position: relative; z-index: 1; }
+</style>

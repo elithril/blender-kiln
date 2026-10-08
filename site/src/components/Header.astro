@@ -1,0 +1,76 @@
+---
+import site from '../content/site.json';
+import arrowUpRight from '@phosphor-icons/core/assets/light/arrow-up-right-light.svg?raw';
+import starIcon from '@phosphor-icons/core/assets/fill/star-fill.svg?raw';
+import ghIcon from '@phosphor-icons/core/assets/fill/github-logo-fill.svg?raw';
+import { repoStars } from '../lib/release';
+const stars = await repoStars();
+// compact, like GitHub's own badges: 30, 999, 1.2k, 12k, 120k: never wider than four characters
+const compact = (n: number) => new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: n < 10_000 ? 1 : 0 }).format(n).toLowerCase();
+interface Props { current?: 'home' | 'bench' }
+const { current = 'home' } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+<!-- a floating pill, detached from the top, always on screen -->
+<header class="bar">
+  <nav class="pill" aria-label="Site">
+    <a class="mark" href={`${base}/`} aria-label="blender-kiln, home">
+      <img src={`${base}/assets/img/logo-72.webp`} alt="" width="28" height="28" />
+      <span class="word">blender-kiln</span>
+    </a>
+    <span class="links">
+      <a href={`${base}/#method`}>Method</a>
+      <a href={`${base}/bench/`} aria-current={current === 'bench' ? 'page' : undefined}>Bench</a>
+      <a href={`${base}/#animate`}>Animate</a>
+    </span>
+    <a class="gh" href={site.repo} aria-label={stars != null ? `GitHub, ${stars} stars` : 'GitHub'}><span class="ghi" aria-hidden="true" set:html={ghIcon} /><span class="ghw">GitHub</span>{stars != null && <span class="stars measure" aria-hidden="true"><span class="star" set:html={starIcon} />{compact(stars)}</span>}<span class="ic" aria-hidden="true" set:html={arrowUpRight} /></a>
+  </nav>
+</header>
+
+<style>
+  .bar { position: fixed; top: 16px; left: 0; right: 0; z-index: 20; display: flex; justify-content: center; pointer-events: none; padding-inline: 12px; }
+  .pill {
+    pointer-events: auto;
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px 6px 6px 14px; border-radius: 999px;
+    background: var(--char); border: 1px solid var(--line);
+    box-shadow: inset 0 1px 0 rgb(255 238 220 / 0.06), 0 18px 40px -20px rgb(0 0 0 / 0.8);
+    backdrop-filter: blur(16px) saturate(140%); -webkit-backdrop-filter: blur(16px) saturate(140%);
+  }
+  .mark { display: flex; align-items: center; gap: 8px; margin-right: 10px; text-decoration: none; font: 600 1rem var(--face-display); letter-spacing: -0.01em; color: var(--bone); }
+  .links { display: flex; }
+  .links a, .gh {
+    padding: 8px 14px; border-radius: 999px; font-size: 0.9375rem; color: var(--ash); text-decoration: none;
+    transition: color 0.3s var(--ease-spring), background 0.3s var(--ease-spring);
+  }
+  .links a:hover, .links a[aria-current='page'] { color: var(--bone); background: rgb(255 238 220 / 0.07); }
+  .gh { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); background: var(--molten); font-weight: 600; }
+  .gh:hover { color: var(--ink); background: var(--bone); }
+  .ic { display: inline-flex; width: 16px; height: 16px; transition: transform 0.4s var(--ease-spring); }
+  .ic :global(svg) { width: 100%; height: 100%; fill: currentColor; }
+  .gh:hover .ic { transform: translate(2px, -2px); }
+  .stars { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: rgb(20 13 7 / 0.14); font-size: 0.8125rem; font-weight: 500; }
+  .star { display: inline-flex; width: 12px; height: 12px; }
+  .star :global(svg) { width: 100%; height: 100%; fill: currentColor; }
+  @media (prefers-reduced-transparency: reduce) { .pill { background: var(--char); backdrop-filter: none; } }
+  @media (max-width: 560px) {
+    .word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    .mark { margin-right: 2px; }
+    .links a, .gh { padding: 8px 8px; font-size: 0.875rem; }
+    .mark { flex: none; }
+    .pill { padding-left: 10px; max-width: 100%; }
+    .stars { padding: 2px 6px; }
+    /* phones: the arrow goes, the button gets its breathing room back */
+    .gh { padding: 8px 12px; }
+    .gh .ic { display: none; }
+  }
+  .ghi { display: none; width: 18px; height: 18px; }
+  .ghi :global(svg) { width: 100%; height: 100%; fill: currentColor; }
+  /* the narrowest phones: the GitHub mark replaces the word, the count stays */
+  @media (max-width: 400px) {
+    .ghi { display: inline-flex; }
+    .ghw { display: none; }
+    .gh { gap: 4px; }
+    .gh .ic { display: none; }
+  }
+</style>

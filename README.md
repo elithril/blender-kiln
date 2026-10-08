@@ -88,6 +88,14 @@ openwork views left out for the chair. The text briefs were measured on the skil
 2.0 (`2b313d2`), the photo rebuilds on the final one. Size is assumed when a brief gives none —
 the chair came out at an ordinary chair's height, 29 % short.</sub>
 
+**Close, not identical, on purpose.** kiln stops at a few dollars per object.
+[img2threejs](https://github.com/img2threejs/img2threejs), which rebuilds an image as Three.js
+code through eight vision-reviewed passes, keeps finer surface detail: on the same lantern its
+likeness was comparable — 0.866 against kiln's 0.861 — at about three times the cost, estimated on
+a run stopped after three of its eight passes. Several of its techniques were measured and adopted
+in kiln: traced wires, layered texture fields, a frosted-glass recipe
+([benchmarks § 4](docs/benchmarks.md#4-kiln-against-an-image-to-code-tool)).
+
 What did not improve is published too: the [benchmarks](docs/benchmarks.md) — fifteen
 versions of one lantern, what each fix broke, how the bench was kept honest — and every
 number, render and GLB under 1 MB on the [`bench-results`](https://github.com/elithril/blender-kiln/tree/bench-results) branch — kept
@@ -215,7 +223,7 @@ The measured optimization sizes, the rule-by-rule audit of the gallery scripts a
   <img src="docs/images/animate-cat-walk.webp" width="24%" alt="A low-poly cat walking, looped" />
   <img src="docs/images/animate-cat-idle.webp" width="24%" alt="The cat idling: breathing, glancing, tail swaying" />
   <img src="docs/images/animate-lamp.webp"     width="24%" alt="An articulated desk lamp looking around" />
-  <img src="docs/images/animate-chest.webp"    width="24%" alt="A treasure chest popping open and slamming shut" />
+  <img src="docs/images/animate-chest.webp"    width="24%" alt="A textured treasure chest: the hasp flips, the lid rattles, pops open on a heap of gold and slams shut" />
 </p>
 
 Phase 5d picks the route from the subject, because no single method held up across
@@ -226,7 +234,7 @@ measurement):
 |---|---|---|
 | Biped or winged, from a sentence | [UniMate](https://github.com/Friedrich-M/UniMate) text-to-motion, looped by `tools/motion_loop.py` | the villager, the dragon |
 | Four-legged, idle and walk | `tools/quadruped.py` — a scripted, measured cycle | the cat |
-| Articulated object | rigid parts keyed by script, every rotation's sign measured first | the lamp, the chest |
+| Articulated object | rigid parts keyed by script, every rotation's sign measured first | the lamp, the chest (planks, iron, Poly Haven CC0 scans) |
 
 UniMate was measured **unusable for quadruped walking** — on a cat, a Shiba, a horse
 and the model author's own robot dog, with the solver ruled out — so a quadruped never

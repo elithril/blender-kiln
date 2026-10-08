@@ -1,0 +1,53 @@
+/* The forge. The page is night, lit only by the fire: ember and molten are light, kiln's flame is
+   the brand, slate is the forge's stone. Every render that carries a grey studio ground sits in a
+   plate (an object on a stand), never as page background. */
+:root {
+  /* ground */
+  --night: #0b0908;
+  --char: #14110f;
+  --soot: #1e1a17;
+  --line: rgb(255 238 220 / 0.09);
+  --line-strong: rgb(255 238 220 / 0.18);
+
+  /* text */
+  --bone: #f4ede4;
+  --ash: #c4bbb1;       /* 11.4:1 on night */
+  --ash-dim: #958c83;   /* 5.8:1 on night: small secondary text */
+
+  /* fire */
+  --ember: #ff5a14;
+  --molten: #ffb547;
+  --flame: #d67e2c;     /* kiln's own orange, from the logo */
+  --flame-lit: #f0954a;
+  --slate: #343c62;
+  --ink: #140d07;       /* text on molten / ember surfaces */
+
+  /* the bench's marking, in the overlay only */
+  --truth: #e5484d;
+  --kiln: #2bb5d6;
+  --both: #f6e6ea;
+
+  /* legacy names, so the Bench prose and plates keep resolving */
+  --white: var(--bone);
+  --n8: var(--ash);
+  --muted: var(--ash-dim);
+  --n5: #6d655e;
+  --n35: var(--line-strong);
+  --black: var(--char);
+  --sweep: #404040;     /* the bench renders' own grey, inside plates only */
+  --sweep-deep: var(--char);
+  --sweep-edge: var(--night);
+  --sweep-lit: var(--soot);
+
+  --face-display: 'Clash Display', 'Geist Variable', sans-serif;
+  --face-text: 'Geist Variable', ui-sans-serif, sans-serif;
+  --face-measure: 'Geist Mono Variable', ui-monospace, monospace;
+
+  --h2: clamp(2.5rem, 6vw, 6.25rem);
+  --bar-h: 0px;
+  --u: 8px;
+  --gutter: clamp(16px, 4vw, 64px);
+  --radius: 1.5rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+}

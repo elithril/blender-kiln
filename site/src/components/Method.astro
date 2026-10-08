@@ -1,0 +1,172 @@
+---
+import site from '../content/site.json';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const m = site.method;
+const S = m.scene;
+---
+<!-- the session replayed on its real GLB: one step per screen of scroll -->
+<section id="method" class="method" aria-labelledby="method-h" data-method data-base={base} data-scene={JSON.stringify(S)} data-n={m.steps.length}>
+  <div class="sticky">
+    <canvas data-canvas aria-hidden="true"></canvas>
+
+    <header class="head">
+      <h2 id="method-h">{m.headline}</h2>
+      <p>{m.lede}</p>
+    </header>
+
+    <ol class="steps">
+      {m.steps.map((s, i) => (
+        <li class:list={['step', i === 0 && 'on']} data-step={i}>
+          <h3><span class="idx">{i + 1}.</span> {s.title}</h3>
+          <p class="body">{s.body}</p>
+          <blockquote class="log measure"><p>{s.log}</p><cite>ammo-box_log.md</cite></blockquote>
+          {i === 0 && (
+            <figure class="read">
+              <img class="ph" src={`${base}${S.photo}`} alt="The ammo box reference photo kiln worked from" loading="lazy" />
+              {S.crops.map((c) => <img src={`${base}${c}`} alt="" loading="lazy" />)}
+              <figcaption class="measure">the photo and the crops the session read</figcaption>
+            </figure>
+          )}
+          {i === 2 && <p class="figure measure"><span class="big">{S.iou.toFixed(3)}</span> silhouette overlap, photo camera</p>}
+          {i === 4 && <p class="figure measure"><span class="big" data-mb>{S.rawMB.toFixed(2)} MB</span> {S.tris.toLocaleString('en-US')} triangles, Draco + WebP</p>}
+        </li>
+      ))}
+    </ol>
+
+    <div class="timeline">
+      <div class="track" data-track role="slider" tabindex="0" aria-label="Session timeline" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <i class="fill" data-fill></i>
+        {m.steps.map((_, i) => <i class="tick" style={`left:${((i + 0.5) / m.steps.length) * 100}%`}></i>)}
+        <i class="knob" data-head></i>
+      </div>
+      <nav class="rail" aria-label="Steps">
+        {m.steps.map((s, i) => <button type="button" data-go={i} class:list={[i === 0 && 'on']}><span class="measure">{i + 1}</span> {s.verb}</button>)}
+      </nav>
+    </div>
+    <p class="legend measure" data-legend><span class="l-both">both</span><span class="l-truth">photo only</span><span class="l-kiln">model only</span></p>
+  </div>
+</section>
+
+<script>
+  import { ScrollTrigger } from 'gsap/ScrollTrigger';
+  const root = document.querySelector<HTMLElement>('[data-method]')!;
+  const base = root.dataset.base ?? '';
+  const cfg = JSON.parse(root.dataset.scene!);
+  const n = Number(root.dataset.n);
+  const steps = [...root.querySelectorAll<HTMLElement>('[data-step]')];
+  const rail = [...root.querySelectorAll<HTMLButtonElement>('[data-go]')];
+  const legend = root.querySelector<HTMLElement>('[data-legend]')!;
+  const track = root.querySelector<HTMLElement>('[data-track]')!;
+  const mb = root.querySelector<HTMLElement>('[data-mb]')!;
+  let scene: ReturnType<typeof import('../scripts/method3d').mountMethod> = null;
+
+  new IntersectionObserver(async ([e], io) => {
+    if (!e.isIntersecting) return;
+    io.disconnect();
+    try { const { mountMethod } = await import('../scripts/method3d'); scene = mountMethod(root.querySelector('[data-canvas]')!, base, cfg); } catch { scene = null; }
+  }, { rootMargin: '400px' }).observe(root);
+
+  let cur = -1;
+  const fill = root.querySelector<HTMLElement>('[data-fill]')!;
+  const head = root.querySelector<HTMLElement>('[data-head]')!;
+  function paint(p: number) {
+    const s = p * n; // 0..5
+    scene?.setStep(s);
+    const i = Math.min(n - 1, Math.floor(s));
+    // each step's text is fully in around its centre and crossfades with its neighbours in between
+    steps.forEach((el, k) => {
+      const d = Math.abs(s - (k + 0.5));
+      const o = 1 - Math.min(1, Math.max(0, (d - 0.28) / 0.22));
+      el.style.opacity = String(o);
+      el.style.transform = `translateY(${(1 - o) * 14 * Math.sign(k + 0.5 - s)}px)`;
+      el.style.pointerEvents = o > 0.5 ? 'auto' : 'none';
+    });
+    fill.style.transform = `scaleX(${p})`;
+    head.style.left = `${p * 100}%`;
+    track.setAttribute('aria-valuenow', String(Math.round(p * 100)));
+    if (i !== cur) {
+      cur = i;
+      rail.forEach((el, k) => el.classList.toggle('on', k === i));
+    }
+    legend.classList.toggle('on', s > 2.05 && s < 2.95);
+    // the export: the file shrinks as the step plays
+    const k = Math.min(1, Math.max(0, (s - 4.05) / 0.4));
+    const kb = cfg.rawMB * 1024 * (1 - k) + cfg.shippedKB * k;
+    mb.textContent = kb >= 1024 ? `${(kb / 1024).toFixed(2)} MB` : `${Math.round(kb)} KB`;
+  }
+  paint(0);
+  const st = ScrollTrigger.create({ trigger: root, start: 'top top', end: 'bottom bottom', refreshPriority: 1, onUpdate: (x) => paint(x.progress) });
+  // a timeline, not pages: the scroll scrubs it both ways; the track can be dragged or clicked
+  const stepY = (i: number) => st.start + (st.end - st.start) * ((i + 0.5) / n);
+  const L = () => (window as any).__lenis;
+  const go = (y: number, immediate = false) => { const l = L(); l ? l.scrollTo(y, immediate ? { immediate: true } : { duration: 1.2 }) : scrollTo({ top: y, behavior: immediate ? 'auto' : 'smooth' }); };
+  const toY = (clientX: number) => { const r = track.getBoundingClientRect(); return st.start + (st.end - st.start) * Math.min(1, Math.max(0, (clientX - r.left) / r.width)); };
+  let dragging = false;
+  track.addEventListener('pointerdown', (e) => { dragging = true; track.setPointerCapture(e.pointerId); go(toY(e.clientX), true); });
+  track.addEventListener('pointermove', (e) => { if (dragging) go(toY(e.clientX), true); });
+  track.addEventListener('pointerup', () => { dragging = false; });
+  track.addEventListener('keydown', (e) => {
+    const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+    if (!d) return; e.preventDefault();
+    go(stepY(Math.min(n - 1, Math.max(0, cur + d))));
+  });
+  rail.forEach((b, i) => b.addEventListener('click', () => {
+    go(stepY(i));
+  }));
+</script>
+
+<style>
+  .method { position: relative; height: 600svh; background: rgb(11 9 8 / 0.86); }
+  .sticky { position: sticky; top: 0; height: 100svh; overflow: hidden; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .head { position: absolute; z-index: 1; top: 104px; left: var(--gutter); right: var(--gutter); display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; pointer-events: none; }
+  .head h2 { margin: 0; font-size: clamp(2.25rem, 4.4vw, 4.75rem); line-height: 0.95; letter-spacing: -0.025em; word-spacing: 0.05em; max-width: 15ch; }
+  .head p { margin: 0; color: var(--ash); max-width: 44ch; font-size: 0.9375rem; }
+
+  .steps { list-style: none; margin: 0; padding: 0; position: absolute; z-index: 1; left: var(--gutter); top: 46%; width: min(440px, 36vw); }
+  .step { position: absolute; inset: 0 auto auto 0; width: 100%; opacity: 0; pointer-events: none; will-change: opacity, transform; }
+  .step h3 { margin: 0 0 12px; font-size: clamp(1.5rem, 2.2vw, 2rem); line-height: 1.1; letter-spacing: -0.015em; }
+  .idx { color: var(--molten); }
+  .body { margin: 0 0 16px; color: var(--ash); }
+  .log { margin: 0; padding: 12px 14px; border-radius: 1rem; background: rgb(20 17 15 / 0.85); box-shadow: inset 0 0 0 1px var(--line); font-size: 0.75rem; color: var(--bone); line-height: 1.6; }
+  .log p { margin: 0 0 6px; }
+  .log cite { font-style: normal; color: var(--ash-dim); }
+  .read { margin: 16px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .read img { flex: 0 1 auto; min-width: 0; object-fit: cover; height: 44px; max-width: 16%; width: auto; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--line); background: var(--sweep); }
+  .read .ph { height: 56px; max-width: 14%; object-fit: contain; background: none; }
+  .read figcaption { flex-basis: 100%; font-size: 0.75rem; color: var(--ash-dim); }
+  .figure { margin: 18px 0 0; font-size: 0.8125rem; color: var(--ash); }
+  .big { display: block; font-size: clamp(3rem, 5.2vw, 4.75rem); font-weight: 500; line-height: 0.9; letter-spacing: -0.04em; color: var(--bone); margin-bottom: 6px; }
+
+  .timeline { position: absolute; z-index: 2; left: var(--gutter); right: var(--gutter); bottom: 22px; }
+  .track { position: relative; height: 18px; cursor: pointer; touch-action: none; }
+  .track::before { content: ''; position: absolute; left: 0; right: 0; top: 8px; height: 2px; border-radius: 999px; background: var(--line-strong); }
+  .fill { position: absolute; left: 0; right: 0; top: 8px; height: 2px; border-radius: 999px; background: var(--molten); transform-origin: left; transform: scaleX(0); }
+  .tick { position: absolute; top: 5px; width: 2px; height: 8px; margin-left: -1px; border-radius: 999px; background: var(--ash-dim); }
+  .knob { position: absolute; top: 3px; width: 12px; height: 12px; margin-left: -6px; border-radius: 999px; background: var(--bone); box-shadow: 0 0 0 4px rgb(255 181 71 / 0.25); }
+  .track:focus-visible { outline-offset: 4px; }
+  .rail { margin-top: 6px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .rail button { padding: 4px 0 0; text-align: center; background: none; border: 0; color: var(--ash-dim); font: 500 0.875rem var(--face-text); cursor: pointer; transition: color 0.3s, border-color 0.3s; }
+  .rail button span { margin-right: 6px; }
+  .rail button.on { color: var(--bone); }
+  .legend { position: absolute; z-index: 1; right: var(--gutter); bottom: 72px; margin: 0; display: flex; gap: 16px; font-size: 0.75rem; color: var(--ash); opacity: 0; transition: opacity 0.3s; }
+  .legend.on { opacity: 1; }
+  .legend span::before { content: ''; display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; border-radius: 2px; }
+  .l-both::before { background: var(--both); }
+  .l-truth::before { background: var(--truth); }
+  .l-kiln::before { background: var(--kiln); }
+
+  @media (max-width: 960px) {
+    .head { display: block; top: 92px; }
+    .head p { display: none; }
+    .steps { top: auto; bottom: 76px; left: var(--gutter); right: var(--gutter); width: auto; height: 46svh; }
+    .step { inset: auto 0 0 0; padding: 16px; border-radius: 1.5rem; background: rgb(11 9 8 / 0.82); }
+    .body { font-size: 0.9375rem; }
+    .read img { height: 38px; }
+    .read .ph { height: 46px; }
+    .figure .big { font-size: 2.25rem; }
+    .rail button { font-size: 0; }
+    .rail button span { font-size: 0.75rem; }
+    .legend { display: none; } /* the step text names the colours on phones */
+  }
+</style>

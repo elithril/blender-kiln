@@ -1,0 +1,140 @@
+---
+import site from '../content/site.json';
+import { latestRelease } from '../lib/release';
+const release = await latestRelease();
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const A = site.animate;
+const clips = A.routes.flatMap((r, ri) => r.clips.map((c) => ({ ...c, route: ri })));
+---
+<section id="animate" class="animate" aria-labelledby="animate-h" data-animate data-base={base} data-clips={JSON.stringify(clips.map((c) => [c.glb, c.label.split(',')[0].trim()]))}>
+  <header class="head">
+    <h2 id="animate-h">{A.headline}</h2>
+    <div class="side">
+      <p>{A.lede}</p>
+      <a class="release measure" href={release.url}>New in {release.version}: {release.title}</a>
+    </div>
+  </header>
+
+  <div class="theatre">
+    <div class="viewport">
+      <canvas data-canvas aria-label="A kiln-animated model, playing live. Drag to turn it." role="img"></canvas>
+      <img class="fallback" data-fallback src={`${base}${clips[0].src}`} alt={clips[0].alt} hidden />
+      <p class="now measure" data-now aria-live="polite">{clips[0].label}</p>
+    </div>
+
+    <div class="routes">
+      {A.routes.map((r, ri) => (
+        <div class="route" data-route={ri}>
+          <h3>{r.subject}</h3>
+          <p class="via measure">{r.route}</p>
+          <p class="detail">{r.detail}</p>
+          <div class="pick" role="group" aria-label={r.subject}>
+            {clips.map((c, i) => c.route === ri && (
+              <button type="button" data-clip={i} aria-pressed={i === 0 ? 'true' : 'false'} data-alt={c.alt} data-src={`${base}${c.src}`}>{c.label}</button>
+            ))}
+          </div>
+        </div>
+      ))}
+      <div class="cmds measure" aria-label="Commands">{A.commands.map((c) => <code>{c}</code>)}</div>
+    </div>
+  </div>
+
+  <div class="left-out">
+    <h3>Measured, and left out</h3>
+    <ul>{A.rejected.map((x) => <li>{x}</li>)}</ul>
+  </div>
+  <p class="disclosure">{A.disclosure}</p>
+</section>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-animate]')!;
+  const base = root.dataset.base ?? '';
+  const glbs = JSON.parse(root.dataset.clips!) as [string, string][]; // [file, model]
+  const canvas = root.querySelector<HTMLCanvasElement>('[data-canvas]')!;
+  const fallback = root.querySelector<HTMLImageElement>('[data-fallback]')!;
+  const now = root.querySelector<HTMLElement>('[data-now]')!;
+  const buttons = [...root.querySelectorAll<HTMLButtonElement>('[data-clip]')];
+  let live: ReturnType<typeof import('../scripts/creatures').mountCreatures> = null;
+  let cur = 0, timer = 0;
+
+  function pick(i: number, user = false) {
+    cur = i;
+    buttons.forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.clip) === i)));
+    const b = buttons.find((x) => Number(x.dataset.clip) === i)!;
+    now.textContent = b.textContent;
+    fallback.src = b.dataset.src!; fallback.alt = b.dataset.alt!;
+    live?.show(base + glbs[i][0], glbs[i][1]);
+    clearInterval(timer);
+    if (!user) timer = window.setInterval(() => pick((cur + 1) % glbs.length), 7000);
+  }
+  buttons.forEach((b) => b.addEventListener('click', () => pick(Number(b.dataset.clip), true)));
+
+  const gl = (() => { try { return !!document.createElement('canvas').getContext('webgl2'); } catch { return false; } })();
+  new IntersectionObserver(async ([e], io) => {
+    if (!e.isIntersecting) return;
+    io.disconnect();
+    if (gl) {
+      const { mountCreatures } = await import('../scripts/creatures');
+      live = mountCreatures(canvas, base);
+    }
+    if (!live) { canvas.hidden = true; fallback.hidden = false; }
+    pick(0, matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }, { rootMargin: '300px' }).observe(root);
+</script>
+
+<style>
+  .animate { position: relative; padding: 160px var(--gutter) 120px; background: rgb(11 9 8 / 0.86); }
+  .head { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 32px 64px; align-items: end; margin-bottom: 48px; }
+  .head h2 { margin: 0; font-size: var(--h2); line-height: 0.95; letter-spacing: -0.025em; word-spacing: 0.05em; }
+  .side p { margin: 0 0 14px; color: var(--ash); max-width: 46ch; }
+  .release { font-size: 0.8125rem; color: var(--molten); text-decoration: none; }
+  .release:hover { text-decoration: underline; }
+
+  .theatre { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 40px; align-items: stretch; }
+  .viewport { position: relative; min-height: min(72svh, 680px); border-radius: 2rem; padding: 6px; background: rgb(255 238 220 / 0.04); box-shadow: inset 0 0 0 1px var(--line); }
+  .viewport canvas, .fallback { position: absolute; inset: 6px; width: calc(100% - 12px); height: calc(100% - 12px); border-radius: 26px; cursor: grab;
+    background: radial-gradient(60% 50% at 50% 70%, #2a1d14, #120e0b 70%); }
+  .fallback { object-fit: contain; }
+  .now { position: absolute; left: 28px; bottom: 22px; margin: 0; padding: 6px 12px; border-radius: 999px; font-size: 0.8125rem; color: var(--bone); background: rgb(11 9 8 / 0.6); box-shadow: inset 0 0 0 1px var(--line); }
+
+  .routes { display: grid; align-content: start; gap: 28px; }
+  .route { padding-top: 20px; border-top: 1px solid var(--line); }
+  .route h3 { margin: 0 0 6px; font-size: 1.5rem; line-height: 1.15; }
+  .via { margin: 0 0 8px; font-size: 0.8125rem; color: var(--molten); }
+  .detail { margin: 0 0 14px; color: var(--ash); font-size: 0.9375rem; max-width: 42ch; }
+  .pick { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pick button { padding: 9px 16px; border-radius: 999px; border: 0; font: 500 0.9375rem var(--face-text); color: var(--ash); background: rgb(255 238 220 / 0.06); box-shadow: inset 0 0 0 1px var(--line); cursor: pointer; transition: background 0.3s var(--ease-spring), color 0.3s, transform 0.4s var(--ease-spring); }
+  .pick button:hover { color: var(--bone); background: rgb(255 238 220 / 0.1); }
+  .pick button:active { transform: scale(0.97); }
+  .pick button[aria-pressed='true'] { color: var(--ink); background: var(--molten); box-shadow: none; }
+  .cmds { display: grid; gap: 4px; padding: 16px 18px; border-radius: 1rem; background: var(--char); box-shadow: inset 0 0 0 1px var(--line); font-size: 0.8125rem; }
+  .cmds code { font: inherit; color: var(--bone); }
+  .cmds code::before { content: '>'; color: var(--molten); margin-right: 1ch; }
+
+  .left-out { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.4fr); gap: 32px; margin-top: 96px; padding-top: 28px; border-top: 1px solid var(--line); }
+  .left-out h3 { margin: 0; font-size: 1.5rem; }
+  .left-out ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 40px; }
+  .left-out li { color: var(--ash); padding-left: 18px; position: relative; }
+  .left-out li::before { content: ''; position: absolute; left: 0; top: 0.75em; width: 8px; height: 1px; background: var(--ash-dim); }
+  .disclosure { margin: 48px 0 0; font-size: 0.8125rem; color: var(--ash-dim); max-width: 100ch; }
+
+  @media (max-width: 960px) {
+    .head, .theatre, .left-out { grid-template-columns: minmax(0, 1fr); }
+    .viewport { min-height: 0; height: min(50svh, 460px); }
+    .left-out ul { grid-template-columns: minmax(0, 1fr); }
+    /* phones: the stage stays put and the clip families become panels swiped sideways right under it,
+       so a tap never sends the model off screen */
+    .theatre { gap: 14px; }
+    .routes { display: flex; align-items: flex-start; gap: 12px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory;
+      margin-inline: calc(-1 * var(--gutter)); padding-inline: var(--gutter); scroll-padding-inline: var(--gutter); scrollbar-width: none; }
+    .routes::-webkit-scrollbar { display: none; }
+    .route, .cmds { flex: 0 0 min(84%, 420px); scroll-snap-align: start; }
+    .route { padding: 18px; border-top: 0; border-radius: 1.5rem; background: var(--char); box-shadow: inset 0 0 0 1px var(--line); }
+    .detail { font-size: 0.875rem; }
+    .cmds { border-radius: 1.5rem; }
+  }
+  @media (max-width: 560px) {
+    .animate { padding-top: 120px; }
+    .cmds code { white-space: normal; padding-left: 2ch; text-indent: -2ch; }
+  }
+</style>

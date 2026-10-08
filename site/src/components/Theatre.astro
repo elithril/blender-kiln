@@ -1,0 +1,198 @@
+---
+import site from '../content/site.json';
+import copyIcon from '@phosphor-icons/core/assets/light/copy-simple-light.svg?raw';
+import arrowRight from '@phosphor-icons/core/assets/light/arrow-right-light.svg?raw';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const S = site.specimens;
+// when each object is on stage, as a share of the theatre's scroll
+const windows: [number, number][] = [[0.27, 0.53], [0.53, 0.76], [0.76, 1.0]];
+const fmt = (n: number) => n.toLocaleString('en-US');
+const pct = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(Math.round(n * 100))}%`;
+---
+<section class="theatre" aria-label="blender-kiln" data-theatre data-base={base}
+  data-specimens={JSON.stringify(S.map((s) => ({ id: s.id, glb: s.glb, score: s.score, before: s.scoreBefore })))}
+  data-windows={JSON.stringify(windows)}>
+  <div class="sticky">
+
+    <div class="hero" data-hero>
+      <h1>{site.hero.headline.map((l, i) => <span class:list={['line', i === 1 && 'hot']}><span>{l}</span></span>)}</h1>
+      <p class="lede">{site.hero.lede}</p>
+      <div class="actions">
+        <button type="button" class="cta" data-copy={site.install.join('\n')}>
+          <span data-label>Copy the install</span><span class="ic" aria-hidden="true" set:html={copyIcon} />
+        </button>
+        <a class="ghost" href={`${base}/bench/`}>See the bench<span class="ic" aria-hidden="true" set:html={arrowRight} /></a>
+      </div>
+      <p class="req">{site.requirements} Three commands in Claude Code.</p>
+    </div>
+
+    <h2 class="chapter" data-chapter>Rebuilt from one photo.<br /><span>Graded against the real thing.</span></h2>
+
+    {S.map((s, i) => (
+      <div class="proof" data-proof={i}>
+        <figure class="plate">
+          <div class="core"><img src={`${base}${s.photo}`} alt={s.photoAlt} loading="lazy" /></div>
+          <figcaption><span>What kiln saw</span> {s.photoCredit}</figcaption>
+        </figure>
+        <div class="reading">
+          <p class="name">{s.name}</p>
+          <p class="score measure"><span data-count={i}>{s.score.toFixed(3)}</span></p>
+          <p class="unit">shape score against the real {s.name.toLowerCase()}, which the session never saw. 1 = identical.</p>
+          <dl class="facts measure">
+            <div><dt>before 2.0</dt><dd>{s.scoreBefore.toFixed(3)}</dd></div>
+            <div><dt>height</dt><dd>{pct(s.heightVsTruth)}</dd></div>
+            <div><dt>shipped</dt><dd>{s.shippedKB} KB</dd></div>
+            <div><dt>triangles</dt><dd>{fmt(s.tris)}</dd></div>
+          </dl>
+        </div>
+      </div>
+    ))}
+    <p class="tally measure" data-tally aria-hidden="true">{S.map((s, i) => <span data-tick={i}>{s.name}</span>)}</p>
+  </div>
+</section>
+
+<script>
+  import { gsap } from 'gsap';
+  import { ScrollTrigger } from 'gsap/ScrollTrigger';
+  gsap.registerPlugin(ScrollTrigger);
+
+  const root = document.querySelector<HTMLElement>('[data-theatre]')!;
+  const base = root.dataset.base ?? '';
+  const specimens = JSON.parse(root.dataset.specimens!) as { id: string; glb: string; score: number; before: number }[];
+  const windows = JSON.parse(root.dataset.windows!) as [number, number][];
+  const canvas = document.querySelector<HTMLCanvasElement>('[data-forge-canvas]')!;
+  const fallbackImg = document.querySelector<HTMLElement>('[data-forge-fallback]')!;
+  const hero = root.querySelector<HTMLElement>('[data-hero]')!;
+  const chapter = root.querySelector<HTMLElement>('[data-chapter]')!;
+  const proofs = [...root.querySelectorAll<HTMLElement>('[data-proof]')];
+  const counts = [...root.querySelectorAll<HTMLElement>('[data-count]')];
+  const ticks = [...root.querySelectorAll<HTMLElement>('[data-tick]')];
+  const sm = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+  let forge: ReturnType<typeof import('../scripts/forge').mountForge> = null;
+  const gl = (() => { try { return !!document.createElement('canvas').getContext('webgl2'); } catch { return false; } })();
+  if (gl) import('../scripts/forge').then(({ mountForge }) => {
+    forge = mountForge(canvas, base, specimens, windows);
+    if (!forge) { canvas.hidden = true; fallbackImg.hidden = false; }
+  });
+  else { canvas.hidden = true; fallbackImg.hidden = false; }
+
+  function paint(p: number) {
+    forge?.setProgress(p);
+    const h = 1 - sm(0.05, 0.15, p);
+    hero.style.opacity = String(h);
+    hero.style.transform = `translate3d(0, ${(1 - h) * -60}px, 0) scale(${1 - (1 - h) * 0.04})`;
+    hero.style.visibility = h < 0.01 ? 'hidden' : 'visible';
+    const c = sm(0.17, 0.23, p) * (1 - sm(0.27, 0.31, p));
+    chapter.style.opacity = String(c);
+    chapter.style.transform = `translate3d(0, ${(1 - c) * 30}px, 0)`;
+    proofs.forEach((el, i) => {
+      const [a, b] = windows[i];
+      const v = Math.min(sm(a + 0.03, a + 0.08, p), 1 - sm(b - 0.05, b - 0.01, p));
+      el.style.opacity = String(v);
+      el.style.visibility = v < 0.01 ? 'hidden' : 'visible';
+      el.style.setProperty('--in', String(v));
+      const k = sm(a + 0.05, a + 0.15, p);
+      const s = specimens[i];
+      counts[i].textContent = (s.before + (s.score - s.before) * k).toFixed(3);
+      ticks[i].classList.toggle('on', p >= a && p < b);
+    });
+    root.querySelector<HTMLElement>('[data-tally]')!.style.opacity = String(sm(0.27, 0.32, p));
+  }
+  paint(0);
+  ScrollTrigger.create({ trigger: root, start: 'top top', end: 'bottom bottom', scrub: true, onUpdate: (st) => paint(st.progress) });
+  // after the theatre: the rest of the page drives the forge's banked glow and its closing flare
+  ScrollTrigger.create({ trigger: root, start: 'bottom bottom', endTrigger: document.documentElement, end: 'bottom bottom', onUpdate: (st) => forge?.setTail(st.progress) });
+  // the closing flare belongs to the Install section itself: it rises as that section comes in
+  ScrollTrigger.create({ trigger: '.close', start: 'top bottom', end: 'top 20%', onUpdate: (st) => forge?.setClose(st.progress) });
+  const footEl = document.querySelector<HTMLElement>('.foot');
+  if (footEl) ScrollTrigger.create({ trigger: footEl, start: 'top bottom', end: 'bottom bottom', onUpdate: (st) => forge?.setFoot(st.progress * footEl.offsetHeight / innerHeight) });
+
+  root.querySelector<HTMLButtonElement>('[data-copy]')!.addEventListener('click', async (e) => {
+    const b = e.currentTarget as HTMLButtonElement, label = b.querySelector<HTMLElement>('[data-label]')!;
+    try { await navigator.clipboard.writeText(b.dataset.copy!); label.textContent = 'Copied, paste in Claude Code'; }
+    catch { label.textContent = 'Copy failed, see Install below'; }
+    setTimeout(() => { label.textContent = 'Copy the install'; }, 2400);
+  });
+</script>
+
+<style>
+  .theatre { position: relative; height: 560svh; }
+  .sticky { position: sticky; top: 0; height: 100svh; overflow: hidden; }
+  .fallback { object-fit: cover; }
+  /* the fire reads through a soft vignette, so the type always has night behind it */
+  .sticky::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120% 90% at 50% 60%, transparent 40%, rgb(11 9 8 / 0.75) 100%); }
+
+  /* the type sits left, the forge stands right of it (camera view offset in forge.ts) */
+  .hero { position: absolute; z-index: 2; inset: 0; display: grid; align-content: center; justify-items: start; text-align: left; padding: 96px var(--gutter) 40px; will-change: transform, opacity; }
+  h1 { margin: 0; font-size: clamp(3rem, 6.4vw, 7.5rem); font-weight: 600; line-height: 0.92; letter-spacing: -0.03em; word-spacing: 0.08em; }
+  .line { display: block; overflow: hidden; padding-bottom: 0.06em; }
+  .line > span { display: inline-block; animation: rise 1.2s var(--ease-out) both; }
+  .line + .line > span { animation-delay: 0.12s; }
+  .hot { color: var(--molten); }
+  @keyframes rise { from { transform: translateY(105%); } }
+  .lede { margin: 28px 0 0; max-width: 46ch; font-size: clamp(1.0625rem, 1.4vw, 1.25rem); color: var(--ash); animation: fade 1.2s 0.35s var(--ease-out) both; }
+  @keyframes fade { from { opacity: 0; transform: translateY(16px); } }
+  .actions { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 12px; margin-top: 32px; animation: fade 1.2s 0.5s var(--ease-out) both; }
+  .cta, .ghost {
+    display: inline-flex; align-items: center; gap: 12px; padding: 8px 8px 8px 22px; border-radius: 999px;
+    font: 600 1rem var(--face-text); text-decoration: none; cursor: pointer; border: 0;
+    transition: transform 0.5s var(--ease-spring), background 0.3s, color 0.3s;
+  }
+  .cta { color: var(--ink); background: var(--molten); box-shadow: 0 0 0 1px rgb(255 181 71 / 0.4), 0 20px 50px -18px rgb(255 90 20 / 0.7); }
+  .cta:hover { background: var(--bone); }
+  .ghost { color: var(--bone); background: rgb(255 238 220 / 0.06); box-shadow: inset 0 0 0 1px var(--line-strong); }
+  .ghost:hover { color: var(--bone); background: rgb(255 238 220 / 0.12); }
+  .cta:active, .ghost:active { transform: scale(0.98); }
+  .ic { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 999px; background: rgb(20 13 7 / 0.12); transition: transform 0.5s var(--ease-spring); }
+  .ghost .ic { background: rgb(255 238 220 / 0.08); }
+  .ic :global(svg) { width: 18px; height: 18px; fill: currentColor; }
+  .cta:hover .ic, .ghost:hover .ic { transform: translate(2px, -1px) scale(1.06); }
+  .req { margin: 18px 0 0; font-size: 0.875rem; color: var(--ash-dim); animation: fade 1.2s 0.65s var(--ease-out) both; }
+
+  .chapter { position: absolute; z-index: 2; left: 0; right: 0; top: 30%; translate: 0 -50%; margin: 0; padding: 0 var(--gutter); text-align: center; font-size: var(--h2); line-height: 0.98; letter-spacing: -0.025em; word-spacing: 0.06em; opacity: 0; }
+  .chapter span { color: var(--molten); }
+  /* the fire flares behind this line: a soft night halo keeps it readable */
+  .chapter { text-shadow: 0 0 40px rgb(11 9 8 / 0.95), 0 0 12px rgb(11 9 8 / 0.9), 0 2px 2px rgb(11 9 8 / 0.8); }
+  .chapter::before { content: ''; position: absolute; inset: -12% 6%; z-index: -1; background: radial-gradient(closest-side, rgb(11 9 8 / 0.72), transparent); }
+
+  .proof { position: absolute; z-index: 2; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 0 24vw; padding: 110px var(--gutter) 90px; opacity: 0; visibility: hidden; pointer-events: none; }
+  .plate { position: relative; z-index: 1; justify-self: start; margin: 0; width: min(280px, 22vw); padding: 6px; border-radius: var(--radius); background: var(--char); box-shadow: inset 0 0 0 1px var(--line); transform: translate3d(calc((1 - var(--in, 0)) * -40px), 0, 0) rotate(-2deg); }
+  .core { position: relative; border-radius: 18px; overflow: hidden; background: radial-gradient(circle at 50% 40%, #2a2420, #120f0d); box-shadow: inset 0 1px 1px rgb(255 238 220 / 0.12); aspect-ratio: 3 / 4; }
+  .core img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 8%; filter: drop-shadow(0 20px 22px rgb(0 0 0 / 0.6)); }
+  .plate figcaption { padding: 10px 8px 4px; font-size: 0.8125rem; color: var(--ash-dim); }
+  .plate figcaption span { color: var(--bone); font-weight: 600; margin-right: 6px; }
+  .reading { justify-self: end; max-width: 26rem; transform: translate3d(calc((1 - var(--in, 0)) * 40px), 0, 0); }
+  .name { margin: 0 0 6px; font: 600 1.25rem var(--face-display); color: var(--molten); }
+  .score { margin: 0; font-size: clamp(4rem, 9vw, 9rem); font-weight: 500; line-height: 0.85; letter-spacing: -0.06em; }
+  .unit { margin: 14px 0 22px; color: var(--ash); font-size: 0.9375rem; max-width: 34ch; }
+  .facts { display: grid; grid-template-columns: repeat(4, auto); gap: 4px 22px; margin: 0; font-size: 0.8125rem; justify-content: start; }
+  .facts div { display: grid; gap: 2px; }
+  .facts dt { color: var(--ash-dim); }
+  .facts dd { margin: 0; color: var(--bone); }
+  .tally { position: absolute; z-index: 2; left: 0; right: 0; bottom: 28px; display: flex; justify-content: center; gap: 22px; margin: 0; font-size: 0.75rem; color: var(--ash-dim); opacity: 0; }
+  .tally span { transition: color 0.3s; }
+  .tally span.on { color: var(--molten); }
+
+  @media (max-width: 760px) {
+    .hero { align-content: start; justify-items: center; text-align: center; padding-top: 104px; }
+    h1 { font-size: clamp(2.5rem, 11vw, 3.5rem); }
+    .lede { font-size: 1rem; margin-top: 18px; }
+    .actions { justify-content: center; margin-top: 22px; }
+    .req { display: none; }
+    /* phones: the object owns the top; the photo kiln saw becomes a chip above the reading, never over the object */
+    .proof { grid-template-columns: minmax(0, 1fr); align-content: end; gap: 0; padding: 96px 0 64px; background: linear-gradient(to top, rgb(11 9 8 / 0.94) 48%, transparent 70%); }
+    .plate { justify-self: start; margin: 0 var(--gutter) 14px; width: auto; display: flex; align-items: center; gap: 12px; padding: 5px 14px 5px 5px; border-radius: 16px; transform: none; }
+    .plate .core { width: 52px; border-radius: 1rem; }
+    .chapter { top: 20%; font-size: 2.25rem; }
+    .chapter span { color: var(--bone); }
+    .plate .core img { padding: 4%; }
+    .plate figcaption { padding: 0; font-size: 0.75rem; line-height: 1.3; max-width: 22ch; }
+    .reading { justify-self: stretch; transform: none; padding: 0 var(--gutter); }
+    .score { font-size: 4.25rem; }
+    .facts { grid-template-columns: repeat(2, auto); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .line > span, .lede, .actions, .req { animation: none; }
+  }
+</style>

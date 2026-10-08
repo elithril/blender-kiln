@@ -1,0 +1,33 @@
+/Users/nicolasdolphens/Documents/projects/blender-kiln-site/site/assets-src/forge/build_forge.py:25: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+Info: Saved as "forge.blend"
+STAT tris=526 height=1.280 zmin=0.000
+INFO Draco is available, use library at /Applications/Blender.app/Contents/Resources/5.2/scripts/addons_core/io_scene_gltf2/libbf_intern_draco_bridge.dylib
+INFO MeshOptimizer is available, use library at /Applications/Blender.app/Contents/Resources/5.2/scripts/addons_core/io_scene_gltf2/libbf_intern_meshopt_bridge.dylib
+09:17:43 | INFO: Starting glTF 2.0 export
+09:17:43 | INFO: Extracting primitive: SM_Forge_Base_Mesh
+09:17:43 | INFO: Primitives created: 1
+09:17:43 | INFO: Extracting primitive: SM_Forge_DrumHigh_Mesh
+09:17:43 | INFO: Primitives created: 1
+09:17:43 | INFO: Extracting primitive: SM_Forge_DrumLow_Mesh
+09:17:43 | INFO: Primitives created: 1
+09:17:43 | INFO: Extracting primitive: SM_Forge_Flame_Mesh
+09:17:43 | INFO: Primitives created: 1
+09:17:43 | INFO: Extracting primitive: SM_Forge_FlameLeft_Mesh
+09:17:43 | INFO: Primitives created: 1
+09:17:43 | INFO: Extracting primitive: SM_Forge_FlameRight_Mesh
+09:17:43 | INFO: Primitives created: 1
+09:17:43 | INFO: Extracting primitive: SM_Forge_Lip_Mesh
+09:17:43 | INFO: Primitives created: 1
+09:17:43 | INFO: Extracting primitive: SM_Forge_Pool_Mesh
+09:17:43 | INFO: Primitives created: 1
+09:17:43 | INFO: Extracting primitive: SM_Forge_SeamHigh_Mesh
+09:17:43 | INFO: Primitives created: 1
+09:17:43 | INFO: Extracting primitive: SM_Forge_SeamLow_Mesh
+09:17:43 | INFO: Primitives created: 1
+09:17:43 | INFO: Finished glTF 2.0 export in 0.015702009201049805 s
+
+EXPORTED 44636
+Blender 5.2.2 LTS (hash d13f752e3b9c built 2026-09-15 01:49:19)
+
+Blender quit

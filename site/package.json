@@ -1,0 +1,23 @@
+{
+  "name": "blender-kiln-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@fontsource-variable/familjen-grotesk": "^5.3.0",
+    "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/geist-mono": "^5.3.0",
+    "@fontsource/martian-mono": "^5.3.0",
+    "@phosphor-icons/core": "^2.1.1",
+    "astro": "^7.3.6",
+    "github-slugger": "^2.0.0",
+    "gsap": "^3.15.0",
+    "lenis": "^1.3.26",
+    "marked": "^18.1.0",
+    "three": "^0.186.1"
+  }
+}
