@@ -13,3 +13,6 @@ assets-src/lantern/final/
 assets-src/*/work/
 assets-src/*/review/
 assets-src/**/*_original.glb
+
+# the site pins its own dependencies: the root ignore is for local gltf-transform installs
+!package-lock.json
