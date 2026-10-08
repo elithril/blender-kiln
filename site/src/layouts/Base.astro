@@ -44,6 +44,9 @@ const ogImage = new URL(`${base}${image}`, Astro.site).href;
       import { gsap } from 'gsap';
       import { ScrollTrigger } from 'gsap/ScrollTrigger';
       gsap.registerPlugin(ScrollTrigger);
+      // iOS Safari grows the viewport as its toolbar slides away: that height-only resize must not
+      // re-measure every pinned scene mid-scroll, or the page jumps under the finger
+      ScrollTrigger.config({ ignoreMobileResize: true });
       if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
         const lenis = new Lenis({ lerp: 0.1 });
         lenis.on('scroll', ScrollTrigger.update);

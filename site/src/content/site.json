@@ -509,7 +509,7 @@
     "compressed": "0 of 7 GLBs compressed with Draco and WebP before, 7 of 7 after, on both."
   },
   "close": {
-    "headline": "Install it.",
+    "headline": "Try it.",
     "links": [
       {
         "label": "Repository",
