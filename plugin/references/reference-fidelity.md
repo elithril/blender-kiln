@@ -451,6 +451,25 @@ Read it with its limits:
   not a closed ring on a clip.
 - **Round parts need enough sides to stay round up close**: 16 or more around a tube, 32
   or more round a turned body, shade smooth; the triangle range is a guide, not a cap.
+- **Shade smooth, and mark the sharp edges yourself — after the last boolean.** Smooth
+  shading across a cut blends the light over its edge, and the edge reads as a staircase:
+  a carved figure's eyes came out jagged in the preview while the geometry was straight.
+  `bpy.ops.object.shade_smooth_by_angle`, called headless through a `temp_override`,
+  marked **0** of 6,332 edges over 35° and raised nothing. Set them on the mesh, and count:
+
+  ```python
+  import bmesh, math
+  bm = bmesh.new(); bm.from_mesh(obj.data); n = 0
+  for e in bm.edges:
+      sharp = len(e.link_faces) == 2 and e.calc_face_angle(0) > math.radians(35)
+      e.smooth = not sharp; n += sharp
+  for f in bm.faces: f.smooth = True
+  bm.to_mesh(obj.data); bm.free()
+  print("sharp edges", n)        # 0 on an object with cuts is the bug, not a result
+  ```
+
+  Then look at **every cut edge up close** (a few cm of view, the shading on): the review
+  renders and the face measure are too coarse to show it.
 - **Curved glass needs ≥ 64 segments and one smooth shell**, or a semi-transparent shell
   shows its facets as bands, its back faces blending through.
 - **Fine detail is what reads as real.** Add it as **fine features** — scratches (thin

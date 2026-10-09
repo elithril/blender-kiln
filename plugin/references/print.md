@@ -105,6 +105,9 @@ passed every print check and the user found it "not alike at all".
    wall's thickness in pixels, hence in mm; the outline's bumps and the grooves' darkness give
    a relief's depth. The process minimum is a floor, never the value: a shell at the 1.2 mm
    minimum, where the photo showed three times that, read as paper.
+   **An inner wall is an offset of the outer one, solved, not stepped**: a cavity whose radius
+   was searched in 0.1 mm steps came out terraced in bands — Solidify, or a bisection to
+   0.001 mm per ring.
 4. **Project the front details along the photo's camera, not straight back.** A camera
    `--elevation` θ above sees a front point lower than it is: cut along the line
    z cos θ + y sin θ = v (y toward the back), not along y. Cut straight, every opening of one
@@ -128,6 +131,9 @@ passed every print check and the user found it "not alike at all".
 7. **Colour the preview from the photo** — one material per region sampled from it (body,
    stem), on a lit area, not in shadow. A print has no colour, but the review image is how the
    user judges the shape: a green stem left orange read as a stem half its size.
+   Its edges too: a cut with no sharp edge marked reads as a staircase in the preview, and
+   the user takes it for the print (`reference-fidelity.md` § 6, sharp edges). The STL
+   carries no shading — check the geometry with flat shading before blaming it.
 8. **Supports are normal for what the photo shows; overhangs are designed out where nobody
    looks.** Hanging teeth, paws or a round belly start in mid-air: check with `--supports` and
    say the print needs them, rather than flattening what the photo shows. What no one sees —
