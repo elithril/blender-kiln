@@ -19,7 +19,9 @@ them, no network. Cases:
 - overhang: the raised cube's underside is reported, a cube's bottom on the bed is not;
 - --reference: the crossing cubes against themselves, no loss; one of them alone against
   both — the MANIFOLD union that dropped half the object — FAIL; two end pillars against
-  the full block: same bounding box, a quarter of the volume — FAIL on volume alone;
+  the full block: same bounding box, a quarter of the volume — FAIL on volume alone; a cup
+  open at the top against the same hollow body closed — a figure carved after its reference
+  was saved: no loss (the voxelisation fills a closed cavity; it read 23 % on a pumpkin);
 - --height-mm scales: the cube read at 50 mm is 50 mm;
 - a missing file: exit 1;
 - slivers (parts under 1e-3 mm3) neither hold a part they cross nor lower the bed;
@@ -182,6 +184,22 @@ with tempfile.TemporaryDirectory() as d:
     check("one cube vs the two: closed and manifold, yet FAIL for the loss",
           rc == 3 and r["open_edges"] == 0 and any("lost material" in f or "dimensions differ" in f for f in r["fails"]),
           (rc, r["reference"]["dims_diff_pct"], r["reference"]["volume_ratio"]))
+
+    # a hollow body, closed (the reference saved before carving), and the same body opened at
+    # the top (the carved model): 94 % of its volume, and a voxelisation that fills the closed
+    # cavity must not turn that into a loss
+    ring = []
+    o4, i4 = [(0, 0), (40, 0), (40, 40), (0, 40)], [(6, 6), (34, 6), (34, 34), (6, 34)]
+    for k in range(4):
+        a, b, c, e = (*o4[k], 40), (*o4[(k + 1) % 4], 40), (*i4[(k + 1) % 4], 40), (*i4[k], 40)
+        ring += [[a, b, c], [a, c, e]]
+    stl(f"{d}/cup.stl", box(0, 0, 0, 40, 40, 40, skip=(1,)) + box(6, 6, 6, 34, 34, 40, skip=(1,), flip=True) + ring)
+    stl(f"{d}/hollow_closed.stl", box(0, 0, 0, 40, 40, 40) + box(6, 6, 6, 34, 34, 37, flip=True))
+    rc, r, _ = run(f"{d}/cup.stl", "--process", "fdm", "--reference", f"{d}/hollow_closed.stl")
+    want = (40 ** 3 - 28 * 28 * 34) / (40 ** 3 - 28 * 28 * 31)
+    check("carved cup vs its closed hollow reference: no loss, ratio near 0.94",
+          rc == 0 and r["closed_parts"] == 1 and abs(r["reference"]["volume_ratio"] - want) < 0.03,
+          (rc, r["reference"]["volume_ratio"], round(want, 3), r["fails"]))
 
     rc, r, _ = run(f"{d}/pillars.stl", "--process", "fdm", "--reference", f"{d}/block.stl")
     check("two end pillars vs the block: same dimensions, FAIL on volume",

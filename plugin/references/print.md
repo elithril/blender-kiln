@@ -126,8 +126,15 @@ passed every print check and the user found it "not alike at all".
      it follows the photo where the measure is known blind (an outline traced on its outer edge,
      a thin line, a groove's shadow). Then the crop decides, and the log says why.
    - A move under 0.01 either way is noise: judge it on the crops.
-   - Stop when two rounds in a row close nothing the overlay or the crops list, and show the
-     user `side_by_side.png`: they decide it is alike.
+   - **Stop when nothing is left to close**: every gap the overlay lists is either closed or
+     known blind (a groove's shadow, a cut wall), and the crops show no difference a change
+     could fix. Do not invent a change to get an empty round. Two rounds in a row that close
+     nothing also stop it.
+   - The joint review and the close look at the cut edges (rule 7, `reference-fidelity.md`
+     § 3 and § 6) come **before** stopping, not after: run them every round the joints or
+     cuts changed — on a pumpkin they found a plateau, steps and a regression the numbers
+     did not move on.
+   - Then show the user `side_by_side.png`: they decide it is alike.
 7. **Colour the preview from the photo** — one material per region sampled from it (body,
    stem), on a lit area, not in shadow. A print has no colour, but the review image is how the
    user judges the shape: a green stem left orange read as a stem half its size.
@@ -139,6 +146,16 @@ passed every print check and the user found it "not alike at all".
    say the print needs them, rather than flattening what the photo shows. What no one sees —
    the ceiling inside a hollow body, the underside of a base — is shaped for the printer (a 45°
    cone, a chamfer), as long as no visible opening looks onto it.
+   **When openings look onto the ceiling** (a carved lantern), a 45° ceiling has to start above
+   the highest opening — inside a round body it rarely fits: started lower, it turned a
+   pumpkin's eyes into blind pockets. Three ways, said to the user (guided) or logged (auto):
+   - **one part, bridged ceiling, supports** removed through the openings — the pumpkin's
+     choice: a ~42 mm flat ceiling, PASS with supports, PrusaSlicer warning of a collapsing
+     overhang. The default in auto mode;
+   - **two parts split on a horizontal plane**, each printed open side clear of supports,
+     glued along a line the photo already has (a rib's top, the ring round a stem) — how a
+     real lantern is cut. Not measured here;
+   - **no cavity**: openings as pockets one wall deep, painted dark — no see-through.
 9. **The photo's colours are a question for CONFIG, not something the model drops.** On a
    single-colour printer each colour region is either painted afterwards — then the model
    carries the boundary as geometry (a 0.6 mm groove or step, § Printable from the brief, rule
@@ -171,7 +188,10 @@ STL (mm), 3MF (its own unit), GLB and .blend (metres). Exit 0 PASS, 3 FAIL, 1 er
 - **`--reference`** voxelises both meshes at the same size (largest dimension / 150) and
   compares dimensions (3 %) and volume (10 %, only when the dimensions agree and BOTH the
   model and the reference are sealed — an open mesh voxelises to almost nothing: an open
-  40 × 20 × 20 box gives 4 mm3). An open reference is compared on its dimensions alone, and
+  40 × 20 × 20 box gives 4 mm3). A closed cavity is voxelised as solid, so its exact volume is
+  taken back out: a hollow figure saved before its openings were cut read as a 77 % loss
+  against the carved model, 95 % once corrected (the cut openings). An open reference is
+  compared on its dimensions alone, and
   the tool says so; a reference under one voxel of volume is a FAIL, never a ratio. The
   reference is first scaled to the model's height: a uniform scale is not a loss.
 - **`--supports`** slices with PrusaSlicer's automatic supports. A figurine whose limbs hang starts

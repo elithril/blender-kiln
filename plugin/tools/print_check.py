@@ -447,7 +447,13 @@ def voxel_volume(V, F, size):
     vol = abs(bm.calc_volume(signed=True))
     bm.free(); ev.to_mesh_clear()
     bpy.data.objects.remove(ob); bpy.data.meshes.remove(me)
-    return vol
+    # The voxel remesh fills a CLOSED cavity: a hollow figure saved before its openings were cut
+    # read as solid, and the carved model as a 77 % loss against it (a pumpkin, 2026-10-09).
+    # A closed shell with a negative volume is that cavity: take it back out, exactly.
+    _, part, nparts, closed = topology(V, F)
+    sv = signed_volumes(V, F, part, nparts)
+    cav = closed & (sv < -EMPTY_MM3)
+    return max(vol - float(-sv[cav].sum()), 0.0)
 
 
 # ── slicer ───────────────────────────────────────────────────────────────────────────────

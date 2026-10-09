@@ -72,7 +72,9 @@ Materials and small details still come from the photo (§ 4).
 Without a template, the reference's own pixels give proportions in millimetres. For a turned object
 (bottle, vase, barrel, lamp) the profile is usable directly as a lathe profile.
 Take the **core width** — the opaque run through the vertical axis — not the full
-width, which measures whatever stands around the body (a handle, a bail).
+width, which measures whatever stands around the body (a handle, a bail). **Except where
+the axis row is see-through** (an opening on the front, the background through it): the
+core reads 0 there — take the full width on those rows, or interpolate from the rows around.
 
 ```python
 import bpy, numpy as np
@@ -182,7 +184,8 @@ def floating_parts(objs, tol=0.0005):
 
 Contact is not insertion: a part that touches another at one point passes this check
 and still reads wrong. **A part that joins another ENTERS it** — its end runs past the
-surface by at least its own radius, its section unchanged, with at most a small fillet
+surface by at least its own radius (into a hollow part, by the wall's thickness — deeper
+pierces the cavity), its section unchanged, with at most a small fillet
 where it meets. A foot, a flange or a saddle only when the photo shows one clearly, and
 then judged against the same crop of the photo. Never a flat cut resting on a curve, and
 never a tube widened or flattened to make a foot — it reads as a tongue. No distance can
