@@ -3,9 +3,10 @@
     blender -b --factory-startup --python-exit-code 1 --python tools/print_check.py -- \\
         model.stl|model.3mf|model.glb|model.blend --process fdm|resin \\
         [--height-mm H] [--parts N] [--reference original.glb|.blend|.stl] \\
-        [--slicer /path/to/PrusaSlicer] [--json out.json]
+        [--slicer /path/to/PrusaSlicer|name] [--slicer-timeout S] [--json out.json]
 
-Exit codes: 0 PASS, 3 FAIL, 1 error (unreadable file, bad arguments, slicer missing).
+Exit codes: 0 PASS, 3 FAIL, 1 error (unreadable file, bad arguments, slicer missing or
+timed out).
 
 Units: STL is read as millimetres, 3MF by its own `unit`, GLB and .blend as metres. With
 --height-mm the model is scaled uniformly to that height; every figure is in mm after it.
@@ -23,18 +24,22 @@ that). Edges are then paired exactly:
 - self-intersections (triangle pairs crossing, inside a part) and intersecting parts, with
   Blender's own BVH — no external dependency;
 - floating parts: a part neither on the bed, nor crossing, enclosed by or within one
-  extrusion (0.4 mm FDM, 0.05 mm resin) of a held part — a printer fuses closer parts;
+  extrusion (0.4 mm FDM, 0.05 mm resin) of a held part — a printer fuses closer parts. The
+  bed is the lowest point of the parts with volume, and only they hold another part;
   inverted parts: negative volume and not enclosed (a cavity is enclosed). Parts with no
   volume (slivers a decimation leaves) are counted and not judged;
 - thin walls: share of faces whose wall, cast inward along the normal, is thinner than the
   process minimum (0.8 mm FDM, 0.5 mm resin) — sampled above 50,000 faces;
 - overhangs: share of the downward area steeper than 45° from vertical (bed excluded).
 
---reference compares the model against the file it was repaired from: dimensions and
-volume, both voxelised at the same size so that an open or overlapping original still has
-a volume. A boolean union that reports a perfect manifold can have dropped most of the
-object; only this comparison sees it. The reference is scaled to the model's height first —
-a uniform scale is not a loss.
+--reference compares the model against the file it was repaired from: dimensions, and
+volume, both voxelised at the same size so that an original made of overlapping closed
+pieces still has one volume. A boolean union that reports a perfect manifold can have
+dropped most of the object; only this comparison sees it. The reference is scaled to the
+model's height first — a uniform scale is not a loss. The volume is compared only when the
+model AND the reference are sealed (no open, no non-manifold edge): an open mesh voxelises
+to almost nothing, so an open original is compared on its dimensions alone, and said so.
+A reference under one voxel of volume is a FAIL, never a ratio.
 
 --slicer writes the scaled mesh as a binary STL and hands it to PrusaSlicer in a throwaway
 --datadir: `--info` (manifold, number_of_parts) and an FDM `--export-gcode`, whose log is
@@ -89,7 +94,8 @@ def args():
     p.add_argument("--height-mm", type=float)
     p.add_argument("--parts", type=int, help="expected number of parts (default: any)")
     p.add_argument("--reference")
-    p.add_argument("--slicer")
+    p.add_argument("--slicer", help="PrusaSlicer: a path, or a name on the PATH")
+    p.add_argument("--slicer-timeout", type=float, default=1800, help="seconds per slicer call (default 1800)")
     p.add_argument("--json")
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     return p.parse_args(argv)
@@ -98,16 +104,32 @@ def args():
 # ── loading: every format ends as (vertices in mm, triangles) ────────────────────────────
 
 def read_stl(path):
+    """Binary or ASCII STL. A binary file is not refused for the size test alone: exporters
+    write a count of 0, pad the end, or start the 80-byte header with "solid"."""
     data = open(path, "rb").read()
-    if len(data) >= 84 and 84 + 50 * struct.unpack("<I", data[80:84])[0] == len(data):
-        n = struct.unpack("<I", data[80:84])[0]
-        rec = np.frombuffer(data, dtype=np.dtype([("n", "<f4", 3), ("v", "<f4", (3, 3)), ("a", "<u2")]),
-                            count=n, offset=84)
-        return rec["v"].reshape(-1, 3).astype(np.float64)
-    co = [l.split()[1:4] for l in data.decode("latin-1").splitlines() if l.strip().startswith("vertex")]
-    if not co:
-        die(f"{path}: no triangle read (neither binary nor ASCII STL)")
-    return np.array(co, dtype=np.float64)
+    declared = struct.unpack("<I", data[80:84])[0] if len(data) >= 84 else None
+    held = (len(data) - 84) // 50 if declared is not None else 0     # whole records in the file
+    # ASCII only when it reads as ASCII: "solid" first AND facets written out as text
+    if declared is None or 84 + 50 * declared != len(data):
+        if data.lstrip()[:5].lower() == b"solid" and re.search(rb"facet\s+normal", data[:4096]):
+            co = [l.split()[1:4] for l in data.decode("latin-1").splitlines() if l.strip().startswith("vertex")]
+            if not co or len(co) % 3:
+                die(f"{path}: ASCII STL with {len(co)} vertices — not whole triangles")
+            return np.array(co, dtype=np.float64)
+        if not held:
+            die(f"{path}: no triangle read (neither binary nor ASCII STL)")
+    n = declared
+    if declared != held:
+        # the count field and the size disagree: trust the records the file actually holds
+        # when the count is 0 or larger than the file, or when the size is whole records;
+        # a few bytes past the declared count are padding. Said, never silent.
+        if declared == 0 or declared > held or (len(data) - 84) % 50 == 0:
+            n = held
+        print(f"print_check: {path}: binary STL whose count field says {declared} triangles, "
+              f"{len(data) - 84} bytes of records follow — reading {n}", file=sys.stderr)
+    rec = np.frombuffer(data, dtype=np.dtype([("n", "<f4", 3), ("v", "<f4", (3, 3)), ("a", "<u2")]),
+                        count=n, offset=84)
+    return rec["v"].reshape(-1, 3).astype(np.float64)
 
 
 UNITS = {"micron": 0.001, "millimeter": 1.0, "centimeter": 10.0, "inch": 25.4, "foot": 304.8, "meter": 1000.0}
@@ -313,59 +335,76 @@ def ray_hits(tree, origin, direction, limit=1e9):
     return out
 
 
-def support(V, F, part, nparts, closed, vol, overlaps, bed_tol, gap, real):
+def support(V, F, part, nparts, closed, vol, overlaps, bed_tol, gap, real, zmin):
     """Which parts are held: on the bed, or crossing, enclosed by, or within `gap` of a held
-    part — a printer fuses what is closer than one extrusion. Only `real` parts are judged."""
-    zmin_all = V[:, 2].min()
+    part — a printer fuses what is closer than one extrusion. Only `real` parts are judged,
+    and only a real part holds another: a sliver prints nothing, so it carries nothing.
+    `zmin` is the bed: the lowest point of the real parts."""
     lo = np.full((nparts, 3), np.inf); hi = np.full((nparts, 3), -np.inf)
     t = V[F]
     np.minimum.at(lo, part, t.min(axis=1)); np.maximum.at(hi, part, t.max(axis=1))
-    held = (lo[:, 2] <= zmin_all + bed_tol) | ~real
+    held = (lo[:, 2] <= zmin + bed_tol) & real
     touch = {}
     for i, j in overlaps:
         touch.setdefault(i, set()).add(j); touch.setdefault(j, set()).add(i)
     enclosed = np.zeros(nparts, bool)
-    trees = {}
+    # faces of each part, sorted once: part k is order[bounds[k]:bounds[k + 1]]
+    order = np.argsort(part, kind="stable")
+    bounds = np.searchsorted(part[order], np.arange(nparts + 1))
+    trees, verts = {}, {}
+
+    def faces(k):
+        return order[bounds[k]:bounds[k + 1]]
+
+    def vertices(k):
+        if k not in verts:
+            verts[k] = np.unique(F[faces(k)])
+        return verts[k]
 
     def tree(k):
         if k not in trees:
-            idx = np.flatnonzero(part == k)
-            used, inv = np.unique(F[idx], return_inverse=True)
+            used, inv = np.unique(F[faces(k)], return_inverse=True)
             trees[k] = bvh(V[used], inv.reshape(-1, 3))
         return trees[k]
 
     def inside(p, q):                   # p's lowest vertex inside closed part q (ray parity)
         if not closed[q] or (lo[p] < lo[q]).any() or (hi[p] > hi[q]).any():
             return False
-        v = V[F[part == p]].reshape(-1, 3)
+        v = V[vertices(p)]
         o = v[np.argmin(v[:, 2])]
         return len(ray_hits(tree(q), o, (0.267, 0.534, 0.802))) % 2 == 1
 
-    def near(p, q):                     # some point of p within `gap` of q's surface, or back
-        if (lo[p] - gap > hi[q]).any() or (lo[q] - gap > hi[p]).any():
-            return False
+    def near(p, q):
+        """Some vertex of p within `gap` of q's surface, or back. Every vertex that can be
+        that close — the ones inside the other part's box grown by `gap` — is tried, none
+        sampled: on a dense part the one contact is a single vertex."""
         from mathutils import Vector
         for x, y in ((p, q), (q, p)):
-            v = np.unique(F[part == x])
-            if len(v) > 4000:
-                v = np.random.default_rng(0).choice(v, 4000, replace=False)
-            t = tree(y)
-            if any(t.find_nearest(Vector(c), gap)[0] is not None for c in V[v].tolist()):
-                return True
+            v = V[vertices(x)]
+            v = v[((v >= lo[y] - gap) & (v <= hi[y] + gap)).all(axis=1)]
+            if len(v):
+                t = tree(y)
+                if any(t.find_nearest(Vector(c), gap)[0] is not None for c in v.tolist()):
+                    return True
         return False
 
-    for p in range(nparts):
-        for q in range(nparts):
-            if p != q and inside(p, q):
-                enclosed[p] = True
-                break
+    for p in np.flatnonzero(real):      # the box test for every candidate at once
+        within = closed & real & (lo <= lo[p]).all(axis=1) & (hi >= hi[p]).all(axis=1)
+        within[p] = False
+        if any(inside(p, q) for q in np.flatnonzero(within)):
+            enclosed[p] = True
     changed = True
     while changed:
         changed = False
-        for p in np.flatnonzero(~held):
-            if any(held[q] for q in touch.get(p, ())) or \
-               any(held[q] and real[q] and (enclosed[p] and inside(p, q) or near(p, q)) for q in range(nparts) if q != p):
+        for p in np.flatnonzero(~held & real):
+            if any(held[q] and real[q] for q in touch.get(p, ())):
                 held[p] = True; changed = True
+                continue
+            cand = held & real & (lo - gap <= hi[p]).all(axis=1) & (lo[p] - gap <= hi).all(axis=1)
+            cand[p] = False
+            if any(enclosed[p] and inside(p, q) or near(p, q) for q in np.flatnonzero(cand)):
+                held[p] = True; changed = True
+    held |= ~real                       # not judged: never reported floating
     inverted = (vol < 0) & closed & ~enclosed & real
     return held, inverted, enclosed, lo, hi
 
@@ -418,21 +457,30 @@ def write_stl(path, V, F):
         f.write(b"print_check".ljust(80, b" ")); f.write(struct.pack("<I", len(F))); f.write(rec.tobytes())
 
 
-def slicer(exe, V, F):
-    if not os.path.exists(exe):
-        die(f"slicer not found: {exe}")
+def slicer(name, V, F, timeout):
+    exe = shutil.which(name)                 # a path, or a command on the PATH
+    if exe is None:
+        die(f"slicer not found, or not executable: {name}")
     d = tempfile.mkdtemp(prefix="print_check_")
+
+    def call(argv):
+        try:
+            return subprocess.run(argv, capture_output=True, text=True, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            die(f"slicer timed out after {timeout:g} s (--slicer-timeout): {' '.join(argv[-2:])}")
+        except OSError as e:
+            die(f"slicer could not run: {e}")
+
     try:
         stl = os.path.join(d, "model.stl"); write_stl(stl, V, F)
         data = os.path.join(d, "datadir"); os.makedirs(data)
         base = [exe, "--datadir", data, "--loglevel", "2"]
-        info = subprocess.run(base + ["--info", stl], capture_output=True, text=True, timeout=600)
+        info = call(base + ["--info", stl])
         txt = info.stdout + info.stderr
         man = re.search(r"manifold\s*=\s*(\w+)", txt)
         parts = re.search(r"number_of_parts\s*=\s*(\d+)", txt)
         opn = re.search(r"open_edges\s*=\s*(\d+)", txt)
-        sl = subprocess.run(base + ["--export-gcode", "-o", os.path.join(d, "out.gcode"), stl],
-                            capture_output=True, text=True, timeout=1800)
+        sl = call(base + ["--export-gcode", "-o", os.path.join(d, "out.gcode"), stl])
         log = sl.stdout + sl.stderr
         empty = re.findall(r"Empty layer[^\n]*", log)
         floating = re.findall(r"Floating object part[^\n]*", log)
@@ -457,9 +505,15 @@ def main():
     if not len(F):
         die(f"{o.model}: no triangle")
     native_h = float(V[:, 2].max() - V[:, 2].min())
-    scale = o.height_mm / native_h if o.height_mm else 1.0
-    if o.height_mm and native_h <= 0:
-        die("the model is flat: no height to scale")
+    if o.height_mm is not None:
+        # 0 would be ignored, a negative height mirrors the model and turns its normals inside out
+        if not (math.isfinite(o.height_mm) and o.height_mm > 0):
+            die(f"--height-mm must be a height above 0, not {o.height_mm:g}")
+        if native_h <= 0:
+            die("the model is flat: no height to scale")
+    scale = o.height_mm / native_h if o.height_mm is not None else 1.0
+    if o.slicer and not o.slicer_timeout > 0:
+        die(f"--slicer-timeout must be above 0, not {o.slicer_timeout:g}")
     V = V * scale
     dims = np.ptp(V, axis=0)
     topo, part, nparts, closed = topology(V, F)
@@ -475,8 +529,10 @@ def main():
     # Zero-volume parts — flat slivers a decimation or a voxel pass leaves behind — print
     # nothing and a slicer drops them; they are counted, not judged.
     real = np.abs(vol) >= EMPTY_MM3
+    # The bed is the lowest point of what prints: a sliver under the model does not lower it.
+    zmin = float(t[real[part]][:, :, 2].min()) if real.any() else float(V[:, 2].min())
     held, inverted, enclosed, plo, phi = support(V, F, part, nparts, closed, vol, inter, BED_TOL[o.process],
-                                                 FUSE_GAP[o.process], real)
+                                                 FUSE_GAP[o.process], real, zmin)
     floating = [int(p) for p in np.flatnonzero(~held)]
     from mathutils import Vector
     float_info = []
@@ -489,7 +545,6 @@ def main():
                                volume_mm3=round(float(vol[p]), 2),
                                gap_to_other_part_mm=round(min(gaps), 3) if gaps else "> 5"))
 
-    zmin = V[:, 2].min()
     on_bed = (t[:, :, 2] <= zmin + BED_TOL[o.process]).all(axis=1)
     down = (n[:, 2] < -math.cos(math.radians(OVERHANG_DEG))) & ~on_bed
     overhang_pct = round(100 * area[down].sum() / max(area.sum(), 1e-30), 2)
@@ -536,22 +591,38 @@ def main():
         RV = RV * (dims[2] / rh) if rh > 0 else RV
         rdims = np.ptp(RV, axis=0)
         size = float(max(dims.max(), rdims.max())) / VOXELS_ACROSS
-        mv, rv = voxel_volume(V, F, size), voxel_volume(RV, RF, size)
+        rtopo = topology(RV, RF)[0]
+        ref_sealed = not rtopo["open_edges"] and not rtopo["nonmanifold_edges"]
+        sealed = not topo["open_edges"] and not topo["nonmanifold_edges"]
+        # An open reference voxelises to almost nothing — 4 mm3 for an open 40 x 20 x 20 box —
+        # and any model reads as a gain over it: its volume is not measured at all.
+        rv = voxel_volume(RV, RF, size) if ref_sealed else None
+        mv = voxel_volume(V, F, size) if ref_sealed else None
+        # under one voxel the reference has no volume to compare against: no ratio, never a NaN
+        ref_empty = rv is not None and rv < size ** 3
+        ratio = mv / rv if rv is not None and not ref_empty else None
         dd = (dims - rdims) / np.maximum(rdims, 1e-9)
-        ratio = mv / rv if rv > 0 else float("nan")
         r["reference"] = dict(file=os.path.abspath(o.reference), dims_mm=[round(float(x), 3) for x in rdims],
                               dims_diff_pct=[round(100 * float(x), 2) for x in dd], voxel_mm=round(size, 4),
-                              volume_voxel_mm3=round(rv, 1), model_volume_voxel_mm3=round(mv, 1),
-                              volume_ratio=round(ratio, 4), volume_compared=True)
+                              open_edges=rtopo["open_edges"], nonmanifold_edges=rtopo["nonmanifold_edges"],
+                              volume_voxel_mm3=None if rv is None else round(rv, 1),
+                              model_volume_voxel_mm3=None if mv is None else round(mv, 1),
+                              volume_ratio=None if ratio is None else round(ratio, 4), volume_compared=True)
         dims_off = bool((np.abs(dd) > DIM_TOL).any())
-        sealed = not topo["open_edges"] and not topo["nonmanifold_edges"]
         if dims_off:
             fails.append(f"dimensions differ from the reference by {[round(100 * float(x), 1) for x in dd]} % "
                          f"(tolerance {100 * DIM_TOL:.0f} %) — part of the object is gone or added")
         # The volume speaks only when the dimensions agree (otherwise the height scaling has
-        # already distorted it) and when the model is sealed: a surface with holes voxelises
-        # to a shell with no inside, and reads as a loss it is not — it already FAILs as open.
-        if dims_off or not sealed:
+        # already distorted it), when the model is sealed — a surface with holes voxelises to
+        # a shell with no inside, and reads as a loss it is not; it already FAILs as open — and
+        # when the reference is sealed too, for the same reason the other way round.
+        if ref_empty:
+            fails.append(f"the reference has no volume ({rv:.3g} mm3 voxelised, under one {size:.3g} mm voxel) "
+                         f"— nothing to compare against")
+        if not ref_sealed:
+            warns.append(f"the reference is open ({rtopo['open_edges']} open, {rtopo['nonmanifold_edges']} "
+                         f"non-manifold edges) — volume not compared, only dimensions")
+        if dims_off or not sealed or ratio is None:
             r["reference"]["volume_compared"] = False
         elif ratio < 1 - VOL_TOL:
             fails.append(f"volume is {100 * ratio:.1f} % of the reference (tolerance {100 * VOL_TOL:.0f} %) "
@@ -560,7 +631,7 @@ def main():
             warns.append(f"volume is {100 * ratio:.1f} % of the reference — cavities filled or parts thickened")
 
     if o.slicer:
-        s = slicer(o.slicer, V, F)
+        s = slicer(o.slicer, V, F, o.slicer_timeout)
         r["slicer"] = s
         if s["manifold"] != "yes":
             fails.append(f"PrusaSlicer: manifold = {s['manifold']} ({s['open_edges']} open edges)")
@@ -576,10 +647,11 @@ def main():
 
     r["verdict"] = "FAIL" if fails else "PASS"
     r["fails"], r["warnings"] = fails, warns
-    print("PRINT_CHECK " + json.dumps(r))
+    # strict JSON: a NaN here is a bug to hear about, not a token to hand a parser
+    print("PRINT_CHECK " + json.dumps(r, allow_nan=False))
     if o.json:
         with open(o.json, "w") as f:
-            json.dump(r, f, indent=1)
+            json.dump(r, f, indent=1, allow_nan=False)
     print(f"\n{os.path.basename(o.model)} · {o.process} · {r['dims_mm'][0]:.1f} × {r['dims_mm'][1]:.1f} × "
           f"{r['dims_mm'][2]:.1f} mm (scale {scale:.4g}) · {len(F):,} triangles · {nparts} part(s), "
           f"{r['closed_parts']} closed")

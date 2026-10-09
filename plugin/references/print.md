@@ -99,12 +99,15 @@ STL (mm), 3MF (its own unit), GLB and .blend (metres). Exit 0 PASS, 3 FAIL, 1 er
   made defects the file did not have. The tool's counts match an independent exact edge
   pairing on every study file.
 - **`--reference`** voxelises both meshes at the same size (largest dimension / 150) and
-  compares dimensions (3 %) and volume (10 %, only when the dimensions agree and the model
-  is sealed — a mesh with holes voxelises hollow). The reference is first scaled to the
-  model's height: a uniform scale is not a loss.
-- **`--slicer`** gives the scaled mesh to PrusaSlicer in a throwaway `--datadir`: `--info`
-  (manifold, parts) and an FDM `--export-gcode`, whose log is searched for *Empty layer* and
-  *Floating object part*. **An arbiter in addition to the counts, never instead**: it
+  compares dimensions (3 %) and volume (10 %, only when the dimensions agree and BOTH the
+  model and the reference are sealed — an open mesh voxelises to almost nothing: an open
+  40 × 20 × 20 box gives 4 mm3). An open reference is compared on its dimensions alone, and
+  the tool says so; a reference under one voxel of volume is a FAIL, never a ratio. The
+  reference is first scaled to the model's height: a uniform scale is not a loss.
+- **`--slicer`** (a path, or a name on the PATH) gives the scaled mesh to PrusaSlicer in a
+  throwaway `--datadir`: `--info` (manifold, parts) and an FDM `--export-gcode`, whose log
+  is searched for *Empty layer* and *Floating object part*; past `--slicer-timeout` (1800 s
+  per call) it is an error, exit 1. **An arbiter in addition to the counts, never instead**: it
   slices open meshes with exit 0 and calls the MANIFOLD union that lost the object manifold.
   It also sees what the counts do not — a gap between layers.
 

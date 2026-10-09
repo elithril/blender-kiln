@@ -14,6 +14,8 @@ name: blender
 #   - USDZ exports natively, but convert_world_material writes a non-conforming .exr
 #   - fidelity_check.py measures what it claims: seeded widths, views, refusals
 #   - template_profile.py reads known radii back, a wire pressed against the body included
+#   - print_check.py finds the seeded defects: holes, floating and inverted parts, slivers,
+#     lost volume, odd STL files (no PrusaSlicer on the runner: its cases are skipped)
 
 on:
   schedule:
@@ -29,6 +31,8 @@ on:
       - "plugin/tools/test_fidelity_check.py"
       - "plugin/tools/template_profile.py"
       - "plugin/tools/test_template_profile.py"
+      - "plugin/tools/print_check.py"
+      - "plugin/tools/test_print_check.py"
 
 jobs:
   blender:
@@ -58,3 +62,7 @@ jobs:
       - name: Check the template profile against a seeded part
         run: |
           BLENDER=blender python3 plugin/tools/test_template_profile.py
+
+      - name: Check the print check against seeded meshes
+        run: |
+          BLENDER=blender python3 plugin/tools/test_print_check.py

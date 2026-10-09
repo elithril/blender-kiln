@@ -22,7 +22,13 @@ them, no network. Cases:
   the full block: same bounding box, a quarter of the volume — FAIL on volume alone;
 - --height-mm scales: the cube read at 50 mm is 50 mm;
 - a missing file: exit 1;
-- with PrusaSlicer: the closed cube is manifold, the open one is not.
+- slivers (parts under 1e-3 mm3) neither hold a part they cross nor lower the bed;
+- a reference with no volume is a FAIL with no NaN; an open reference's volume is not compared;
+- --height-mm 0 or negative, or a flat model to scale: exit 1, no Python trace;
+- a dense cone held by its apex alone, 0.2 mm off the cube: not floating (no sampling);
+- binary STL with a "solid" header and a count of 0, or trailing bytes; ASCII STL;
+- a slicer that is not executable, or hangs past --slicer-timeout: exit 1, no Python trace;
+- with PrusaSlicer: the closed cube is manifold, the open one is not; found by name on the PATH.
 """
 import json, os, struct, subprocess, sys, tempfile
 
@@ -45,19 +51,54 @@ def box(x0, y0, z0, x1, y1, z1, skip=(), flip=False):
     return tris
 
 
-def stl(path, tris):
+def stl(path, tris, header=b"test_print_check", count=None, trailing=b""):
     with open(path, "wb") as f:
-        f.write(b"test_print_check".ljust(80, b" ")); f.write(struct.pack("<I", len(tris)))
+        f.write(header.ljust(80, b" ")); f.write(struct.pack("<I", len(tris) if count is None else count))
         for t in tris:
             f.write(struct.pack("<3f", 0, 0, 0))
             for p in t:
                 f.write(struct.pack("<3f", *p))
             f.write(b"\0\0")
+        f.write(trailing)
 
 
-def run(model, *extra):
+def ascii_stl(path, tris):
+    with open(path, "w") as f:
+        f.write("solid test\n")
+        for t in tris:
+            f.write("  facet normal 0 0 0\n    outer loop\n")
+            for p in t:
+                f.write(f"      vertex {p[0]} {p[1]} {p[2]}\n")
+            f.write("    endloop\n  endfacet\n")
+        f.write("endsolid test\n")
+
+
+def cone(apex, length, radius, rings, segments, gap_to_first_ring):
+    """A closed cone along +x, apex first; its first ring starts `gap_to_first_ring` behind the
+    apex so that the apex is the only vertex near whatever it points at. Dense on purpose."""
+    import math
+    ax, ay, az = apex
+    xs = [ax + gap_to_first_ring + (length - gap_to_first_ring) * k / (rings - 1) for k in range(rings)]
+    ring = [[(x, ay + radius * (x - ax) / length * math.cos(2 * math.pi * j / segments),
+              az + radius * (x - ax) / length * math.sin(2 * math.pi * j / segments)) for j in range(segments)]
+            for x in xs]
+    base = (ax + length, ay, az)
+    tris = []
+    for j in range(segments):
+        k = (j + 1) % segments
+        tris.append([apex, ring[0][k], ring[0][j]])
+        for r in range(rings - 1):
+            tris += [[ring[r][j], ring[r][k], ring[r + 1][k]], [ring[r][j], ring[r + 1][k], ring[r + 1][j]]]
+        tris.append([base, ring[-1][j], ring[-1][k]])
+    # outward winding: flip everything if the signed volume came out negative
+    v6 = sum(a[0] * (b[1] * c[2] - b[2] * c[1]) - a[1] * (b[0] * c[2] - b[2] * c[0]) + a[2] * (b[0] * c[1] - b[1] * c[0])
+             for a, b, c in tris)
+    return tris if v6 > 0 else [t[::-1] for t in tris]
+
+
+def run(model, *extra, env=None):
     r = subprocess.run([BLENDER, "--background", "--factory-startup", "--python-exit-code", "1",
-                        "--python", TOOL, "--", model, *extra], capture_output=True, text=True)
+                        "--python", TOOL, "--", model, *extra], capture_output=True, text=True, env=env)
     line = next((l for l in r.stdout.splitlines() if l.startswith("PRINT_CHECK ")), None)
     return r.returncode, (json.loads(line[len("PRINT_CHECK "):]) if line else None), r
 
@@ -155,7 +196,90 @@ with tempfile.TemporaryDirectory() as d:
     rc, r, p = run(f"{d}/cube.stl")
     check("missing --process: exit 1", rc == 1 and r is None, rc)
 
+    # ── what a code review found: each case failed before its fix ──────────────────────────
+    # a sliver (5.7e-4 mm3, under EMPTY_MM3) crossing a cube that hangs 10 mm over another:
+    # the sliver holds nothing, the hanging cube still floats
+    stl(f"{d}/sliver_touch.stl", box(0, 0, 0, 20, 20, 20) + box(5, 5, 30, 15, 15, 40)
+        + box(10, 10, 35, 25, 12, 35.00002))
+    rc, r, _ = run(f"{d}/sliver_touch.stl", "--process", "fdm")
+    check("hanging cube crossing a sliver: still floating, FAIL",
+          rc == 3 and r["floating_parts"] == 1 and r["empty_parts"] == 1, (rc, r["floating_parts"], r["empty_parts"]))
+
+    # a flat sliver 1 mm under the cube does not lower the bed
+    stl(f"{d}/sliver_under.stl", box(0, 0, 0, 20, 20, 20) + box(0, 0, -1, 5, 5, -0.99998))
+    rc, r, _ = run(f"{d}/sliver_under.stl", "--process", "fdm")
+    check("cube over a sliver 1 mm below: on the bed, no overhang, PASS",
+          rc == 0 and r["floating_parts"] == 0 and r["overhang_area_pct"] == 0 and r["empty_parts"] == 1,
+          (rc, r["floating_parts"], r["overhang_area_pct"]))
+
+    # a reference with no volume — a closed, two-sided triangle: said, never a NaN
+    tri = [(0, 0, 0), (20, 0, 0), (0, 20, 0)]
+    stl(f"{d}/speck.stl", [tri, tri[::-1]])
+    rc, r, p = run(f"{d}/cube.stl", "--process", "fdm", "--reference", f"{d}/speck.stl")
+    line = next((l for l in p.stdout.splitlines() if l.startswith("PRINT_CHECK ")), "")
+    check("reference with no volume: FAIL said so, no NaN in the JSON",
+          rc == 3 and "NaN" not in line and r["reference"]["volume_ratio"] is None
+          and any("no volume" in f for f in r["fails"]), (rc, r and r["reference"], r and r["fails"]))
+
+    # an open reference voxelises to a shell: its volume is not compared
+    stl(f"{d}/block_open.stl", box(0, 0, 0, 40, 20, 20, skip=(1,)))
+    rc, r, _ = run(f"{d}/pillars.stl", "--process", "fdm", "--reference", f"{d}/block_open.stl")
+    check("pillars vs an OPEN block: volume not compared, said so",
+          r["reference"]["volume_compared"] is False and any("reference is open" in w for w in r["warnings"]),
+          (rc, r["reference"], r["warnings"]))
+
+    # --height-mm must be a height
+    for h in ("-10", "0"):
+        rc, r, p = run(f"{d}/cube.stl", "--process", "fdm", "--height-mm", h)
+        check(f"--height-mm {h}: exit 1, no verdict, no traceback",
+              rc == 1 and r is None and "Traceback" not in p.stderr and "height" in p.stderr, (rc, p.stderr[-200:]))
+    stl(f"{d}/flat.stl", [[(0, 0, 0), (10, 0, 0), (10, 10, 0)], [(0, 0, 0), (10, 10, 0), (0, 10, 0)]])
+    rc, r, p = run(f"{d}/flat.stl", "--process", "fdm", "--height-mm", "10")
+    check("flat model with --height-mm: exit 1, said flat, no traceback",
+          rc == 1 and "Traceback" not in p.stderr and "flat" in p.stderr, (rc, p.stderr[-200:]))
+
+    # a dense raised cone whose apex alone comes 0.2 mm from the cube's side: one vertex in
+    # 20,002 holds it, and sampling 4,000 of them misses it
+    stl(f"{d}/cone.stl", box(0, 0, 0, 20, 20, 20) + cone((20.2, 10, 15), 9.8, 5, 100, 200, 0.8))
+    rc, r, _ = run(f"{d}/cone.stl", "--process", "fdm")
+    check("cone held by its apex alone (0.2 mm off, FDM): not floating",
+          r["floating_parts"] == 0 and r["parts"] == 2 and r["open_edges"] == 0 and r["inverted_parts"] == 0,
+          (rc, r["parts"], r["open_edges"], r["floating_parts"], r["floating"]))
+
+    # binary STL that only the exact size test rejected
+    cube = box(0, 0, 0, 20, 20, 20)
+    stl(f"{d}/solid_header.stl", cube, header=b"solid exported by a CAD tool", count=0)
+    rc, r, p = run(f"{d}/solid_header.stl", "--process", "fdm")
+    check("binary STL, header 'solid', count field 0: read, 12 triangles, PASS",
+          rc == 0 and r["triangles"] == 12, (rc, r and r["triangles"], p.stderr[-200:]))
+    stl(f"{d}/trailing.stl", cube, trailing=b"\0" * 7)
+    rc, r, p = run(f"{d}/trailing.stl", "--process", "fdm")
+    check("binary STL with 7 trailing bytes: read, PASS", rc == 0 and r["triangles"] == 12, (rc, p.stderr[-200:]))
+    ascii_stl(f"{d}/ascii.stl", cube)
+    rc, r, _ = run(f"{d}/ascii.stl", "--process", "fdm")
+    check("ASCII STL cube: PASS, 12 triangles", rc == 0 and r["triangles"] == 12, (rc, r and r["triangles"]))
+
+    # a slicer that cannot run, or never answers: an error, not a Python trace
+    fake = f"{d}/not_executable_slicer"
+    open(fake, "w").write("#!/bin/sh\n")
+    rc, r, p = run(f"{d}/cube.stl", "--process", "fdm", "--slicer", fake)
+    check("slicer not executable: exit 1, no traceback",
+          rc == 1 and "Traceback" not in p.stderr and "slicer" in p.stderr, (rc, p.stderr[-300:]))
+    slow = f"{d}/slow_slicer"
+    open(slow, "w").write("#!/bin/sh\nsleep 30\n"); os.chmod(slow, 0o755)
+    rc, r, p = run(f"{d}/cube.stl", "--process", "fdm", "--slicer", slow, "--slicer-timeout", "2")
+    check("slicer that hangs, --slicer-timeout 2: exit 1, 'timed out', no traceback",
+          rc == 1 and "Traceback" not in p.stderr and "timed out" in p.stderr, (rc, p.stderr[-300:]))
+
     if os.path.exists(SLICER):
+        # by name, from the PATH, like any command
+        bindir = f"{d}/bin"; os.makedirs(bindir)
+        os.symlink(SLICER, f"{bindir}/prusa-slicer-on-path")
+        env = dict(os.environ, PATH=bindir + os.pathsep + os.environ.get("PATH", ""))
+        rc, r, p = run(f"{d}/cube.stl", "--process", "fdm", "--slicer", "prusa-slicer-on-path", env=env)
+        check("slicer named on the PATH: found, manifold, PASS",
+              rc == 0 and r and r["slicer"]["manifold"] == "yes", (rc, p.stderr[-200:]))
+
         rc, r, _ = run(f"{d}/cube.stl", "--process", "fdm", "--slicer", SLICER)
         check("slicer, closed cube: manifold, 1 part, sliced, PASS",
               rc == 0 and r["slicer"]["manifold"] == "yes" and r["slicer"]["number_of_parts"] == 1 and r["slicer"]["gcode"],
