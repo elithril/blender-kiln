@@ -33,9 +33,9 @@ const clips = A.routes.flatMap((r, ri) => r.clips.map((c) => ({ ...c, route: ri 
               <button type="button" data-clip={i} aria-pressed={i === 0 ? 'true' : 'false'} data-alt={c.alt} data-src={`${base}${c.src}`}>{c.label}</button>
             ))}
           </div>
+          {r.command && <p class="cmd measure" aria-label="The command for this route"><code>{r.command}</code></p>}
         </div>
       ))}
-      <div class="cmds measure" aria-label="Commands">{A.commands.map((c) => <code>{c}</code>)}</div>
     </div>
   </div>
 
@@ -55,7 +55,8 @@ const clips = A.routes.flatMap((r, ri) => r.clips.map((c) => ({ ...c, route: ri 
   const now = root.querySelector<HTMLElement>('[data-now]')!;
   const buttons = [...root.querySelectorAll<HTMLButtonElement>('[data-clip]')];
   let live: ReturnType<typeof import('../scripts/creatures').mountCreatures> = null;
-  let cur = 0, timer = 0;
+  let cur = 0, timer = 0, onScreen = false;
+  new IntersectionObserver(([e]) => { onScreen = e.isIntersecting; }).observe(canvas);
 
   function pick(i: number, user = false) {
     cur = i;
@@ -65,7 +66,7 @@ const clips = A.routes.flatMap((r, ri) => r.clips.map((c) => ({ ...c, route: ri 
     fallback.src = b.dataset.src!; fallback.alt = b.dataset.alt!;
     live?.show(base + glbs[i][0], glbs[i][1]);
     clearInterval(timer);
-    if (!user) timer = window.setInterval(() => pick((cur + 1) % glbs.length), 7000);
+    if (!user) timer = window.setInterval(() => { if (onScreen) pick((cur + 1) % glbs.length); }, 7000); // no change nobody sees
   }
   buttons.forEach((b) => b.addEventListener('click', () => pick(Number(b.dataset.clip), true)));
 
@@ -107,9 +108,10 @@ const clips = A.routes.flatMap((r, ri) => r.clips.map((c) => ({ ...c, route: ri 
   .pick button:hover { color: var(--bone); background: rgb(255 238 220 / 0.1); }
   .pick button:active { transform: scale(0.97); }
   .pick button[aria-pressed='true'] { color: var(--ink); background: var(--molten); box-shadow: none; }
-  .cmds { display: grid; gap: 4px; padding: 16px 18px; border-radius: 1rem; background: var(--char); box-shadow: inset 0 0 0 1px var(--line); font-size: 0.8125rem; }
-  .cmds code { font: inherit; color: var(--bone); }
-  .cmds code::before { content: '>'; color: var(--molten); margin-right: 1ch; }
+  /* each route carries the command that produced its clips, so what is selected and what is typed match */
+  .cmd { margin: 14px 0 0; font-size: 0.8125rem; color: var(--ash); }
+  .cmd code { font: inherit; color: var(--bone); padding-left: 2ch; text-indent: -2ch; display: block; }
+  .cmd code::before { content: '>'; color: var(--molten); margin-right: 1ch; }
 
   .left-out { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.4fr); gap: 32px; margin-top: 96px; padding-top: 28px; border-top: 1px solid var(--line); }
   .left-out h3 { margin: 0; font-size: 1.5rem; }
@@ -128,13 +130,11 @@ const clips = A.routes.flatMap((r, ri) => r.clips.map((c) => ({ ...c, route: ri 
     .routes { display: flex; align-items: flex-start; gap: 12px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory;
       margin-inline: calc(-1 * var(--gutter)); padding-inline: var(--gutter); scroll-padding-inline: var(--gutter); scrollbar-width: none; }
     .routes::-webkit-scrollbar { display: none; }
-    .route, .cmds { flex: 0 0 min(84%, 420px); scroll-snap-align: start; }
+    .route { flex: 0 0 min(84%, 420px); scroll-snap-align: start; }
     .route { padding: 18px; border-top: 0; border-radius: 1.5rem; background: var(--char); box-shadow: inset 0 0 0 1px var(--line); }
     .detail { font-size: 0.875rem; }
-    .cmds { border-radius: 1.5rem; }
   }
   @media (max-width: 560px) {
     .animate { padding-top: 120px; }
-    .cmds code { white-space: normal; padding-left: 2ch; text-indent: -2ch; }
   }
 </style>

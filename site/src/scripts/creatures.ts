@@ -90,6 +90,8 @@ export function mountCreatures(canvas: HTMLCanvasElement, base: string) {
     const c = env.getCenter(new THREE.Vector3());
     obj.position.set(-c.x * k, -env.min.y * k, -c.z * k);
     const fitR = Math.max(size.y, Math.hypot(size.x, size.z)) * k * 0.5;
+    // a model still on its way out is dropped now: overwritten, it would stay on stage for good
+    if (outgoing) { scene.remove(outgoing.root); outgoing = null; }
     if (current) outgoing = { root: current.root, t: 0 };
     holder.scale.setScalar(0.001);
     scene.add(holder);
