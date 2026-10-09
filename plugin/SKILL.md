@@ -395,7 +395,7 @@ Collect these parameters. Only type and brief are mandatory — infer the rest f
 | **Type** (prop, environment, character, vehicle...) | mandatory | — |
 | **Brief** (description, context, mood) | mandatory | Feeds searches and prompts |
 | **Export target** (glTF, FBX, USDZ, multi) | glTF | Determines export rules |
-| **Print** (FDM / resin + height in mm) | none | Set when the brief says it will be 3D printed. Switches [3], [5] and [7] to `references/print.md`; target STL (+ 3MF) |
+| **Print** (FDM / resin + height in mm + colours the printer has) | none | Set when the brief says it will be 3D printed. Switches [3], [5] and [7] to `references/print.md`; target STL (+ 3MF). A single-colour printer: say which regions get painted, or which become separate parts in their own filament (`print.md` § Like the photo, rule 9) |
 | **Detail tier** (lightweight / balanced / detailed / custom) | balanced | Soft ranges, never hard caps |
 | **Visual style** (realistic, stylized, cartoon, low-poly) | realistic | Impacts sourcing + AI prompts |
 | **Mode** (auto / guided) | auto | guided = validation at each step |
@@ -482,14 +482,17 @@ ELSE
 
 Always explain WHY the recommendation, always let the user choose.
 
-**Print set in CONFIG:** recommend scripted, and **load `references/print.md` § Printable from
-the brief before the first primitive** — model at print size, closed solids only, one volume
+**Print set in CONFIG:** recommend scripted — print replaces the style rules above as a
+recommendation, never as a ban: for an organic figure from a photo (creature, food, character)
+present the AI route too, its mesh then repaired in [5], and let the user choose. **Load
+`references/print.md` § Printable from the brief before the first primitive** — model at print size, closed solids only, one volume
 (exact union as you go, or overlap + one voxel remesh), the process's minimum thickness, a flat
 base, overhangs that grow out of the part below, relief as geometry. A generated or marketplace
 mesh is repaired instead ([5]). Texturing ([5b]) carries nothing to a print. **With a reference
 image, `references/print.md` § Like the photo, for print too**: the photo method in full, openings
 read on their outer edge, details cut along the photo's camera, the `face` measure every round, and
-rounds until the gaps stop closing — the user decides it is alike.
+rounds until the gaps stop closing — **the two-round cap of `reference-fidelity.md` § 5 does not
+apply** — and the user decides it is alike.
 
 **Options:**
 
@@ -1021,6 +1024,9 @@ Each asset produces `{name}_log.md`:
 - Texturing: zones [{zone1}: {texture}, {zone2}: {texture}]
 - Optimize: {tool}, {before_size} → {after_size}
 - Export: {format}, {final_size}, {final_faces}
+- Rounds (reference image): v{n}: silhouette {iou}, face {iou} (f {f}, offset {mm}); changed
+  {one thing}; kept / undone
+- Print check: {PASS/FAIL}, {dimensions} mm, {parts} part(s), supports {yes/no}, warnings {…}
 
 ## Licenses
 - {resource}: {license} {attribution if needed}
@@ -1029,6 +1035,10 @@ Each asset produces `{name}_log.md`:
 - Last completed step: {step}
 - Timestamp: {datetime}
 ```
+
+**Write the log at the end of every phase, not at the end of the run.** A run that stops
+mid-way — a crash, a context limit — resumes from it; a log left at BRIEF while the model went
+through seven versions records nothing of what was tried or undone.
 
 ---
 

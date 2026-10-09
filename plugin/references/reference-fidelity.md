@@ -13,6 +13,7 @@ source of what this asset looks like.
 | lightweight, background prop | § 1 inventory, § 3 attachment, one § 5 measure of the shipped file |
 | balanced (default) | all of § 1–5, two correction rounds |
 | detailed, hero asset, character | all of it, plus the extra views of § 1, each measured |
+| **print** (any tier) | all of § 1–5, and rounds until the gaps stop closing — `print.md` § Like the photo, for print |
 
 ## 1. Inventory the details before modeling
 
@@ -393,7 +394,9 @@ Read it with its limits:
 - **Thin parts wreck band IoU.** A 2-px wire off by one pixel scores very low. Use the
   overlay for wires, loops and handles; trust IoU for bodies.
 - **Two correction rounds at most — three measures in all**, each logged: what the numbers
-  said, what changed. **One material problem per round** — the largest the review shows —
+  said, what changed. **Except for print**: the cap stopped a pumpkin at round three with its
+  mouth still wrong, and a print is held in the hand — rounds go on until the gaps stop
+  closing (`print.md` § Like the photo, for print, rule 6). **One material problem per round** — the largest the review shows —
   then measure again; fixing several at once regresses the surface while every fix reads
   "applied". At 16–32 samples and 512 px bakes during review; 1024 only for the final bake.
 - **Tick the inventory at the final review**, line by line, on an enlarged crop of the

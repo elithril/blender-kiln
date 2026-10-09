@@ -125,6 +125,13 @@ first version passed every print check and the user found it "not alike at all".
 8. **Supports are normal for a figure.** Hanging teeth, paws or a round belly start in mid-air;
    check with `--supports` and say the print needs them, rather than flattening what the photo
    shows.
+9. **The photo's colours are a question for CONFIG, not something the model drops.** On a
+   single-colour printer each colour region is either painted afterwards — then the model
+   carries the boundary as geometry (a 0.6 mm groove or step, § Printable from the brief, rule
+   7) so the brush has an edge — or printed as its own part in its own filament, joined by a peg
+   in a hole. The peg's clearance (0.2–0.3 mm per side on FDM) is a common starting value, not
+   one measured here: say so, and offer a test print of the joint. Ask which, and log the
+   answer.
 
 ## The tool
 
