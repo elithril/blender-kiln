@@ -96,6 +96,9 @@ def args():
     p.add_argument("--reference")
     p.add_argument("--slicer", help="PrusaSlicer: a path, or a name on the PATH")
     p.add_argument("--slicer-timeout", type=float, default=1800, help="seconds per slicer call (default 1800)")
+    p.add_argument("--supports", action="store_true",
+                   help="slice with PrusaSlicer's automatic supports: a figurine whose limbs hang starts them "
+                        "in mid-air without (Floating object part) and prints with them; the verdict says so")
     p.add_argument("--json")
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     return p.parse_args(argv)
@@ -453,11 +456,16 @@ def write_stl(path, V, F):
     t = V[F].astype(np.float32)
     rec = np.zeros(len(F), dtype=np.dtype([("n", "<f4", 3), ("v", "<f4", (3, 3)), ("a", "<u2")]))
     rec["v"] = t
+    # Real facet normals: PrusaSlicer 2.9.6 refuses to load some binary STLs whose normals are all zero
+    # ("Loading of a model file failed": a 10 mm cube did, a 10 x 10 x 20 box did not). Measured 2026-10-09.
+    n = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])
+    ln = np.linalg.norm(n, axis=1, keepdims=True)
+    rec["n"] = np.divide(n, ln, out=np.zeros_like(n), where=ln > 0)
     with open(path, "wb") as f:
         f.write(b"print_check".ljust(80, b" ")); f.write(struct.pack("<I", len(F))); f.write(rec.tobytes())
 
 
-def slicer(name, V, F, timeout):
+def slicer(name, V, F, timeout, supports=False):
     exe = shutil.which(name)                 # a path, or a command on the PATH
     if exe is None:
         die(f"slicer not found, or not executable: {name}")
@@ -480,7 +488,8 @@ def slicer(name, V, F, timeout):
         man = re.search(r"manifold\s*=\s*(\w+)", txt)
         parts = re.search(r"number_of_parts\s*=\s*(\d+)", txt)
         opn = re.search(r"open_edges\s*=\s*(\d+)", txt)
-        sl = call(base + ["--export-gcode", "-o", os.path.join(d, "out.gcode"), stl])
+        sup = ["--support-material", "--support-material-auto"] if supports else []
+        sl = call(base + sup + ["--export-gcode", "-o", os.path.join(d, "out.gcode"), stl])
         log = sl.stdout + sl.stderr
         empty = re.findall(r"Empty layer[^\n]*", log)
         floating = re.findall(r"Floating object part[^\n]*", log)
@@ -631,8 +640,11 @@ def main():
             warns.append(f"volume is {100 * ratio:.1f} % of the reference — cavities filled or parts thickened")
 
     if o.slicer:
-        s = slicer(o.slicer, V, F, o.slicer_timeout)
+        s = slicer(o.slicer, V, F, o.slicer_timeout, o.supports)
+        s["supports"] = bool(o.supports)
         r["slicer"] = s
+        if o.supports:
+            warns.append("sliced with automatic supports (--supports): print it with them, then remove them")
         if s["manifold"] != "yes":
             fails.append(f"PrusaSlicer: manifold = {s['manifold']} ({s['open_edges']} open edges)")
         if s["empty_layer_count"]:

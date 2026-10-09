@@ -271,6 +271,30 @@ with tempfile.TemporaryDirectory() as d:
     check("slicer that hangs, --slicer-timeout 2: exit 1, 'timed out', no traceback",
           rc == 1 and "Traceback" not in p.stderr and "timed out" in p.stderr, (rc, p.stderr[-300:]))
 
+    # --supports: the slice is asked with automatic supports, and the verdict says so. A fake PrusaSlicer
+    # reports a floating part unless --support-material is on its command line (on the real one, the
+    # black cat of the ghost figurine: Floating object part without, a clean slice with, 2026-10-09)
+    fake = f"{d}/fake_prusaslicer"
+    open(fake, "w").write("""#!/bin/sh
+case " $* " in
+  *" --info "*) echo "manifold = yes"; echo "number_of_parts =  1"; exit 0 ;;
+esac
+out=""; prev=""
+for a in "$@"; do [ "$prev" = "-o" ] && out="$a"; prev="$a"; done
+[ -n "$out" ] && : > "$out"
+case " $* " in
+  *" --support-material "*) exit 0 ;;
+  *) printf 'print warning: Detected print stability issues:\n\nmodel\nFloating object part, Collapsing overhang\n'; exit 0 ;;
+esac
+"""); os.chmod(fake, 0o755)
+    rc, r, p = run(f"{d}/cube.stl", "--process", "fdm", "--slicer", fake)
+    check("slicer reports a floating part, no --supports: FAIL",
+          rc == 3 and r["slicer"]["floating_count"] == 1 and not r["slicer"]["supports"], (rc, p.stderr[-200:]))
+    rc, r, p = run(f"{d}/cube.stl", "--process", "fdm", "--slicer", fake, "--supports")
+    check("same with --supports: sliced with supports, PASS, said in the warnings",
+          rc == 0 and r["slicer"]["floating_count"] == 0 and r["slicer"]["supports"]
+          and any("--supports" in w for w in r["warnings"]), (rc, r and r["warnings"], p.stderr[-200:]))
+
     if os.path.exists(SLICER):
         # by name, from the PATH, like any command
         bindir = f"{d}/bin"; os.makedirs(bindir)
@@ -284,6 +308,12 @@ with tempfile.TemporaryDirectory() as d:
         check("slicer, closed cube: manifold, 1 part, sliced, PASS",
               rc == 0 and r["slicer"]["manifold"] == "yes" and r["slicer"]["number_of_parts"] == 1 and r["slicer"]["gcode"],
               r["slicer"])
+        # binary STLs with all-zero normals: PrusaSlicer 2.9.6 refused to load a 10 x 10 x 40 box written
+        # that way ("Loading of a model file failed"); print_check now writes the facet normals itself
+        stl(f"{d}/post.stl", box(0, 0, 0, 10, 10, 40))
+        rc, r, p = run(f"{d}/post.stl", "--process", "fdm", "--slicer", SLICER)
+        check("slicer, 10 x 10 x 40 post (zero normals in the input): loaded, manifold, PASS",
+              rc == 0 and r["slicer"]["manifold"] == "yes", (rc, r and r["slicer"], p.stderr[-200:]))
         rc, r, _ = run(f"{d}/open.stl", "--process", "fdm", "--slicer", SLICER)
         check("slicer, open cube: manifold = no", rc == 3 and r["slicer"]["manifold"] == "no", r["slicer"]["manifold"])
     else:

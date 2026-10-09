@@ -50,6 +50,11 @@ and only a voxel remesh held, at 600,000 triangles.
    edges, PASS first time. **Never cut exactly on the lathe's edges**: windows placed at
    45° + 90°·k on a 64-step spin (one edge every 5.625°) left 3 non-manifold edges; the same
    cuts half a step off (2.8°) left 0.
+   **Remesh last.** A boolean applied after a voxel remesh (the eyes engraved in a ghost, the shell
+   of a pumpkin carved after its stem was joined) left 2 to 9 edges shared by three faces: carve and
+   join first, remesh at 0.2 mm once at the end, then decimate (a pumpkin, 2.35 M → 250 k
+   triangles, still PASS). A part cut to fit another can leave a crumb behind (a paw tip behind
+   the ghost's hand): count islands, drop the ones hidden by the other part, and log it.
    Parts meet by **overlapping, never face to face**: coplanar or touching faces are where an
    exact union leaves slivers and holes. Never `MANIFOLD` as the join: it returned a sealed,
    sliceable mesh that had dropped most of the object.
@@ -104,6 +109,9 @@ STL (mm), 3MF (its own unit), GLB and .blend (metres). Exit 0 PASS, 3 FAIL, 1 er
   40 × 20 × 20 box gives 4 mm3). An open reference is compared on its dimensions alone, and
   the tool says so; a reference under one voxel of volume is a FAIL, never a ratio. The
   reference is first scaled to the model's height: a uniform scale is not a loss.
+- **`--supports`** slices with PrusaSlicer's automatic supports. A figurine whose limbs hang starts
+  them in mid-air: *Floating object part* without supports, a clean slice with them (the black cat
+  held by a ghost). The verdict can then PASS, and says the print needs them.
 - **`--slicer`** (a path, or a name on the PATH) gives the scaled mesh to PrusaSlicer in a
   throwaway `--datadir`: `--info` (manifold, parts) and an FDM `--export-gcode`, whose log
   is searched for *Empty layer* and *Floating object part*; past `--slicer-timeout` (1800 s
