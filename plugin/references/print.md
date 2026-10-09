@@ -88,6 +88,44 @@ PASS (overhangs 0.69 %), and its 3MF too; a lantern, 44 × 44 × 100.5 mm resin,
 remesh, a warning; sliced as FDM, the only slicer pass). The dog house's first build failed on
 its eaves: rule 6's second half comes from it.
 
+## Like the photo, for print
+
+A print is held in the hand and looked at from every side: it has to look like the reference,
+not only pass the slicer. Measured on a carved pumpkin rebuilt from one photo, v3 → v7: the
+first version passed every print check and the user found it "not alike at all".
+
+1. **The photo method applies in full** (`reference-fidelity.md` § 1–5): inventory on enlarged
+   crops, measure from the pixels, review against the photo. Print mode changes how the volume
+   is built, never how closely it follows the reference.
+2. **Read openings on their outer edge, not on their shadow.** A carved opening shows its cut
+   wall at an angle — a lit band around the dark — and the opening is that band's OUTER line.
+   Tracing the dark gave a mouth three times too thin; tracing the shadow and the
+   see-through gave eyes half their size. Read the outline on a 6× crop with a 10 px grid.
+3. **Wall and groove depths come from the photo too.** The cut wall's band gives the wall's
+   thickness (4 mm on the pumpkin, against the 1.2 mm minimum first used, which read as paper);
+   the outline's bumps and the grooves' darkness give the ribs' depth. The process minimum is a
+   floor, never the value.
+4. **Project the front details along the photo's camera, not straight back.** A camera
+   `--elevation` θ above sees a front point lower than it is: cut along the line
+   z cos θ + y sin θ = v (y toward the back), not along y. Cut straight, every opening of the
+   pumpkin sat 4.9 mm low (θ = 10°); cut along the view, the gap fell to 0.4 % and the face
+   overlap from 0.24 to 0.63.
+5. **Measure the face, not only the silhouette.** The silhouette IoU stayed at 0.90 while the
+   mouth went from a line to a grin. Read `fidelity_check`'s `face` block and
+   `face_overlay.png` every round: the `offset`, then each detail's area (too small / too
+   large / missing). It is an alarm, not a judge (`reference-fidelity.md` § 5).
+6. **Iterate until the gaps stop closing, not for a fixed count.** Print mode lifts the photo
+   method's two-round cap: one change per round, measured; a change that lowers the face
+   measure is undone (lowering the pumpkin's lower teeth did: 0.663 → 0.642, reverted). Stop
+   when a round closes nothing the overlay lists — the pumpkin took five — and show the user
+   `side_by_side.png`: they decide it is alike.
+7. **Colour the preview from the photo** — one material per region sampled from it (body,
+   stem). A print has no colour, but the review image is how the user judges the shape: a
+   green stem left orange read as a stem half its size.
+8. **Supports are normal for a figure.** Hanging teeth, paws or a round belly start in mid-air;
+   check with `--supports` and say the print needs them, rather than flattening what the photo
+   shows.
+
 ## The tool
 
 ```

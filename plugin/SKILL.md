@@ -486,7 +486,10 @@ Always explain WHY the recommendation, always let the user choose.
 the brief before the first primitive** — model at print size, closed solids only, one volume
 (exact union as you go, or overlap + one voxel remesh), the process's minimum thickness, a flat
 base, overhangs that grow out of the part below, relief as geometry. A generated or marketplace
-mesh is repaired instead ([5]). Texturing ([5b]) carries nothing to a print.
+mesh is repaired instead ([5]). Texturing ([5b]) carries nothing to a print. **With a reference
+image, `references/print.md` § Like the photo, for print too**: the photo method in full, openings
+read on their outer edge, details cut along the photo's camera, the `face` measure every round, and
+rounds until the gaps stop closing — the user decides it is alike.
 
 **Options:**
 
