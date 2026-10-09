@@ -20,7 +20,11 @@ test writes its own tiny HDRI. Cases:
 - joints: a rod's flat end resting on a sphere is rendered up close (two views); a rod sunk
   into it, and a free one, are not;
 - --view and --azimuth on a 2 x 1 x 1 box: 2:1 from the front, 1:1 from the side or at 90°,
-  and 2.12:1 at 45° (2 cos 45° + sin 45°) — the 3/4 view most product photos are.
+  and 2.12:1 at 45° (2 cos 45° + sin 45°) — the 3/4 view most product photos are;
+- face details, on a vase with two dark eyes and a mouth: its own render matches them in
+  place; the same vase without them keeps its silhouette IoU but scores 0 and every detail
+  is reported missing; the face 3 cm lower is reported lower, by about that much, and still
+  matches once slid; a reference one stop brighter changes nothing.
 """
 import json, os, subprocess, sys, tempfile
 
@@ -125,6 +129,29 @@ def rods(name, z_bottom):
 rods("rod_resting", 0.1993)   # the UV sphere is faceted: 0.8 mm under its pole at 8 mm out
 rods("rod_sunk", 0.17)
 rods("rod_free", 0.25)
+# face details: a vase with two dark eyes and a mouth on its front (the pumpkin whose carved
+# face the silhouette could not see); the reference is its own Cycles render, then one stop
+# brighter; the models: the same, the vase alone, the face 3 cm lower
+def face_vase(name, dz=0.0, features=True):
+    vase(1.0)
+    if features:
+        dark = bpy.data.materials.new("dark"); dark.use_nodes = True
+        dark.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.02, 0.02, 0.02, 1)
+        for x, z, sx, sz in ((-0.045, 0.22, 0.03, 0.04), (0.045, 0.22, 0.03, 0.04), (0.0, 0.12, 0.1, 0.02)):
+            bpy.ops.mesh.primitive_cube_add(size=1, location=(x, -0.1, z + dz)); b = bpy.context.object
+            b.scale = (sx, 0.01, sz); b.data.materials.append(dark)
+    export(f"{d}/{name}.glb")
+face_vase("face"); face_vase("face_blank", features=False); face_vase("face_low", dz=-0.03)
+face_vase("face")
+w = bpy.data.worlds.new("w"); bpy.context.scene.world = w
+env = w.node_tree.nodes.new("ShaderNodeTexEnvironment"); env.image = bpy.data.images.load(f"{d}/env.hdr")
+w.node_tree.links.new(env.outputs["Color"], w.node_tree.nodes["Background"].inputs["Color"])
+cam = bpy.data.objects.new("c", bpy.data.cameras.new("c")); bpy.context.scene.collection.objects.link(cam)
+cam.data.type = "ORTHO"; cam.data.ortho_scale = 0.46; cam.location = (0, -2, 0.225); cam.rotation_euler = (math.pi / 2, 0, 0)
+sc = bpy.context.scene; sc.camera = cam; sc.render.engine = "CYCLES"; sc.cycles.samples = 16; sc.render.film_transparent = True
+sc.render.resolution_x = sc.render.resolution_y = 512; sc.render.image_settings.color_mode = "RGBA"
+sc.view_settings.view_transform = "Standard"; sc.render.filepath = f"{d}/ref_face.png"; bpy.ops.render.render(write_still=True)
+sc.view_settings.exposure = 1.0; sc.render.filepath = f"{d}/ref_face_bright.png"; bpy.ops.render.render(write_still=True)
 # a 2 x 1 x 1 box: 2 m along X, so front is 2:1 and left is 1:1
 fresh(); bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, 0.5)); bpy.context.object.scale = (2, 1, 1)
 bpy.ops.object.transform_apply(scale=True); export(f"{d}/box.glb")
@@ -230,6 +257,26 @@ with tempfile.TemporaryDirectory() as d:
             "ys, xs = np.where(m); print('ASPECT', (np.ptp(xs) + 1) / (np.ptp(ys) + 1))\n")
         a = float(next(l for l in blender("--python", probe).stdout.splitlines() if l.startswith("ASPECT")).split()[1])
         check(f"{label}: 2x1x1 box silhouette {want:.2f}:1", abs(a - want) < 0.08, round(a, 2))
+
+    faces = {}
+    for name, ref in (("face", "ref_face.png"), ("face_blank", "ref_face.png"), ("face_low", "ref_face.png"),
+                      ("face", "ref_face_bright.png")):
+        _, r, _ = measure(d, f"{d}/{name}.glb", "--samples", "16", ref=ref)
+        faces[(name, ref)] = r
+    same, blank, low, bright = (faces[k] for k in faces)
+    fg = lambda r: [g for g in r["gaps"] if g.startswith("face")]
+    check("face: its own render matches the details in place", same["face"]["iou"] > 0.8 and max(map(abs, same["face"]["offset"])) < 0.02
+          and not fg(same), (round(same["face"]["iou"], 3), [round(v, 3) for v in same["face"]["offset"]], fg(same)))
+    check("face: without them the silhouette still matches", blank["iou"] > 0.95, round(blank["iou"], 3))
+    check("face: without them it scores 0, every detail missing",
+          blank["face"]["iou"] < 0.05 and sum("is missing" in g for g in fg(blank)) == len(blank["face"]["features"]) >= 3,
+          (round(blank["face"]["iou"], 3), len(fg(blank)), len(blank["face"]["features"])))
+    want = -0.03 / 0.45                                           # 3 cm on a 45 cm vase, as a share of its height
+    check("face: 3 cm lower is reported lower, by about that much", any("lower" in g for g in fg(low))
+          and abs(low["face"]["offset"][0] - want) < 0.015, (round(low["face"]["offset"][0], 3), round(want, 3)))
+    check("face: 3 cm lower still matches once slid", low["face"]["iou"] > 0.8, round(low["face"]["iou"], 3))
+    check("face: a reference one stop brighter changes nothing", abs(bright["face"]["iou"] - same["face"]["iou"]) < 0.05
+          and not fg(bright), (round(bright["face"]["iou"], 3), round(same["face"]["iou"], 3)))
 
 print(f"\n{sum(checks)}/{len(checks)}")
 sys.exit(0 if all(checks) else 1)

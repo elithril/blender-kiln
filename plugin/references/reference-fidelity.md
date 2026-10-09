@@ -352,10 +352,11 @@ modeling, never chosen by the score.** Picking the angle at which the model bein
 scores best is circular. With a close camera the ellipses open toward the bottom: take the
 rim nearest mid-height. Never rescale the whole model to raise the score.
 
-It writes `overlay.png` (red: reference only, cyan: model only) and `side_by_side.png`,
-and one `FIDELITY {...}` JSON line: silhouette IoU overall and per height band, width and
-core-width differences per band, and per band the material numbers — luminance,
-saturation, warmth (R−B), highlight share, texture detail, grain, value spread. Look at
+It writes `overlay.png` (red: reference only, cyan: model only), `face_overlay.png` (the
+same for the details inside the outline) and `side_by_side.png`, and one `FIDELITY {...}`
+JSON line: silhouette IoU overall and per height band, width and core-width differences
+per band, per band the material numbers — luminance, saturation, warmth (R−B), highlight
+share, texture detail, grain, value spread — and the `face` details. Look at
 both images, then fix the listed gaps.
 
 Read it with its limits:
@@ -366,6 +367,25 @@ Read it with its limits:
   lights; **luminance and highlights depend on the photo's unknown light: alarms, never
   targets.** When luminance is off, fix the MATERIAL (dark metal, the palette), never the
   number — matching a photo's luminance under a different light proves nothing.
+- **The silhouette cannot see a face.** A carved eye is plugged by the back wall, ribs leave
+  the outline alone: three pumpkins whose openings went from wrong to right all scored
+  silhouette IoU 0.902. The `face` block measures the details inside the outline —
+  openings, cuts, dark marks: pixels much darker than a light field fitted to the body
+  (exposure and falloff cancel: ±1 EV or a hue turn moved it by 0.003), or background
+  seen through. The model's details are slid onto the photo's first: the slide is
+  `offset` (+ = higher, + = right; share of the height, and mm), a gap past 2 % — a camera
+  above lowers what is on the front, so check `--elevation` before moving features. Then
+  `iou`, `f` (within 2 % of the height), `chamfer_mm`, and each detail of the photo alone
+  in `features` (IoU, model area vs the photo's): missing, too small, too large or wrong
+  shape, and `extra` details the photo has not. Look at `face_overlay.png` (red: photo
+  only, cyan: model only, white: both). Its limits: it sees what is DARK or SEE-THROUGH,
+  not the cut's outline — a cut wall lit in the photo reads as body, so an opening traced
+  on its outer edge can read "too large"; thin lines (grooves, a 1-px slit) are dropped;
+  dark paint counts as a detail. Read the features and the overlay, not the total: a
+  broken mouth and a missing nose can score alike. **An alarm, not a judge**: on the
+  pumpkin it caught a face with no openings (0) and the whole face 4.9 mm too low, but it
+  did not rank the version a person found closest first on `iou` (only on `f`). Likeness
+  is decided by looking at `side_by_side.png` against the inventory, and by the user.
 - **Openwork is judged on proportions and by eye, not by silhouette.** A chair seen from
   the side is posts and rails: its silhouette overlaps little whatever its accuracy. For
   chairs, frames, lattices, cages: compare width, depth and height ratios and the heights
