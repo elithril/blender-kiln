@@ -1,0 +1,595 @@
+"""Check that a model will print — counted on the raw triangles, then confirmed by a slicer.
+
+    blender -b --factory-startup --python-exit-code 1 --python tools/print_check.py -- \\
+        model.stl|model.3mf|model.glb|model.blend --process fdm|resin \\
+        [--height-mm H] [--parts N] [--reference original.glb|.blend|.stl] \\
+        [--slicer /path/to/PrusaSlicer] [--json out.json]
+
+Exit codes: 0 PASS, 3 FAIL, 1 error (unreadable file, bad arguments, slicer missing).
+
+Units: STL is read as millimetres, 3MF by its own `unit`, GLB and .blend as metres. With
+--height-mm the model is scaled uniformly to that height; every figure is in mm after it.
+
+The counts are RAW: vertices are matched only when their coordinates are bit-identical,
+never welded within a distance. Welding before counting glued neighbouring shells together
+and made defects that the file did not have (the print study's first measure did exactly
+that). Edges are then paired exactly:
+
+- parts: groups of triangles joined through shared edges (what a slicer calls parts);
+  closed parts: every edge of the part has exactly two faces;
+- open edges (one face), non-manifold edges (more than two), non-manifold vertices (faces
+  around the vertex fall into more than one fan), inconsistent normals (an edge walked the
+  same way by both its faces);
+- self-intersections (triangle pairs crossing, inside a part) and intersecting parts, with
+  Blender's own BVH — no external dependency;
+- floating parts: a part neither on the bed, nor crossing, enclosed by or within one
+  extrusion (0.4 mm FDM, 0.05 mm resin) of a held part — a printer fuses closer parts;
+  inverted parts: negative volume and not enclosed (a cavity is enclosed). Parts with no
+  volume (slivers a decimation leaves) are counted and not judged;
+- thin walls: share of faces whose wall, cast inward along the normal, is thinner than the
+  process minimum (0.8 mm FDM, 0.5 mm resin) — sampled above 50,000 faces;
+- overhangs: share of the downward area steeper than 45° from vertical (bed excluded).
+
+--reference compares the model against the file it was repaired from: dimensions and
+volume, both voxelised at the same size so that an open or overlapping original still has
+a volume. A boolean union that reports a perfect manifold can have dropped most of the
+object; only this comparison sees it. The reference is scaled to the model's height first —
+a uniform scale is not a loss.
+
+--slicer writes the scaled mesh as a binary STL and hands it to PrusaSlicer in a throwaway
+--datadir: `--info` (manifold, number_of_parts) and an FDM `--export-gcode`, whose log is
+searched for "Empty layer" and "Floating object part". PrusaSlicer is an arbiter IN ADDITION
+to the counts, not instead: it slices open meshes with exit 0 and calls a union that lost
+the object manifold. It also sees gaps between layers that the counts do not.
+
+PASS needs: 0 open edges, 0 non-manifold edges, consistent normals, no floating or inverted
+part (and --parts N parts when given), no loss against --reference, and with --slicer:
+manifold = yes, no empty layer, no floating object part. Everything else is a WARN.
+
+Prints a readable verdict and one JSON line (`PRINT_CHECK {...}`); --json writes it to a file.
+"""
+import argparse, json, math, os, re, shutil, struct, subprocess, sys, tempfile, zipfile
+import xml.etree.ElementTree as ET
+import numpy as np
+
+PASS, FAIL, ERROR = 0, 3, 1
+MIN_WALL = {"fdm": 0.8, "resin": 0.5}       # mm: the usual nozzle-width and resin floors
+BED_TOL = {"fdm": 0.2, "resin": 0.05}        # mm: one layer — closer than that is on the bed
+FUSE_GAP = {"fdm": 0.4, "resin": 0.05}       # mm: one extrusion width / about one resin pixel —
+                                             # two parts closer than that print as one
+EMPTY_MM3 = 1e-3                             # a part under a 0.1 mm cube of volume prints nothing
+OVERHANG_DEG = 45.0
+THICKNESS_SAMPLE = 50_000
+# Loss against the reference, measured on the print study's chest and lantern: the faithful
+# repairs (voxel remesh, decimated or not) are within 0.52 % on every axis and 0.15 % in
+# volume; the MANIFOLD unions that dropped the object are 158-208 % off on an axis once
+# scaled to the same height. 3 % sits far from both. The volume tolerance has no real
+# lossy case with matching dimensions yet — 10 % is a margin over the voxel error, and
+# the seeded test (a quarter of the volume, same box) is all that exercises it.
+DIM_TOL = 0.03
+VOL_TOL = 0.10
+VOXELS_ACROSS = 150                          # voxel size = largest dimension / 150
+
+
+def die(msg):
+    print(f"print_check: {msg}", file=sys.stderr)
+    sys.exit(ERROR)
+
+
+class Parser(argparse.ArgumentParser):
+    def error(self, message):                # argparse exits 2; every error here is 1
+        self.print_usage(sys.stderr)
+        die(message)
+
+
+def args():
+    p = Parser(prog="print_check.py")
+    p.add_argument("model")
+    p.add_argument("--process", required=True, choices=("fdm", "resin"))
+    p.add_argument("--height-mm", type=float)
+    p.add_argument("--parts", type=int, help="expected number of parts (default: any)")
+    p.add_argument("--reference")
+    p.add_argument("--slicer")
+    p.add_argument("--json")
+    argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+    return p.parse_args(argv)
+
+
+# ── loading: every format ends as (vertices in mm, triangles) ────────────────────────────
+
+def read_stl(path):
+    data = open(path, "rb").read()
+    if len(data) >= 84 and 84 + 50 * struct.unpack("<I", data[80:84])[0] == len(data):
+        n = struct.unpack("<I", data[80:84])[0]
+        rec = np.frombuffer(data, dtype=np.dtype([("n", "<f4", 3), ("v", "<f4", (3, 3)), ("a", "<u2")]),
+                            count=n, offset=84)
+        return rec["v"].reshape(-1, 3).astype(np.float64)
+    co = [l.split()[1:4] for l in data.decode("latin-1").splitlines() if l.strip().startswith("vertex")]
+    if not co:
+        die(f"{path}: no triangle read (neither binary nor ASCII STL)")
+    return np.array(co, dtype=np.float64)
+
+
+UNITS = {"micron": 0.001, "millimeter": 1.0, "centimeter": 10.0, "inch": 25.4, "foot": 304.8, "meter": 1000.0}
+
+
+def read_3mf(path):
+    """Triangle soup in mm from a 3MF: objects, components and build items with transforms."""
+    z = zipfile.ZipFile(path)
+    rels = z.read("_rels/.rels").decode() if "_rels/.rels" in z.namelist() else ""
+    m = re.search(r'Target="/?([^"]+\.model)"', rels)
+    root = ET.fromstring(z.read((m.group(1) if m else "3D/3dmodel.model").lstrip("/")))
+    ns = root.tag[:root.tag.index("}") + 1] if root.tag.startswith("{") else ""
+    unit = UNITS.get(root.get("unit", "millimeter"), 1.0)
+
+    def mat(s):
+        if not s:
+            return np.eye(4)
+        v = [float(x) for x in s.split()]
+        M = np.eye(4); M[:3, :3] = np.array(v[:9]).reshape(3, 3).T; M[:3, 3] = v[9:12]
+        return M
+
+    # The production extension (Bambu Studio, PrusaSlicer) keeps meshes in other parts of
+    # the package and points at them with p:path on each component.
+    PATH = "{http://schemas.microsoft.com/3dmanufacturing/production/2015/06}path"
+    main = m.group(1) if m else "3D/3dmodel.model"
+    trees = {main: root}
+
+    def objects(part):
+        part = part.lstrip("/")
+        if part not in trees:
+            trees[part] = ET.fromstring(z.read(part))
+        return {o.get("id"): o for o in trees[part].iter(ns + "object")}
+
+    def soup(oid, M, part):
+        o, out = objects(part)[oid], []
+        mesh = o.find(ns + "mesh")
+        if mesh is not None:
+            V = np.array([[float(v.get(k)) for k in "xyz"] for v in mesh.iter(ns + "vertex")])
+            T = np.array([[int(t.get(k)) for k in ("v1", "v2", "v3")] for t in mesh.iter(ns + "triangle")])
+            if len(T):
+                W = V @ M[:3, :3].T + M[:3, 3]
+                out.append(W[T].reshape(-1, 3))
+        comps = o.find(ns + "components")
+        if comps is not None:
+            for c in comps.iter(ns + "component"):
+                out += soup(c.get("objectid"), M @ mat(c.get("transform")), c.get(PATH) or part)
+        return out
+
+    parts = []
+    for item in root.iter(ns + "item"):
+        parts += soup(item.get("objectid"), mat(item.get("transform")), item.get(PATH) or main)
+    if not parts:
+        die(f"{path}: no mesh in the 3MF build")
+    return np.concatenate(parts) * unit
+
+
+def read_blender(path):
+    import bpy
+    if path.lower().endswith(".blend"):
+        bpy.ops.wm.open_mainfile(filepath=path)
+    else:
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        bpy.ops.import_scene.gltf(filepath=path)
+    sc = bpy.context.scene
+    shapes = {pb.custom_shape for a in sc.objects if a.type == "ARMATURE" for pb in a.pose.bones if pb.custom_shape}
+    dg = bpy.context.evaluated_depsgraph_get()
+    out = []
+    for ob in sc.objects:
+        if ob.type != "MESH" or ob in shapes or ob.hide_render:
+            continue
+        ev = ob.evaluated_get(dg)
+        me = ev.to_mesh()
+        me.calc_loop_triangles()
+        co = np.empty(len(me.vertices) * 3); me.vertices.foreach_get("co", co); co = co.reshape(-1, 3)
+        tri = np.empty(len(me.loop_triangles) * 3, dtype=np.int64)
+        me.loop_triangles.foreach_get("vertices", tri)
+        M = np.array(ob.matrix_world)
+        out.append((co @ M[:3, :3].T + M[:3, 3])[tri])
+        ev.to_mesh_clear()
+    if not out:
+        die(f"{path}: no renderable mesh")
+    return np.concatenate(out) * 1000.0
+
+
+def load(path):
+    if not os.path.exists(path):
+        die(f"{path}: no such file")
+    ext = os.path.splitext(path)[1].lower()
+    if ext == ".stl":
+        soup = read_stl(path)
+    elif ext == ".3mf":
+        soup = read_3mf(path)
+    elif ext in (".glb", ".gltf", ".blend"):
+        soup = read_blender(path)
+    else:
+        die(f"{path}: STL, 3MF, GLB or .blend only")
+    # Exact matching only: bit-identical coordinates share a vertex, nothing else does.
+    V, F = np.unique(soup, axis=0, return_inverse=True)
+    return V, F.reshape(-1, 3).astype(np.int64)
+
+
+# ── topology ─────────────────────────────────────────────────────────────────────────────
+
+def components(n, a, b):
+    """Connected components of n nodes joined by the pairs (a, b): hook roots, shortcut."""
+    p = np.arange(n)
+    while True:
+        while True:
+            pp = p[p]
+            if np.array_equal(pp, p):
+                break
+            p = pp
+        ra, rb = p[a], p[b]
+        k = ra != rb
+        if not k.any():
+            return p
+        lo, hi = np.minimum(ra[k], rb[k]), np.maximum(ra[k], rb[k])
+        np.minimum.at(p, hi, lo)
+
+
+def topology(V, F):
+    nf = len(F)
+    # directed half-edges, then undirected keys
+    a = F.reshape(-1); b = F[:, [1, 2, 0]].reshape(-1)
+    face = np.repeat(np.arange(nf), 3)
+    lo, hi = np.minimum(a, b), np.maximum(a, b)
+    key = lo * len(V) + hi
+    order = np.argsort(key, kind="stable")
+    ks, fs = key[order], face[order]
+    fwd = (a < b)[order]
+    starts = np.flatnonzero(np.r_[True, ks[1:] != ks[:-1]])
+    counts = np.diff(np.r_[starts, len(ks)])
+    open_e = int((counts == 1).sum())
+    nm_e = int((counts > 2).sum())
+    # pairs of faces sharing an edge: consecutive faces in each edge group
+    i = np.flatnonzero(ks[1:] == ks[:-1])
+    fa, fb = fs[i], fs[i + 1]
+    label = components(nf, fa, fb) if nf else np.array([], dtype=np.int64)
+    roots, part = np.unique(label, return_inverse=True)
+    nparts = len(roots)
+    # a part is closed when every edge it holds has exactly two faces
+    edge_ok = np.repeat(counts == 2, counts)
+    bad_face = np.zeros(nf, bool); bad_face[fs[~edge_ok]] = True
+    closed = np.ones(nparts, bool); closed[np.unique(part[bad_face])] = False
+    # inconsistent normals: on a two-face edge, both faces walk it the same way
+    two = starts[counts == 2]
+    incoh = int((fwd[two] == fwd[two + 1]).sum())
+    # non-manifold vertices: corners (face, vertex) joined across two-face edges; a vertex
+    # whose corners fall into more than one fan — or that sits on a >2-face edge — is one
+    e_local = np.tile(np.arange(3), nf)[order]          # which edge of its face (0: v0v1 ...)
+    k2 = np.flatnonzero(np.repeat(counts == 2, counts) & np.r_[ks[1:] == ks[:-1], False])
+    ca, cb = [], []
+    for side in (0, 1):
+        va = F[fs[k2], (e_local[k2] + side) % 3]
+        # the same vertex in the other face
+        other = F[fs[k2 + 1]]
+        j = np.argmax(other == va[:, None], axis=1)
+        ca.append(fs[k2] * 3 + (e_local[k2] + side) % 3)
+        cb.append(fs[k2 + 1] * 3 + j)
+    ca = np.concatenate(ca) if ca else np.array([], np.int64)
+    cb = np.concatenate(cb) if cb else np.array([], np.int64)
+    fan = components(3 * nf, ca, cb) if nf else np.array([], np.int64)
+    cv = F.reshape(-1)
+    pairs = np.unique(np.stack([cv, fan], 1), axis=0)
+    fans_per_v = np.bincount(pairs[:, 0], minlength=len(V))
+    nm_v = fans_per_v > 1
+    nm_v[np.r_[lo[order][starts[counts > 2]], hi[order][starts[counts > 2]]]] = True
+    return dict(open_edges=open_e, nonmanifold_edges=nm_e, inconsistent_edges=incoh,
+                nonmanifold_vertices=int(nm_v.sum())), part, nparts, closed
+
+
+# ── geometry ─────────────────────────────────────────────────────────────────────────────
+
+def face_data(V, F):
+    t = V[F]
+    c = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])
+    area2 = np.linalg.norm(c, axis=1)
+    n = c / np.maximum(area2, 1e-30)[:, None]
+    return t, n, area2 / 2
+
+
+def signed_volumes(V, F, part, nparts):
+    t = V[F]
+    v6 = np.einsum("ij,ij->i", t[:, 0], np.cross(t[:, 1], t[:, 2]))
+    return np.bincount(part, weights=v6, minlength=nparts) / 6.0
+
+
+def bvh(V, F):
+    from mathutils.bvhtree import BVHTree
+    return BVHTree.FromPolygons(V.tolist(), F.tolist(), all_triangles=True)
+
+
+def ray_hits(tree, origin, direction, limit=1e9):
+    """All hit distances along a ray (for inside/outside parity)."""
+    from mathutils import Vector
+    o, d, out, travelled = Vector(origin), Vector(direction).normalized(), [], 0.0
+    for _ in range(10_000):
+        loc, nrm, idx, dist = tree.ray_cast(o, d, limit)
+        if loc is None:
+            return out
+        travelled += dist; out.append(travelled)
+        o = loc + d * 1e-5
+    return out
+
+
+def support(V, F, part, nparts, closed, vol, overlaps, bed_tol, gap, real):
+    """Which parts are held: on the bed, or crossing, enclosed by, or within `gap` of a held
+    part — a printer fuses what is closer than one extrusion. Only `real` parts are judged."""
+    zmin_all = V[:, 2].min()
+    lo = np.full((nparts, 3), np.inf); hi = np.full((nparts, 3), -np.inf)
+    t = V[F]
+    np.minimum.at(lo, part, t.min(axis=1)); np.maximum.at(hi, part, t.max(axis=1))
+    held = (lo[:, 2] <= zmin_all + bed_tol) | ~real
+    touch = {}
+    for i, j in overlaps:
+        touch.setdefault(i, set()).add(j); touch.setdefault(j, set()).add(i)
+    enclosed = np.zeros(nparts, bool)
+    trees = {}
+
+    def tree(k):
+        if k not in trees:
+            idx = np.flatnonzero(part == k)
+            used, inv = np.unique(F[idx], return_inverse=True)
+            trees[k] = bvh(V[used], inv.reshape(-1, 3))
+        return trees[k]
+
+    def inside(p, q):                   # p's lowest vertex inside closed part q (ray parity)
+        if not closed[q] or (lo[p] < lo[q]).any() or (hi[p] > hi[q]).any():
+            return False
+        v = V[F[part == p]].reshape(-1, 3)
+        o = v[np.argmin(v[:, 2])]
+        return len(ray_hits(tree(q), o, (0.267, 0.534, 0.802))) % 2 == 1
+
+    def near(p, q):                     # some point of p within `gap` of q's surface, or back
+        if (lo[p] - gap > hi[q]).any() or (lo[q] - gap > hi[p]).any():
+            return False
+        from mathutils import Vector
+        for x, y in ((p, q), (q, p)):
+            v = np.unique(F[part == x])
+            if len(v) > 4000:
+                v = np.random.default_rng(0).choice(v, 4000, replace=False)
+            t = tree(y)
+            if any(t.find_nearest(Vector(c), gap)[0] is not None for c in V[v].tolist()):
+                return True
+        return False
+
+    for p in range(nparts):
+        for q in range(nparts):
+            if p != q and inside(p, q):
+                enclosed[p] = True
+                break
+    changed = True
+    while changed:
+        changed = False
+        for p in np.flatnonzero(~held):
+            if any(held[q] for q in touch.get(p, ())) or \
+               any(held[q] and real[q] and (enclosed[p] and inside(p, q) or near(p, q)) for q in range(nparts) if q != p):
+                held[p] = True; changed = True
+    inverted = (vol < 0) & closed & ~enclosed & real
+    return held, inverted, enclosed, lo, hi
+
+
+def thickness(V, F, n, area, wall, seed=0):
+    tree = bvh(V, F)
+    from mathutils import Vector
+    nf = len(F)
+    idx = np.arange(nf) if nf <= THICKNESS_SAMPLE else np.sort(
+        np.random.default_rng(seed).choice(nf, THICKNESS_SAMPLE, replace=False))
+    c = V[F[idx]].mean(axis=1)
+    eps = 1e-6 * float(np.ptp(V, axis=0).max())
+    thin = np.zeros(len(idx), bool)
+    for k, (ci, ni) in enumerate(zip(c, n[idx])):
+        if not ni.any():
+            continue
+        d = Vector((-ni).tolist())
+        loc, hn, _, dist = tree.ray_cast(Vector((ci - ni * eps).tolist()), d, wall)
+        # only a back wall counts: the face we leave the solid through points along the ray
+        if loc is not None and hn.dot(d) > 0 and dist + eps < wall:
+            thin[k] = True
+    a = area[idx]
+    return dict(min_wall_mm=wall, faces_thin_pct=round(100 * thin.mean(), 2) if len(idx) else 0.0,
+                area_thin_pct=round(100 * a[thin].sum() / max(a.sum(), 1e-30), 2),
+                sampled=int(len(idx)), of=int(nf))
+
+
+def voxel_volume(V, F, size):
+    """Volume of the voxelised surface — defined even for an open or overlapping mesh."""
+    import bpy, bmesh
+    me = bpy.data.meshes.new("pc_vox")
+    me.from_pydata(V.tolist(), [], F.tolist())
+    ob = bpy.data.objects.new("pc_vox", me); bpy.context.scene.collection.objects.link(ob)
+    md = ob.modifiers.new("r", "REMESH"); md.mode = "VOXEL"; md.voxel_size = size
+    ev = ob.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    bm = bmesh.new(); bm.from_mesh(ev.to_mesh())
+    vol = abs(bm.calc_volume(signed=True))
+    bm.free(); ev.to_mesh_clear()
+    bpy.data.objects.remove(ob); bpy.data.meshes.remove(me)
+    return vol
+
+
+# ── slicer ───────────────────────────────────────────────────────────────────────────────
+
+def write_stl(path, V, F):
+    t = V[F].astype(np.float32)
+    rec = np.zeros(len(F), dtype=np.dtype([("n", "<f4", 3), ("v", "<f4", (3, 3)), ("a", "<u2")]))
+    rec["v"] = t
+    with open(path, "wb") as f:
+        f.write(b"print_check".ljust(80, b" ")); f.write(struct.pack("<I", len(F))); f.write(rec.tobytes())
+
+
+def slicer(exe, V, F):
+    if not os.path.exists(exe):
+        die(f"slicer not found: {exe}")
+    d = tempfile.mkdtemp(prefix="print_check_")
+    try:
+        stl = os.path.join(d, "model.stl"); write_stl(stl, V, F)
+        data = os.path.join(d, "datadir"); os.makedirs(data)
+        base = [exe, "--datadir", data, "--loglevel", "2"]
+        info = subprocess.run(base + ["--info", stl], capture_output=True, text=True, timeout=600)
+        txt = info.stdout + info.stderr
+        man = re.search(r"manifold\s*=\s*(\w+)", txt)
+        parts = re.search(r"number_of_parts\s*=\s*(\d+)", txt)
+        opn = re.search(r"open_edges\s*=\s*(\d+)", txt)
+        sl = subprocess.run(base + ["--export-gcode", "-o", os.path.join(d, "out.gcode"), stl],
+                            capture_output=True, text=True, timeout=1800)
+        log = sl.stdout + sl.stderr
+        empty = re.findall(r"Empty layer[^\n]*", log)
+        floating = re.findall(r"Floating object part[^\n]*", log)
+        # "Detected print stability issues:" / blank / object name / the issues, comma-separated
+        m = re.search(r"Detected print stability issues:\s*\n\s*\n[^\n]*\n([^\n]+)", log)
+        issues = [x.strip() for x in m.group(1).split(",")] if m else []
+        return dict(info_exit=info.returncode, manifold=man.group(1) if man else None,
+                    number_of_parts=int(parts.group(1)) if parts else None,
+                    open_edges=int(opn.group(1)) if opn else 0,
+                    slice_exit=sl.returncode, gcode=os.path.exists(os.path.join(d, "out.gcode")),
+                    empty_layers=empty[:5], empty_layer_count=len(empty),
+                    floating_parts=floating[:5], floating_count=len(floating), stability_issues=issues)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+# ── main ─────────────────────────────────────────────────────────────────────────────────
+
+def main():
+    o = args()
+    V, F = load(o.model)
+    if not len(F):
+        die(f"{o.model}: no triangle")
+    native_h = float(V[:, 2].max() - V[:, 2].min())
+    scale = o.height_mm / native_h if o.height_mm else 1.0
+    if o.height_mm and native_h <= 0:
+        die("the model is flat: no height to scale")
+    V = V * scale
+    dims = np.ptp(V, axis=0)
+    topo, part, nparts, closed = topology(V, F)
+    t, n, area = face_data(V, F)
+    vol = signed_volumes(V, F, part, nparts)
+
+    tree = bvh(V, F)
+    pairs = np.array(tree.overlap(tree), dtype=np.int64).reshape(-1, 2)
+    pa, pb = part[pairs[:, 0]], part[pairs[:, 1]]
+    selfx = int((pa == pb).sum())
+    inter = sorted({(int(min(x, y)), int(max(x, y))) for x, y in zip(pa, pb) if x != y})
+
+    # Zero-volume parts — flat slivers a decimation or a voxel pass leaves behind — print
+    # nothing and a slicer drops them; they are counted, not judged.
+    real = np.abs(vol) >= EMPTY_MM3
+    held, inverted, enclosed, plo, phi = support(V, F, part, nparts, closed, vol, inter, BED_TOL[o.process],
+                                                 FUSE_GAP[o.process], real)
+    floating = [int(p) for p in np.flatnonzero(~held)]
+    from mathutils import Vector
+    float_info = []
+    for p in floating[:20]:                   # where each one is, and how far from the rest
+        vv = np.unique(F[part == p])
+        vv = vv if len(vv) <= 500 else np.random.default_rng(0).choice(vv, 500, replace=False)
+        gaps = [d for c in V[vv].tolist() for _, _, i, d in tree.find_nearest_range(Vector(c), 5.0)
+                if part[i] != p and real[part[i]]]
+        float_info.append(dict(bbox_mm=[np.round(plo[p], 2).tolist(), np.round(phi[p], 2).tolist()],
+                               volume_mm3=round(float(vol[p]), 2),
+                               gap_to_other_part_mm=round(min(gaps), 3) if gaps else "> 5"))
+
+    zmin = V[:, 2].min()
+    on_bed = (t[:, :, 2] <= zmin + BED_TOL[o.process]).all(axis=1)
+    down = (n[:, 2] < -math.cos(math.radians(OVERHANG_DEG))) & ~on_bed
+    overhang_pct = round(100 * area[down].sum() / max(area.sum(), 1e-30), 2)
+    thin = thickness(V, F, n, area, MIN_WALL[o.process])
+
+    r = dict(file=os.path.abspath(o.model), process=o.process, triangles=int(len(F)), vertices=int(len(V)),
+             scale=scale, dims_mm=[round(float(x), 3) for x in dims],
+             parts=int(nparts), closed_parts=int(closed.sum()), empty_parts=int((~real).sum()), **topo,
+             self_intersecting_pairs=selfx, intersecting_part_pairs=len(inter),
+             floating_parts=len(floating), floating=float_info, inverted_parts=int(inverted.sum()),
+             cavities=int((enclosed & (vol < 0)).sum()),
+             volume_mm3=round(float(vol[closed].sum()), 3), overhang_area_pct=overhang_pct, thickness=thin)
+    fails, warns = [], []
+    if topo["open_edges"]:
+        fails.append(f"{topo['open_edges']} open edges — the surface has holes")
+    if topo["nonmanifold_edges"]:
+        fails.append(f"{topo['nonmanifold_edges']} edges shared by more than two faces")
+    if topo["inconsistent_edges"]:
+        fails.append(f"{topo['inconsistent_edges']} edges with inconsistent normals")
+    if floating:
+        fails.append(f"{len(floating)} floating part(s): not on the bed, nor crossing or within one extrusion of a held part")
+    if r["inverted_parts"]:
+        fails.append(f"{r['inverted_parts']} inverted part(s): negative volume and not a cavity")
+    if o.parts is not None and int(real.sum()) != o.parts:
+        fails.append(f"{int(real.sum())} parts with volume, expected {o.parts}")
+    if (~real).any():
+        warns.append(f"{int((~real).sum())} part(s) with no volume (under {EMPTY_MM3} mm3) — slivers, ignored "
+                     f"by a slicer; not judged")
+    if topo["nonmanifold_vertices"]:
+        warns.append(f"{topo['nonmanifold_vertices']} non-manifold vertices (faces meeting at a single point)")
+    if selfx:
+        warns.append(f"{selfx} self-intersecting triangle pairs inside a part")
+    if inter:
+        warns.append(f"{len(inter)} pair(s) of parts crossing each other — a slicer merges them, a union is cleaner")
+    if thin["faces_thin_pct"] > 0:
+        warns.append(f"{thin['faces_thin_pct']} % of faces on a wall under {thin['min_wall_mm']} mm "
+                     f"({thin['area_thin_pct']} % of the area)")
+    if overhang_pct > 0:
+        warns.append(f"{overhang_pct} % of the area overhangs more than {OVERHANG_DEG:.0f}° — supports")
+
+    if o.reference:
+        RV, RF = load(o.reference)
+        rh = float(RV[:, 2].max() - RV[:, 2].min())
+        RV = RV * (dims[2] / rh) if rh > 0 else RV
+        rdims = np.ptp(RV, axis=0)
+        size = float(max(dims.max(), rdims.max())) / VOXELS_ACROSS
+        mv, rv = voxel_volume(V, F, size), voxel_volume(RV, RF, size)
+        dd = (dims - rdims) / np.maximum(rdims, 1e-9)
+        ratio = mv / rv if rv > 0 else float("nan")
+        r["reference"] = dict(file=os.path.abspath(o.reference), dims_mm=[round(float(x), 3) for x in rdims],
+                              dims_diff_pct=[round(100 * float(x), 2) for x in dd], voxel_mm=round(size, 4),
+                              volume_voxel_mm3=round(rv, 1), model_volume_voxel_mm3=round(mv, 1),
+                              volume_ratio=round(ratio, 4), volume_compared=True)
+        dims_off = bool((np.abs(dd) > DIM_TOL).any())
+        sealed = not topo["open_edges"] and not topo["nonmanifold_edges"]
+        if dims_off:
+            fails.append(f"dimensions differ from the reference by {[round(100 * float(x), 1) for x in dd]} % "
+                         f"(tolerance {100 * DIM_TOL:.0f} %) — part of the object is gone or added")
+        # The volume speaks only when the dimensions agree (otherwise the height scaling has
+        # already distorted it) and when the model is sealed: a surface with holes voxelises
+        # to a shell with no inside, and reads as a loss it is not — it already FAILs as open.
+        if dims_off or not sealed:
+            r["reference"]["volume_compared"] = False
+        elif ratio < 1 - VOL_TOL:
+            fails.append(f"volume is {100 * ratio:.1f} % of the reference (tolerance {100 * VOL_TOL:.0f} %) "
+                         f"— the object lost material")
+        elif ratio > 1 + VOL_TOL:
+            warns.append(f"volume is {100 * ratio:.1f} % of the reference — cavities filled or parts thickened")
+
+    if o.slicer:
+        s = slicer(o.slicer, V, F)
+        r["slicer"] = s
+        if s["manifold"] != "yes":
+            fails.append(f"PrusaSlicer: manifold = {s['manifold']} ({s['open_edges']} open edges)")
+        if s["empty_layer_count"]:
+            fails.append(f"PrusaSlicer: {s['empty_layer_count']} empty layer(s) — {s['empty_layers'][0]}")
+        if s["floating_count"]:
+            fails.append("PrusaSlicer: floating object part")
+        other = [x for x in s["stability_issues"] if x != "Floating object part"]
+        if other:
+            warns.append(f"PrusaSlicer stability issues: {', '.join(other)}")
+        if s["slice_exit"] != 0 or not s["gcode"]:
+            fails.append(f"PrusaSlicer: slicing failed (exit {s['slice_exit']})")
+
+    r["verdict"] = "FAIL" if fails else "PASS"
+    r["fails"], r["warnings"] = fails, warns
+    print("PRINT_CHECK " + json.dumps(r))
+    if o.json:
+        with open(o.json, "w") as f:
+            json.dump(r, f, indent=1)
+    print(f"\n{os.path.basename(o.model)} · {o.process} · {r['dims_mm'][0]:.1f} × {r['dims_mm'][1]:.1f} × "
+          f"{r['dims_mm'][2]:.1f} mm (scale {scale:.4g}) · {len(F):,} triangles · {nparts} part(s), "
+          f"{r['closed_parts']} closed")
+    for x in fails:
+        print("  FAIL ", x)
+    for x in warns:
+        print("  WARN ", x)
+    print(f"\nVERDICT {r['verdict']}")
+    sys.exit(FAIL if fails else PASS)
+
+
+if __name__ == "__main__":
+    main()
