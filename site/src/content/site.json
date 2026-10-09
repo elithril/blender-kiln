@@ -393,10 +393,6 @@
     "headline": "It moves, routed by subject.",
     "lede": "No single animation method held up across a cat, a villager and a desk lamp, so kiln picks the route from the subject, and shows every clip before exporting.",
     "since": "2.1, one command since 2.2",
-    "commands": [
-      "/kiln animate SK_Cat.glb walk, idle",
-      "/kiln animate dragon.glb \"flaps its wings\""
-    ],
     "routes": [
       {
         "subject": "Biped or winged, from a sentence",
@@ -427,7 +423,8 @@
             "bench": true,
             "glb": "/assets/glb/anim/dragon.glb"
           }
-        ]
+        ],
+        "command": "/kiln animate dragon.glb \"flaps its wings\""
       },
       {
         "subject": "Four-legged, idle and walk",
@@ -450,7 +447,8 @@
             "bench": true,
             "glb": "/assets/glb/anim/cat-idle.glb"
           }
-        ]
+        ],
+        "command": "/kiln animate SK_Cat.glb walk, idle"
       },
       {
         "subject": "Articulated object",

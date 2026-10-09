@@ -122,6 +122,8 @@ const pct = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(Math.r
      slides away on iOS; what reads keeps clear of the toolbar by --toolbar, the gap between the two heights */
   .sticky { --toolbar: 0px; position: sticky; top: 0; height: 100svh; overflow: hidden; }
   @supports (height: 100lvh) { .sticky { --toolbar: calc(100lvh - 100svh); height: 100lvh; } }
+  /* dynamic: the toolbar's room while it shows, nothing once it has slid away (no empty band under the reading) */
+  @supports (height: 100dvh) { .sticky { --toolbar: calc(100lvh - 100dvh); } }
   .fallback { object-fit: cover; }
   /* the fire reads through a soft vignette, so the type always has night behind it */
   .sticky::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120% 90% at 50% 60%, transparent 40%, rgb(11 9 8 / 0.75) 100%); }
@@ -193,7 +195,7 @@ const pct = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(Math.r
     .plate figcaption { padding: 0; font-size: 0.75rem; line-height: 1.3; max-width: 22ch; }
     .reading { justify-self: stretch; transform: none; padding: 0 var(--gutter); }
     .score { font-size: 4.25rem; }
-    .facts { grid-template-columns: repeat(2, auto); }
+    .facts { grid-template-columns: repeat(4, auto); gap: 2px 16px; } /* one row: the object keeps the room */
   }
   @media (prefers-reduced-motion: reduce) {
     .line > span, .lede, .actions, .req { animation: none; }
