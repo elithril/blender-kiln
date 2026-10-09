@@ -44,6 +44,12 @@ and only a voxel remesh held, at 600,000 triangles.
      one wall thickness; join, Remesh `VOXEL` (adaptivity 0) at ≤ 0.2 mm and ≤ the thinnest
      feature / 8, then move the lowest vertex back to Z = 0. The study's lantern, remeshed
      at 0.2 mm, passes. The cost is weight: ~900,000 triangles for a 100 mm lantern.
+   **A solid of revolution is the cheapest closed volume**: spin one profile (base, body, bands,
+   corbels, roof) round Z with `bmesh.ops.spin(..., use_merge=True)`, then merge the axis
+   points — one closed solid, no union at all. Measured on a 90 mm lighthouse: 0 non-manifold
+   edges, PASS first time. **Never cut exactly on the lathe's edges**: windows placed at
+   45° + 90°·k on a 64-step spin (one edge every 5.625°) left 3 non-manifold edges; the same
+   cuts half a step off (2.8°) left 0.
    Parts meet by **overlapping, never face to face**: coplanar or touching faces are where an
    exact union leaves slivers and holes. Never `MANIFOLD` as the join: it returned a sealed,
    sliceable mesh that had dropped most of the object.
