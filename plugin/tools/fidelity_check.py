@@ -343,6 +343,11 @@ def load(path):
     m = a[..., 3] > 0.5
     if not m.any():
         sys.exit(f"fidelity_check: {path} has no opaque pixel — a reference needs alpha")
+    if m.all():
+        # a phone photo on its table: the background is measured as object — a pumpkin read
+        # 0.62 instead of 0.93, with exit 0. Refuse rather than measure the wrong thing.
+        sys.exit(f"fidelity_check: {path} has no transparent pixel — cut the object out first "
+                 "(reference-fidelity.md § 2, Cut the photo out)")
     ys, xs = np.where(m)
     return a[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
 

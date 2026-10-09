@@ -637,6 +637,10 @@ Load `references/validation-checklist.md` and execute:
 
 Execute the full cleanup sequence from `references/validation-checklist.md` § Execution Order. Check poly budget against tier from `references/topology-rules.md`.
 
+**Print set in CONFIG: not the same sequence.** Its 0.1 mm merge broke a printable model
+(PASS → FAIL) while its own count read 0; the print variant is under § Execution Order —
+no merge on a model built closed, `print_check` on the STL as the count, no tier decimation.
+
 **Poly check:** report the count against the tier. Past **2× the tier's top** → **propose decimate with before/after** (always interactive, even in auto mode); below that, say where the triangles go and keep them.
 
 **Thin parts are never decimated** — wires, bails, loops: anything an order of magnitude

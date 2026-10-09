@@ -43,6 +43,9 @@ small part reads as something it is not; a 3x crop shows what it is.
 - **The camera's elevation.** A photo taken from above shows the top of every circle as an
   ellipse, whose minor/major ratio is sin θ. Read θ on the widest rim you can see; step 5
   renders at that elevation. Ignoring it inflates every stacked disc.
+  **No rim** (a fruit, a figure): any circle the object carries or rests on — its contact
+  with the table, a stem's foot, a base, a hat's brim. None at all: estimate it from how much
+  of the top shows, and log it as an estimate, not a measure.
 
 ## 2. Measure the silhouette
 
@@ -92,8 +95,42 @@ def core_profile(path, height_m):
     return out[::-1]                                                      # bottom-up, as documented
 ```
 
-`height_m` is the one number you choose (brief, or a real-world size). An opaque
-reference needs a mask first — key out the corner colour.
+`height_m` is the one number you choose (brief, or a real-world size).
+
+**Cut the photo out.** A phone photo has no alpha, and `fidelity_check` refuses it: measured
+as it was, the table counted as object and a pumpkin scored 0.62 instead of 0.93. Fill the
+background from the border — what touches the edge and looks like the corner is background;
+what is enclosed by the object (the background seen through a cut eye) stays, to be read on a crop:
+
+```python
+import bpy, numpy as np
+from collections import deque
+im = bpy.data.images.load(PHOTO); w, h = im.size
+px = np.array(im.pixels[:], dtype=np.float32).reshape(h, w, 4)[::-1].copy()   # top row first
+corner = np.median(np.concatenate([px[:4, :4, :3].reshape(-1, 3), px[:4, -4:, :3].reshape(-1, 3)]), 0)
+near = np.abs(px[..., :3] - corner).max(-1) < 0.08         # loosen for a shadowed table, log it
+bg = np.zeros((h, w), bool)
+q = deque((y, x) for y in range(h) for x in (0, w - 1) if near[y, x])
+q.extend((y, x) for x in range(w) for y in (0, h - 1) if near[y, x])
+for y, x in q: bg[y, x] = True
+while q:
+    y, x = q.popleft()
+    for Y, X in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+        if 0 <= Y < h and 0 <= X < w and near[Y, X] and not bg[Y, X]:
+            bg[Y, X] = True; q.append((Y, X))
+px[..., 3] = ~bg
+out = bpy.data.images.new("ref", w, h, alpha=True); out.pixels = px[::-1].ravel().tolist()
+out.filepath_raw = REF_PNG; out.file_format = "PNG"; out.save()
+```
+
+Look at the cut-out before measuring with it: a shadow on the table that survives is a
+foot that does not exist.
+
+**Background seen THROUGH the object is not a view of its back.** The pumpkin's eyes showed
+the white behind it; a session read it as an opening at the back and cut one — a hole
+the user found and asked about. What the photo does not show is not added: no opening, no
+part, no ornament on a side nobody photographed. Keep the unseen side plain and closed, and
+list it in the log as unseen; the confirmation of [2] asks for the view.
 
 **Wires, handles and bails: trace their centre line and use it as the curve.** Guessed
 control points drift, and a guessed curve misses the shape of its peak:
@@ -151,7 +188,9 @@ then judged against the same crop of the photo. Never a flat cut resting on a cu
 never a tube widened or flattened to make a foot — it reads as a tongue. No distance can
 judge a joint, so `fidelity_check.py` renders every end of a long part that touches
 another — the two parts alone, flat grey, two views, in `review/joints/` — and **each one
-is looked at before the inventory line is ticked**.
+is looked at before the inventory line is ticked**. It needs the parts still separate: on a
+print, joined into one volume, it finds none (`joints: []`) — run it on the .blend saved
+before the union, or capture each joint by hand.
 
 ## 4. Materials from the reference, not from memory
 

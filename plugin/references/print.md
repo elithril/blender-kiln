@@ -50,11 +50,11 @@ and only a voxel remesh held, at 600,000 triangles.
    edges, PASS first time. **Never cut exactly on the lathe's edges**: windows placed at
    45° + 90°·k on a 64-step spin (one edge every 5.625°) left 3 non-manifold edges; the same
    cuts half a step off (2.8°) left 0.
-   **Remesh last.** A boolean applied after a voxel remesh (the eyes engraved in a ghost, the shell
-   of a pumpkin carved after its stem was joined) left 2 to 9 edges shared by three faces: carve and
-   join first, remesh at 0.2 mm once at the end, then decimate (a pumpkin, 2.35 M → 250 k
-   triangles, still PASS). A part cut to fit another can leave a crumb behind (a paw tip behind
-   the ghost's hand): count islands, drop the ones hidden by the other part, and log it.
+   **Remesh last.** A boolean applied after a voxel remesh (eyes engraved in a figure, a shell
+   carved after a part was joined to it) left 2 to 9 edges shared by three faces: carve and
+   join first, remesh at 0.2 mm once at the end, then decimate (2.35 M → 250 k triangles, still
+   PASS). A part cut to fit another can leave a crumb behind (a tip hidden behind the other
+   part): count islands, drop the ones hidden by the other part, and log it.
    Parts meet by **overlapping, never face to face**: coplanar or touching faces are where an
    exact union leaves slivers and holes. Never `MANIFOLD` as the join: it returned a sealed,
    sliceable mesh that had dropped most of the object.
@@ -91,40 +91,48 @@ its eaves: rule 6's second half comes from it.
 ## Like the photo, for print
 
 A print is held in the hand and looked at from every side: it has to look like the reference,
-not only pass the slicer. Measured on a carved pumpkin rebuilt from one photo, v3 → v7: the
-first version passed every print check and the user found it "not alike at all".
+not only pass the slicer. Measured on a carved figure rebuilt from one photo: the first version
+passed every print check and the user found it "not alike at all".
 
-1. **The photo method applies in full** (`reference-fidelity.md` § 1–5): inventory on enlarged
-   crops, measure from the pixels, review against the photo. Print mode changes how the volume
-   is built, never how closely it follows the reference.
+1. **The photo method applies in full** (`reference-fidelity.md` § 1–5): cut the photo out,
+   inventory on enlarged crops, measure from the pixels, review against the photo. Print mode
+   changes how the volume is built, never how closely it follows the reference.
 2. **Read openings on their outer edge, not on their shadow.** A carved opening shows its cut
    wall at an angle — a lit band around the dark — and the opening is that band's OUTER line.
    Tracing the dark gave a mouth three times too thin; tracing the shadow and the
    see-through gave eyes half their size. Read the outline on a 6× crop with a 10 px grid.
-3. **Wall and groove depths come from the photo too.** The cut wall's band gives the wall's
-   thickness (4 mm on the pumpkin, against the 1.2 mm minimum first used, which read as paper);
-   the outline's bumps and the grooves' darkness give the ribs' depth. The process minimum is a
-   floor, never the value.
+3. **Wall and groove depths come from the photo too.** The lit band of a cut wall gives the
+   wall's thickness in pixels, hence in mm; the outline's bumps and the grooves' darkness give
+   a relief's depth. The process minimum is a floor, never the value: a shell at the 1.2 mm
+   minimum, where the photo showed three times that, read as paper.
 4. **Project the front details along the photo's camera, not straight back.** A camera
    `--elevation` θ above sees a front point lower than it is: cut along the line
-   z cos θ + y sin θ = v (y toward the back), not along y. Cut straight, every opening of the
-   pumpkin sat 4.9 mm low (θ = 10°); cut along the view, the gap fell to 0.4 % and the face
-   overlap from 0.24 to 0.63.
+   z cos θ + y sin θ = v (y toward the back), not along y. Cut straight, every opening of one
+   figure sat 4.9 mm low; cut along the view, the gap fell to 0.4 % and the face overlap rose
+   from 0.24 to 0.63. **The outline too**: at θ > 0 the top of the silhouette is the back of
+   the shoulders, not their side — read a turned profile through the same line. θ is read as
+   `reference-fidelity.md` § 1 says, on any circle of the object.
 5. **Measure the face, not only the silhouette.** The silhouette IoU stayed at 0.90 while the
    mouth went from a line to a grin. Read `fidelity_check`'s `face` block and
    `face_overlay.png` every round: the `offset`, then each detail's area (too small / too
-   large / missing). It is an alarm, not a judge (`reference-fidelity.md` § 5).
+   large / missing). It is an alarm, not a judge (`reference-fidelity.md` § 5): it counts a lit
+   cut wall as body, drops thin lines, and reads a deep groove's shadow as a detail.
 6. **Iterate until the gaps stop closing, not for a fixed count.** Print mode lifts the photo
-   method's two-round cap: one change per round, measured; a change that lowers the face
-   measure is undone (lowering the pumpkin's lower teeth did: 0.663 → 0.642, reverted). Stop
-   when a round closes nothing the overlay lists — the pumpkin took five — and show the user
-   `side_by_side.png`: they decide it is alike.
+   method's two-round cap (`reference-fidelity.md` § 5): one change per round, measured.
+   - A change that lowers the face measure by more than 0.01 is undone — unless the crops show
+     it follows the photo where the measure is known blind (an outline traced on its outer edge,
+     a thin line, a groove's shadow). Then the crop decides, and the log says why.
+   - A move under 0.01 either way is noise: judge it on the crops.
+   - Stop when two rounds in a row close nothing the overlay or the crops list, and show the
+     user `side_by_side.png`: they decide it is alike.
 7. **Colour the preview from the photo** — one material per region sampled from it (body,
-   stem). A print has no colour, but the review image is how the user judges the shape: a
-   green stem left orange read as a stem half its size.
-8. **Supports are normal for a figure.** Hanging teeth, paws or a round belly start in mid-air;
-   check with `--supports` and say the print needs them, rather than flattening what the photo
-   shows.
+   stem), on a lit area, not in shadow. A print has no colour, but the review image is how the
+   user judges the shape: a green stem left orange read as a stem half its size.
+8. **Supports are normal for what the photo shows; overhangs are designed out where nobody
+   looks.** Hanging teeth, paws or a round belly start in mid-air: check with `--supports` and
+   say the print needs them, rather than flattening what the photo shows. What no one sees —
+   the ceiling inside a hollow body, the underside of a base — is shaped for the printer (a 45°
+   cone, a chamfer), as long as no visible opening looks onto it.
 9. **The photo's colours are a question for CONFIG, not something the model drops.** On a
    single-colour printer each colour region is either painted afterwards — then the model
    carries the boundary as geometry (a 0.6 mm groove or step, § Printable from the brief, rule
@@ -132,6 +140,12 @@ first version passed every print check and the user found it "not alike at all".
    in a hole. The peg's clearance (0.2–0.3 mm per side on FDM) is a common starting value, not
    one measured here: say so, and offer a test print of the joint. Ask which, and log the
    answer.
+10. **Nothing the photo does not show.** No opening, part or ornament on a side nobody
+    photographed — background seen through an opening is not a view of the back
+    (`reference-fidelity.md` § 2). The unseen side stays plain and closed, and the log lists it.
+11. **Keep every round's numbers in the log**, whatever the storage mode: compact storage
+    drops the intermediate FILES, never the measures. The .blend of a kept version is enough
+    to come back to it.
 
 ## The tool
 
@@ -155,8 +169,8 @@ STL (mm), 3MF (its own unit), GLB and .blend (metres). Exit 0 PASS, 3 FAIL, 1 er
   the tool says so; a reference under one voxel of volume is a FAIL, never a ratio. The
   reference is first scaled to the model's height: a uniform scale is not a loss.
 - **`--supports`** slices with PrusaSlicer's automatic supports. A figurine whose limbs hang starts
-  them in mid-air: *Floating object part* without supports, a clean slice with them (the black cat
-  held by a ghost). The verdict can then PASS, and says the print needs them.
+  them in mid-air: *Floating object part* without supports, a clean slice with them (a figure
+  held in another's arms). The verdict can then PASS, and says the print needs them.
 - **`--slicer`** (a path, or a name on the PATH) gives the scaled mesh to PrusaSlicer in a
   throwaway `--datadir`: `--info` (manifold, parts) and an FDM `--export-gcode`, whose log
   is searched for *Empty layer* and *Floating object part*; past `--slicer-timeout` (1800 s

@@ -10,6 +10,8 @@ test writes its own tiny HDRI. Cases:
 - a model measured against its own render: IoU near 1, no shape gap;
 - the same model 20 % wider: the width gap is reported, and close to +20 %;
 - a texture that is not loaded: refused, exit 1 — it would render black;
+- a reference with no transparency (a phone photo on its white table): refused, exit 1 —
+  measured as it was, a pumpkin scored 0.62 instead of 0.93, with exit 0;
 - a .blend: measured, with the warning that the shipped file is what counts;
 - --max-tris: a guide, not a cap — under twice the limit listed last and kept, past it a
   reduction proposed; silent below;
@@ -155,6 +157,12 @@ sc.view_settings.exposure = 1.0; sc.render.filepath = f"{d}/ref_face_bright.png"
 # a 2 x 1 x 1 box: 2 m along X, so front is 2:1 and left is 1:1
 fresh(); bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, 0.5)); bpy.context.object.scale = (2, 1, 1)
 bpy.ops.object.transform_apply(scale=True); export(f"{d}/box.glb")
+# the reference flattened on white, every pixel opaque — what a phone photo is
+im = bpy.data.images.load(f"{d}/ref.png"); w, h = im.size; px = list(im.pixels[:])
+for i in range(0, len(px), 4):
+    a = px[i + 3]; px[i:i + 4] = [c * a + (1 - a) for c in px[i:i + 3]] + [1.0]
+op = bpy.data.images.new("opaque", w, h, alpha=True); op.pixels = px
+op.filepath_raw = f"{d}/ref_opaque.png"; op.file_format = "PNG"; op.save()
 '''
 
 
@@ -195,6 +203,10 @@ with tempfile.TemporaryDirectory() as d:
 
     r, _, _ = measure(d, f"{d}/lost.blend", check=False)
     check("unloaded texture: refused with exit 1", r.returncode == 1 and "textures not loaded" in (r.stdout + r.stderr),
+          r.returncode)
+
+    r, _, _ = measure(d, f"{d}/vase.glb", check=False, ref="ref_opaque.png")
+    check("opaque reference: refused with exit 1", r.returncode == 1 and "no transparent pixel" in (r.stdout + r.stderr),
           r.returncode)
 
     r, blend, _ = measure(d, f"{d}/vase.blend")
