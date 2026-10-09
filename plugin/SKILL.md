@@ -24,7 +24,7 @@ Reply in the language the user wrote the request in — not the language of the 
 | `/kiln batch` | Batch wizard → manifest → autonomous multi-asset production |
 | `/kiln batch run` | Execute/resume a batch manifest (options: `--all`, `--asset <name>`) |
 | `/kiln setup` | Environment detection + guided setup (models, dependencies, GPU) |
-| `/kiln models` | List available Hunyuan3D models, switch active model |
+| `/kiln models` | List the optional AI backends (TRELLIS.2 first, Hunyuan3D with its licence limit), switch the active one |
 | `/kiln status` | Show current pipeline state, next steps, prompts |
 | `/kiln search` | Search PolyHaven/Sketchfab marketplaces |
 | `/kiln inspect` | Inspect a 3D file (stats, poly count, materials, bbox) |
@@ -170,7 +170,7 @@ exercised live. Anything not listed here does not exist; the raw addon socket us
 | `search_polyhaven_assets` / `download_polyhaven_asset` / `get_polyhaven_categories` / `get_polyhaven_asset_preview` | PolyHaven, only when enabled |
 | `search_sketchfab_models` / `download_sketchfab_model` / `get_sketchfab_model_preview` | Sketchfab, only when enabled (free token) |
 | `search_polypizza_models` / `download_polypizza_model` | Poly Pizza low-poly models, only when enabled. Check each model's licence and record it (rule 17) |
-| `get_hunyuan3d_status` / `generate_hunyuan3d_model` / `poll_hunyuan_job_status` / `import_generated_asset_hunyuan` | Native Hunyuan3D — **needs Tencent Cloud keys or a local API**, and the licence excludes the EU |
+| `get_hunyuan3d_status` / `generate_hunyuan3d_model` / `poll_hunyuan_job_status` / `import_generated_asset_hunyuan` | Native Hunyuan3D — **needs Tencent Cloud keys or a local API**, and the licence excludes the EU, UK and South Korea. Never by default; only on explicit request, licence shown, confirmed first |
 | `get_hyper3d_status` / `generate_hyper3d_model_via_text` / `generate_hyper3d_model_via_images` / `poll_rodin_job_status` / `import_generated_asset` | Native Hyper3D Rodin — paid API (rule 5) |
 | `get_tripo_status` / `generate_tripo_model` / `poll_tripo_job_status` / `import_generated_asset_tripo` | Native Tripo — paid (rule 5) |
 | `disable_telemetry` / `record_trajectory_feedback` | Addon telemetry — opt-in since 2.0, leave it off |
@@ -255,10 +255,13 @@ angle too. A single-asset run therefore takes **at least four** captures.
   (anonymous). Never read or log a token. See `references/ai-generation.md`
 - Pollinations — **no longer free**: HTTP 402 after one image (measured 2026-09-29)
 
-**3D Generation (one of):**
-- **HF Spaces** — requires `gradio_client` in a venv (see `/kiln setup`; a bare
-  `pip3 install` fails on any PEP 668 Python, which is most of them)
-- **Local** — requires Hunyuan3D-2 models downloaded locally. Run `/kiln setup` to install.
+**3D Generation — optional, never required.** The default is Claude scripting
+Blender: no AI model, nothing to install. AI generation is an option the user picks
+(recommended for organic or realistic forms), and a local install is never needed
+for it:
+- **HF Spaces** (first choice) — free, quota-limited; requires `gradio_client` in a
+  venv (see `/kiln setup`; a bare `pip3 install` fails on any PEP 668 Python)
+- **Local** — only if the user wants offline work. Run `/kiln setup` to install.
 
 **Optional:**
 - `nano-banana` MCP — alternative concept art generation via Gemini (requires API key with billing)
@@ -288,7 +291,7 @@ Blender MCP  {✅ connected, addon v1.x / ⚠️ connected but outdated / ❌ no
 Python       {version, path} │ {⚠️ externally managed (PEP 668)}
 
 ── 3D Generation ───────────────────────────
-Backend      {✅ MCP native / ✅ Local (Hunyuan3D-2 mini) / ✅ HF Spaces / ❌ not configured}
+Backend      {✅ none needed — scripted (default) / ✅ HF Spaces / ✅ Local / ✅ MCP native}
 Models       {list installed models with sizes, or "none"}
 Device       {cuda / mps / cpu / unknown until a backend is installed}
 
@@ -336,21 +339,16 @@ Then use `~/.hunyuan3d/venv/bin/python` for every generation call, and detect
 
 Based on scan results, propose actions:
 
-**If no 3D backend configured:**
-> "Choose your 3D generation backend:"
-> 1. **MCP native** (recommended to start) — nothing to install. Tick *Use Tencent
->    Hunyuan 3D model generation* (or *Use Hyper3D Rodin*) in the BlenderMCP panel
->    of the 3D Viewport sidebar, press <kbd>N</kbd> if hidden. Takes effect
->    immediately. See `references/ai-generation.md`.
-> 2. **HF Spaces** — needs `gradio_client` in a venv, uses a shared cloud GPU with
->    a queue
-> 3. **Local Hunyuan3D** — ~25 GB of weights, runs offline, texture generation
->    needs CUDA
-> 4. **Both** — local as primary, one of the above as fallback
-
-Check what is already on before asking: `get_hunyuan3d_status()` and
-`get_hyper3d_status()`. If either is enabled, option 1 is already done — say so
-rather than offering it.
+**No 3D backend is not a gap.** Scripted modeling needs none — never push a setup.
+Only when the user picks AI generation, propose in this order (stage `RUNNING`
+checked first, `references/ai-generation.md`):
+> 1. **TRELLIS.2 Space** (`microsoft/TRELLIS.2`, MIT) — free, textured. Send an
+>    image with an alpha cut-out: an opaque one is cut out by RMBG-2.0, non-commercial.
+>    Else **TRELLIS** (`trellis-community/TRELLIS`, MIT), else **TripoSR** (MIT).
+> 2. **Local** — never required; offline only. TRELLIS.2 on Apple Silicon (31 GB).
+> 3. **Hunyuan3D** (Space, local or MCP native) — only on request. Its licence
+>    **does not apply in the EU, the UK or South Korea**: say so, confirm before any
+>    call. MCP-native Rodin and Tripo are paid (rule 5).
 
 **If user chooses Local:** Load `references/setup-install.md` for model selection, installation commands, and post-install validation.
 
@@ -358,17 +356,21 @@ rather than offering it.
 
 ## /kiln models — Model Management
 
-List and switch between available Hunyuan3D models.
+List and switch the optional AI backends. Default stays scripted — none needed.
 
 ```
 ── 🧠 Models ───────────────────────────────
-  #  │ Model                      │ Status          │ Size
-  1  │ hunyuan3d-dit-v2-mini      │ ✅ active       │ 6.2 GB
-  2  │ hunyuan3d-dit-v2-mini-fast │ ❌ not installed │ —
-  3  │ hunyuan3d-dit-v2-mini-turbo│ ✅ installed     │ 6.1 GB
+  #  │ Backend                     │ Status            │ Licence
+  1  │ TRELLIS.2 (HF Space)        │ ✅ RUNNING        │ MIT
+  2  │ TRELLIS (HF Space)          │ ✅ RUNNING        │ MIT
+  3  │ TripoSR (HF Space)          │ ❌ RUNTIME_ERROR  │ MIT
+  4  │ hunyuan3d-dit-v2-mini local │ ❌ not installed  │ ⚠️ not EU/UK/KR
 
-Backend: local (mps) │ "switch to 3" "download 2" "use HF Spaces" "delete 3"
+Active: scripted (no AI) │ "use 1" "install 4" "back to scripted"
 ```
+
+Stages are read live, never copied from here. Choosing Hunyuan3D shows its licence
+limit and asks for confirmation first.
 
 User can switch model or backend at any time during a session.
 
@@ -397,9 +399,9 @@ Collect these parameters. Only type and brief are mandatory — infer the rest f
 | **Visual style** (realistic, stylized, cartoon, low-poly) | realistic | Impacts sourcing + AI prompts |
 | **Mode** (auto / guided) | auto | guided = validation at each step |
 | **Storage** (compact / full) | compact | compact = original + final + .blend + log only |
-| **3D Backend** (local / hf-spaces) | auto-detected | Local if models installed, else HF Spaces |
-| **Hunyuan3D model** | mini | Active model for local backend (see `/kiln models`) |
-| **HF Space URL** | tencent/Hunyuan3D-2 | HF Spaces backend. Check `stage: RUNNING` first — a paused Space still answers HTTP 200. See `references/ai-generation.md` |
+| **3D Backend** (none / hf-spaces / local) | none — scripted | AI only when chosen; then HF Spaces unless a local model is installed |
+| **Local model** | none | Only if installed (see `/kiln models`) |
+| **HF Space URL** | microsoft/TRELLIS.2 | Then `trellis-community/TRELLIS`. Hunyuan3D only on request (licence). Check `stage: RUNNING` first — a paused Space still answers HTTP 200. See `references/ai-generation.md` |
 | **Auto-open links** | false | Configurable mid-session |
 | **Output folder** (absolute path) | `./generated-assets/` | Confirmed at launch |
 
@@ -483,7 +485,7 @@ Always explain WHY the recommendation, always let the user choose.
 
 | Method | Best for | Trade-off |
 |---|---|---|
-| **AI Generation (Hunyuan3D)** | organic, realistic, complex | Single mesh, texturing needed after |
+| **AI Generation (optional; TRELLIS.2 first)** | organic, realistic, complex | Single mesh, free daily quota |
 | **Scripted modeling (Blender Python)** | furniture, archi, stylized, low-poly | Separated parts, clean topology, more geometric |
 | **Geometry Nodes (procedural)** | scattering, patterns, parametric | Non-destructive, powerful but complex |
 | **User-provided image → AI or scripted** | when user has reference art (path or URL) | Image guides any method (see below) |
@@ -501,18 +503,18 @@ Ask: **"Do you have a reference image, or should I generate a concept from your 
 
 **Reference image usage per method:**
 
-A user-provided image (or generated concept art) is useful for ALL creation methods, not just Hunyuan3D:
+A user-provided image (or generated concept art) is useful for ALL creation methods, not just AI generation:
 
 | Method | How the image is used |
 |---|---|
-| **Hunyuan3D** | Passed directly as generation input (image → 3D) |
+| **AI generation** | Passed directly as generation input (image → 3D) |
 | **Scripted modeling** | **Load `references/reference-fidelity.md`** — inventory the details, measure the silhouette from the pixels (or, given a generated mesh of the photo, its profile with `tools/template_profile.py` — never ship that mesh), check every part is attached — and LOOK at every joint the review renders (`review/joints/`): a part that joins another enters it, section unchanged (a foot only if the photo shows one) — sample materials from the image (one material per physical material; patina stays metal), review twice against it |
 | **Geometry Nodes** | Analyze image to inform node parameters — spacing, density, pattern, scale |
 | **Marketplace** | Analyze image to refine search keywords and evaluate result similarity |
 
 If nano-banana MCP is available, offer it as an alternative (supports iterative editing) — it bills a Gemini key, so only on explicit request (rule 5).
 
-**Concept art & AI generation:** Load `references/ai-generation.md` for the concept-art commands, prompt rules, and Hunyuan3D details.
+**Concept art & AI generation:** Load `references/ai-generation.md` for the concept-art commands, prompt rules, and the 3D backends.
 
 **Scripted modeling flow:**
 
@@ -697,7 +699,7 @@ every rule there is a cycle that looked wrong until it was measured.
 
 Load `references/texturing-strategy.md`. With a reference image, also `references/reference-fidelity.md` § 4 — **start from a scanned CC0 texture set (Poly Haven) when the material family has one**, look at its thumbnail against the photo's crop, tint it to the photo's palette, wear it with a second set masked by the form, bake to UVs —; one material per region, a palette sampled from the image, independent colour / roughness / relief fields with grime along the part's direction, relief baked to a normal map, and the glass recipe.
 
-**Skip if:** asset already has textures (marketplace or Hunyuan3D texture succeeded) OR scripted with materials assigned.
+**Skip if:** asset already has textures (marketplace or AI-generated textures) OR scripted with materials assigned.
 
 **Triggered if:** white mesh (AI without texture) or insufficient materials.
 
@@ -791,7 +793,7 @@ Files    _original.glb ({size}) │ _clean.glb ({size}) │ .blend
 Next     {description}
 ```
 
-Note: "Reusable prompts" (concept art prompt, Hunyuan3D params) are stored in the log file only — not shown in status output.
+Note: "Reusable prompts" (concept art prompt, generation params) are stored in the log file only — not shown in status output.
 
 ---
 
@@ -987,8 +989,7 @@ Each asset produces `{name}_log.md`:
 ## Prompts (copy-paste ready)
 - Concept art: "{exact prompt}" (source: {flux-schnell|nano-banana|user image|user URL})
 - Concept iterations: ["{edit1}", "{edit2}"]
-- Hunyuan3D params: steps={s}, guidance_scale={g}, seed={seed},
-  octree_resolution={res}, mode={mode}
+- Generation params: backend={space}, seed={seed}, and the backend's own settings
 
 ## Source
 - Method: {AI / scripted / marketplace}
@@ -1031,7 +1032,7 @@ Axis conversion at export is automatic.
 |---|---|
 | Local install (models, commands, validation) | `references/setup-install.md` |
 | Marketplace search | `references/sourcing-strategy.md` |
-| AI generation (Hunyuan3D), concept art (FLUX.1-schnell Space, nano-banana) | `references/ai-generation.md` |
+| AI generation (TRELLIS.2, TripoSR, Hunyuan3D), concept art (FLUX.1-schnell Space, nano-banana) | `references/ai-generation.md` |
 | Topology rules, poly budgets | `references/topology-rules.md` |
 | UV, materials, PBR | `references/uv-materials.md` |
 | Texturing white meshes | `references/texturing-strategy.md` |

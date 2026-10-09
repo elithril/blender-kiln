@@ -68,10 +68,10 @@ IF brief suggests simple geometric shapes (table, shelf, door, box, frame)
     → method: scripted
 
 IF brief suggests organic/complex forms (ergonomic chair, articulated lamp, plant, rock)
-    → method: hunyuan3d
+    → method: ai (proposed — the recap is where the user confirms or switches)
 
 IF type = character
-    → method: hunyuan3d (always)
+    → method: ai (proposed)
 
 IF brief suggests repetitive patterns (cables, grids, fences, railings)
     → method: geometry-nodes
@@ -92,7 +92,7 @@ Scene: {name} │ {style} │ {tier} │ {target}
 
   #  Asset     Method          Materials        Tier        Ref Image
   1  desk      scripted        wood + metal     balanced    —
-  2  chair     hunyuan3d       fabric + plastic balanced    📷 chair-ref.png
+  2  chair     ai              fabric + plastic balanced    📷 chair-ref.png
   3  keyboard  marketplace     plastic          lightweight —
   ...
 
@@ -100,19 +100,19 @@ Scene: {name} │ {style} │ {tier} │ {target}
    Network retries, material complexity, and errors can
    double an individual asset.
 ────────────────────────────────────────────
-Modify? (e.g. "3 → hunyuan3d", "5 tier detailed")
+Modify? (e.g. "3 → ai", "5 tier detailed")
 Or: Launch / Later
 ```
 
 **Token estimation formula:**
 - scripted: ~30K tokens/asset
 - marketplace: ~20K tokens/asset
-- hunyuan3d: ~60-80K tokens/asset
+- ai: ~60-80K tokens/asset
 - geometry-nodes: ~40K tokens/asset
 - Multiply total by 1.0 (low) and 1.5 (high) for the range
 
 Allow the user to adjust any line before validation. Accept formats like:
-- `"3 → hunyuan3d"` — change method
+- `"3 → ai"` — change method
 - `"5 tier detailed"` — change tier
 - `"2 materials wood + metal"` — change materials
 - `"2 ref /path/to/image.png"` — add/change reference image
@@ -165,7 +165,7 @@ Execute a batch manifest autonomously. Zero interaction during execution.
    | Any asset with | Check |
    |---|---|
    | `method: marketplace` | `get_polyhaven_status()` and `get_sketchfab_status()` |
-   | `method: hunyuan3d` + `config.backend: mcp` | `get_hunyuan3d_status()` |
+   | `method: ai` + `config.backend: mcp` (Hunyuan3D, on request only) | `get_hunyuan3d_status()` |
    | Rodin generation | `get_hyper3d_status()` |
 
    If a needed integration is off, ABORT the batch and print the `message` field
@@ -234,9 +234,9 @@ For each asset where `status` is `pending`, `failed`, or `redo` (in manifest ord
          Use visual analysis to guide Python modeling — match proportions,
          number of parts, shapes, and structural details from the image.
        Go to scripted modeling flow.
-     - hunyuan3d →
+     - ai (`hunyuan3d` in older manifests) →
        IF reference image was analyzed:
-         Use reference image directly as Hunyuan3D input (skip concept art generation).
+         Use reference image directly as the generation input (skip concept art generation).
        ELSE:
          Generate concept art (FLUX.1-schnell Space, auto prompt from brief).
        Then AI generation. Use config.backend.
@@ -351,7 +351,7 @@ The runner maintains `batch-report.md` in the batch folder, updated after each a
 | # | Asset | Status | Method | Faces | Size | Duration |
 |---|-------|--------|--------|-------|------|----------|
 | 1 | desk | ✅ | scripted | 2.1K | 340KB | 3m |
-| 2 | chair | ✅ | hunyuan3d | 3.8K | 1.2MB | 5m |
+| 2 | chair | ✅ | ai | 3.8K | 1.2MB | 5m |
 | 3 | keyboard | ❌ | marketplace | — | — | — |
 |   | | | Error: No matching asset found on PolyHaven/Sketchfab |
 ```
@@ -400,8 +400,8 @@ config:
   tier: balanced                      # lightweight | balanced | detailed
   storage: compact                    # compact | full
   backend: hf-spaces                  # hf-spaces | local
-  hf_space_url: tencent/Hunyuan3D-2    # pre-flight must check stage=RUNNING
-  hunyuan_model: mini                 # mini | mini-fast | mini-turbo (local only)
+  hf_space_url: microsoft/TRELLIS.2   # pre-flight must check stage=RUNNING; Hunyuan3D only on request (licence excludes EU/UK/KR)
+  local_model: null                   # only if installed (local only)
   optimize_preset: resize-1k-webp-draco  # resize-1k-webp-draco | resize-512-webp | none | custom
   output_folder: ./generated-assets/batch-corporate-office-2026-04-02
 
@@ -422,7 +422,7 @@ palette:
 assets:
   - name: desk                        # kebab-case, used for folder + file names
     brief: "Modern rectangular desk, light wood top, tubular metal legs"
-    method: scripted                  # scripted | hunyuan3d | marketplace | geometry-nodes
+    method: scripted                  # scripted | ai | marketplace | geometry-nodes
     reference_image: null             # optional: local path or URL to reference image
     materials: [wood, metal]          # refs to palette keys
     tier: balanced                    # override config.tier if needed
