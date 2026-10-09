@@ -395,6 +395,7 @@ Collect these parameters. Only type and brief are mandatory — infer the rest f
 | **Type** (prop, environment, character, vehicle...) | mandatory | — |
 | **Brief** (description, context, mood) | mandatory | Feeds searches and prompts |
 | **Export target** (glTF, FBX, USDZ, multi) | glTF | Determines export rules |
+| **Print** (FDM / resin + height in mm) | none | Set when the brief says it will be 3D printed. Switches [3], [5] and [7] to `references/print.md`; target STL (+ 3MF) |
 | **Detail tier** (lightweight / balanced / detailed / custom) | balanced | Soft ranges, never hard caps |
 | **Visual style** (realistic, stylized, cartoon, low-poly) | realistic | Impacts sourcing + AI prompts |
 | **Mode** (auto / guided) | auto | guided = validation at each step |
@@ -480,6 +481,12 @@ ELSE
 ```
 
 Always explain WHY the recommendation, always let the user choose.
+
+**Print set in CONFIG:** recommend scripted, and **load `references/print.md` § Printable from
+the brief before the first primitive** — model at print size, closed solids only, one volume
+(exact union as you go, or overlap + one voxel remesh), the process's minimum thickness, a flat
+base, overhangs that grow out of the part below, relief as geometry. A generated or marketplace
+mesh is repaired instead ([5]). Texturing ([5b]) carries nothing to a print.
 
 **Options:**
 
@@ -635,6 +642,10 @@ non-manifold edge counts with before, and look at a close render of every thin p
 **Auto mode:** non-destructive cleanup runs automatically. Decimate remains interactive.
 **Guided mode:** show each step, wait for validation.
 
+**Print set in CONFIG:** after any repair (union, remesh, decimate), run `tools/print_check.py`
+with `--reference` on the file it was repaired from (`references/print.md` § The tool): a
+sealed, sliceable result can have lost most of the object, and only that comparison sees it.
+
 ### [5c] RIG SELECTION — characters only (rule 26)
 
 Runs after CLEANUP, once the mesh is final and **welded** (rule 10). Never weight a
@@ -755,7 +766,12 @@ By target:
     glTF/GLB → Principled BSDF only, Draco/meshopt per optimize choice
     FBX → Apply Transform, scale 1.0, version 7.4
     USDZ → Reality Converter or usdzconvert (macOS)
+    Print → STL, global_scale=1000 (mm); 3MF too if the extension is installed
 ```
+
+**Print set in CONFIG:** the export ends with `tools/print_check.py --process … --slicer …`
+(PrusaSlicer when installed) on the STL. **PASS is required**; otherwise report each FAIL line
+as the tool printed it — never call the file printable.
 
 **Axis conversion** handled automatically (Blender -Y/Z → glTF +Z/Y).
 
@@ -1043,3 +1059,4 @@ Axis conversion at export is automatic.
 | Characters, rigging (phase 2) | `references/characters.md` |
 | Animation: routes, UniMate install and prompts | `references/animation.md` |
 | Batch mode (wizard, runner, manifest) | `references/batch-mode.md` |
+| 3D printing: modelling from the brief, check, repair | `references/print.md` |
