@@ -4,6 +4,26 @@
 
 ---
 
+## Scope — simple objects ONLY
+
+Print mode models **simple objects**: turned or geometric shapes, and stylised figures that are
+a bell, a block or a lathe with a few details cut or engraved. Measured on six briefs: a dog
+house, a lighthouse, a pumpkin and a ghost's body passed, and looked like what was asked. A
+cat held by the ghost, then a real cat rebuilt from its photo, both passed every print check
+and were unacceptable to look at — primitives cannot make an animal, and no rule here closes
+that gap.
+
+**An animal, a person, a character, a portrait of anything alive: refuse print mode at
+CONFIG, before the first primitive.** Say why in one line and offer what is honest:
+- the object reduced to a simple stylised shape the user agrees to first (a cat as a bell
+  with ears — said as such, not as a likeness);
+- or `tools/print_check.py` on a model the user brings (a sculpt, a scan, a model bought or
+  downloaded): the check works on any mesh.
+
+Never start one "to see": every round spent on it is spent on a result the user will reject.
+
+---
+
 ## Requirements
 
 A slicer cuts the mesh into layers and fills what is inside. It needs to know what inside is:
@@ -150,8 +170,9 @@ passed every print check and the user found it "not alike at all".
      could fix. Do not invent a change to get an empty round.
    - **A gap two rounds could not close is the method's limit, not a reason to go on**: log it
      as a limit (what was tried, what it measured) and move to the next gap; when every open
-     gap is one, stop. A primitive cat stays a primitive cat — say so to the user, and say
-     what would do better (the AI route of SKILL.md [3] for an organic figure).
+     gap is one, stop, and say so to the user. If the limits are the object itself — it was
+     not a simple object after all — say that too (§ Scope) rather than hand over a likeness
+     it is not.
    - The joint review and the close look at the cut edges (rule 7, `reference-fidelity.md`
      § 3 and § 6) come **before** stopping, not after: run them every round the joints or
      cuts changed — on a pumpkin they found a plateau, steps and a regression the numbers
