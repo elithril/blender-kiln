@@ -110,7 +110,13 @@ nothing and the user gets no response.
     with get_object_info() — see rule 24.
 15. ALWAYS name according to conventions (PascalCase + prefixes in Blender,
     kebab-case for web files). See references/naming-conventions.md.
-16. ALWAYS save the .blend file in the asset output folder.
+16. ALWAYS save the .blend file in the asset output folder — and never over the
+    user's own: when the open Blender holds anything of the user's (a file, a scene,
+    objects), build in a headless Blender (rule 21) and save the .blend from there;
+    use the open Blender only to look. Measured in 5.2.2: `save_as_mainfile` renames
+    the user's file; `copy=True` drags their objects into yours;
+    `bpy.data.libraries.write` of the asset alone leaves it in no scene, and of a
+    scene, crashes Blender.
 17. ALWAYS track licenses of all resources used in the log.
 18. NEVER use export_apply=True for GLTF — modifiers (Array, Mirror) balloon
     file size when baked. Replicate instances at runtime instead.
@@ -797,7 +803,7 @@ as the tool printed it — never call the file printable.
 
 Save in output folder per **storage mode** (compact or full). See `references/naming-conventions.md` for folder structure details. The .blend file always contains the full history — compact mode is safe.
 
-Save the .blend file via `execute_blender_code`: `bpy.ops.wm.save_as_mainfile(filepath=...)`.
+Save the .blend file via `execute_blender_code`: `bpy.ops.wm.save_as_mainfile(filepath=...)`. Only when the open file is yours alone — otherwise from the headless Blender that built it (rule 16).
 
 **Output format:**
 ```
@@ -1040,7 +1046,8 @@ Each asset produces `{name}_log.md`:
 - Export: {format}, {final_size}, {final_faces}
 - Rounds (reference image): v{n}: silhouette {iou}, face {iou} (f {f}, offset {mm}); changed
   {one thing}; kept / undone
-- Print check: {PASS/FAIL}, {dimensions} mm, {parts} part(s), supports {yes/no}, warnings {…}
+- Print check, one line per printed part: {part}: {PASS/FAIL}, {dimensions} mm, {parts} part(s),
+  supports {yes/no}, warnings {…}
 
 ## Licenses
 - {resource}: {license} {attribution if needed}

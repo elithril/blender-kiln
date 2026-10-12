@@ -573,6 +573,10 @@ def main():
              cavities=int((enclosed & (vol < 0)).sum()),
              volume_mm3=round(float(vol[closed].sum()), 3), overhang_area_pct=overhang_pct, thickness=thin)
     fails, warns = [], []
+    # A rescale hides a model built at the wrong size: one at 93.7 mm passed as 100 mm in silence.
+    if abs(scale - 1.0) > 0.01:
+        warns.append(f"scaled x{scale:.3f} to {o.height_mm:g} mm: the file itself is {native_h:.1f} mm tall "
+                     f"— print it at that scale, or export it at size")
     if topo["open_edges"]:
         fails.append(f"{topo['open_edges']} open edges — the surface has holes")
     if topo["nonmanifold_edges"]:

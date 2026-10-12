@@ -39,7 +39,10 @@ small part reads as something it is not; a 3x crop shows what it is.
   measured in step 5 with its own `--view`. Parts no view shows are inventions: say which.
 - **The real size.** A photo has no scale. Ask; otherwise take the object's usual size
   and log it as an assumption. Never leave it implicit: an unstated size drifts by tens of
-  percent and nothing flags it.
+  percent and nothing flags it. **A ruler in the photo gives it** — but only for what stands
+  at the ruler's distance: a ruler laid in front of an object is nearer the lens, reads
+  larger, and makes the object read small (about 7 % on a teapot photographed close). Correct
+  for the depth between them, and log it.
 - **The camera's elevation.** A photo taken from above shows the top of every circle as an
   ellipse, whose minor/major ratio is sin θ. Read θ on the widest rim you can see; step 5
   renders at that elevation. Ignoring it inflates every stacked disc.

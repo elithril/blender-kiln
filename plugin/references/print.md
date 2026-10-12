@@ -60,6 +60,15 @@ and only a voxel remesh held, at 600,000 triangles.
 3. **One volume, joined one of two ways** — never by touching faces:
    - **Union as you go**: Boolean, solver `EXACT`, applied part by part; count non-manifold
      edges after each (bmesh, `not e.is_manifold`) and stop at the first that is not 0.
+     **That count is not the verdict — `print_check` on the exported STL is.** Two sessions
+     read 0 in Blender while the STL had 84 and 480 edges shared by three faces or more; both
+     cleared it by triangulating in Blender before exporting
+     (`bmesh.ops.triangulate(bm, faces=bm.faces[:], quad_method="BEAUTY", ngon_method="BEAUTY")`),
+     then checking the STL again. Export and check after each risky step, not only at the end.
+     Set `material_mode = "TRANSFER"` on every boolean: the default `INDEX` paints the second
+     part in the first one's material (checked on two cubes, Blender 5.2.2), and the preview
+     loses its regions. A difference with many cutters that fails as one pass (66 engraved
+     diamonds: 1,408 open edges) can pass split into a few passes — check after each.
    - **Interpenetrate, then one voxel remesh**: every part enters its neighbour by at least
      one wall thickness; join, Remesh `VOXEL` (adaptivity 0) at ≤ 0.2 mm and ≤ the thinnest
      feature / 8, then move the lowest vertex back to Z = 0. The study's lantern, remeshed
@@ -85,6 +94,11 @@ and only a voxel remesh held, at 600,000 triangles.
 5. **A flat base on the bed**: lowest Z = 0 on a flat face that carries the object, origin at
    the bottom centre. Every part rests on the bed or enters another — two of the chest's parts
    ended 1.1 mm above the lid and PrusaSlicer reported an empty layer.
+   **A part that would print in the air is printed apart**, each on its own best face: a
+   windmill's lattice sails, upright, had horizontal bars starting in mid-air; laid flat as a
+   second part, both parts PASS with no support. Each part gets its own STL, its own
+   `print_check`, and its own line in the log; they join by a peg in a hole (the clearance of
+   § Like the photo rule 9, not measured here — say so).
 6. **Overhangs past 45° from vertical are designed out**: undersides of eaves, caps and rims
    at 45° or steeper (a cone, a chamfer, a roof pitch ≥ 45°), grooves as V-cuts. What remains
    — the top of an arch, the inside of a ring — is reported with the check's overhang %.
@@ -233,7 +247,9 @@ STL (mm), 3MF (its own unit), GLB and .blend (metres). Exit 0 PASS, 3 FAIL, 1 er
   study's first measure welded at 1e-5 before counting; that glued neighbouring shells and
   made defects the file did not have. The tool's counts match an independent exact edge
   pairing on every study file.
-- **`--reference`** voxelises both meshes at the same size (largest dimension / 150) and
+- **`--reference`** is the file the model came from: the original before a repair, or — for a
+  model built from scratch by unions — the parts saved just before the union (both sessions
+  that built one chose that, and it caught nothing false). It voxelises both meshes at the same size (largest dimension / 150) and
   compares dimensions (3 %) and volume (10 %, only when the dimensions agree and BOTH the
   model and the reference are sealed — an open mesh voxelises to almost nothing: an open
   40 × 20 × 20 box gives 4 mm3). A closed cavity is voxelised as solid, so its exact volume is

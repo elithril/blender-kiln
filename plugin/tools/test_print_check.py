@@ -22,7 +22,8 @@ them, no network. Cases:
   the full block: same bounding box, a quarter of the volume — FAIL on volume alone; a cup
   open at the top against the same hollow body closed — a figure carved after its reference
   was saved: no loss (the voxelisation fills a closed cavity; it read 23 % on a pumpkin);
-- --height-mm scales: the cube read at 50 mm is 50 mm;
+- --height-mm scales: the cube read at 50 mm is 50 mm, and the scale is said — a model built
+  at 93.7 mm passed as 100 mm in silence; at its own height, nothing is said;
 - a missing file: exit 1;
 - slivers (parts under 1e-3 mm3) neither hold a part they cross nor lower the bed;
 - a reference with no volume is a FAIL with no NaN; an open reference's volume is not compared;
@@ -208,6 +209,11 @@ with tempfile.TemporaryDirectory() as d:
 
     rc, r, _ = run(f"{d}/cube.stl", "--process", "fdm", "--height-mm", "50")
     check("--height-mm 50: 50 mm on every side", r["dims_mm"] == [50.0, 50.0, 50.0], r["dims_mm"])
+    check("--height-mm 50: the scale is said, with the file's own height",
+          any("scaled" in w and "20.0 mm" in w for w in r["warnings"]), r["warnings"])
+    rc, r, _ = run(f"{d}/cube.stl", "--process", "fdm", "--height-mm", "20")
+    check("--height-mm at the file's own height: no scale warning", not any("scaled" in w for w in r["warnings"]),
+          r["warnings"])
 
     rc, r, p = run(f"{d}/nothing.stl", "--process", "fdm")
     check("missing file: exit 1, no verdict", rc == 1 and r is None, rc)
