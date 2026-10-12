@@ -68,7 +68,7 @@ and only a voxel remesh held, at 600,000 triangles.
      Set `material_mode = "TRANSFER"` on every boolean: the default `INDEX` paints the second
      part in the first one's material (checked on two cubes, Blender 5.2.2), and the preview
      loses its regions. A difference with many cutters that fails as one pass (66 engraved
-     diamonds: 1,408 open edges) can pass split into a few passes — check after each.
+     motifs: 1,408 open edges) can pass split into a few passes — check after each.
    - **Interpenetrate, then one voxel remesh**: every part enters its neighbour by at least
      one wall thickness; join, Remesh `VOXEL` (adaptivity 0) at ≤ 0.2 mm and ≤ the thinnest
      feature / 8, then move the lowest vertex back to Z = 0. The study's lantern, remeshed
@@ -95,7 +95,7 @@ and only a voxel remesh held, at 600,000 triangles.
    the bottom centre. Every part rests on the bed or enters another — two of the chest's parts
    ended 1.1 mm above the lid and PrusaSlicer reported an empty layer.
    **A part that would print in the air is printed apart**, each on its own best face: a
-   windmill's lattice sails, upright, had horizontal bars starting in mid-air; laid flat as a
+   lattice part, upright, had horizontal bars starting in mid-air; laid flat as a
    second part, both parts PASS with no support. Each part gets its own STL, its own
    `print_check`, and its own line in the log; they join by a peg in a hole (the clearance of
    § Like the photo rule 9, not measured here — say so).
