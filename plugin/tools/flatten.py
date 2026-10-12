@@ -125,6 +125,35 @@ def fit(P, mean_normal):
     return nrm, float(nrm @ c), Q @ nrm, Q @ e1, Q @ e2
 
 
+def lay_on_bed(V, F, o):
+    """Turn V so its largest downward face lying within --bed-deg of down, and within the
+    tolerance of a plane, faces straight down. Done BEFORE flattening: flattening first snapped
+    a box's sides upright while the box was still tilted, and its top came out 0.04 mm off level."""
+    _, n, area = pc.face_data(V, F)
+    regs, _ = regions(V, F, n, area, neighbours(F), o.tol_mm, o.grow_deg)
+    best = None
+    for r in regs:
+        a = float(area[r].sum()); vid = np.unique(F[r])
+        if a < o.min_area_mm2 or len(vid) < 3:
+            continue
+        nrm, _, h, _, _ = fit(V[vid], (n[r] * area[r][:, None]).sum(axis=0))
+        if nrm[2] < -math.cos(math.radians(o.bed_deg)) and float(np.abs(h).max()) <= o.tol_mm:
+            if best is None or a > best[0]:
+                best = (a, nrm)
+    if best is None:
+        return V, 0.0
+    nrm = best[1]; target = np.array([0.0, 0.0, -1.0])
+    axis = np.cross(nrm, target); s = float(np.linalg.norm(axis)); c = float(nrm @ target)
+    deg = math.degrees(math.atan2(s, c))
+    if s > 1e-12:
+        k = axis / s
+        K = np.array([[0, -k[2], k[1]], [k[2], 0, -k[0]], [-k[1], k[0], 0]])
+        R = np.eye(3) + s * K + (1 - c) * (K @ K)
+        ctr = V.mean(axis=0)
+        V = (V - ctr) @ R.T + ctr
+    return V, deg
+
+
 def main():
     o = args()
     if not os.path.exists(o.model):
@@ -134,6 +163,9 @@ def main():
     if not (o.tol_mm > 0 and o.edge_deg > 0):
         pc.die("--tol-mm and --edge-deg must be above 0")
     V, F = pc.load(o.model)
+    bed_deg = 0.0
+    if o.bed:
+        V, bed_deg = lay_on_bed(V, F, o)          # level first, then flatten in that frame
     V0 = V.copy()
     before = pc.topology(V, F)[0]
     _, n, area = pc.face_data(V, F)
@@ -222,20 +254,7 @@ def main():
     held = move > o.tol_mm + 1e-9
     V[held] = V0[held]
 
-    bed_deg = 0.0
     if o.bed:
-        down = [(a, nrm) for nrm, d, vid, a, mean_n in planes if nrm[2] < -math.cos(math.radians(o.bed_deg))]
-        if down:
-            _, nrm = max(down, key=lambda x: x[0])
-            target = np.array([0.0, 0.0, -1.0])
-            axis = np.cross(nrm, target); s = np.linalg.norm(axis); c = float(nrm @ target)
-            bed_deg = math.degrees(math.atan2(s, c))
-            if s > 1e-12:
-                k = axis / s
-                K = np.array([[0, -k[2], k[1]], [k[2], 0, -k[0]], [-k[1], k[0], 0]])
-                R = np.eye(3) + s * K + (1 - c) * (K @ K)
-                ctr = V.mean(axis=0)
-                V = (V - ctr) @ R.T + ctr
         V[:, 2] -= V[:, 2].min()
 
     after = pc.topology(V, F)[0]

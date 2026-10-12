@@ -66,3 +66,7 @@ jobs:
       - name: Check the print check against seeded meshes
         run: |
           BLENDER=blender python3 plugin/tools/test_print_check.py
+
+      - name: Check flattening against seeded meshes
+        run: |
+          BLENDER=blender python3 plugin/tools/test_flatten.py

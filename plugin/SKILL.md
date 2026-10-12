@@ -868,6 +868,10 @@ Anim     {count or "none"}                                         Rig       {ye
 Use `execute_blender_code` to import temporarily, read stats via Python API, then undo/delete.
 For GLB: can also use `gltf-transform inspect {path}` if installed.
 
+**For a print** (the user says so, or the file is an STL or a 3MF): add `tools/print_check.py`'s
+verdict — `--slicer` when PrusaSlicer is installed — and quote each FAIL and warning as the tool
+printed it. Never call the file printable on the stats alone.
+
 ### /kiln cleanup
 
 Clean up a mesh already open in Blender (or import one first).
@@ -877,6 +881,13 @@ Clean up a mesh already open in Blender (or import one first).
 3. Load `references/validation-checklist.md` — execute full cleanup sequence
 4. `get_viewport_screenshot()` after each step
 5. If poly count high: propose decimate (always interactive)
+
+**For a print** — a model the user made and wants to print (`/kiln cleanup model.stl`): not the
+sequence above. Load `references/print.md` § A model you bring, then: `print_check` on the file,
+`tools/flatten.py` to a NEW file (never over theirs), `print_check` again, and show both verdicts
+and flatten's report — regions flattened, kept as shapes, past the tolerance, the largest move —
+with a matcap close-up of the largest flattened face before and after. Holes are reported, not
+filled: the slicer closes small ones, the user decides the rest.
 
 ### /kiln texture
 

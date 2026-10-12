@@ -24,6 +24,9 @@ Known meshes, written as STL by this script, with the answer fixed before the to
   kept (an edge sharper than --edge-deg bounds a face; flattening across it would erase it);
 - the same 0.2 mm rise as a 20 degree bevel (0.55 mm wide) — a chamfer a plank's edge has:
   kept (the first distance-grown version flattened the chest's bevels away);
+- the whole box tilted 1 degree with its top jittered, --bed: laid level FIRST, then
+  flattened — the top at one height, nothing held (flattening first snapped the sides upright
+  while the box was still tilted, and 87 vertices could not follow);
 - the output path equal to the input: refused, exit 1, the input untouched.
 """
 import json, math, os, random, struct, subprocess, sys, tempfile
@@ -254,6 +257,22 @@ with tempfile.TemporaryDirectory() as d:
     out = read(f"{d}/bevel_out.stl") if rc in (0, 3) else []
     check("0.2 mm bevel at 20 degrees: kept", bool(out) and moved(src, out) < 1e-4,
           round(moved(src, out), 4) if out else (rc, log[-200:]))
+
+    # 5d. the whole box tilted, top jittered, --bed: level first, then flat
+    a = math.radians(1.0); ca, sa = math.cos(a), math.sin(a)
+    rot = {}
+    def R(p):
+        if p not in rot:
+            rot[p] = (30 + (p[0] - 30) * ca + (p[2] - 12.5) * sa, p[1], 12.5 - (p[0] - 30) * sa + (p[2] - 12.5) * ca)
+        return rot[p]
+    src = [[R(p) for p in t] for t in grid_box(60, 40, 25, 12, top=jitter(0.15))]
+    stl(f"{d}/tilted.stl", src)
+    rc, r, log = run(f"{d}/tilted.stl", f"{d}/tilted_out.stl", "--tol-mm", "0.3", "--bed")
+    out = read(f"{d}/tilted_out.stl") if rc in (0, 3) else []
+    tops = [p[2] for t in out for p in t if p[2] > 12]
+    check("tilted box, --bed: top at one height (to 1 micron)", bool(tops) and max(tops) - min(tops) < 1e-3,
+          round(max(tops) - min(tops), 4) if tops else (rc, log[-200:]))
+    check("tilted box, --bed: nothing held", r is not None and r["vertices_held"] == 0, r and r.get("vertices_held"))
 
     # 6. never over the input
     before = open(f"{d}/jit.stl", "rb").read()

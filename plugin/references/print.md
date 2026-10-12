@@ -18,7 +18,8 @@ CONFIG, before the first primitive.** Say why in one line and offer what is hone
 - the object reduced to a simple stylised shape the user agrees to first (a cat as a bell
   with ears — said as such, not as a likeness);
 - or `tools/print_check.py` on a model the user brings (a sculpt, a scan, a model bought or
-  downloaded): the check works on any mesh.
+  downloaded): the check works on any mesh, and `tools/flatten.py` makes its nearly flat faces
+  flat (§ A model you bring).
 
 Never start one "to see": every round spent on it is spent on a result the user will reject.
 
@@ -143,6 +144,37 @@ PASS (overhangs 0.69 %), and its 3MF too; a lantern, 44 × 44 × 100.5 mm resin,
 0.2 mm — 889,152 triangles, PASS (overhangs 1.18 %, 75 self-intersecting pairs left by the
 remesh, a warning; sliced as FDM, the only slicer pass). The dog house's first build failed on
 its eaves: rule 6's second half comes from it.
+
+## A model you bring
+
+`print_check` works on any mesh, and `tools/flatten.py` is the one change kiln makes to a model
+it did not build. A model finished by hand often has faces that should be flat and are not,
+and sits a degree off; the slicer prints it as it is.
+
+```
+blender -b --factory-startup --python-exit-code 1 --python tools/flatten.py -- \
+    model.stl --out model_flat.stl --bed --json flatten.json      # then print_check on both
+```
+
+- **What it changes**: a face whose vertices all lie within `--tol-mm` (0.3) of one plane, and
+  that is not a shape, becomes exactly flat; a flattened plane within 1° of an axis becomes
+  that axis; `--bed` first turns the model so its largest downward face is level, then sets it
+  on Z = 0. Vertices shared by flat faces land where their planes meet, so edges stay sharp.
+- **What it keeps** — each one a case that broke a version of the tool on a real file: a curve
+  (a quadric fits it), a fold or a wave (its distance to the plane varies smoothly between
+  neighbours: a ghost's sides came out faceted until this), a patch that runs on into its
+  neighbours without an edge, a 0.2 mm step behind a vertical wall, a bevel turning more than
+  8° (a chest's plank bevels were flattened away until this), a real slope.
+- **What it does not do**: fill a hole (the slicer closes small ones; `print_check` says where
+  the rest are), change the triangle list, move a vertex past the tolerance, write over its
+  input.
+- **Measured** on the windmill, turned 1° with 10 % of its vertices off by 0.1-0.25 mm:
+  PrusaSlicer finished its gallery floor at 4 heights and held it by one edge of the base
+  (629 mm of first layer); flattened, one height and the whole base (3,317 mm). 52 of its 74
+  flat faces back flat to 0.01 mm; with every vertex off (scan-like noise), 31. On the
+  windmill, the teapot, the pumpkin and the ghost as kiln made them, nothing moves but the
+  ghost's base (0.01 mm). A script in the repository's examples rebuilds the README's figure
+  from the G-code alone.
 
 ## Like the photo, for print
 

@@ -32,6 +32,17 @@ print mode refuses an animal, a person or a character before the first primitive
   closing — the two-round cap does not apply to print.
 - **`tools/cutout.swift`**: macOS Vision's subject lifting cuts a photo out, local and free,
   where a background fill could not part a white ghost from a white wall.
+- **`tools/flatten.py`**, for a model you made: nearly flat faces made exactly flat, the model
+  laid level on the bed, nothing else touched — curves, folds, bevels, steps and real slopes
+  kept, no vertex past the tolerance, the input never overwritten, holes left to the slicer
+  (which closes small ones: an open-topped cube sliced fine in PrusaSlicer 2.9.6). On the
+  windmill turned 1° with 10 % of its vertices off, PrusaSlicer finished the gallery floor at
+  4 heights and held the print by one edge (629 mm of first layer); flattened, 1 height and
+  the whole base (3,317 mm). 22 seeded cases, each after the first added when a real model
+  broke the tool. `/kiln inspect` and `/kiln cleanup` gain a print variant.
+- **README § 3D printing**, with the windmill (preview and parts), the teapot against its
+  museum photo (CC BY 4.0), and the before/after drawn from PrusaSlicer's G-code by
+  `examples/print/flatten_demo.py`, which rebuilds it from the committed windmill.
 
 ### Changed
 

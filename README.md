@@ -249,6 +249,59 @@ goes to it: `unimate.py` recognises the posture and points at `quadruped.py`.
 > (`examples/animation/showcase.sh`, assets and credits alongside), not from an
 > interactive session of the skill.
 
+## 3D printing — simple objects
+
+<p align="center">
+  <img src="docs/images/print-windmill.webp" width="100%" alt="A Dutch windmill kiln modelled for an FDM printer: the coloured preview, and the two STL parts as they print — the body upright, the lattice sails flat beside it" />
+</p>
+
+Say it will be printed, and kiln models **for the printer from the first primitive**: at size, in
+closed solids joined into one volume, smooth where a layer would show a facet, with no
+overhang where nobody looks, and in several parts when one would print in the air — the
+windmill above is a body and its sails, laid flat, each checked on its own. Every STL ends
+with [`tools/print_check.py`](plugin/tools/print_check.py): raw edge counts, held parts, walls,
+overhangs, nothing lost against the original, and PrusaSlicer as a second opinion
+([`references/print.md`](plugin/references/print.md)).
+
+<p align="center">
+  <img src="docs/images/print-teapot.webp" width="100%" alt="A museum photo of an 18th-century drum teapot, and the printable model kiln built from it: body, spout rings, ribbed lid, diamonds and zigzags engraved 0.6 mm deep to paint" />
+</p>
+
+A teapot from three museum photos, decoration engraved for the brush. Measured on sessions
+given the skill and nothing else: a dog house and a lighthouse from a brief, a pumpkin, a
+ghost, the windmill and this teapot — printable, and like what was asked.
+
+**Two cats were not.** The one the ghost holds, then a real cat from its photo, passed every
+check and were unacceptable to look at: primitives cannot make an animal. So print mode
+**refuses an animal, a person or a character** before the first primitive, and offers
+instead to check a model you bring.
+
+### A model you made: flatten it, then check it
+
+<p align="center">
+  <img src="docs/images/print-flatten-prusaslicer.svg" width="100%" alt="What PrusaSlicer lays down for the windmill turned 1 degree with 10 percent of its vertices off: the gallery floor's top layer in 4 heights and one edge of the base on the bed; after flatten.py, one height and the whole base" />
+</p>
+
+A model finished by hand often has faces that should be flat and are not, and sits a degree
+off. The slicer prints it as it is: above, the gallery floor finishes at **4 heights instead of
+one**, and **one edge** of the base holds the print. [`tools/flatten.py`](plugin/tools/flatten.py)
+makes nearly flat faces exactly flat and lays the base on the bed — **629 mm of first layer
+become 3,317** — and touches nothing else: curves, folds, bevels and real slopes stay as they
+are, no vertex moves past the tolerance, the input is never overwritten.
+
+```
+/kiln inspect model.stl     # print mode: print_check's verdict
+/kiln cleanup model.stl     # print mode: flatten.py, then print_check again, before and after shown
+```
+
+> **What this is, and is not.** Everything here was checked by PrusaSlicer 2.9.6 and by
+> renders — **none of these models has been printed yet**. `flatten.py` does not fill holes:
+> the slicer closes small ones on its own, and `print_check` says where the rest are. On a
+> model nudged by hand (10 % of its vertices off by 0.1-0.25 mm) it brings 52 of the
+> windmill's 74 flat faces back flat to 0.01 mm; on scan-like noise, every vertex off, 31.
+> The figure comes from `examples/print/flatten_demo.py`, from the G-code alone; the teapot
+> photo is the Auckland War Memorial Museum's, CC BY 4.0, via Wikimedia Commons.
+
 ## Commands
 
 | Command | Action |
@@ -380,9 +433,10 @@ plugin/
 | `plugin/references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~480 |
 | `plugin/tools/fidelity_check.py` | Renders a model under a studio HDRI and measures shape and material gaps against its reference | ~245 |
 | `plugin/tools/template_profile.py` | Reads a turned object's real profile off a 3D template (a generated mesh, a scan), to model from | ~120 |
-| `plugin/references/print.md` | 3D printing, simple objects only (refused for an animal or a person): modelling for the printer from the brief (FDM / resin), what the check counts, what it does not | ~275 |
+| `plugin/references/print.md` | 3D printing, simple objects only (refused for an animal or a person): modelling for the printer from the brief (FDM / resin), what the check counts, what it does not, flattening a model you bring | ~330 |
 | `plugin/tools/print_check.py` | 3D printing check, FDM or resin: raw edge counts, held parts, walls, overhangs, loss against the original, PrusaSlicer as second arbiter | ~580 |
 | `plugin/tools/cutout.swift` | Cuts the subject out of a photo with macOS Vision (14+), local and free — the alpha `fidelity_check` needs | ~30 |
+| `plugin/tools/flatten.py` | Makes a model's nearly flat faces exactly flat and lays it on the bed — curves, bevels and slopes untouched, the input never overwritten | ~290 |
 | `plugin/references/validation-checklist.md` | Geometry cleanup (welding that keeps the shading) + material export audit | ~290 |
 | `plugin/references/ai-generation.md` | Backend order (TRELLIS.2 first), licences, Hunyuan3D 2.x (on request), TRELLIS.2 local (measured), concept art (FLUX.1-schnell, nano-banana), free-quota and token rules | ~430 |
 | `plugin/references/export-targets.md` | GLB/FBX/USDZ settings, headless CLI, post-export checklist | ~240 |
@@ -440,8 +494,16 @@ claims to measure — a model against its own render (IoU 0.998), the same model
 colour as non-metal, silent), metal in hard scattered islands (reported; one soft region,
 silent), metal painted mostly as non-metal (reported), grain measured but never listed as a gap,
 joint close-ups (a rod resting on a sphere rendered; sunk or free,
-not), and `--view` and `--azimuth` on a 2 x 1 x 1 box — **27/27**. Its first run caught the tool framing views by
+not), `--view` and `--azimuth` on a 2 x 1 x 1 box, the face measure, and a photo with no
+transparency (refused) — **34/34**. Its first run caught the tool framing views by
 height only: anything wider than tall was clipped, a box measured 1:1 instead of 2:1.
+`plugin/tools/test_print_check.py` builds the meshes a print can fail on — open, inverted,
+floating, too thin, a cavity, a loss against the original, a carved cup against its closed
+reference — and checks each verdict, with PrusaSlicer when it is there — **44/44**.
+`plugin/tools/test_flatten.py` seeds what flattening must and must not touch: a jittered top
+made flat, a cylinder, a sphere, a dome, a wave, a 5° slope, a 0.2 mm step and a 0.2 mm bevel
+left alone, a tilted model laid on the bed — **22/22**; each case after the first was added
+when a real model broke the tool.
 `plugin/tools/test_template_profile.py` reads a seeded turned part back through
 `template_profile.py` — radii, a free rod, a rod pressed against the body — **4/4**.
 
