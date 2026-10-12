@@ -294,13 +294,28 @@ are, no vertex moves past the tolerance, the input is never overwritten.
 /kiln cleanup model.stl     # print mode: flatten.py, then print_check again, before and after shown
 ```
 
-> **What this is, and is not.** Everything here was checked by PrusaSlicer 2.9.6 and by
-> renders — **none of these models has been printed yet**. `flatten.py` does not fill holes:
-> the slicer closes small ones on its own, and `print_check` says where the rest are. On a
-> model nudged by hand (10 % of its vertices off by 0.1-0.25 mm) it brings 52 of the
-> windmill's 74 flat faces back flat to 0.01 mm; on scan-like noise, every vertex off, 31.
-> The figure comes from `examples/print/flatten_demo.py`, from the G-code alone; the teapot
-> photo is the Auckland War Memorial Museum's, CC BY 4.0, via Wikimedia Commons.
+### Limits
+
+- **None of these models has been printed yet.** Everything here was checked by PrusaSlicer
+  2.9.6 and by renders, not on a bed.
+- **Simple objects only**: turned, geometric, stylised shapes. An animal, a person or a
+  character is refused.
+- **FDM, checked with PrusaSlicer's default profile.** No resin slicing, no orientation
+  search, no support generation, no build-volume check.
+- **Parts are glued or pressed, never moving.** A peg goes into a hole with 0.2 mm a side, a
+  usual value that has not been measured here; the windmill's sails do not turn.
+- **No multi-material file.** A colour is either painted, on a zone the geometry gives an
+  edge, or printed as its own part in its own filament.
+- **`flatten.py` does not fill holes.** The slicer closes small ones on its own, and
+  `print_check` says where the rest are.
+- **Scan noise is harder to flatten.** On a model nudged by hand (10 % of its vertices off by
+  0.1-0.25 mm), it brings 52 of the windmill's 74 flat faces back flat to 0.01 mm. On scan-like
+  noise, with every vertex off, it brings back 31.
+- **Self-intersections are counted, not repaired.** A slicer merges them.
+
+The full list is in [`references/print.md`](plugin/references/print.md) § What it does not check.
+The flatten figure comes from `examples/print/flatten_demo.py`, from the G-code alone. The
+teapot photo is the Auckland War Memorial Museum's, CC BY 4.0, via Wikimedia Commons.
 
 ## Commands
 
