@@ -453,7 +453,7 @@ plugin/
 | `plugin/references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~480 |
 | `plugin/tools/fidelity_check.py` | Renders a model under a studio HDRI and measures shape and material gaps against its reference | ~245 |
 | `plugin/tools/template_profile.py` | Reads a turned object's real profile off a 3D template (a generated mesh, a scan), to model from | ~120 |
-| `plugin/references/print.md` | 3D printing, simple objects only (refused for an animal or a person): modelling for the printer from the brief (FDM / resin), what the check counts, what it does not, flattening a model you bring | ~345 |
+| `plugin/references/print.md` | 3D printing, simple objects only (refused for an animal or a person): modelling for the printer from the brief (FDM / resin), what the check counts, what it does not, flattening a model you bring | ~350 |
 | `plugin/tools/print_check.py` | 3D printing check, FDM or resin: raw edge counts, held parts, walls, overhangs, loss against the original, PrusaSlicer as second arbiter | ~580 |
 | `plugin/tools/cutout.swift` | Cuts the subject out of a photo with macOS Vision (14+), local and free — the alpha `fidelity_check` needs | ~30 |
 | `plugin/tools/flatten.py` | Makes a model's nearly flat faces exactly flat and lays it on the bed — curves, bevels and slopes untouched, the input never overwritten | ~290 |

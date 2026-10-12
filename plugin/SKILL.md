@@ -506,7 +506,10 @@ Always explain WHY the recommendation, always let the user choose.
 **Print set in CONFIG: simple objects only** (`references/print.md` § Scope). An animal, a
 person, a character or a portrait of anything alive is refused at CONFIG, before the first
 primitive — offer a stylised simple shape the user agrees to, or `print_check` on a model they
-bring. Measured: two cats passed every check and were unacceptable to look at. For a simple
+bring. Measured: two cats passed every check and were unacceptable to look at. A mechanical
+part (a load, a lid that must close, a size to the tenth) is said at CONFIG to belong in a CAD
+tool, and goes on only as decorative if the user agrees. Parts joined by a peg: offer
+`tools/fit_coupon.py`'s test print before modelling the joints. For a simple
 object, scripted. **Load
 `references/print.md` § Printable from the brief before the first primitive** — model at print size, closed solids only, one volume
 (exact union as you go, or overlap + one voxel remesh), the process's minimum thickness, a flat

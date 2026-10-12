@@ -21,6 +21,12 @@ CONFIG, before the first primitive.** Say why in one line and offer what is hone
   downloaded): the check works on any mesh, and `tools/flatten.py` makes its nearly flat faces
   flat (§ A model you bring).
 
+**A mechanical part — it carries a load, a lid must close, a size is called to the tenth: say
+at CONFIG that a CAD tool is the right one** (build123d, CadQuery, OpenSCAD: exact circles,
+fillets, dimensions). A Blender mesh has none of those, and print mode has not been measured on
+such a part. Go on only if the user takes it as decorative, and log that answer. Parts that
+join by a peg are fine: offer the joint's test print first (§ Printable from the brief rule 5).
+
 Never start one "to see": every round spent on it is spent on a result the user will reject.
 
 ---
