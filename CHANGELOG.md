@@ -6,7 +6,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.0] — 2026-10-12
+
+kiln now models for a **3D printer** — simple objects only. Measured on sessions given the
+skill and a brief or a photo, nothing else: a dog house and a lighthouse from a brief, a
+pumpkin and a ghost from photos, a windmill (two parts) from a brief, a teapot from three
+museum photos — all printable, all but the ghost's cat looking like what was asked. That cat,
+then a real cat from its photo, passed every print check and were unacceptable to look at, so
+print mode refuses an animal, a person or a character before the first primitive.
+
+### Added — 3D printing
+
+- **Print in CONFIG** (FDM or resin, height, the printer's colours) switches modelling,
+  cleanup and export to `references/print.md`: model at print size, closed solids, one
+  volume (exact union as you go, or overlap + one voxel remesh, last), minimum thickness,
+  a flat base, overhangs designed out where nobody looks and supported where the photo shows
+  them, relief as geometry, a smooth surface the printer will not facet, parts printed apart
+  when they would print in the air, STL in mm.
+- **`tools/print_check.py`**: a printability verdict, raw — open and non-manifold edges,
+  normals, held and floating parts, walls, overhangs, loss against the original (dimensions
+  and volume, closed cavities taken out exactly), and PrusaSlicer as a second arbiter
+  (`--slicer`, `--supports`). It says when it rescales. 44 seeded cases.
+- **Like the photo, for print**: openings read on their outer edge, details cut along the
+  photo's camera, a `face` measure in `fidelity_check`, and rounds until the gaps stop
+  closing — the two-round cap does not apply to print.
+- **`tools/cutout.swift`**: macOS Vision's subject lifting cuts a photo out, local and free,
+  where a background fill could not part a white ghost from a white wall.
+
 ### Changed
+
+- `fidelity_check` refuses a reference with no transparent pixel: measured as it was, a
+  photo's table counted as object (0.62 instead of 0.93, exit 0).
+- The cleanup's 0.1 mm merge is skipped for a model built closed — it broke a printable one.
+- Rule 7: a phase is not done until its log says so — three runs had left it at BRIEF.
+- Rule 16: never save over the user's open Blender; build headless when it holds their work.
 
 - **The showcase chest is rebuilt** by its own script, `examples/animation/chest.py`: planks, a
   barrel lid of staves, iron corners, bands, rivets, handles, lock and hasp, a heap of gold inside,
@@ -26,6 +59,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The TRELLIS.2 Space removes backgrounds with RMBG-2.0 (CC BY-NC 4.0)** unless the
   image already has an alpha channel — read in its `app.py`. The reference says to send
   a cut-out, or to use the TRELLIS Space, whose `rembg`/U²-Net chain is MIT/Apache-2.0.
+
+### Measured — what did not make it
+
+- **Living subjects in print mode**: a cat held by a ghost, then a real cat from its photo,
+  both PASS and both rejected on sight. Primitives cannot make an animal; no rule closed it.
+- **A single recipe for bad edges after an export**: triangulating before export fixed it
+  twice and caused it once. The rule is to check the STL after each risky step.
 
 ## [2.2.0] — 2026-10-07
 
