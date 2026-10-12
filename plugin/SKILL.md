@@ -88,6 +88,13 @@ nothing and the user gets no response.
  7. ALWAYS keep the .blend file (contains full history). In compact mode,
     only keep original + final + .blend + log. In full mode, keep all
     intermediate GLBs. ALWAYS save the .blend — it's the recovery point.
+    AND A PHASE IS NOT DONE UNTIL `{name}_log.md` SAYS SO: before starting the
+    next phase, write its line and the Checkpoint (step, time); in a measured
+    loop (a reference image, print), append each round's line before building
+    the next. Measured: three runs told to "write the log at the end of every
+    phase" left it at BRIEF, or wrote it twice at the end, while three to seven
+    versions went by. Check it yourself: `grep -A2 Checkpoint {name}_log.md`
+    must name the phase you are leaving.
  8. ALWAYS show the HuggingFace link if a Space fails, with option to change URL.
  9. NEVER generate ground/environment with AI — only the requested asset.
 10. Apply transforms, THEN merge doubles keeping each corner's normal, then
@@ -1057,7 +1064,7 @@ Each asset produces `{name}_log.md`:
 - Timestamp: {datetime}
 ```
 
-**Write the log at the end of every phase, not at the end of the run.** A run that stops
+**Write the log at the end of every phase, not at the end of the run** (Iron Rule 7). A run that stops
 mid-way — a crash, a context limit — resumes from it; a log left at BRIEF while the model went
 through seven versions records nothing of what was tried or undone.
 
