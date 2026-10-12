@@ -345,7 +345,7 @@ plugin/
 ├── .claude-plugin/plugin.json
 ├── SKILL.md
 ├── LICENSE
-├── tools/                        # fidelity_check, template_profile, quadruped, motion_loop, bind_rigid_parts, unimate (+ patch), checks
+├── tools/                        # fidelity_check, print_check, cutout, template_profile, quadruped, motion_loop, bind_rigid_parts, unimate (+ patch), checks
 └── references/
     ├── ai-generation.md
     ├── animation.md
@@ -379,8 +379,9 @@ plugin/
 | `plugin/references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~480 |
 | `plugin/tools/fidelity_check.py` | Renders a model under a studio HDRI and measures shape and material gaps against its reference | ~245 |
 | `plugin/tools/template_profile.py` | Reads a turned object's real profile off a 3D template (a generated mesh, a scan), to model from | ~120 |
-| `plugin/references/print.md` | 3D printing: modelling for the printer from the brief (FDM / resin), looking like the photo, what the check counts, what it does not | ~210 |
+| `plugin/references/print.md` | 3D printing: modelling for the printer from the brief (FDM / resin), looking like the photo, what the check counts, what it does not | ~255 |
 | `plugin/tools/print_check.py` | 3D printing check, FDM or resin: raw edge counts, held parts, walls, overhangs, loss against the original, PrusaSlicer as second arbiter | ~580 |
+| `plugin/tools/cutout.swift` | Cuts the subject out of a photo with macOS Vision (14+), local and free — the alpha `fidelity_check` needs | ~30 |
 | `plugin/references/validation-checklist.md` | Geometry cleanup (welding that keeps the shading) + material export audit | ~290 |
 | `plugin/references/ai-generation.md` | Backend order (TRELLIS.2 first), licences, Hunyuan3D 2.x (on request), TRELLIS.2 local (measured), concept art (FLUX.1-schnell, nano-banana), free-quota and token rules | ~430 |
 | `plugin/references/export-targets.md` | GLB/FBX/USDZ settings, headless CLI, post-export checklist | ~240 |

@@ -80,6 +80,11 @@ nothing and the user gets no response.
     exception is Blender's untouched factory scene (Cube, Camera, Light, nothing
     else, no .blend loaded): remove the Cube before building and log it. Any
     other pre-existing object is the user's — hide it, never delete it.
+    A headless script started with `--factory-startup` gets that Cube too: begin
+    it with `bpy.ops.wm.read_factory_settings(use_empty=True)` — a 2 m Cube saved
+    into a print's parts .blend made `--reference` fail by 40 %.
+    Print's remesh-then-decimate (`references/print.md` rule 3) is the build
+    method, not a destruction of the user's mesh: logged, not proposed.
  7. ALWAYS keep the .blend file (contains full history). In compact mode,
     only keep original + final + .blend + log. In full mode, keep all
     intermediate GLBs. ALWAYS save the .blend — it's the recovery point.
@@ -399,7 +404,7 @@ Collect these parameters. Only type and brief are mandatory — infer the rest f
 | **Detail tier** (lightweight / balanced / detailed / custom) | balanced | Soft ranges, never hard caps |
 | **Visual style** (realistic, stylized, cartoon, low-poly) | realistic | Impacts sourcing + AI prompts |
 | **Mode** (auto / guided) | auto | guided = validation at each step |
-| **Storage** (compact / full) | compact | compact = original + final + .blend + log only |
+| **Storage** (compact / full) | compact | compact = original + final + .blend + log only; intermediates are removed at the end-of-session proposal (EXPORT), never silently mid-run. Measures are always logged |
 | **3D Backend** (none / hf-spaces / local) | none — scripted | AI only when chosen; then HF Spaces unless a local model is installed |
 | **Local model** | none | Only if installed (see `/kiln models`) |
 | **HF Space URL** | microsoft/TRELLIS.2 | Then `trellis-community/TRELLIS`. Hunyuan3D only on request (licence). Check `stage: RUNNING` first — a paused Space still answers HTTP 200. See `references/ai-generation.md` |
@@ -734,6 +739,9 @@ Load `references/texturing-strategy.md`. With a reference image, also `reference
 4. **Try another Space** — if current Space doesn't support texture, offer to change URL
 
 ### [6] OPTIMIZE (interactive in guided mode)
+
+**Print set in CONFIG: skipped.** The deliverable is the STL; the GLB is a preview for the
+user, exported plain (no Draco, no texture pass) under the usual `_final.glb` name.
 
 **Auto mode, glTF target:** apply the default preset without asking — textures to
 WebP, resized to the target's cap from `references/uv-materials.md` § Texture

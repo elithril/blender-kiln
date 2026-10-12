@@ -13,7 +13,7 @@ source of what this asset looks like.
 | lightweight, background prop | § 1 inventory, § 3 attachment, one § 5 measure of the shipped file |
 | balanced (default) | all of § 1–5, two correction rounds |
 | detailed, hero asset, character | all of it, plus the extra views of § 1, each measured |
-| **print** (any tier) | all of § 1–5, and rounds until the gaps stop closing — `print.md` § Like the photo, for print |
+| **print** (any tier) | § 1–3 and § 5, rounds until the gaps stop closing — `print.md` § Like the photo, for print; § 4 shrinks to one flat colour per region (no texture reaches a print) |
 
 ## 1. Inventory the details before modeling
 
@@ -100,9 +100,18 @@ def core_profile(path, height_m):
 `height_m` is the one number you choose (brief, or a real-world size).
 
 **Cut the photo out.** A phone photo has no alpha, and `fidelity_check` refuses it: measured
-as it was, the table counted as object and a pumpkin scored 0.62 instead of 0.93. Fill the
-background from the border — what touches the edge and looks like the corner is background;
-what is enclosed by the object (the background seen through a cut eye) stays, to be read on a crop:
+as it was, the table counted as object and a pumpkin scored 0.62 instead of 0.93. In order:
+
+1. **On macOS 14+: `swift tools/cutout.swift photo.jpg ref.png`** — the system's own subject
+   lifting, local and free. A white ghost on a white wall defeated the border fill below (the
+   lit object had the wall's colour, 197,206,219 against 197,209,218) and cost a session 40
+   points traced by hand; Vision cut it at 0.965 IoU against that outline, table removed.
+2. **Elsewhere, fill the background from the border** — what touches the edge and looks like
+   the corner is background; what is enclosed by the object (the background seen through a cut
+   eye) stays, to be read on a crop. It fails when the object shares the background's colour.
+3. **Last, trace the outline by hand** on gridded crops, and log it.
+
+Either way, look at the cut-out over a flat magenta before measuring with it. The border fill:
 
 ```python
 import bpy, numpy as np

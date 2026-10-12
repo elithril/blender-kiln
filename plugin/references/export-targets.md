@@ -201,7 +201,7 @@ record what it was, so the next person does not reinstall them on faith.
 ## STL / 3MF (3D print)
 
 Everything for print — export in mm (`global_scale=1000`), 3MF only when its extension is
-installed, and `tools/print_check.py` on the file — is in `references/print.md`, rule 8 of
+installed, and `tools/print_check.py` on the file — is in `references/print.md`, rule 9 of
 § Printable from the brief and § The tool. The glTF material rules above do not apply: an
 STL carries geometry only.
 

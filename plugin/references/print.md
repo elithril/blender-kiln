@@ -75,7 +75,22 @@ and only a voxel remesh held, at 600,000 triangles.
 7. **Relief is geometry.** An STL has no colour, no material and no texture: letters, planks
    and frames are embossed or engraved — ≥ 0.6 mm deep FDM, 0.3 mm resin, strokes at the
    wall minimum. A texture or a normal map never carries information on a print.
-8. **Export in mm**: `bpy.ops.wm.stl_export(filepath=…, global_scale=1000,
+8. **Smooth where the photo is smooth — the printer shows every facet.** Shading hides
+   facets on screen; a layer of 0.2 mm does not. Measured on a ghost's head:
+   - **one profile, smoothed whole** — a body and a dome built apart and joined at a height
+     left a ring all round: the body's smoothing, cut at the joint, flattened its slope
+     (−0.27 → −0.15 → −0.31) and the dome's curvature then jumped. Smoothing the joined
+     profile over the full height (σ 3 mm, the top's last 2σ kept) gave an even slope and no
+     ring;
+   - **enough rings for the curve**: a facet strays from its curve by its sagitta, L²/8R. The
+     dome's 12 rings strayed by ~0.26 mm — more than a layer, banded on screen and on the
+     print; 80 rings, none. Keep it under 0.05 mm;
+   - **a voxel remesh serrates every sharp rim at the voxel's size**: engraved eyes came out
+     toothed at 0.2 mm. At 0.1 mm the teeth halve (5 M triangles before decimating, 3.4 GB,
+     39 s); a detail that must stay crisp is better joined by an exact union than remeshed;
+   - **look at the STL itself**, close, with a matcap (Solid → MatCap): the review renders are
+     too far and too smooth to show any of this.
+9. **Export in mm**: `bpy.ops.wm.stl_export(filepath=…, global_scale=1000,
    apply_modifiers=True, export_selected_objects=True)`. 3MF only when the 3MF Import/Export
    extension is installed — `bpy.ops.export_mesh.threemf.get_rna_type()` in a `try`;
    `hasattr(bpy.ops.export_mesh, "threemf")` is True even when it is not (Blender 5.2.2).
@@ -115,6 +130,10 @@ passed every print check and the user found it "not alike at all".
    from 0.24 to 0.63. **The outline too**: at θ > 0 the top of the silhouette is the back of
    the shoulders, not their side — read a turned profile through the same line. θ is read as
    `reference-fidelity.md` § 1 says, on any circle of the object.
+   **A cut ends where the detail ends.** A cutter run through the whole figure engraved a
+   ghost's eyes on its back as well: print_check passed, the face measure (front only) passed,
+   and only the back capture of SKILL.md rule 2 showed it. Give every cutter its depth, and
+   look at the side opposite each cut.
 5. **Measure the face, not only the silhouette.** The silhouette IoU stayed at 0.90 while the
    mouth went from a line to a grin. Read `fidelity_check`'s `face` block and
    `face_overlay.png` every round: the `offset`, then each detail's area (too small / too
@@ -128,8 +147,11 @@ passed every print check and the user found it "not alike at all".
    - A move under 0.01 either way is noise: judge it on the crops.
    - **Stop when nothing is left to close**: every gap the overlay lists is either closed or
      known blind (a groove's shadow, a cut wall), and the crops show no difference a change
-     could fix. Do not invent a change to get an empty round. Two rounds in a row that close
-     nothing also stop it.
+     could fix. Do not invent a change to get an empty round.
+   - **A gap two rounds could not close is the method's limit, not a reason to go on**: log it
+     as a limit (what was tried, what it measured) and move to the next gap; when every open
+     gap is one, stop. A primitive cat stays a primitive cat — say so to the user, and say
+     what would do better (the AI route of SKILL.md [3] for an organic figure).
    - The joint review and the close look at the cut edges (rule 7, `reference-fidelity.md`
      § 3 and § 6) come **before** stopping, not after: run them every round the joints or
      cuts changed — on a pumpkin they found a plateau, steps and a regression the numbers
@@ -141,6 +163,11 @@ passed every print check and the user found it "not alike at all".
    Its edges too: a cut with no sharp edge marked reads as a staircase in the preview, and
    the user takes it for the print (`reference-fidelity.md` § 6, sharp edges). The STL
    carries no shading — check the geometry with flat shading before blaming it.
+   **After a voxel remesh the regions are gone** — one mesh, one material. Give each face back
+   the material of the part it came from (nearest part before the union, by BVH), then look at
+   the colour boundary up close before measuring: the face measure reads colour, and a
+   ghost's eyes read 12–18 % "too large" for ten rounds because the dark spilled one voxel
+   past the engraving, not because the engraving was too large.
 8. **Supports are normal for what the photo shows; overhangs are designed out where nobody
    looks.** Hanging teeth, paws or a round belly start in mid-air: check with `--supports` and
    say the print needs them, rather than flattening what the photo shows. What no one sees —
