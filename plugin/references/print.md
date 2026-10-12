@@ -102,7 +102,18 @@ and only a voxel remesh held, at 600,000 triangles.
    lattice part, upright, had horizontal bars starting in mid-air; laid flat as a
    second part, both parts PASS with no support. Each part gets its own STL, its own
    `print_check`, and its own line in the log; they join by a peg in a hole (the clearance of
-   § Like the photo rule 9, not measured here — say so).
+   § Like the photo rule 9, not measured here — say so, and offer the test print below).
+   **A hole that opens on the bed gets a 45° lead-in chamfer, 0.5 mm deep**, and so does the
+   bed edge of a part that must fit into another: the first layer is squashed outward (the
+   "elephant's foot") and closes the hole's mouth by a few tenths. The usual FDM advice, not
+   measured here — the windmill's sails, laid flat, have their peg hole open on the bed
+   without one. **The joint's test print**:
+   `blender -b --factory-startup --python-exit-code 1 --python tools/fit_coupon.py -- --out DIR
+   --peg-mm <the peg's side> --depth-mm <the hole's depth>` writes a plate with one diamond hole
+   per clearance (0.1, 0.2, 0.3 mm a face) and one at 0.2 with the lead-in, and the peg on a
+   wall, printed the way the model's is. About 20 minutes (PrusaSlicer's estimate, default
+   profile); the tightest hole the peg enters is the clearance to model. Ask for that number
+   before modelling a set of joints.
 6. **Overhangs past 45° from vertical are designed out**: undersides of eaves, caps and rims
    at 45° or steeper (a cone, a chamfer, a roof pitch ≥ 45°), grooves as V-cuts. What remains
    — the top of an arch, the inside of a ring — is reported with the check's overhang %.
@@ -262,8 +273,8 @@ passed every print check and the user found it "not alike at all".
    carries the boundary as geometry (a 0.6 mm groove or step, § Printable from the brief, rule
    7) so the brush has an edge — or printed as its own part in its own filament, joined by a peg
    in a hole. The peg's clearance (0.2–0.3 mm per side on FDM) is a common starting value, not
-   one measured here: say so, and offer a test print of the joint. Ask which, and log the
-   answer.
+   one measured here: say so, and offer a test print of the joint (`tools/fit_coupon.py`,
+   § Printable from the brief rule 5). Ask which, and log the answer.
 10. **Nothing the photo does not show.** No opening, part or ornament on a side nobody
     photographed — background seen through an opening is not a view of the back
     (`reference-fidelity.md` § 2). The unseen side stays plain and closed, and the log lists it.
@@ -326,5 +337,10 @@ three hardware parts 0.5-2.1 mm off the body, which PrusaSlicer does not call fl
 - No resin slicing: the slicer pass is FDM with PrusaSlicer's defaults, whatever `--process`.
 - No orientation search, no support generation, no hollowing or drain holes for resin, no
   check that the model fits a given build volume, no tolerances between moving parts.
+- `fit_coupon.py` makes diamond pegs only, and measures nothing itself: the printer and the
+  hand that tries the peg do.
+- Decorative objects, not mechanical parts: a mesh modelled in Blender has no exact circle,
+  no fillet, no dimension a drawing could call. A bracket, a box whose lid must close, a
+  hook that takes a load belong in a CAD tool (build123d, CadQuery, OpenSCAD) — say so.
 - Self-intersections are counted (Blender's BVH), not repaired, and not a FAIL: a slicer
   merges overlapping solids.

@@ -40,6 +40,13 @@ print mode refuses an animal, a person or a character before the first primitive
   4 heights and held the print by one edge (629 mm of first layer); flattened, 1 height and
   the whole base (3,317 mm). 22 seeded cases, each after the first added when a real model
   broke the tool. `/kiln inspect` and `/kiln cleanup` gain a print variant.
+- **`tools/fit_coupon.py`**: the test print for a joint — a plate with one diamond hole per
+  clearance (0.1 / 0.2 / 0.3 mm a face) and one with a 0.5 mm lead-in chamfer on the bed face,
+  and the peg on a wall, printed as on the model. About 20 minutes on PrusaSlicer's default
+  profile; both parts PASS `print_check`. 11 checks read the sizes back from the STLs.
+- print.md: a hole that opens on the bed gets a 45° lead-in chamfer (the first layer's
+  "elephant's foot" closes its mouth), and a mesh is for decorative objects, not mechanical
+  parts — a CAD tool is named for those.
 - **README § 3D printing**, with the windmill (preview and parts), the teapot against its
   museum photo (CC BY 4.0), and the before/after drawn from PrusaSlicer's G-code by
   `examples/print/flatten_demo.py`, which rebuilds it from the committed windmill.

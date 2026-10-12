@@ -70,3 +70,7 @@ jobs:
       - name: Check flattening against seeded meshes
         run: |
           BLENDER=blender python3 plugin/tools/test_flatten.py
+
+      - name: Check the joint test print
+        run: |
+          BLENDER=blender python3 plugin/tools/test_fit_coupon.py

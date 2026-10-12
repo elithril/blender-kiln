@@ -304,6 +304,11 @@ are, no vertex moves past the tolerance, the input is never overwritten.
   search, no support generation, no build-volume check.
 - **Parts are glued or pressed, never moving.** A peg goes into a hole with 0.2 mm a side, a
   usual value that has not been measured here; the windmill's sails do not turn.
+  [`tools/fit_coupon.py`](plugin/tools/fit_coupon.py) writes the test print that measures it
+  on your printer, in about 20 minutes.
+- **Decorative objects, not mechanical parts.** A Blender mesh has no exact circle and no
+  dimension a drawing could call: a bracket or a box whose lid must close belongs in a CAD
+  tool (build123d, CadQuery, OpenSCAD).
 - **No multi-material file.** A colour is either painted, on a zone the geometry gives an
   edge, or printed as its own part in its own filament.
 - **`flatten.py` does not fill holes.** The slicer closes small ones on its own, and
@@ -448,10 +453,11 @@ plugin/
 | `plugin/references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~480 |
 | `plugin/tools/fidelity_check.py` | Renders a model under a studio HDRI and measures shape and material gaps against its reference | ~245 |
 | `plugin/tools/template_profile.py` | Reads a turned object's real profile off a 3D template (a generated mesh, a scan), to model from | ~120 |
-| `plugin/references/print.md` | 3D printing, simple objects only (refused for an animal or a person): modelling for the printer from the brief (FDM / resin), what the check counts, what it does not, flattening a model you bring | ~330 |
+| `plugin/references/print.md` | 3D printing, simple objects only (refused for an animal or a person): modelling for the printer from the brief (FDM / resin), what the check counts, what it does not, flattening a model you bring | ~345 |
 | `plugin/tools/print_check.py` | 3D printing check, FDM or resin: raw edge counts, held parts, walls, overhangs, loss against the original, PrusaSlicer as second arbiter | ~580 |
 | `plugin/tools/cutout.swift` | Cuts the subject out of a photo with macOS Vision (14+), local and free — the alpha `fidelity_check` needs | ~30 |
 | `plugin/tools/flatten.py` | Makes a model's nearly flat faces exactly flat and lays it on the bed — curves, bevels and slopes untouched, the input never overwritten | ~290 |
+| `plugin/tools/fit_coupon.py` | Writes the test print for a peg in a hole: one hole per clearance, one with a lead-in chamfer, the peg printed the way the model's is | ~180 |
 | `plugin/references/validation-checklist.md` | Geometry cleanup (welding that keeps the shading) + material export audit | ~290 |
 | `plugin/references/ai-generation.md` | Backend order (TRELLIS.2 first), licences, Hunyuan3D 2.x (on request), TRELLIS.2 local (measured), concept art (FLUX.1-schnell, nano-banana), free-quota and token rules | ~430 |
 | `plugin/references/export-targets.md` | GLB/FBX/USDZ settings, headless CLI, post-export checklist | ~240 |
@@ -519,6 +525,8 @@ reference — and checks each verdict, with PrusaSlicer when it is there — **4
 made flat, a cylinder, a sphere, a dome, a wave, a 5° slope, a 0.2 mm step and a 0.2 mm bevel
 left alone, a tilted model laid on the bed — **22/22**; each case after the first was added
 when a real model broke the tool.
+`plugin/tools/test_fit_coupon.py` reads the coupon's holes and peg back from the STLs, not
+from the tool's report — each size to the micron, both parts closed — **11/11**.
 `plugin/tools/test_template_profile.py` reads a seeded turned part back through
 `template_profile.py` — radii, a free rod, a rod pressed against the body — **4/4**.
 
