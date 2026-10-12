@@ -1,5 +1,11 @@
 # Setup — Local Installation Guide
 
+**Never required.** kiln's default is scripted modeling, with no AI model; when the
+user picks AI, a free Space comes first (`ai-generation.md`). Install only for offline
+work. **Hunyuan3D-2's licence, below, does not apply in the EU, the UK or South Korea**
+(first line of its `LICENSE`): show that and get a yes before installing. The
+measured MIT alternative, TRELLIS.2 on Apple Silicon, is in `ai-generation.md`.
+
 ## Model Selection
 
 ```

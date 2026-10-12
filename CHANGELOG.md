@@ -13,6 +13,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   textured with two Poly Haven CC0 scans it downloads at run time. Three bones (body, lid, hasp),
   every sign measured, an exact 4 s loop. The export now fails loudly if a texture is lost on the
   way, which a relative image path did silently. `props.py` keeps the lamp.
+- **AI generation is optional, and Hunyuan3D is no longer proposed first.** The default
+  stays Claude scripting Blender — no AI model, nothing to install, and a missing 3D
+  backend is no longer reported as a gap. When the user picks AI, kiln proposes the
+  free `microsoft/TRELLIS.2` Space (MIT), then `trellis-community/TRELLIS` (MIT), then
+  `stabilityai/TripoSR` (MIT; RUNTIME_ERROR on 2026-10-09). Hunyuan3D — Space, local or
+  MCP native — stays available on request only: its `LICENSE` does not apply in the EU,
+  the UK or South Korea, and kiln quotes that and asks before any call. "MCP native
+  (recommended to start)" is gone: it only reaches Hunyuan3D and paid Rodin. Default
+  Space, `/kiln models`, the batch manifest (`method: ai`; `hunyuan3d` still read) and
+  the manifests' descriptions follow.
+- **The TRELLIS.2 Space removes backgrounds with RMBG-2.0 (CC BY-NC 4.0)** unless the
+  image already has an alpha channel — read in its `app.py`. The reference says to send
+  a cut-out, or to use the TRELLIS Space, whose `rembg`/U²-Net chain is MIT/Apache-2.0.
 
 ## [2.2.0] — 2026-10-07
 

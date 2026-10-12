@@ -1,21 +1,44 @@
 # AI Generation Reference
 
-**Four backends, in order of preference:**
+**AI generation is optional.** kiln's default is Claude scripting Blender — no AI
+model, nothing to install. Generation is offered for organic or realistic forms, the
+user chooses, and a local install is never required.
 
-| Backend | How | Needs | When |
+**When the user picks AI, in this order:**
+
+| # | Backend | Needs | Licence |
 |---|---|---|---|
-| **Blender MCP native** | `generate_hunyuan3d_model` / `generate_hyper3d_model_via_text` / `_via_images` | a checkbox in the addon panel | default — nothing to install |
-| **Local Hunyuan3D-2** | `hy3dgen` in your own Python | ~25 GB, ideally CUDA | offline work, or full control of the model variant |
-| **HF Spaces** | `gradio_client` | network, tolerance for queues | neither of the above is set up |
-| **Local TRELLIS.2** | `trellis-mac` on Apple Silicon | 31 GB of weights, 24 GB of memory, five install fixes | best shape measured, offline, free — see below |
+| 1 | **TRELLIS.2 Space** `microsoft/TRELLIS.2` — textured (PBR) | `gradio_client`, free quota | MIT — but send an alpha cut-out, see below |
+| 2 | **TRELLIS Space** `trellis-community/TRELLIS` | same | MIT; background removal by `rembg` (MIT) + U²-Net (Apache-2.0) |
+| 3 | **TripoSR Space** `stabilityai/TripoSR` | same | MIT |
+| 4 | **Local TRELLIS.2** — offline only, never required | 31 GB of weights, 24 GB of memory | MIT, two dependencies are not — see below |
+| — | **Hunyuan3D** (Space, local, MCP native) — **only on explicit request** | see its sections | **does not apply in the EU, the UK or South Korea** |
+| — | **Hyper3D Rodin / Tripo** (MCP native) | paid | rule 5 — never spend |
+
+Stages read on 2026-10-09 through `https://huggingface.co/api/spaces/<id>`:
+`microsoft/TRELLIS.2` RUNNING, `trellis-community/TRELLIS` RUNNING,
+`stabilityai/TripoSR` **RUNTIME_ERROR**, `microsoft/TRELLIS`
+CONFIG_ERROR. Read them again before each session; skip any Space not `RUNNING`.
+None of these three Spaces has completed a generation in this project yet.
+
+**The TRELLIS.2 Space's background removal is non-commercial.** Its `app.py`
+(read 2026-10-09) keeps an image whose alpha channel is not fully opaque and sends
+any other one to the `briaai/BRIA-RMBG-2.0` Space — RMBG-2.0, **CC BY-NC 4.0**. So
+cut the subject out first (a transparent PNG) or use TRELLIS (row 2). Its image
+encoder, DINOv3, is under Meta's own DINOv3 licence.
+
+**Hunyuan3D, whichever path.** The first line of its `LICENSE`, 2.0 and 2.1 alike
+(`Tencent-Hunyuan/Hunyuan3D-2`, `-2.1`): *"THIS LICENSE AGREEMENT DOES NOT APPLY IN THE
+EUROPEAN UNION, UNITED KINGDOM AND SOUTH KOREA"*. Never propose it first; when the user
+asks for it, quote that line and wait for a yes before any call.
 
 ---
 
-## MCP-Native Backend — preferred
+## MCP-Native Backend — Hunyuan3D, Rodin: on request only
 
-The Blender MCP addon already ships 3D generation. Reach for this before
-proposing any install: it needs no Python environment, no weights, and no
-gradio client.
+The Blender MCP addon ships 3D generation, but only for Hunyuan3D (Tencent Cloud
+keys or a local API, licence above) and Hyper3D Rodin (paid). It needs no Python
+environment — which does not make it the default.
 
 **Tencent Hunyuan3D**
 
@@ -35,7 +58,7 @@ poll_rodin_job_status(job_id)  → wait for completion
 import_generated_asset(...)    → straight into the scene
 ```
 
-**Rule 22 applies here too.** Both integrations are OFF in a default install,
+**Rule 23 applies here too.** Both integrations are OFF in a default install,
 and while off the addon does not register their commands — the call answers
 `Unknown command type`, not "disabled". Always call `get_hunyuan3d_status()` /
 `get_hyper3d_status()` first and show the remediation from the `message` field: the
@@ -50,8 +73,8 @@ the user before spending anything, and prefer a free backend when one is set up.
 
 ## Local Backend — Hunyuan3D-2 Mini
 
-Use this when you want offline generation or a specific model variant. It is a
-real install, so say so before proposing it.
+Only on explicit request: offline generation of a specific variant. It is a real
+install — say so — and the licence excludes the EU, the UK and South Korea (above).
 
 ### Requirements
 
@@ -115,7 +138,7 @@ else:
 
 ---
 
-## HF Spaces Backend — Hunyuan3D 2.x
+## HF Spaces Backend — Hunyuan3D 2.x (on request only, licence above)
 
 **Check the Space is awake before using it.** A community Space pauses when its
 owner stops paying for the GPU. The HTTP endpoint still answers 200, so a browser
@@ -141,7 +164,7 @@ Candidates, measured 2026-08-26:
 
 | Space | Stage | Likes |
 |---|---|---:|
-| `tencent/Hunyuan3D-2` | RUNNING | 3,370 |
+| `tencent/Hunyuan3D-2` | RUNNING (again on 2026-10-09) | 3,370 |
 | `Jbowyer/Hunyuan3D-2.1` | **PAUSED** | 62 |
 
 Prefer the vendor's own Space over a community duplicate: a duplicate depends on
@@ -354,7 +377,7 @@ Never fetch these weights with the user's token without saying whose account it 
 | Endpoint | Takes | Note |
 |---|---|---|
 | `/start_session` | — | call first; state lives in the client session |
-| `/preprocess_image` | `input` | background removal; returns a path |
+| `/preprocess_image` | `input` | background removal — RMBG-2.0 (CC BY-NC) unless the image has alpha; returns a path |
 | `/image_to_3d` | `image`, `seed`, `resolution` ("1024"), sampler settings | |
 | `/extract_glb` | `decimation_target`, `texture_size` | **rejects a target under 100,000** — decimate in Blender after (rule 6) |
 

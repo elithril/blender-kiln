@@ -103,7 +103,7 @@ out of `main` so that installing the plugin does not download them.
 
 ## What it does
 
-Kiln is a Claude Code skill that turns you into a 3D asset production studio. It orchestrates Blender (via MCP), AI generation (Hunyuan3D, FLUX.1-schnell concept art), and marketplace search (PolyHaven, Sketchfab) into a single coherent pipeline.
+Kiln is a Claude Code skill that turns you into a 3D asset production studio. By default Claude models in Blender by script (via MCP) — no AI model, nothing to install; optional AI generation (TRELLIS.2 first, FLUX.1-schnell concept art) and marketplace search (PolyHaven, Sketchfab) fit into a single coherent pipeline.
 
 ```
 [1] CONFIG → [2] BRIEF → [3] SOURCE → [4] IMPORT → [5] CLEANUP → [5b] TEXTURING → [6] OPTIMIZE → [7] EXPORT
@@ -130,8 +130,8 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. It
 - **Textures from CC0 scans**: Poly Haven texture sets chosen against the photo, tinted to its palette, worn by the form, baked to UVs — procedural only when no scan fits
 - **A 3D template when one exists**: proportions read off a mesh generated from the same photo (TRELLIS.2, run locally) with `plugin/tools/template_profile.py` — measured, never shipped
 - **Both Blender MCP servers**: ahujasid's `mcp-for-blender` and the Blender Foundation's official Lab MCP, the one behind Claude's Blender connector
-- **Multi-method creation**: AI generation (Hunyuan3D 2.x — local or cloud), scripted modeling (Blender Python), geometry nodes, or marketplace sourcing
-- **Local AI generation**: run Hunyuan3D-2 Mini on your machine — NVIDIA GPU for full pipeline, Apple Silicon for shape generation
+- **Multi-method creation**: scripted modeling (Blender Python, the default), geometry nodes, marketplace sourcing, or optional AI generation (TRELLIS.2 / TRELLIS / TripoSR Spaces, MIT; Hunyuan3D on request only)
+- **Local AI generation, never required**: TRELLIS.2 on Apple Silicon (measured) or Hunyuan3D-2 Mini, for offline work
 - **Environment auto-detection**: `/kiln setup` scans your system and guides installation
 - **Reference images**: provide an image per asset (path, URL, or drag-and-drop) — guides all creation methods (AI input, scripted proportions, texture assignment), enriches the brief, and enables post-export visual comparison
 - **Concept art input**: text prompt (FLUX.1-schnell HF Space, free), image path, image URL, or nano-banana (optional)
@@ -256,7 +256,7 @@ goes to it: `unimate.py` recognises the posture and points at `quadruped.py`.
 | `/kiln batch` | Batch wizard → manifest → autonomous multi-asset production |
 | `/kiln batch run` | Execute/resume a batch manifest (`--all`, `--asset <name>`) |
 | `/kiln setup` | Environment detection + guided setup |
-| `/kiln models` | List/switch Hunyuan3D models |
+| `/kiln models` | List/switch the optional AI backends |
 | `/kiln status` | Show current pipeline state |
 | `/kiln search` | Search PolyHaven/Sketchfab |
 | `/kiln inspect` | Inspect a 3D file (stats, poly count, materials, bbox) |
@@ -284,21 +284,24 @@ goes to it: `unimate.py` recognises the posture and points at `quadruped.py`.
 
 Most assets never need it: scripted modeling, geometry nodes and marketplaces cover
 props, and the bench ships all of its non-AI briefs without any generation service. When a brief does need AI
-generation, this is the state measured on 2026-09-29:
+generation, the user picks it, nothing needs installing, and kiln proposes the
+paths in this order (Space stages read on 2026-10-09; texture state from 2026-09-29):
 
 | Path | Cost | Texture | State |
 |---|---|---|---|
-| [`tencent/Hunyuan3D-2`](https://huggingface.co/spaces/tencent/Hunyuan3D-2) HF Space | free, quota | **no** — `/generation_all` fails server-side | shape works, untextured |
-| [`microsoft/TRELLIS.2`](https://huggingface.co/spaces/microsoft/TRELLIS.2) HF Space | free, quota | PBR, baked | API read live; no run completed yet |
-| Local Hunyuan3D-2 | free | CUDA only | shape only on Apple Silicon, per its docs — not measured here |
+| [`microsoft/TRELLIS.2`](https://huggingface.co/spaces/microsoft/TRELLIS.2) HF Space, MIT | free, quota | PBR, baked | RUNNING; API read live; no run completed yet. Send a cut-out: otherwise it removes the background with RMBG-2.0, non-commercial |
+| [`trellis-community/TRELLIS`](https://huggingface.co/spaces/trellis-community/TRELLIS) HF Space, MIT | free, quota | baked, per its `app.py` (`texture_size`) | RUNNING; not run here |
+| [`stabilityai/TripoSR`](https://huggingface.co/spaces/stabilityai/TripoSR) HF Space, MIT | free, quota | — | RUNTIME_ERROR on 2026-10-09 |
+| [`tencent/Hunyuan3D-2`](https://huggingface.co/spaces/tencent/Hunyuan3D-2) HF Space — on request only | free, quota | **no** — `/generation_all` fails server-side | shape works, untextured |
+| Local Hunyuan3D-2 — on request only | free | CUDA only | shape only on Apple Silicon, per its docs — not measured here |
 | MCP-native Hunyuan3D / Rodin / Tripo | Tencent Cloud keys, or paid | yes | not measured — the skill never spends money |
 
 - **The free cloud path is one or two generations a day.** Hugging Face's ZeroGPU
   quota is 2 minutes without an account, 3.5 with a free one; a generation asks
   60–120 s. `gradio_client` uses your saved Hugging Face token silently — kiln says
   whose account pays before the first call, and never touches the token.
-- **Hunyuan3D's licence excludes the EU, the UK and South Korea** (its `LICENSE`,
-  line 3). Check it before using its output in France or elsewhere in the EU.
+- **Hunyuan3D's licence does not apply in the EU, the UK or South Korea** (its `LICENSE`,
+  line 3), so kiln never proposes it first, and asks before any Hunyuan3D call.
 - **Concept art** comes from the [FLUX.1-schnell](https://huggingface.co/spaces/black-forest-labs/FLUX.1-schnell)
   Space (Apache-2.0, 5.6 s an image). Pollinations, the former default, now answers
   HTTP 402 after one image.
@@ -377,7 +380,7 @@ plugin/
 | `plugin/tools/fidelity_check.py` | Renders a model under a studio HDRI and measures shape and material gaps against its reference | ~245 |
 | `plugin/tools/template_profile.py` | Reads a turned object's real profile off a 3D template (a generated mesh, a scan), to model from | ~120 |
 | `plugin/references/validation-checklist.md` | Geometry cleanup (welding that keeps the shading) + material export audit | ~290 |
-| `plugin/references/ai-generation.md` | Hunyuan3D 2.x (local + cloud), TRELLIS.2 local (measured), concept art (FLUX.1-schnell, nano-banana), free-quota and token rules | ~430 |
+| `plugin/references/ai-generation.md` | Backend order (TRELLIS.2 first), licences, Hunyuan3D 2.x (on request), TRELLIS.2 local (measured), concept art (FLUX.1-schnell, nano-banana), free-quota and token rules | ~430 |
 | `plugin/references/export-targets.md` | GLB/FBX/USDZ settings, headless CLI, post-export checklist | ~240 |
 | `plugin/references/cli-tools.md` | gltf-transform, gltfpack, LOD workflow, metrics | ~210 |
 | `plugin/references/uv-materials.md` | UV unwrapping, PBR channel packing | ~150 |
