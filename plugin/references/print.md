@@ -63,8 +63,11 @@ and only a voxel remesh held, at 600,000 triangles.
      **That count is not the verdict — `print_check` on the exported STL is.** Two sessions
      read 0 in Blender while the STL had 84 and 480 edges shared by three faces or more; both
      cleared it by triangulating in Blender before exporting
-     (`bmesh.ops.triangulate(bm, faces=bm.faces[:], quad_method="BEAUTY", ngon_method="BEAUTY")`),
-     then checking the STL again. Export and check after each risky step, not only at the end.
+     (`bmesh.ops.triangulate(bm, faces=bm.faces[:], quad_method="BEAUTY", ngon_method="BEAUTY")`).
+     A third found the same triangulation, done on the joined mesh, CAUSED 2 to 4 such edges at
+     a spout's joint, and cleared them by triangulating each part BEFORE the union. No single
+     recipe holds: export and check the STL after each risky step, and try one change at a
+     time.
      Set `material_mode = "TRANSFER"` on every boolean: the default `INDEX` paints the second
      part in the first one's material (checked on two cubes, Blender 5.2.2), and the preview
      loses its regions. A difference with many cutters that fails as one pass (66 engraved
@@ -109,6 +112,10 @@ and only a voxel remesh held, at 600,000 triangles.
 7. **Relief is geometry.** An STL has no colour, no material and no texture: letters, planks
    and frames are embossed or engraved — ≥ 0.6 mm deep FDM, 0.3 mm resin, strokes at the
    wall minimum. A texture or a normal map never carries information on a print.
+   **Cut a pattern as exact polygons, never on a grid**: engraved diamonds built on a
+   displaced grid kept the grid's step on every slanted edge — a ~0.2 mm staircase, plain in
+   a matcap close-up although every check passed. A grid is fine for a straight groove that
+   follows its rows; anything slanted is a boolean of a real outline.
 8. **Smooth where the photo is smooth — the printer shows every facet.** Shading hides
    facets on screen; a layer of 0.2 mm does not. Measured on a ghost's head:
    - **one profile, smoothed whole** — a body and a dome built apart and joined at a height

@@ -69,7 +69,10 @@ nothing and the user gets no response.
     minimum once at the end of every phase that changed geometry or materials
     (SOURCE/IMPORT, CLEANUP, TEXTURING, OPTIMIZE if it re-imports), framed per
     rule 22, and from TWO opposite angles after TEXTURING. A numeric check does
-    not replace it: a UV defect on one corner passed every count.
+    not replace it: a UV defect on one corner passed every count. When the MCP
+    does not answer (Blender closed) or the open Blender is the user's (rule 16):
+    build headless and render the same views headless — Workbench, a matcap for
+    the geometry, framed close — never skip the look.
  3. ONE asset at a time — never an entire scene at once.
  4. NEVER hard-cap poly count — alert if out of range, never block.
  5. NEVER spend money — no paid services, no credits consumed. A free service
