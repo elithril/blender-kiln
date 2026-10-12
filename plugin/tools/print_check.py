@@ -30,6 +30,9 @@ that). Edges are then paired exactly:
   volume (slivers a decimation leaves) are counted and not judged;
 - thin walls: share of faces whose wall, cast inward along the normal, is thinner than the
   process minimum (0.8 mm FDM, 0.5 mm resin) — sampled above 50,000 faces;
+- the smallest scale: a slicer shrinks every wall with the model, so the same walls give the
+  scale under which 1 % more of the area would fall below that minimum (`min_scale`, and
+  `min_dims_mm`). Walls only: an engraving's depth or a bar's width is not counted apart;
 - overhangs: share of the downward area steeper than 45° from vertical (bed excluded).
 
 --reference compares the model against the file it was repaired from: dimensions, and
@@ -420,19 +423,34 @@ def thickness(V, F, n, area, wall, seed=0):
         np.random.default_rng(seed).choice(nf, THICKNESS_SAMPLE, replace=False))
     c = V[F[idx]].mean(axis=1)
     eps = 1e-6 * float(np.ptp(V, axis=0).max())
-    thin = np.zeros(len(idx), bool)
+    reach = float(np.linalg.norm(np.ptp(V, axis=0))) + 1.0
+    wall_at = np.full(len(idx), np.inf)
     for k, (ci, ni) in enumerate(zip(c, n[idx])):
         if not ni.any():
             continue
         d = Vector((-ni).tolist())
-        loc, hn, _, dist = tree.ray_cast(Vector((ci - ni * eps).tolist()), d, wall)
+        loc, hn, _, dist = tree.ray_cast(Vector((ci - ni * eps).tolist()), d, reach)
         # only a back wall counts: the face we leave the solid through points along the ray
-        if loc is not None and hn.dot(d) > 0 and dist + eps < wall:
-            thin[k] = True
+        if loc is not None and hn.dot(d) > 0:
+            wall_at[k] = dist + eps
+    thin = wall_at < wall
     a = area[idx]
+    total = max(a.sum(), 1e-30)
+    # The smallest scale this file takes: shrunk in a slicer, every wall shrinks with it. Walls
+    # are taken thinnest first; the scale stops where they add up to 1 % of the area more than
+    # is already thin at 100 % — the next wall would cross the floor below it.
+    order = np.argsort(wall_at)
+    cum = np.cumsum(a[order])
+    allowed = a[thin].sum() + 0.01 * total
+    k = int(np.searchsorted(cum, allowed, side="right"))
+    nxt = wall_at[order[k]] if k < len(order) else np.inf
+    min_scale = round(float(wall / nxt), 3) if np.isfinite(nxt) and nxt > 0 else None
+    # Not the first wall to cross: on the lighthouse that was 2 faces at the foot of the door's
+    # engraving (0.09 % of the area) at 80 %, while the parapet — 4.9 % of it, 1.0-1.2 mm —
+    # sets 67 %. One percent of the area is a wall someone sees.
     return dict(min_wall_mm=wall, faces_thin_pct=round(100 * thin.mean(), 2) if len(idx) else 0.0,
-                area_thin_pct=round(100 * a[thin].sum() / max(a.sum(), 1e-30), 2),
-                sampled=int(len(idx)), of=int(nf))
+                area_thin_pct=round(100 * a[thin].sum() / total, 2),
+                min_scale=min_scale, sampled=int(len(idx)), of=int(nf))
 
 
 def voxel_volume(V, F, size):
@@ -572,6 +590,8 @@ def main():
              floating_parts=len(floating), floating=float_info, inverted_parts=int(inverted.sum()),
              cavities=int((enclosed & (vol < 0)).sum()),
              volume_mm3=round(float(vol[closed].sum()), 3), overhang_area_pct=overhang_pct, thickness=thin)
+    if thin["min_scale"] is not None:
+        thin["min_dims_mm"] = [round(float(x) * thin["min_scale"], 1) for x in dims]
     fails, warns = [], []
     # A rescale hides a model built at the wrong size: one at 93.7 mm passed as 100 mm in silence.
     if abs(scale - 1.0) > 0.01:
@@ -681,6 +701,10 @@ def main():
         print("  FAIL ", x)
     for x in warns:
         print("  WARN ", x)
+    if thin["min_scale"] is not None:
+        print(f"  SCALE do not shrink below {100 * thin['min_scale']:.0f} % "
+              f"({' × '.join(f'{x:g}' for x in thin['min_dims_mm'])} mm): "
+              f"1 % more of the area would fall under {thin['min_wall_mm']} mm. Enlarging is safe.")
     print(f"\nVERDICT {r['verdict']}")
     sys.exit(FAIL if fails else PASS)
 

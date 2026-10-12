@@ -302,6 +302,9 @@ are, no vertex moves past the tolerance, the input is never overwritten.
   character is refused.
 - **FDM, checked with PrusaSlicer's default profile.** No resin slicing, no orientation
   search, no support generation, no build-volume check.
+- **Scaled down in the slicer, a model loses its thin walls.** `print_check` says how far:
+  "do not shrink below 40 %" for the windmill's body, 67 % for the lighthouse. Enlarging is
+  safe.
 - **Parts are glued or pressed, never moving.** A peg goes into a hole with 0.2 mm a side, a
   usual value that has not been measured here; the windmill's sails do not turn.
   [`tools/fit_coupon.py`](plugin/tools/fit_coupon.py) writes the test print that measures it
@@ -447,14 +450,14 @@ plugin/
 | `plugin/tools/quadruped.py` | Procedural quadruped idle + walk, IK-planted, measured before export (legs bent, paws in step, exact loop) | ~200 |
 | `plugin/tools/motion_loop.py` | Generated clip → seamless loop (pose + direction matched, drift removed); keeps the sample that loops best | ~100 |
 | `plugin/tools/bind_rigid_parts.py` | Folds bone-parented parts (eyes, props) into the skin; reports a quadruped posture for routing | ~60 |
-| `plugin/tools/unimate.py` | Installs UniMate at the tested version, reports newer upstream, runs rigged GLB + prompt → animated GLBs | ~300 |
+| `plugin/tools/unimate.py` | Installs UniMate at the tested version, reports newer upstream, runs rigged GLB + prompt → animated GLBs | ~350 |
 | `plugin/references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~460 |
 | `plugin/references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~360 |
 | `plugin/references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~480 |
-| `plugin/tools/fidelity_check.py` | Renders a model under a studio HDRI and measures shape and material gaps against its reference | ~245 |
+| `plugin/tools/fidelity_check.py` | Renders a model under a studio HDRI and measures shape and material gaps against its reference | ~685 |
 | `plugin/tools/template_profile.py` | Reads a turned object's real profile off a 3D template (a generated mesh, a scan), to model from | ~120 |
-| `plugin/references/print.md` | 3D printing, simple objects only (refused for an animal or a person): modelling for the printer from the brief (FDM / resin), what the check counts, what it does not, flattening a model you bring | ~350 |
-| `plugin/tools/print_check.py` | 3D printing check, FDM or resin: raw edge counts, held parts, walls, overhangs, loss against the original, PrusaSlicer as second arbiter | ~580 |
+| `plugin/references/print.md` | 3D printing, simple objects only (refused for an animal or a person): modelling for the printer from the brief (FDM / resin), what the check counts, what it does not, flattening a model you bring | ~365 |
+| `plugin/tools/print_check.py` | 3D printing check, FDM or resin: raw edge counts, held parts, walls, overhangs, loss against the original, PrusaSlicer as second arbiter | ~710 |
 | `plugin/tools/cutout.swift` | Cuts the subject out of a photo with macOS Vision (14+), local and free — the alpha `fidelity_check` needs | ~30 |
 | `plugin/tools/flatten.py` | Makes a model's nearly flat faces exactly flat and lays it on the bed — curves, bevels and slopes untouched, the input never overwritten | ~290 |
 | `plugin/tools/fit_coupon.py` | Writes the test print for a peg in a hole: one hole per clearance, one with a lead-in chamfer, the peg printed the way the model's is | ~180 |
@@ -520,7 +523,8 @@ transparency (refused) — **34/34**. Its first run caught the tool framing view
 height only: anything wider than tall was clipped, a box measured 1:1 instead of 2:1.
 `plugin/tools/test_print_check.py` builds the meshes a print can fail on — open, inverted,
 floating, too thin, a cavity, a loss against the original, a carved cup against its closed
-reference — and checks each verdict, with PrusaSlicer when it is there — **44/44**.
+reference, the smallest scale of a 2 mm plate — and checks each verdict, with PrusaSlicer
+when it is there — **46/46**.
 `plugin/tools/test_flatten.py` seeds what flattening must and must not touch: a jittered top
 made flat, a cylinder, a sphere, a dome, a wave, a 5° slope, a 0.2 mm step and a 0.2 mm bevel
 left alone, a tilted model laid on the bed — **22/22**; each case after the first was added

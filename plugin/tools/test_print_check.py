@@ -16,6 +16,8 @@ them, no network. Cases:
 - a hollow cube (inner shell reversed): the cavity is enclosed, not inverted — PASS;
 - the closed cube with every normal reversed: FAIL, inverted;
 - a 0.4 mm wall: most faces under the FDM minimum, none for the 20 mm cube;
+- the smallest scale: a 2 mm plate takes 40 % (2 x 0.4 = 0.8 mm, its walls at the FDM floor),
+  a 20 mm cube 4 % — and the dimensions at that scale are given;
 - overhang: the raised cube's underside is reported, a cube's bottom on the bed is not;
 - --reference: the crossing cubes against themselves, no loss; one of them alone against
   both — the MANIFOLD union that dropped half the object — FAIL; two end pillars against
@@ -116,6 +118,7 @@ with tempfile.TemporaryDirectory() as d:
     stl(f"{d}/hollow.stl", box(0, 0, 0, 20, 20, 20) + box(5, 5, 5, 15, 15, 15, flip=True))
     stl(f"{d}/inverted.stl", box(0, 0, 0, 20, 20, 20, flip=True))
     stl(f"{d}/wall.stl", box(0, 0, 0, 20, 0.4, 20))
+    stl(f"{d}/plate2.stl", box(0, 0, 0, 20, 2, 20))
     stl(f"{d}/half.stl", box(0, 0, 0, 20, 20, 20))
     stl(f"{d}/block.stl", box(0, 0, 0, 40, 20, 20))
     stl(f"{d}/pillars.stl", box(0, 0, 0, 5, 20, 20) + box(35, 0, 0, 40, 20, 20))   # same box, 1/4 of it
@@ -169,6 +172,12 @@ with tempfile.TemporaryDirectory() as d:
     rc, r, _ = run(f"{d}/wall.stl", "--process", "fdm")
     check("0.4 mm wall, FDM: most faces under 0.8 mm", r["thickness"]["area_thin_pct"] > 90,
           r["thickness"])
+    rc, r, _ = run(f"{d}/plate2.stl", "--process", "fdm")
+    th = r["thickness"]
+    check("2 mm plate: do not shrink below 40 %, 8 x 0.8 x 8 mm there",
+          th["min_scale"] == 0.4 and th["min_dims_mm"] == [8.0, 0.8, 8.0], (th.get("min_scale"), th.get("min_dims_mm")))
+    rc, r, _ = run(f"{d}/cube.stl", "--process", "fdm")
+    check("20 mm cube: do not shrink below 4 %", r["thickness"]["min_scale"] == 0.04, r["thickness"].get("min_scale"))
     rc, r, _ = run(f"{d}/wall.stl", "--process", "resin")
     check("0.4 mm wall, resin: still under 0.5 mm", r["thickness"]["area_thin_pct"] > 90, r["thickness"]["area_thin_pct"])
 

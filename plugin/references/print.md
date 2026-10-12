@@ -153,7 +153,11 @@ and only a voxel remesh held, at 600,000 triangles.
    apply_modifiers=True, export_selected_objects=True)`. 3MF only when the 3MF Import/Export
    extension is installed — `bpy.ops.export_mesh.threemf.get_rna_type()` in a `try`;
    `hasattr(bpy.ops.export_mesh, "threemf")` is True even when it is not (Blender 5.2.2).
-   Then `print_check.py` on the STL; PASS is required, or say what fails.
+   Then `print_check.py` on the STL; PASS is required, or say what fails. **Hand over the
+   size with the file**: the height it was modelled for, and the check's `SCALE` line — "do
+   not shrink below N %; enlarging is safe". For parts that assemble, the largest of their
+   scales holds for all of them: a peg and its hole shrink together, the clearance does not
+   (it is printer-side), so say that a scaled joint wants a new clearance.
 
 Measured on two objects modelled headless from these rules alone (Blender 5.2.2, PrusaSlicer
 2.9.6): a dog house, 72 × 64 × 79.4 mm FDM, union as you go — 854 triangles, one closed part,
@@ -323,6 +327,14 @@ STL (mm), 3MF (its own unit), GLB and .blend (metres). Exit 0 PASS, 3 FAIL, 1 er
   per call) it is an error, exit 1. **An arbiter in addition to the counts, never instead**: it
   slices open meshes with exit 0 and calls the MANIFOLD union that lost the object manifold.
   It also sees what the counts do not — a gap between layers.
+- **`SCALE`, the smallest scale.** A slicer shrinks every wall with the model, and makers
+  rescale in the slicer as a habit: an STL carries no unit, and nothing in it says what size
+  it was designed for. From the same walls, the tool gives the scale under which 1 % more of
+  the area would fall under the process floor, and the dimensions there. Measured: the
+  windmill's body 40 % (its 2 mm railing posts), the lighthouse 67 % (its 1.2 mm parapet),
+  the teapot 67 %. Not the first wall to cross: that was 2 faces at the foot of the
+  lighthouse's door (0.09 % of the area) at 80 %. Walls only: an engraving's depth and a
+  bar's width are not counted apart.
 
 PASS needs 0 open and 0 non-manifold edges, consistent normals, no floating or inverted
 part, no loss against the reference and, with the slicer, manifold = yes, no empty layer,

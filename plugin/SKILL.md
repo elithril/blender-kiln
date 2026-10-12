@@ -810,7 +810,9 @@ By target:
 
 **Print set in CONFIG:** the export ends with `tools/print_check.py --process … --slicer …`
 (PrusaSlicer when installed) on the STL. **PASS is required**; otherwise report each FAIL line
-as the tool printed it — never call the file printable.
+as the tool printed it — never call the file printable. The hand-over gives the size it was
+modelled for and the check's `SCALE` line: people rescale in the slicer, and the STL does not
+say how far down it holds (`print.md` rule 9).
 
 **Axis conversion** handled automatically (Blender -Y/Z → glTF +Z/Y).
 
@@ -1071,7 +1073,7 @@ Each asset produces `{name}_log.md`:
 - Rounds (reference image): v{n}: silhouette {iou}, face {iou} (f {f}, offset {mm}); changed
   {one thing}; kept / undone
 - Print check, one line per printed part: {part}: {PASS/FAIL}, {dimensions} mm, {parts} part(s),
-  supports {yes/no}, warnings {…}
+  supports {yes/no}, smallest scale {N} %, warnings {…}
 
 ## Licenses
 - {resource}: {license} {attribution if needed}
