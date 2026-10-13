@@ -84,7 +84,7 @@ Lighting_Studio
 | glTF / web | kebab-case | `wooden-chair.glb` |
 | FBX / game engine | PascalCase + prefix | `SM_WoodenChair.fbx` |
 | USDZ / AR | kebab-case | `wooden-chair.usdz` |
-| STL / print | kebab-case, `_{part}` per printed part | `dutch-windmill_body.stl`, `dutch-windmill_sails.stl` |
+| STL / print | kebab-case, `_{part}` per printed part — the part's name in the brief's language is fine; files go straight into the output folder the user gave | `dutch-windmill_body.stl`, `christmas-tree_etoile.stl` |
 | Print reference | the parts before the union, one per printed part | `dutch-windmill_body_parts.blend` |
 
 ---

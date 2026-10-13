@@ -21,7 +21,8 @@ that). Edges are then paired exactly:
 - open edges (one face), non-manifold edges (more than two), non-manifold vertices (faces
   around the vertex fall into more than one fan), inconsistent normals (an edge walked the
   same way by both its faces);
-- self-intersections (triangle pairs crossing, inside a part) and intersecting parts, with
+- self-intersections (triangle pairs crossing, inside a part — a pair that only touches, at a
+  shared vertex or a vertex lying on a face, is not one) and intersecting parts, with
   Blender's own BVH — no external dependency;
 - floating parts: a part neither on the bed, nor crossing, enclosed by or within one
   extrusion (0.4 mm FDM, 0.05 mm resin) of a held part — a printer fuses closer parts. The
@@ -112,6 +113,9 @@ def args():
     p.add_argument("--supports", action="store_true",
                    help="slice with PrusaSlicer's automatic supports: a figurine whose limbs hang starts them "
                         "in mid-air without (Floating object part) and prints with them; the verdict says so")
+    p.add_argument("--brim-mm", type=float, default=0.0,
+                   help="slice with a brim this wide: a tall part on a narrow foot reads 'Low bed adhesion' "
+                        "without one (a forge's flame, a tree in its pot) and not with 5 mm")
     p.add_argument("--json")
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     return p.parse_args(argv)
@@ -327,6 +331,24 @@ def face_data(V, F):
     return t, n, area2 / 2
 
 
+def touching_only(V, F, pairs):
+    """How many of these triangle pairs only touch. The BVH overlap counts a pair that touches
+    as one that crosses: the windmill's sails gave 32 (a shared vertex, or a vertex lying on
+    a face beside it), a forge's flame 2, the joint coupon 4 at a 2.5 mm peg — none crossing.
+    Shrunk 0.1 % toward its centroid, a triangle leaves what it only touched and still
+    crosses what it crossed: a crossing shallower than that is not told from a touch."""
+    if not len(pairs):
+        return 0
+    ids = np.unique(pairs)
+    t = V[F[ids]]
+    c = t.mean(axis=1, keepdims=True)
+    small = (c + (t - c) * 0.999).reshape(-1, 3)
+    from mathutils.bvhtree import BVHTree
+    tree = BVHTree.FromPolygons(small.tolist(), np.arange(len(small)).reshape(-1, 3).tolist(), all_triangles=True)
+    still = {(int(ids[a]), int(ids[b])) for a, b in tree.overlap(tree)}
+    return int(sum(1 for a, b in pairs if (int(a), int(b)) not in still))
+
+
 def signed_volumes(V, F, part, nparts):
     t = V[F]
     v6 = np.einsum("ij,ij->i", t[:, 0], np.cross(t[:, 1], t[:, 2]))
@@ -512,7 +534,7 @@ def write_stl(path, V, F):
         f.write(b"print_check".ljust(80, b" ")); f.write(struct.pack("<I", len(F))); f.write(rec.tobytes())
 
 
-def slicer(name, V, F, timeout, supports=False):
+def slicer(name, V, F, timeout, supports=False, brim=0.0):
     exe = shutil.which(name)                 # a path, or a command on the PATH
     if exe is None:
         die(f"slicer not found, or not executable: {name}")
@@ -536,7 +558,8 @@ def slicer(name, V, F, timeout, supports=False):
         parts = re.search(r"number_of_parts\s*=\s*(\d+)", txt)
         opn = re.search(r"open_edges\s*=\s*(\d+)", txt)
         sup = ["--support-material", "--support-material-auto"] if supports else []
-        sl = call(base + sup + ["--export-gcode", "-o", os.path.join(d, "out.gcode"), stl])
+        rim = ["--brim-width", f"{brim:g}"] if brim > 0 else []
+        sl = call(base + sup + rim + ["--export-gcode", "-o", os.path.join(d, "out.gcode"), stl])
         log = sl.stdout + sl.stderr
         empty = re.findall(r"Empty layer[^\n]*", log)
         floating = re.findall(r"Floating object part[^\n]*", log)
@@ -579,7 +602,8 @@ def main():
     tree = bvh(V, F)
     pairs = np.array(tree.overlap(tree), dtype=np.int64).reshape(-1, 2)
     pa, pb = part[pairs[:, 0]], part[pairs[:, 1]]
-    selfx = int((pa == pb).sum())
+    same = pairs[pa == pb]
+    selfx = int(len(same) - touching_only(V, F, same))
     inter = sorted({(int(min(x, y)), int(max(x, y))) for x, y in zip(pa, pb) if x != y})
 
     # Zero-volume parts — flat slivers a decimation or a voxel pass leaves behind — print
@@ -703,8 +727,13 @@ def main():
             warns.append(f"volume is {100 * ratio:.1f} % of the reference — cavities filled or parts thickened")
 
     if o.slicer:
-        s = slicer(o.slicer, V, F, o.slicer_timeout, o.supports)
+        if o.brim_mm < 0:
+            die(f"--brim-mm must be 0 or more, not {o.brim_mm:g}")
+        s = slicer(o.slicer, V, F, o.slicer_timeout, o.supports, o.brim_mm)
         s["supports"] = bool(o.supports)
+        s["brim_mm"] = o.brim_mm
+        if o.brim_mm > 0:
+            warns.append(f"sliced with a {o.brim_mm:g} mm brim (--brim-mm): print it with one")
         r["slicer"] = s
         if o.supports:
             warns.append("sliced with automatic supports (--supports): print it with them, then remove them")
@@ -716,7 +745,8 @@ def main():
             fails.append("PrusaSlicer: floating object part")
         other = [x for x in s["stability_issues"] if x != "Floating object part"]
         if other:
-            warns.append(f"PrusaSlicer stability issues: {', '.join(other)}")
+            hint = (" — try --brim-mm 5" if "Low bed adhesion" in other and not o.brim_mm > 0 else "")
+            warns.append(f"PrusaSlicer stability issues: {', '.join(other)}{hint}")
         if s["slice_exit"] != 0 or not s["gcode"]:
             fails.append(f"PrusaSlicer: slicing failed (exit {s['slice_exit']})")
         clean = (s["manifold"] == "yes" and not s["empty_layer_count"] and not s["floating_count"]

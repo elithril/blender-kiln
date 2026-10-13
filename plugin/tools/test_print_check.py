@@ -18,6 +18,10 @@ them, no network. Cases:
 - a 0.4 mm wall: most faces under the FDM minimum, none for the 20 mm cube;
 - the smallest scale: a 2 mm plate takes 40 % (2 x 0.4 = 0.8 mm, its walls at the FDM floor),
   a 20 mm cube 4 % — and the dimensions at that scale are given;
+- self-intersections: a cube with a top corner pushed through its bottom crosses itself; the
+  joint coupon at a 2.5 mm peg, whose lead-in's triangles only touch the bed face at shared
+  vertices, does not (4 pairs before);
+- --brim-mm reaches the slicer: a low-adhesion warning names it, and goes with a 5 mm brim;
 - thin spots: the 0.4 mm wall's are listed where they are, read 0.4, a mm apart; the cube has none;
 - overhang: the raised cube's underside is reported, a cube's bottom on the bed is not; a
   diamond prism modelled at 45° (the joint's peg) is not one, though float32 reads it 45.0x°;
@@ -214,6 +218,20 @@ with tempfile.TemporaryDirectory() as d:
     check("crossing cubes: the raised underside overhangs, the bed does not",
           abs(r["overhang_area_pct"] - 100 * 400 / 4800) < 0.01, (r["overhang_area_pct"], round(100 * 400 / 4800, 2)))
 
+    # a top corner pushed down through the bottom face: one part, really crossing itself
+    dent = box(0, 0, 0, 20, 20, 20)
+    dent = [[(10.0, 10.0, -5.0) if p == (20, 20, 20) else p for p in t] for t in dent]
+    stl(f"{d}/dent.stl", dent)
+    rc, r, _ = run(f"{d}/dent.stl", "--process", "fdm")
+    check("cube with a corner pushed through its bottom: self-intersecting", r["self_intersecting_pairs"] > 0,
+          r["self_intersecting_pairs"])
+    coupon = subprocess.run([BLENDER, "-b", "--factory-startup", "--python-exit-code", "1", "--python",
+                             os.path.join(os.path.dirname(TOOL), "fit_coupon.py"), "--", "--out", f"{d}/coupon",
+                             "--peg-mm", "2.5", "--depth-mm", "4"], capture_output=True, text=True)
+    rc, r, _ = run(f"{d}/coupon/fit_holes.stl", "--process", "fdm")
+    check("coupon at a 2.5 mm peg: triangles touching at shared vertices are not self-intersections",
+          coupon.returncode == 0 and r and r["self_intersecting_pairs"] == 0, (coupon.returncode, r and r["self_intersecting_pairs"]))
+
     rc, r, _ = run(f"{d}/peg45.stl", "--process", "fdm")
     check("peg modelled at 45° (read 45.2°): closed, no overhang",
           r["closed_parts"] == 1 and r["overhang_area_pct"] == 0, (r["closed_parts"], r["overhang_area_pct"]))
@@ -374,6 +392,29 @@ esac
     check("same with --supports: sliced with supports, PASS, said in the warnings",
           rc == 0 and r["slicer"]["floating_count"] == 0 and r["slicer"]["supports"]
           and any("--supports" in w for w in r["warnings"]), (rc, r and r["warnings"], p.stderr[-200:]))
+
+    # --brim-mm: a fake PrusaSlicer that reads low adhesion unless a brim is on its command line
+    # (on the real one, a tree in its pot, 2026-10-13: "Low bed adhesion" without, nothing with 5 mm)
+    tall = f"{d}/tall_prusaslicer"
+    open(tall, "w").write("""#!/bin/sh
+case " $* " in
+  *" --info "*) echo "manifold = yes"; echo "number_of_parts =  1"; exit 0 ;;
+esac
+out=""; prev=""
+for a in "$@"; do [ "$prev" = "-o" ] && out="$a"; prev="$a"; done
+[ -n "$out" ] && : > "$out"
+case " $* " in
+  *" --brim-width 5 "*) exit 0 ;;
+  *) printf 'print warning: Detected print stability issues:\n\nmodel\nLow bed adhesion\n'; exit 0 ;;
+esac
+"""); os.chmod(tall, 0o755)
+    rc, r, p = run(f"{d}/cube.stl", "--process", "fdm", "--slicer", tall)
+    check("low adhesion, no brim: a warning that names --brim-mm 5",
+          rc == 0 and any("Low bed adhesion" in w and "--brim-mm 5" in w for w in r["warnings"]), (rc, r and r["warnings"]))
+    rc, r, p = run(f"{d}/cube.stl", "--process", "fdm", "--slicer", tall, "--brim-mm", "5")
+    check("--brim-mm 5: passed to the slicer, no adhesion warning, the brim said",
+          rc == 0 and r["slicer"]["brim_mm"] == 5 and not any("adhesion" in w for w in r["warnings"])
+          and any("5 mm brim" in w for w in r["warnings"]), (rc, r and r["warnings"]))
 
     # the overhang warning: a share, then what the slice said
     clean = f"{d}/clean_prusaslicer"

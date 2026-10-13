@@ -121,7 +121,10 @@ and only a voxel remesh held, at 600,000 triangles.
    § Like the photo rule 9, not measured here — say so, and offer the test print below).
    **The peg goes on the part that stands steadier, the hole in the other**: a 35 mm flame
    standing on its own 4 × 4 mm peg got PrusaSlicer's *Low bed adhesion*; the peg moved to the
-   forge and the hole into the flame, the flame stands on its whole base. A hole that ends
+   forge and the hole into the flame, the flame stands on its whole base. **A tall part on a
+   narrow foot** (a tree in its pot) can read the same warning: widening the pot from 18 to
+   23 mm did not clear it, a 5 mm brim did — check with `print_check --brim-mm 5`, and say in
+   the hand-over to print with one rather than reshape what the brief asked. A hole that ends
    inside an upright part gets a pointed 45° roof, not a flat ceiling (rule 6).
    **A hole that opens on the bed gets a 45° lead-in chamfer, 0.5 mm deep**, and so does the
    bed edge of a part that must fit into another: the first layer is squashed outward (the
@@ -155,6 +158,8 @@ and only a voxel remesh held, at 600,000 triangles.
    means each colour region ends on an edge the brush can follow (a 0.6 mm groove or step —
    § Like the photo rule 9 has the rule and the alternative, a part in its own filament), and
    the preview gives each region its own flat material so the user sees the paint plan.
+   A region the brief does not name (a trunk, the soil in a pot) gets its edge too, and the
+   hand-over lists it as the user's choice to paint or not.
    **Cut a pattern as exact polygons, never on a grid**: engraved diamonds built on a
    displaced grid kept the grid's step on every slanted edge — a ~0.2 mm staircase, plain in
    a matcap close-up although every check passed. A grid is fine for a straight groove that
@@ -352,7 +357,9 @@ STL (mm), 3MF (its own unit), GLB and .blend (metres). Exit 0 PASS, 3 FAIL, 1 er
   **one per printed part**: the tool reads every visible mesh of a .blend, so one file for two
   parts compares each part with both; for
   a solid turned and then engraved, that solid before the engravings. A part built closed in
-  one piece, with no union and no repair, has none: say so. It voxelises both meshes at the same size (largest dimension / 150) and
+  one piece, with no union and no repair, has none: say so. A part whose one operation is a
+  small cut (a peg hole in a star) proves little against its reference — a hole of a few
+  mm³ is under the 10 % volume tolerance: measure the cut itself on a section instead. It voxelises both meshes at the same size (largest dimension / 150) and
   compares dimensions (3 %) and volume (10 %, only when the dimensions agree and BOTH the
   model and the reference are sealed — an open mesh voxelises to almost nothing: an open
   40 × 20 × 20 box gives 4 mm3). A closed cavity is voxelised as solid, so its exact volume is
@@ -361,6 +368,9 @@ STL (mm), 3MF (its own unit), GLB and .blend (metres). Exit 0 PASS, 3 FAIL, 1 er
   compared on its dimensions alone, and
   the tool says so; a reference under one voxel of volume is a FAIL, never a ratio. The
   reference is first scaled to the model's height: a uniform scale is not a loss.
+- **`--brim-mm`** slices with a brim that wide: *Low bed adhesion* on a tall, narrow part
+  (a flame on its own base, a tree in its pot) went with 5 mm, and the warning without a brim
+  names the option. The verdict then says to print with one.
 - **`--supports`** slices with PrusaSlicer's automatic supports. A figurine whose limbs hang starts
   them in mid-air: *Floating object part* without supports, a clean slice with them (a figure
   held in another's arms). The verdict can then PASS, and says the print needs them.
@@ -410,9 +420,10 @@ three hardware parts 0.5-2.1 mm off the body, which PrusaSlicer does not call fl
   no fillet, no dimension a drawing could call. A bracket, a box whose lid must close, a
   hook that takes a load belong in a CAD tool (build123d, CadQuery, OpenSCAD) — say so.
 - Self-intersections are counted (Blender's BVH), not repaired, and not a FAIL: a slicer
-  merges overlapping solids. Pairs that only TOUCH are counted too — a shared vertex, a vertex
-  lying on a face: the windmill's sails gave 32 pairs, all at distance 0. Triangulating to
-  clear them made 36; leave them.
+  merges overlapping solids. Pairs that only TOUCH — a shared vertex, a vertex lying on a
+  face — are not counted: each triangle is shrunk 0.1 % toward its centroid and tested again
+  (the windmill's sails read 32 such pairs, a coupon 4, all at distance 0; now 0). A crossing
+  shallower than that 0.1 % is not told from a touch.
 - Overhangs are counted past 45.5° (a face modelled at 45° reads 45.0x° in an STL), as a
   share: small ceilings bridge. Whether the print needs supports is the slicer's answer —
   "sliced clean without supports: none needed" — not the share's.

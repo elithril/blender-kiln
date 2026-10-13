@@ -122,6 +122,19 @@ print mode refuses an animal, a person or a character before the first primitive
     the `.blend1` files are deleted, or `save_version = 0` (checked) stops them;
   - the Blender workflow now also runs on a change to `flatten.py` and `fit_coupon.py`, which
     it tested but did not watch.
+- **What a Christmas tree found after that** (two parts, the star in its own filament on a
+  peg, 70.0 mm assembled; the session used `review_renders.py` and one reference per part
+  unprompted):
+  - `print_check` no longer counts triangles that only TOUCH as self-intersecting — a shared
+    vertex, a vertex lying on a face: each is shrunk 0.1 % and tested again. The windmill's
+    sails read 32, a forge's flame 2, the joint coupon at a 2.5 mm peg 4; all now 0, and a
+    cube with a corner pushed through its bottom still crosses itself;
+  - `print_check --brim-mm`: a tall part on a narrow foot read *Low bed adhesion* (the flame,
+    the tree) and both sessions checked a brim in PrusaSlicer by hand; the warning now names
+    the option, and the tree passes clean with 5 mm;
+  - a region the brief does not name gets its paint edge too; a small cut proves little
+    against its reference; part names may be in the brief's language; the scripted print's
+    checkpoints.
 
 ### Measured — what did not make it
 

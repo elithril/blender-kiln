@@ -1095,6 +1095,8 @@ Each asset produces `{name}_log.md`:
 - {resource}: {license} {attribution if needed}
 
 ## Checkpoint
+<!-- Scripted print: SOURCE and IMPORT are one step (the script builds at size), OPTIMIZE is
+     logged as skipped — the checkpoints are BRIEF, SOURCE/IMPORT, CLEANUP, EXPORT + check. -->
 - Last completed step: {step}
 - Timestamp: {datetime}
 ```
