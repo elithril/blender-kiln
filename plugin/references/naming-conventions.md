@@ -86,6 +86,7 @@ Lighting_Studio
 | USDZ / AR | kebab-case | `wooden-chair.usdz` |
 | STL / print | kebab-case, `_{part}` per printed part — the part's name in the brief's language is fine; files go straight into the output folder the user gave | `dutch-windmill_body.stl`, `christmas-tree_etoile.stl` |
 | Print reference | the parts before the union, one per printed part | `dutch-windmill_body_parts.blend` |
+| Print test piece | in `test/`, `test_{what}.stl` — a coupon, a ring cut to try a mechanism | `test/test_lid-ring.stl` |
 
 ---
 

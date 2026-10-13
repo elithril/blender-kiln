@@ -534,8 +534,8 @@ when a real model broke the tool.
 from the tool's report — each size to the micron, both parts closed, diamond and round —
 **18/18**.
 `plugin/tools/test_review_renders.py` renders a seeded block and reads the images back: one
-per view and mode, the subject spanning the frame, a close-up aimed at nothing refused —
-**7/7**.
+per view and mode, the subject spanning the frame, a close-up aimed at nothing refused, a
+close-up at negative coordinates read as a value — **8/8**.
 `plugin/tools/test_template_profile.py` reads a seeded turned part back through
 `template_profile.py` — radii, a free rod, a rod pressed against the body — **4/4**.
 

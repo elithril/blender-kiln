@@ -7,7 +7,9 @@
   the subject spanning the frame (its tallest side over 80 % of the frame's height);
 - a close-up taken from a print_check JSON's thin spots: written, and framed on something;
 - a close-up aimed at empty space: the frame is empty, exit 1 — never an image that shows nothing;
-- an unknown view, or a missing file: exit 1, no traceback.
+- an unknown view, or a missing file: exit 1, no traceback;
+- --close with negative coordinates (a spot left of or in front of the axis) is read as a value,
+  not as an option: a session's `--close -25,-14,54,14` stopped argparse before this.
 """
 import json, os, struct, subprocess, sys, tempfile
 
@@ -78,6 +80,10 @@ with tempfile.TemporaryDirectory() as d:
     rc, log = run(f"{d}/block.stl", "--out", f"{d}/c", "--views", "q1", "--mode", "matcap", "--close", "500,500,500,5")
     check("close-up on empty space: exit 1, said empty", rc == 1 and "nothing framed" in log and "Traceback" not in log,
           (rc, log[-300:]))
+
+    rc, log = run(f"{d}/block.stl", "--out", f"{d}/n", "--views", "q1", "--mode", "matcap", "--close", "-1,-1,20,12")
+    check("close-up at negative coordinates: read as a value, written",
+          rc == 0 and os.path.isfile(f"{d}/n/block_matcap_close1.png"), (rc, log[-300:]))
 
     rc, log = run(f"{d}/block.stl", "--out", f"{d}/e", "--views", "sideways")
     check("unknown view: exit 1, no traceback", rc == 1 and "unknown view" in log and "Traceback" not in log, (rc, log[-200:]))

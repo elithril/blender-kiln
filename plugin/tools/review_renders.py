@@ -53,6 +53,15 @@ def args():
     p.add_argument("--res", type=int, default=1000)
     p.add_argument("--prefix")
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+    # "--close -25,-14,54,14" — a spot left of or in front of the axis — reads as an option to
+    # argparse and stopped a session: glue the value on, as --close=-25,-14,54,14
+    glued, k = [], 0
+    while k < len(argv):
+        if argv[k] == "--close" and k + 1 < len(argv) and argv[k + 1].startswith("-"):
+            glued.append("--close=" + argv[k + 1]); k += 2
+        else:
+            glued.append(argv[k]); k += 1
+    argv = glued
     a = p.parse_args(argv)
     bad = [v for v in a.views.split(",") if v not in DIRS]
     if bad:

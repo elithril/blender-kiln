@@ -142,6 +142,11 @@ print mode refuses an animal, a person or a character before the first primitive
   bridges, then the visible faces off the bed. Rule 6: a flat ceiling past ~10 mm becomes a
   45° cone or vault, never a filled cavity. Rule 7: relief goes on faces that print upright or
   up. `print_check` turns PrusaSlicer's *Long bridging extrusions* into that instruction.
+  A session without context then made a bayonet box under those rules: no support, no long
+  bridge, every orientation logged. What it still met, now written: a ceiling too wide for the
+  part's height starts its 45° vault from a ring inside the wall; test pieces go in `test/` as
+  `test_{what}.stl` (a user took two test rings for parts of the box); `review_renders.py
+  --close` reads negative coordinates as a value.
 
 ### Measured — what did not make it
 

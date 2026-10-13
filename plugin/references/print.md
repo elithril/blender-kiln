@@ -144,6 +144,11 @@ and only a voxel remesh held, at 600,000 triangles.
    write the coupon to the output folder with the model, and say in the hand-over that the
    clearance is not measured. A peg the coupon does not make (a square one standing up) gets
    only an order of magnitude from the nearest shape: say that too.
+   **A test piece is named and stored as one**: the coupon, and any piece a session cuts from
+   the model to try a joint or a mechanism (a ring of a lid, a collar with its grooves), goes in
+   a `test/` subfolder as `test_{what}.stl`, and the hand-over says to print it first. A user
+   loading every STL of an output folder took two test rings for parts of the object and asked
+   where the lid was.
 6. **Overhangs past 45° from vertical are designed out**: undersides of eaves, caps and rims
    at 45° or steeper (a cone, a chamfer, a roof pitch ≥ 45°), grooves as V-cuts. What remains
    — the top of an arch, the inside of a ring — is reported with the check's overhang %.
@@ -159,6 +164,11 @@ and only a voxel remesh held, at 600,000 triangles.
    no support. Never shorten a bridge by filling the cavity: a solid added inside to make the
    ceiling smaller took 10 mm of usable depth from the object it was in. `print_check` passes
    the warning on: it is a change to make, not a line to report.
+   **When the height is short of the cone** — a 45° cone needs half its width in height: a
+   57 mm ceiling under 22 mm of part could not — start the vault from a ring inside the part's
+   own wall, where it takes no usable volume: the ceiling steps in on that ring, then rises at
+   45°, and what is left at the apex is a bridge of a few millimetres (2.4 mm there, sliced
+   clean). Or split the part on a horizontal plane (§ Like the photo rule 8).
 7. **Relief is geometry.** An STL has no colour, no material and no texture: letters, planks
    and frames are embossed or engraved — ≥ 0.6 mm deep FDM, 0.3 mm resin, strokes at the
    wall minimum. **The depth is the shallowest point's**: a flat cutter on a round wall cuts
