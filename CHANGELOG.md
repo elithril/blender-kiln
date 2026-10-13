@@ -135,6 +135,13 @@ print mode refuses an animal, a person or a character before the first primitive
   - a region the brief does not name gets its paint edge too; a small cut proves little
     against its reference; part names may be in the brief's language; the scripted print's
     checkpoints.
+- **Fewer supports and no long bridges, as rules** (two boxes with lids, 2026-10-13): both
+  printed with no support, but one bridged a 20 mm flat ceiling and filled 10 mm of its own
+  cavity to keep the bridge that short, the other printed a raised pattern face-down. Rule 5:
+  each part's orientation is a logged decision — zero supports, then the fewest and shortest
+  bridges, then the visible faces off the bed. Rule 6: a flat ceiling past ~10 mm becomes a
+  45° cone or vault, never a filled cavity. Rule 7: relief goes on faces that print upright or
+  up. `print_check` turns PrusaSlicer's *Long bridging extrusions* into that instruction.
 
 ### Measured — what did not make it
 

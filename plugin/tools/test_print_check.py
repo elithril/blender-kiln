@@ -21,6 +21,7 @@ them, no network. Cases:
 - self-intersections: a cube with a top corner pushed through its bottom crosses itself; the
   joint coupon at a 2.5 mm peg, whose lead-in's triangles only touch the bed face at shared
   vertices, does not (4 pairs before);
+- a long bridge reported by the slicer stays a warning, and says to shape the ceiling at 45°;
 - --brim-mm reaches the slicer: a low-adhesion warning names it, and goes with a 5 mm brim;
 - thin spots: the 0.4 mm wall's are listed where they are, read 0.4, a mm apart; the cube has none;
 - overhang: the raised cube's underside is reported, a cube's bottom on the bed is not; a
@@ -415,6 +416,16 @@ esac
     check("--brim-mm 5: passed to the slicer, no adhesion warning, the brim said",
           rc == 0 and r["slicer"]["brim_mm"] == 5 and not any("adhesion" in w for w in r["warnings"])
           and any("5 mm brim" in w for w in r["warnings"]), (rc, r and r["warnings"]))
+
+    # a long bridge: the warning says what to change (print.md rule 6), not only that it happened
+    bridge = f"{d}/bridge_prusaslicer"
+    open(bridge, "w").write(open(tall).read().replace("Low bed adhesion", "Long bridging extrusions")
+                            .replace('*" --brim-width 5 "*) exit 0 ;;', ''))
+    os.chmod(bridge, 0o755)
+    rc, r, p = run(f"{d}/cube.stl", "--process", "fdm", "--slicer", bridge)
+    check("long bridge: still a PASS, and the warning names the 45-degree ceiling of rule 6",
+          rc == 0 and any("Long bridging extrusions" in w and "45° cone" in w and "rule 6" in w for w in r["warnings"]),
+          (rc, r and r["warnings"]))
 
     # the overhang warning: a share, then what the slice said
     clean = f"{d}/clean_prusaslicer"

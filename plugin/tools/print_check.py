@@ -746,6 +746,9 @@ def main():
         other = [x for x in s["stability_issues"] if x != "Floating object part"]
         if other:
             hint = (" — try --brim-mm 5" if "Low bed adhesion" in other and not o.brim_mm > 0 else "")
+            # a flat ceiling over ~10 mm: a change to make (print.md rule 6), not a line to report
+            if "Long bridging extrusions" in other:
+                hint += " — a flat ceiling over ~10 mm: shape it as a 45° cone or vault (print.md rule 6)"
             warns.append(f"PrusaSlicer stability issues: {', '.join(other)}{hint}")
         if s["slice_exit"] != 0 or not s["gcode"]:
             fails.append(f"PrusaSlicer: slicing failed (exit {s['slice_exit']})")

@@ -116,7 +116,10 @@ and only a voxel remesh held, at 600,000 triangles.
    ended 1.1 mm above the lid and PrusaSlicer reported an empty layer.
    **A part that would print in the air is printed apart**, each on its own best face: a
    lattice part, upright, had horizontal bars starting in mid-air; laid flat as a
-   second part, both parts PASS with no support. Each part gets its own STL, its own
+   second part, both parts PASS with no support. **Each part's print orientation is a decision,
+   written in the log**: which face goes on the bed, chosen for zero supports first, then the
+   fewest and shortest bridges (rule 6), then the visible faces away from the bed — the bed
+   face prints flat and smooth, and a relief on it is lost (rule 7). Each part gets its own STL, its own
    `print_check`, and its own line in the log; they join by a peg in a hole (the clearance of
    § Like the photo rule 9, not measured here — say so, and offer the test print below).
    **The peg goes on the part that stands steadier, the hole in the other**: a 35 mm flame
@@ -148,12 +151,27 @@ and only a voxel remesh held, at 600,000 triangles.
    under it, never in the air. A 50° eave with no face past 45° still failed — its tip is
    the lowest point of the roof, so each layer starts there as a new island (PrusaSlicer:
    *Floating object part*). Brace it back into the wall at ≥ 45° (a corbel), or end it there.
+   **And a flat ceiling is a bridge — keep it short.** The ceiling of a cavity, the inside of
+   a part printed opening-down, the roof of a hole: printed flat, each of its layers spans the
+   gap in mid-air. PrusaSlicer bridges a few millimetres cleanly and warns *Long bridging
+   extrusions* past that — a 20 mm flat ceiling drew it. **Past about 10 mm across, shape the
+   ceiling as a 45° cone, pyramid or pointed vault** rising from its walls: no bridge at all,
+   no support. Never shorten a bridge by filling the cavity: a solid added inside to make the
+   ceiling smaller took 10 mm of usable depth from the object it was in. `print_check` passes
+   the warning on: it is a change to make, not a line to report.
 7. **Relief is geometry.** An STL has no colour, no material and no texture: letters, planks
    and frames are embossed or engraved — ≥ 0.6 mm deep FDM, 0.3 mm resin, strokes at the
    wall minimum. **The depth is the shallowest point's**: a flat cutter on a round wall cuts
    less deep at its sides than at its middle — a 50 mm lighthouse engraved 0.9-1.0 mm at the
    middle to keep its sides above 0.6. A texture or a normal map never carries information
    on a print.
+   **Relief goes on faces that print upright or facing up.** A pattern on a face printed
+   against the bed is flattened by the bed, and its grooves print as small bridges: a raised
+   pattern on a part printed face-down drew *Long bridging extrusions* and 9 % of overhang
+   for 1.2 mm grooves. Put the decoration on the walls and the upward faces of the print
+   orientation (rule 5); a face that must go on the bed is left plain, or carries shallow
+   engraved lines only. On a wall, a relief's underside obeys rule 6: chamfered at 45°, or
+   pointed downward.
    **Paint regions are decided with or without a photo**: one filament and a painted result
    means each colour region ends on an edge the brush can follow (a 0.6 mm groove or step —
    § Like the photo rule 9 has the rule and the alternative, a part in its own filament), and
