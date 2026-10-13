@@ -456,8 +456,8 @@ plugin/
 | `plugin/references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~480 |
 | `plugin/tools/fidelity_check.py` | Renders a model under a studio HDRI and measures shape and material gaps against its reference | ~685 |
 | `plugin/tools/template_profile.py` | Reads a turned object's real profile off a 3D template (a generated mesh, a scan), to model from | ~120 |
-| `plugin/references/print.md` | 3D printing, simple objects only (refused for an animal or a person): modelling for the printer from the brief (FDM / resin), what the check counts, what it does not, flattening a model you bring | ~365 |
-| `plugin/tools/print_check.py` | 3D printing check, FDM or resin: raw edge counts, held parts, walls, overhangs, loss against the original, PrusaSlicer as second arbiter | ~710 |
+| `plugin/references/print.md` | 3D printing, simple objects only (refused for an animal or a person): modelling for the printer from the brief (FDM / resin), what the check counts, what it does not, flattening a model you bring | ~400 |
+| `plugin/tools/print_check.py` | 3D printing check, FDM or resin: raw edge counts, held parts, walls, overhangs, loss against the original, PrusaSlicer as second arbiter | ~740 |
 | `plugin/tools/cutout.swift` | Cuts the subject out of a photo with macOS Vision (14+), local and free — the alpha `fidelity_check` needs | ~30 |
 | `plugin/tools/flatten.py` | Makes a model's nearly flat faces exactly flat and lays it on the bed — curves, bevels and slopes untouched, the input never overwritten | ~290 |
 | `plugin/tools/fit_coupon.py` | Writes the test print for a peg in a hole: one hole per clearance, one with a lead-in chamfer, the peg printed the way the model's is | ~180 |
@@ -471,7 +471,7 @@ plugin/
 | `plugin/references/setup-install.md` | Model selection, install commands, post-install validation | ~70 |
 | `plugin/references/sourcing-strategy.md` | PolyHaven (MCP or public API) + Sketchfab search patterns | ~120 |
 
-**Total: ~4,800 lines** of production-tested 3D pipeline knowledge.
+**Total: ~5,500 lines** of production-tested 3D pipeline knowledge.
 
 ## Continuous checks
 

@@ -18,7 +18,10 @@ them, no network. Cases:
 - a 0.4 mm wall: most faces under the FDM minimum, none for the 20 mm cube;
 - the smallest scale: a 2 mm plate takes 40 % (2 x 0.4 = 0.8 mm, its walls at the FDM floor),
   a 20 mm cube 4 % — and the dimensions at that scale are given;
-- overhang: the raised cube's underside is reported, a cube's bottom on the bed is not;
+- overhang: the raised cube's underside is reported, a cube's bottom on the bed is not; a
+  diamond prism modelled at 45° (the joint's peg) is not one, though float32 reads it 45.0x°;
+- the overhang warning follows the slice: "none needed" when it slices clean without supports,
+  "not clean" when it does not;
 - --reference: the crossing cubes against themselves, no loss; one of them alone against
   both — the MANIFOLD union that dropped half the object — FAIL; two end pillars against
   the full block: same bounding box, a quarter of the volume — FAIL on volume alone; a cup
@@ -26,6 +29,8 @@ them, no network. Cases:
   was saved: no loss (the voxelisation fills a closed cavity; it read 23 % on a pumpkin);
 - --height-mm scales: the cube read at 50 mm is 50 mm, and the scale is said — a model built
   at 93.7 mm passed as 100 mm in silence; at its own height, nothing is said;
+- the smallest scale is the file's at any --height-mm: the 2 mm plate read at 30 % still
+  says 40 % and that 30 % is under it; read at 200 %, 40 % and nothing said;
 - a missing file: exit 1;
 - slivers (parts under 1e-3 mm3) neither hold a part they cross nor lower the bed;
 - a reference with no volume is a FAIL with no NaN; an open reference's volume is not compared;
@@ -121,6 +126,21 @@ with tempfile.TemporaryDirectory() as d:
     stl(f"{d}/plate2.stl", box(0, 0, 0, 20, 2, 20))
     stl(f"{d}/half.stl", box(0, 0, 0, 20, 20, 20))
     stl(f"{d}/block.stl", box(0, 0, 0, 40, 20, 20))
+    # the joint's peg, a diamond lying along y, its lower faces `deg` from vertical: 45.2° is a
+    # face modelled at 45° as the windmill's STL reads it (45.0x°), 47° a real overhang
+    def diamond(deg):
+        import math
+        w = 2.0; z1 = w / math.tan(math.radians(deg))
+        dia = [(0, 0), (w, z1), (0, z1 + w), (-w, z1)]
+        tris = []
+        for k in range(4):
+            (xa, za), (xb, zb) = dia[k], dia[(k + 1) % 4]
+            tris += [[(xa, 0, za), (xa, 10, za), (xb, 10, zb)], [(xa, 0, za), (xb, 10, zb), (xb, 0, zb)]]
+        top = z1 + w
+        return tris + [[(0, 0, 0), (w, 0, z1), (0, 0, top)], [(0, 0, 0), (0, 0, top), (-w, 0, z1)],
+                       [(0, 10, 0), (0, 10, top), (w, 10, z1)], [(0, 10, 0), (-w, 10, z1), (0, 10, top)]]
+    stl(f"{d}/peg45.stl", diamond(45.2))
+    stl(f"{d}/peg47.stl", diamond(47.0))
     stl(f"{d}/pillars.stl", box(0, 0, 0, 5, 20, 20) + box(35, 0, 0, 40, 20, 20))   # same box, 1/4 of it
     checks = []
 
@@ -187,6 +207,12 @@ with tempfile.TemporaryDirectory() as d:
     check("crossing cubes: the raised underside overhangs, the bed does not",
           abs(r["overhang_area_pct"] - 100 * 400 / 4800) < 0.01, (r["overhang_area_pct"], round(100 * 400 / 4800, 2)))
 
+    rc, r, _ = run(f"{d}/peg45.stl", "--process", "fdm")
+    check("peg modelled at 45° (read 45.2°): closed, no overhang",
+          r["closed_parts"] == 1 and r["overhang_area_pct"] == 0, (r["closed_parts"], r["overhang_area_pct"]))
+    rc, r, _ = run(f"{d}/peg47.stl", "--process", "fdm")
+    check("same peg at 47°: its lower faces overhang", r["overhang_area_pct"] > 30, r["overhang_area_pct"])
+
     rc, r, _ = run(f"{d}/crossing.stl", "--process", "fdm", "--reference", f"{d}/crossing.stl")
     check("reference = itself: no loss, ratio 1", rc == 0 and abs(r["reference"]["volume_ratio"] - 1) < 1e-6,
           r["reference"]["volume_ratio"])
@@ -223,6 +249,20 @@ with tempfile.TemporaryDirectory() as d:
     rc, r, _ = run(f"{d}/cube.stl", "--process", "fdm", "--height-mm", "20")
     check("--height-mm at the file's own height: no scale warning", not any("scaled" in w for w in r["warnings"]),
           r["warnings"])
+    # The smallest scale is the file's, whatever --height-mm reads it at: measured on the scaled
+    # mesh, the walls already thin there were excused and the floor moved down with the model.
+    rc, r, _ = run(f"{d}/plate2.stl", "--process", "fdm", "--height-mm", "6")
+    th = r["thickness"]
+    check("2 mm plate read at 30 %: still 40 % of the file, 8 x 0.8 x 8 mm, and said to be under it",
+          th["min_scale"] == 0.4 and th["min_dims_mm"] == [8.0, 0.8, 8.0]
+          and any("under the smallest scale" in w and "40 %" in w for w in r["warnings"]),
+          (th.get("min_scale"), th.get("min_dims_mm"), r["warnings"]))
+    rc, r, _ = run(f"{d}/plate2.stl", "--process", "fdm", "--height-mm", "40")
+    th = r["thickness"]
+    check("2 mm plate read at 200 %: still 40 % of the file, nothing said under it",
+          th["min_scale"] == 0.4 and th["min_dims_mm"] == [8.0, 0.8, 8.0]
+          and not any("under the smallest scale" in w for w in r["warnings"]),
+          (th.get("min_scale"), th.get("min_dims_mm"), r["warnings"]))
 
     rc, r, p = run(f"{d}/nothing.stl", "--process", "fdm")
     check("missing file: exit 1, no verdict", rc == 1 and r is None, rc)
@@ -327,6 +367,26 @@ esac
     check("same with --supports: sliced with supports, PASS, said in the warnings",
           rc == 0 and r["slicer"]["floating_count"] == 0 and r["slicer"]["supports"]
           and any("--supports" in w for w in r["warnings"]), (rc, r and r["warnings"], p.stderr[-200:]))
+
+    # the overhang warning: a share, then what the slice said
+    clean = f"{d}/clean_prusaslicer"
+    open(clean, "w").write("""#!/bin/sh
+case " $* " in
+  *" --info "*) echo "manifold = yes"; echo "number_of_parts =  1"; exit 0 ;;
+esac
+out=""; prev=""
+for a in "$@"; do [ "$prev" = "-o" ] && out="$a"; prev="$a"; done
+[ -n "$out" ] && : > "$out"
+exit 0
+"""); os.chmod(clean, 0o755)
+    rc, r, p = run(f"{d}/crossing.stl", "--process", "fdm", "--slicer", clean)
+    check("overhang, clean slice without supports: 'none needed', never a bare 'supports'",
+          rc == 0 and any("overhangs" in w and "none needed" in w for w in r["warnings"]),
+          (rc, r and r["warnings"], p.stderr[-200:]))
+    rc, r, p = run(f"{d}/crossing.stl", "--process", "fdm", "--slicer", fake)
+    check("overhang, slice with a floating part: FAIL, the overhang line says 'not clean'",
+          rc == 3 and any("overhangs" in w and "not clean" in w for w in r["warnings"]),
+          (rc, r and r["warnings"], p.stderr[-200:]))
 
     if os.path.exists(SLICER):
         # by name, from the PATH, like any command

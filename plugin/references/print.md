@@ -57,6 +57,10 @@ and only a voxel remesh held, at 600,000 triangles.
 
 1. **Model at print size.** 1 Blender unit = 1 m, so an 80 mm object is 0.08 tall. Every
    thickness below is then a real millimetre on the model, not one that a later scale shrinks.
+   **The height asked is the object's, assembled** — parts printed apart included, a windmill
+   to the tip of its top sail — unless the brief says otherwise; log which. Two sessions read
+   it two ways: a forge took its flame in (70.1 mm), a windmill left its sails out and stood
+   ~120 mm tall for a "~90 mm" brief.
 2. **Every primitive is a closed solid** — capped cylinders, boxes, prisms, tori. No plane, no
    circle, no one-sided shell: a shell gets Solidify (applied) at the wall thickness of rule 4,
    a ring is a torus. The study's lantern had 184 open edges, its chest 100: game assets are
@@ -84,9 +88,13 @@ and only a voxel remesh held, at 600,000 triangles.
      feature / 8, then move the lowest vertex back to Z = 0. The study's lantern, remeshed
      at 0.2 mm, passes. The cost is weight: ~900,000 triangles for a 100 mm lantern.
    **A solid of revolution is the cheapest closed volume**: spin one profile (base, body, bands,
-   corbels, roof) round Z with `bmesh.ops.spin(..., use_merge=True)`, then merge the axis
-   points — one closed solid, no union at all. Measured on a 90 mm lighthouse: 0 non-manifold
-   edges, PASS first time. **Never cut exactly on the lathe's edges**: windows placed at
+   corbels, roof) round Z with `bmesh.ops.spin(..., use_merge=True)` — one closed solid, no
+   union at all. Measured on a 90 mm lighthouse: 0 non-manifold edges, PASS first time.
+   **Close each end with a flat cap, not a point on the axis**, when anything is cut into it
+   afterwards: a 50 mm lighthouse closed by merged axis points was clean, until an EXACT
+   engraving re-cut the pole's fan and left a zero-length, non-manifold edge there; ends
+   filled flat (`bmesh.ops.holes_fill`, a finial ending in a small disc) left 0 after every
+   cut. **Never cut exactly on the lathe's edges**: windows placed at
    45° + 90°·k on a 64-step spin (one edge every 5.625°) left 3 non-manifold edges; the same
    cuts half a step off (2.8°) left 0.
    **Remesh last.** A boolean applied after a voxel remesh (eyes engraved in a figure, a shell
@@ -109,17 +117,23 @@ and only a voxel remesh held, at 600,000 triangles.
    second part, both parts PASS with no support. Each part gets its own STL, its own
    `print_check`, and its own line in the log; they join by a peg in a hole (the clearance of
    § Like the photo rule 9, not measured here — say so, and offer the test print below).
+   **The peg goes on the part that stands steadier, the hole in the other**: a 35 mm flame
+   standing on its own 4 × 4 mm peg got PrusaSlicer's *Low bed adhesion*; the peg moved to the
+   forge and the hole into the flame, the flame stands on its whole base. A hole that ends
+   inside an upright part gets a pointed 45° roof, not a flat ceiling (rule 6).
    **A hole that opens on the bed gets a 45° lead-in chamfer, 0.5 mm deep**, and so does the
    bed edge of a part that must fit into another: the first layer is squashed outward (the
    "elephant's foot") and closes the hole's mouth by a few tenths. The usual FDM advice, not
-   measured here — the windmill's sails, laid flat, have their peg hole open on the bed
-   without one. **The joint's test print**:
+   measured yet — hole 4 of the test print below measures it. **The joint's test print**:
    `blender -b --factory-startup --python-exit-code 1 --python tools/fit_coupon.py -- --out DIR
    --peg-mm <the peg's side> --depth-mm <the hole's depth>` writes a plate with one diamond hole
    per clearance (0.1, 0.2, 0.3 mm a face) and one at 0.2 with the lead-in, and the peg on a
    wall, printed the way the model's is. About 20 minutes (PrusaSlicer's estimate, default
    profile); the tightest hole the peg enters is the clearance to model. Ask for that number
-   before modelling a set of joints.
+   before modelling a set of joints — **in auto mode, do not wait**: model at 0.2 mm a face,
+   write the coupon to the output folder with the model, and say in the hand-over that the
+   clearance is not measured. A peg that is not a diamond printed on its side (a square peg
+   standing up) gets only an order of magnitude from the coupon: say that too.
 6. **Overhangs past 45° from vertical are designed out**: undersides of eaves, caps and rims
    at 45° or steeper (a cone, a chamfer, a roof pitch ≥ 45°), grooves as V-cuts. What remains
    — the top of an arch, the inside of a ring — is reported with the check's overhang %.
@@ -129,7 +143,9 @@ and only a voxel remesh held, at 600,000 triangles.
    *Floating object part*). Brace it back into the wall at ≥ 45° (a corbel), or end it there.
 7. **Relief is geometry.** An STL has no colour, no material and no texture: letters, planks
    and frames are embossed or engraved — ≥ 0.6 mm deep FDM, 0.3 mm resin, strokes at the
-   wall minimum. A texture or a normal map never carries information on a print.
+   wall minimum. **The depth is the shallowest point's**: a flat cutter on a round wall cuts
+   less deep at its sides than at its middle — a 50 mm lighthouse engraved 0.9-1.0 mm at the
+   middle to keep its sides above 0.6. A texture or a normal map never carries information on a print.
    **Cut a pattern as exact polygons, never on a grid**: engraved diamonds built on a
    displaced grid kept the grid's step on every slanted edge — a ~0.2 mm staircase, plain in
    a matcap close-up although every check passed. A grid is fine for a straight groove that
@@ -153,6 +169,9 @@ and only a voxel remesh held, at 600,000 triangles.
    apply_modifiers=True, export_selected_objects=True)`. 3MF only when the 3MF Import/Export
    extension is installed — `bpy.ops.export_mesh.threemf.get_rna_type()` in a `try`;
    `hasattr(bpy.ops.export_mesh, "threemf")` is True even when it is not (Blender 5.2.2).
+   **An object hidden from the render exports nothing**: `hide_render` left on the sails after
+   the review renders wrote an 84-byte STL, 0 triangles, with no error. Restore visibility
+   before exporting; `print_check` counts the triangles.
    Then `print_check.py` on the STL; PASS is required, or say what fails. **Hand over the
    size with the file**: the height it was modelled for, and the check's `SCALE` line — "do
    not shrink below N %; enlarging is safe". For parts that assemble, the largest of their
@@ -239,6 +258,9 @@ passed every print check and the user found it "not alike at all".
      it follows the photo where the measure is known blind (an outline traced on its outer edge,
      a thin line, a groove's shadow). Then the crop decides, and the log says why.
    - A move under 0.01 either way is noise: judge it on the crops.
+   - **On an illustration** (a logo, a painting) the face measure reads painted light and
+     shadow as details: on the forge logo it stayed at 0.00 every round. Judge on the
+     silhouette (±0.01) and the crops, and say so in the log.
    - **Stop when nothing is left to close**: every gap the overlay lists is either closed or
      known blind (a groove's shadow, a cut wall), and the crops show no difference a change
      could fix. Do not invent a change to get an empty round.
@@ -309,7 +331,9 @@ STL (mm), 3MF (its own unit), GLB and .blend (metres). Exit 0 PASS, 3 FAIL, 1 er
   pairing on every study file.
 - **`--reference`** is the file the model came from: the original before a repair, or — for a
   model built from scratch by unions — the parts saved just before the union (both sessions
-  that built one chose that, and it caught nothing false). It voxelises both meshes at the same size (largest dimension / 150) and
+  that built one chose that, and it caught nothing false), saved as `{name}_parts.blend`; for
+  a solid turned and then engraved, that solid before the engravings. A part built closed in
+  one piece, with no union and no repair, has none: say so. It voxelises both meshes at the same size (largest dimension / 150) and
   compares dimensions (3 %) and volume (10 %, only when the dimensions agree and BOTH the
   model and the reference are sealed — an open mesh voxelises to almost nothing: an open
   40 × 20 × 20 box gives 4 mm3). A closed cavity is voxelised as solid, so its exact volume is
@@ -334,7 +358,12 @@ STL (mm), 3MF (its own unit), GLB and .blend (metres). Exit 0 PASS, 3 FAIL, 1 er
   windmill's body 40 % (its 2 mm railing posts), the lighthouse 67 % (its 1.2 mm parapet),
   the teapot 67 %. Not the first wall to cross: that was 2 faces at the foot of the
   lighthouse's door (0.09 % of the area) at 80 %. Walls only: an engraving's depth and a
-  bar's width are not counted apart.
+  bar's width are not counted apart. **The rim of an engraving on a round wall reads thin**
+  (the ray leaves through the curve beside it) and weighs on the line: cast rays at the faces
+  flagged before thickening anything — on the 50 mm lighthouse every face left under 0.8 mm
+  was such a rim. A real thin wall is fixed even when that lowers the line's margin. **Always a scale of the file**: `--height-mm` does not
+  move it, and a height under it is a warning — the lighthouse read at 49.5 mm, 55 %, is
+  under its 67 %, with 5.4 % of its area under 0.8 mm.
 
 PASS needs 0 open and 0 non-manifold edges, consistent normals, no floating or inverted
 part, no loss against the reference and, with the slicer, manifold = yes, no empty layer,
@@ -361,4 +390,9 @@ three hardware parts 0.5-2.1 mm off the body, which PrusaSlicer does not call fl
   no fillet, no dimension a drawing could call. A bracket, a box whose lid must close, a
   hook that takes a load belong in a CAD tool (build123d, CadQuery, OpenSCAD) — say so.
 - Self-intersections are counted (Blender's BVH), not repaired, and not a FAIL: a slicer
-  merges overlapping solids.
+  merges overlapping solids. Pairs that only TOUCH are counted too — a shared vertex, a vertex
+  lying on a face: the windmill's sails gave 32 pairs, all at distance 0. Triangulating to
+  clear them made 36; leave them.
+- Overhangs are counted past 45.5° (a face modelled at 45° reads 45.0x° in an STL), as a
+  share: small ceilings bridge. Whether the print needs supports is the slicer's answer —
+  "sliced clean without supports: none needed" — not the share's.

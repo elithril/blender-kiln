@@ -32,8 +32,11 @@ that). Edges are then paired exactly:
   process minimum (0.8 mm FDM, 0.5 mm resin) — sampled above 50,000 faces;
 - the smallest scale: a slicer shrinks every wall with the model, so the same walls give the
   scale under which 1 % more of the area would fall below that minimum (`min_scale`, and
-  `min_dims_mm`). Walls only: an engraving's depth or a bar's width is not counted apart;
-- overhangs: share of the downward area steeper than 45° from vertical (bed excluded).
+  `min_dims_mm`), always of the FILE: --height-mm does not move it, and a height under it is
+  said. Walls only: an engraving's depth or a bar's width is not counted apart;
+- overhangs: share of the downward area steeper than 45° from vertical (bed excluded), past
+  0.5° of tolerance so that a face modelled at 45° is not one. A share, not a verdict on
+  supports: small ceilings bridge — --slicer says whether it slices clean without them.
 
 --reference compares the model against the file it was repaired from: dimensions, and
 volume, both voxelised at the same size so that an original made of overlapping closed
@@ -67,6 +70,10 @@ FUSE_GAP = {"fdm": 0.4, "resin": 0.05}       # mm: one extrusion width / about o
                                              # two parts closer than that print as one
 EMPTY_MM3 = 1e-3                             # a part under a 0.1 mm cube of volume prints nothing
 OVERHANG_DEG = 45.0
+# A face modelled at 45° reads 45.0x° once written in single-precision STL: every overhang the
+# windmill, its sails and the joint's peg reported was one of those (0.1, 0.33, 0.48 % of the
+# area, 2026-10-13) — the chamfers print.md asks for, counted against it.
+OVERHANG_TOL_DEG = 0.5
 THICKNESS_SAMPLE = 50_000
 # Loss against the reference, measured on the print study's chest and lantern: the faithful
 # repairs (voxel remesh, decimated or not) are within 0.52 % on every axis and 0.15 % in
@@ -415,7 +422,7 @@ def support(V, F, part, nparts, closed, vol, overlaps, bed_tol, gap, real, zmin)
     return held, inverted, enclosed, lo, hi
 
 
-def thickness(V, F, n, area, wall, seed=0):
+def thickness(V, F, n, area, wall, scale=1.0, seed=0):
     tree = bvh(V, F)
     from mathutils import Vector
     nf = len(F)
@@ -438,12 +445,16 @@ def thickness(V, F, n, area, wall, seed=0):
     total = max(a.sum(), 1e-30)
     # The smallest scale this file takes: shrunk in a slicer, every wall shrinks with it. Walls
     # are taken thinnest first; the scale stops where they add up to 1 % of the area more than
-    # is already thin at 100 % — the next wall would cross the floor below it.
-    order = np.argsort(wall_at)
+    # is already thin at 100 % — the next wall would cross the floor below it. 100 % is the
+    # FILE, whatever --height-mm asked: measured on the scaled mesh, a lighthouse read at 55 %
+    # had its parapet already thin, so it was excused, and the line said 43 % for a model
+    # whose floor is 67 % — under the floor, told it could shrink further.
+    native = wall_at / scale
+    order = np.argsort(native)
     cum = np.cumsum(a[order])
-    allowed = a[thin].sum() + 0.01 * total
+    allowed = a[native < wall].sum() + 0.01 * total
     k = int(np.searchsorted(cum, allowed, side="right"))
-    nxt = wall_at[order[k]] if k < len(order) else np.inf
+    nxt = native[order[k]] if k < len(order) else np.inf
     min_scale = round(float(wall / nxt), 3) if np.isfinite(nxt) and nxt > 0 else None
     # Not the first wall to cross: on the lighthouse that was 2 faces at the foot of the door's
     # engraving (0.09 % of the area) at 80 %, while the parapet — 4.9 % of it, 1.0-1.2 mm —
@@ -579,9 +590,10 @@ def main():
                                gap_to_other_part_mm=round(min(gaps), 3) if gaps else "> 5"))
 
     on_bed = (t[:, :, 2] <= zmin + BED_TOL[o.process]).all(axis=1)
-    down = (n[:, 2] < -math.cos(math.radians(OVERHANG_DEG))) & ~on_bed
+    # a face θ from vertical has n_z = -sin θ: steeper than the limit is below -sin(limit)
+    down = (n[:, 2] < -math.sin(math.radians(OVERHANG_DEG + OVERHANG_TOL_DEG))) & ~on_bed
     overhang_pct = round(100 * area[down].sum() / max(area.sum(), 1e-30), 2)
-    thin = thickness(V, F, n, area, MIN_WALL[o.process])
+    thin = thickness(V, F, n, area, MIN_WALL[o.process], scale)
 
     r = dict(file=os.path.abspath(o.model), process=o.process, triangles=int(len(F)), vertices=int(len(V)),
              scale=scale, dims_mm=[round(float(x), 3) for x in dims],
@@ -591,12 +603,16 @@ def main():
              cavities=int((enclosed & (vol < 0)).sum()),
              volume_mm3=round(float(vol[closed].sum()), 3), overhang_area_pct=overhang_pct, thickness=thin)
     if thin["min_scale"] is not None:
-        thin["min_dims_mm"] = [round(float(x) * thin["min_scale"], 1) for x in dims]
+        thin["min_dims_mm"] = [round(float(x) / scale * thin["min_scale"], 1) for x in dims]
     fails, warns = [], []
     # A rescale hides a model built at the wrong size: one at 93.7 mm passed as 100 mm in silence.
     if abs(scale - 1.0) > 0.01:
         warns.append(f"scaled x{scale:.3f} to {o.height_mm:g} mm: the file itself is {native_h:.1f} mm tall "
                      f"— print it at that scale, or export it at size")
+        if thin["min_scale"] is not None and scale < thin["min_scale"] - 1e-9:
+            warns.append(f"{o.height_mm:g} mm is under the smallest scale: the file holds down to "
+                         f"{100 * thin['min_scale']:.0f} % ({thin['min_dims_mm'][2]:g} mm tall), this is "
+                         f"{100 * scale:.0f} % — {thin['area_thin_pct']} % of the area under {thin['min_wall_mm']} mm")
     if topo["open_edges"]:
         fails.append(f"{topo['open_edges']} open edges — the surface has holes")
     if topo["nonmanifold_edges"]:
@@ -621,8 +637,13 @@ def main():
     if thin["faces_thin_pct"] > 0:
         warns.append(f"{thin['faces_thin_pct']} % of faces on a wall under {thin['min_wall_mm']} mm "
                      f"({thin['area_thin_pct']} % of the area)")
+    # Said as a share, never as "supports": three sessions read the bare word against a clean
+    # slice without them and could not tell which to hand over. The slicer pass answers it.
+    over_at = None
     if overhang_pct > 0:
-        warns.append(f"{overhang_pct} % of the area overhangs more than {OVERHANG_DEG:.0f}° — supports")
+        over_at = len(warns)
+        warns.append(f"{overhang_pct} % of the area overhangs more than {OVERHANG_DEG:.0f}° — small areas "
+                     f"bridge; --slicer says whether it needs supports")
 
     if o.reference:
         RV, RF = load(o.reference)
@@ -686,6 +707,13 @@ def main():
             warns.append(f"PrusaSlicer stability issues: {', '.join(other)}")
         if s["slice_exit"] != 0 or not s["gcode"]:
             fails.append(f"PrusaSlicer: slicing failed (exit {s['slice_exit']})")
+        clean = (s["manifold"] == "yes" and not s["empty_layer_count"] and not s["floating_count"]
+                 and s["slice_exit"] == 0 and s["gcode"])
+        if over_at is not None:
+            warns[over_at] = (f"{overhang_pct} % of the area overhangs more than {OVERHANG_DEG:.0f}° — "
+                              + ("sliced with supports" if o.supports else
+                                 "sliced clean without supports: none needed" if clean else
+                                 "and the slice is not clean: see the FAIL lines, then try --supports"))
 
     r["verdict"] = "FAIL" if fails else "PASS"
     r["fails"], r["warnings"] = fails, warns
@@ -702,7 +730,8 @@ def main():
     for x in warns:
         print("  WARN ", x)
     if thin["min_scale"] is not None:
-        print(f"  SCALE do not shrink below {100 * thin['min_scale']:.0f} % "
+        print(f"  SCALE do not shrink below {100 * thin['min_scale']:.0f} %"
+              f"{' of the file' if abs(scale - 1.0) > 0.01 else ''} "
               f"({' × '.join(f'{x:g}' for x in thin['min_dims_mm'])} mm): "
               f"1 % more of the area would fall under {thin['min_wall_mm']} mm. Enlarging is safe.")
     print(f"\nVERDICT {r['verdict']}")

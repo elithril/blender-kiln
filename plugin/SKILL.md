@@ -104,7 +104,9 @@ nothing and the user gets no response.
     recalc normals — BEFORE rigging and before any export. A plain merge re-smooths
     a faceted low-poly mesh (26.7% → 94.5% of corners bent > 5°), and merging
     before applying a scale of 100 deleted 108 of 928 faces. Code and numbers:
-    references/validation-checklist.md § Merge by Distance.
+    references/validation-checklist.md § Merge by Distance. **Print set in CONFIG:
+    no merge** on a model built closed — at print size it merges real geometry
+    (validation-checklist.md, print: steps 1 and 4 skipped).
 11. ALWAYS generate concept images with no background (transparent).
     Fallback: solid white. Never environment/ground/context.
 12. SINGLE VIEW by default for AI generation. Multi-view only if user
@@ -420,7 +422,7 @@ Collect these parameters. Only type and brief are mandatory — infer the rest f
 | **Detail tier** (lightweight / balanced / detailed / custom) | balanced | Soft ranges, never hard caps |
 | **Visual style** (realistic, stylized, cartoon, low-poly) | realistic | Impacts sourcing + AI prompts |
 | **Mode** (auto / guided) | auto | guided = validation at each step |
-| **Storage** (compact / full) | compact | compact = original + final + .blend + log only; intermediates are removed at the end-of-session proposal (EXPORT), never silently mid-run. Measures are always logged |
+| **Storage** (compact / full) | compact | compact = original + final + .blend + log only; intermediates are removed at the end-of-session proposal (EXPORT), never silently mid-run. Auto mode with nobody to answer: keep them and list them in the hand-over. Measures are always logged |
 | **3D Backend** (none / hf-spaces / local) | none — scripted | AI only when chosen; then HF Spaces unless a local model is installed |
 | **Local model** | none | Only if installed (see `/kiln models`) |
 | **HF Space URL** | microsoft/TRELLIS.2 | Then `trellis-community/TRELLIS`. Hunyuan3D only on request (licence). Check `stage: RUNNING` first — a paused Space still answers HTTP 200. See `references/ai-generation.md` |
@@ -454,7 +456,7 @@ Ask: **"Search marketplaces or create from scratch?"**
 
 Load `references/sourcing-strategy.md`.
 
-**Preflight (rule 22) — do this BEFORE the first search:**
+**Preflight (rule 23) — do this BEFORE the first search:**
 
 ```
 get_polyhaven_status()   → {"enabled": false, "message": "...press N..."}
@@ -488,8 +490,10 @@ IF type = furniture OR simple architecture AND style = stylized
 IF type = organic (rock, tree, food, creature) OR style = realistic + detailed
     → recommend AI ("Organic forms and realistic detail = AI excels here.")
 
-IF type = complex architecture (lighthouse, cathedral)
+IF type = complex architecture (cathedral, ornate facade) AND print not set
     → recommend AI ("Complex detail = AI handles it better.")
+    # print set: a lighthouse, a windmill, a tower are simple objects — a lathe or a prism,
+    # scripted (print.md § Scope). Two print sessions read this line against it.
 
 IF type = character
     → recommend AI
@@ -509,7 +513,9 @@ primitive — offer a stylised simple shape the user agrees to, or `print_check`
 bring. Measured: two cats passed every check and were unacceptable to look at. A mechanical
 part (a load, a lid that must close, a size to the tenth) is said at CONFIG to belong in a CAD
 tool, and goes on only as decorative if the user agrees. Parts joined by a peg: offer
-`tools/fit_coupon.py`'s test print before modelling the joints. For a simple
+`tools/fit_coupon.py`'s test print before modelling the joints — **in auto mode, do not wait
+for it**: model at 0.2 mm a face, write the coupon next to the model, and say in the hand-over
+that the clearance is not measured (`print.md` rule 5). For a simple
 object, scripted. **Load
 `references/print.md` § Printable from the brief before the first primitive** — model at print size, closed solids only, one volume
 (exact union as you go, or overlap + one voxel remesh), the process's minimum thickness, a flat
@@ -762,7 +768,9 @@ Load `references/texturing-strategy.md`. With a reference image, also `reference
 ### [6] OPTIMIZE (interactive in guided mode)
 
 **Print set in CONFIG: skipped.** The deliverable is the STL; the GLB is a preview for the
-user, exported plain (no Draco, no texture pass) under the usual `_final.glb` name.
+user, exported plain (no Draco, no texture pass) under the usual `_final.glb` name. **No
+`_original.glb`** — nothing is optimized, so there is nothing to keep it for; the file
+`print_check --reference` reads is `{name}_parts.blend` (`print.md` § The tool).
 
 **Auto mode, glTF target:** apply the default preset without asking — textures to
 WebP, resized to the target's cap from `references/uv-materials.md` § Texture
@@ -1073,7 +1081,7 @@ Each asset produces `{name}_log.md`:
 - Rounds (reference image): v{n}: silhouette {iou}, face {iou} (f {f}, offset {mm}); changed
   {one thing}; kept / undone
 - Print check, one line per printed part: {part}: {PASS/FAIL}, {dimensions} mm, {parts} part(s),
-  supports {yes/no}, smallest scale {N} %, warnings {…}
+  supports {yes/no — from the slice, not from the overhang %}, smallest scale {N} %, warnings {…}
 
 ## Licenses
 - {resource}: {license} {attribution if needed}

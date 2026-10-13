@@ -84,6 +84,7 @@ Lighting_Studio
 | glTF / web | kebab-case | `wooden-chair.glb` |
 | FBX / game engine | PascalCase + prefix | `SM_WoodenChair.fbx` |
 | USDZ / AR | kebab-case | `wooden-chair.usdz` |
+| STL / print | kebab-case, `_{part}` per printed part | `dutch-windmill_body.stl`, `dutch-windmill_sails.stl` |
 
 ---
 

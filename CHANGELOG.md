@@ -44,6 +44,10 @@ print mode refuses an animal, a person or a character before the first primitive
   rescale in the slicer, an STL carries no unit, and the walls shrink with it. The scale
   under which 1 % more of the area falls under the floor — the windmill's body 40 %, the
   lighthouse 67 %, the teapot 67 %. The hand-over gives it with the size it was modelled for.
+  Always a scale of the FILE: measured on the mesh `--height-mm` had scaled, the walls already
+  thin there were excused and the floor moved with the model — the lighthouse read at 55 %
+  said 43 % instead of 67 %, a 2 mm plate read at 200 % said 20 % instead of 40 %. A height
+  under it is now a warning.
 - **`tools/fit_coupon.py`**: the test print for a joint — a plate with one diamond hole per
   clearance (0.1 / 0.2 / 0.3 mm a face) and one with a 0.5 mm lead-in chamfer on the bed face,
   and the peg on a wall, printed as on the model. About 20 minutes on PrusaSlicer's default
@@ -81,6 +85,27 @@ print mode refuses an animal, a person or a character before the first primitive
 - **The TRELLIS.2 Space removes backgrounds with RMBG-2.0 (CC BY-NC 4.0)** unless the
   image already has an alpha channel — read in its `app.py`. The reference says to send
   a cut-out, or to use the TRELLIS Space, whose `rembg`/U²-Net chain is MIT/Apache-2.0.
+- **What three isolated print sessions found unclear, contradictory or silent** (a 90 mm
+  windmill, a 50 mm lighthouse, a 70 mm forge from the logo, 2026-10-13), each fixed where it
+  was read:
+  - `print_check` no longer counts a face modelled at 45° as an overhang (it reads 45.0x° in
+    an STL: every overhang the windmill, its sails and the joint's peg reported was one), and
+    never says a bare "supports": the line says what the slice said — "sliced clean without
+    supports: none needed" on the lighthouse and the forge;
+  - auto mode does not wait for the measured clearance: 0.2 mm a face, the coupon next to the
+    model, said unmeasured in the hand-over;
+  - the height asked is the assembled object's — the windmill left its sails out and stood
+    ~120 mm for "~90 mm";
+  - a lathe is closed by flat caps, not axis points, when it is engraved after: an EXACT
+    engraving re-cut the pole and left a non-manifold edge;
+  - the peg goes on the steadier part (a flame on its own 4 × 4 mm peg: low bed adhesion);
+    an engraving's depth is its shallowest point's on a round wall; an object hidden from the
+    render exports an empty STL with no error; touching pairs count as self-intersections;
+    the face measure is blind on an illustration;
+  - rule 10's merge is skipped in print mode, as the checklist already said; the lighthouse
+    is no longer an example of architecture to send to AI; print has no `_original.glb`, its
+    `--reference` is `{name}_parts.blend`; STLs are named `{name}_{part}.stl`; the preflight
+    points to rule 23.
 
 ### Measured — what did not make it
 
