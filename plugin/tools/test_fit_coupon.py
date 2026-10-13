@@ -8,7 +8,10 @@
   the STL, not from the tool's own report;
 - both parts are one closed solid, the plate is --depth-mm thick and lies on Z = 0;
 - other values (a 6 mm peg, one clearance, no chamfer): one hole, 6.3 mm, no lead-in;
-- a negative clearance: refused, exit 1, nothing written.
+- a negative clearance: refused, exit 1, nothing written;
+- --shape round, an 8 mm peg 6 mm deep: holes 8.2 / 8.4 / 8.6 mm across the flats and 8.4
+  with the lead-in (9.4 on the bed face), the peg standing on its base, 8.0 mm at its corners
+  and 7 mm long — read back from the STLs.
 """
 import json, math, os, struct, subprocess, sys, tempfile
 
@@ -93,6 +96,34 @@ with tempfile.TemporaryDirectory() as d:
     check("6 mm peg, one clearance, no chamfer: one hole of 6.3 mm",
           rc == 0 and len(r["holes"]) == 1 and r["holes"][0]["side_mm"] == 6.3
           and abs(r["holes"][0]["measured_bed_side_mm"] - 6.3) < 1e-3, (rc, r and r["holes"], log[-200:]))
+
+    # 2b. round, standing up
+    rc, r, log = run(f"{d}/r", "--shape", "round", "--peg-mm", "8", "--depth-mm", "6")
+    check("round: exit 0, a report", rc == 0 and r is not None and r.get("shape") == "round", (rc, log[-300:]))
+    if rc == 0:
+        plate, peg = read(f"{d}/r/fit_holes.stl"), read(f"{d}/r/fit_peg.stl")
+        check("round: plate and peg closed shells", closed(plate) and closed(peg))
+        cos = math.cos(math.pi / 64)
+        def across(tris, x, y, z):
+            best = 0.0
+            for t in tris:
+                for i in range(3):
+                    a, b = t[i], t[(i + 1) % 3]
+                    if (a[2] - z) * (b[2] - z) < 0:
+                        s_ = (z - a[2]) / (b[2] - a[2])
+                        dd = math.hypot(a[0] + (b[0] - a[0]) * s_ - x, a[1] + (b[1] - a[1]) * s_ - y)
+                        if best < dd < 6:
+                            best = dd
+            return 2 * best * cos
+        for i, (mid, bed) in enumerate([(8.2, 8.2), (8.4, 8.4), (8.6, 8.6), (8.4, 9.4)]):
+            x, y = r["holes"][i]["centre_mm"]
+            m, b = across(plate, x, y, 3.0), across(plate, x, y, 0.001)
+            check(f"round hole {i + 1}: {mid} mm across the flats, {bed} on the bed face",
+                  abs(m - mid) < 2e-3 and abs(b - bed) < 1e-2, (round(m, 4), round(b, 4)))
+        top = [p for t in peg for p in t if p[2] > 2.0 + 1e-4]
+        dia = 2 * max(math.hypot(p[0], p[1]) for p in top)
+        check("round peg: 8.0 mm at its corners, 7 mm above its 2 mm base",
+              abs(dia - 8.0) < 2e-3 and abs(max(p[2] for p in top) - 9.0) < 1e-3, (round(dia, 4), max(p[2] for p in top)))
 
     # 3. refused
     rc, r, log = run(f"{d}/c", "--clear-mm", "-0.1")

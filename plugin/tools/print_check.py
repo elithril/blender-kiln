@@ -29,7 +29,9 @@ that). Edges are then paired exactly:
   inverted parts: negative volume and not enclosed (a cavity is enclosed). Parts with no
   volume (slivers a decimation leaves) are counted and not judged;
 - thin walls: share of faces whose wall, cast inward along the normal, is thinner than the
-  process minimum (0.8 mm FDM, 0.5 mm resin) — sampled above 50,000 faces;
+  process minimum (0.8 mm FDM, 0.5 mm resin) — sampled above 50,000 faces; the JSON's
+  `thickness.thin_at` says where, thinnest first: up to 20 spots (centre in mm, wall read),
+  one per mm;
 - the smallest scale: a slicer shrinks every wall with the model, so the same walls give the
   scale under which 1 % more of the area would fall below that minimum (`min_scale`, and
   `min_dims_mm`), always of the FILE: --height-mm does not move it, and a height under it is
@@ -75,6 +77,7 @@ OVERHANG_DEG = 45.0
 # area, 2026-10-13) — the chamfers print.md asks for, counted against it.
 OVERHANG_TOL_DEG = 0.5
 THICKNESS_SAMPLE = 50_000
+THIN_AT = 20                                 # thin spots listed in the JSON
 # Loss against the reference, measured on the print study's chest and lantern: the faithful
 # repairs (voxel remesh, decimated or not) are within 0.52 % on every axis and 0.15 % in
 # volume; the MANIFOLD unions that dropped the object are 158-208 % off on an axis once
@@ -459,9 +462,18 @@ def thickness(V, F, n, area, wall, scale=1.0, seed=0):
     # Not the first wall to cross: on the lighthouse that was 2 faces at the foot of the door's
     # engraving (0.09 % of the area) at 80 %, while the parapet — 4.9 % of it, 1.0-1.2 mm —
     # sets 67 %. One percent of the area is a wall someone sees.
+    # Where they are: print.md asks to cast rays at the faces flagged before thickening anything,
+    # and two sessions wrote their own probe to find them. Thinnest first, one per 1 mm.
+    at = []
+    for k in np.flatnonzero(thin)[np.argsort(wall_at[thin])]:
+        p = c[k]
+        if all(np.linalg.norm(p - np.array(q["at_mm"])) > 1.0 for q in at):
+            at.append(dict(at_mm=[round(float(x), 2) for x in p], wall_mm=round(float(wall_at[k]), 3)))
+            if len(at) == THIN_AT:
+                break
     return dict(min_wall_mm=wall, faces_thin_pct=round(100 * thin.mean(), 2) if len(idx) else 0.0,
                 area_thin_pct=round(100 * a[thin].sum() / total, 2),
-                min_scale=min_scale, sampled=int(len(idx)), of=int(nf))
+                min_scale=min_scale, sampled=int(len(idx)), of=int(nf), thin_at=at)
 
 
 def voxel_volume(V, F, size):

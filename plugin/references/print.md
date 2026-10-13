@@ -94,9 +94,11 @@ and only a voxel remesh held, at 600,000 triangles.
    afterwards: a 50 mm lighthouse closed by merged axis points was clean, until an EXACT
    engraving re-cut the pole's fan and left a zero-length, non-manifold edge there; ends
    filled flat (`bmesh.ops.holes_fill`, a finial ending in a small disc) left 0 after every
-   cut. **Never cut exactly on the lathe's edges**: windows placed at
+   cut. **Never cut — or join — exactly on the lathe's edges**: windows placed at
    45° + 90°·k on a 64-step spin (one edge every 5.625°) left 3 non-manifold edges; the same
-   cuts half a step off (2.8°) left 0.
+   cuts half a step off (2.8°) left 0. Unions too: a diamond shaft whose lower edge lay on a
+   meridian of a 64-step cap, and a 45° cone passing through the corners of an octagon, each
+   left non-manifold edges until moved half a step.
    **Remesh last.** A boolean applied after a voxel remesh (eyes engraved in a figure, a shell
    carved after a part was joined to it) left 2 to 9 edges shared by three faces: carve and
    join first, remesh at 0.2 mm once at the end, then decimate (2.35 M → 250 k triangles, still
@@ -128,12 +130,14 @@ and only a voxel remesh held, at 600,000 triangles.
    `blender -b --factory-startup --python-exit-code 1 --python tools/fit_coupon.py -- --out DIR
    --peg-mm <the peg's side> --depth-mm <the hole's depth>` writes a plate with one diamond hole
    per clearance (0.1, 0.2, 0.3 mm a face) and one at 0.2 with the lead-in, and the peg on a
-   wall, printed the way the model's is. About 20 minutes (PrusaSlicer's estimate, default
+   wall, printed the way the model's is. **A round peg standing up** (a cap on a stem, a flame
+   on its forge): `--shape round --peg-mm <its diameter>` — round holes, the peg standing on a
+   base, as on the model; 23 + 5 minutes for an 8 mm peg 6.5 mm deep. About 20 minutes (PrusaSlicer's estimate, default
    profile); the tightest hole the peg enters is the clearance to model. Ask for that number
    before modelling a set of joints — **in auto mode, do not wait**: model at 0.2 mm a face,
    write the coupon to the output folder with the model, and say in the hand-over that the
-   clearance is not measured. A peg that is not a diamond printed on its side (a square peg
-   standing up) gets only an order of magnitude from the coupon: say that too.
+   clearance is not measured. A peg the coupon does not make (a square one standing up) gets
+   only an order of magnitude from the nearest shape: say that too.
 6. **Overhangs past 45° from vertical are designed out**: undersides of eaves, caps and rims
    at 45° or steeper (a cone, a chamfer, a roof pitch ≥ 45°), grooves as V-cuts. What remains
    — the top of an arch, the inside of a ring — is reported with the check's overhang %.
@@ -145,7 +149,12 @@ and only a voxel remesh held, at 600,000 triangles.
    and frames are embossed or engraved — ≥ 0.6 mm deep FDM, 0.3 mm resin, strokes at the
    wall minimum. **The depth is the shallowest point's**: a flat cutter on a round wall cuts
    less deep at its sides than at its middle — a 50 mm lighthouse engraved 0.9-1.0 mm at the
-   middle to keep its sides above 0.6. A texture or a normal map never carries information on a print.
+   middle to keep its sides above 0.6. A texture or a normal map never carries information
+   on a print.
+   **Paint regions are decided with or without a photo**: one filament and a painted result
+   means each colour region ends on an edge the brush can follow (a 0.6 mm groove or step —
+   § Like the photo rule 9 has the rule and the alternative, a part in its own filament), and
+   the preview gives each region its own flat material so the user sees the paint plan.
    **Cut a pattern as exact polygons, never on a grid**: engraved diamonds built on a
    displaced grid kept the grid's step on every slanted edge — a ~0.2 mm staircase, plain in
    a matcap close-up although every check passed. A grid is fine for a straight groove that
@@ -169,6 +178,10 @@ and only a voxel remesh held, at 600,000 triangles.
    apply_modifiers=True, export_selected_objects=True)`. 3MF only when the 3MF Import/Export
    extension is installed — `bpy.ops.export_mesh.threemf.get_rna_type()` in a `try`;
    `hasattr(bpy.ops.export_mesh, "threemf")` is True even when it is not (Blender 5.2.2).
+   **Delete the `.blend1`** Blender writes beside each re-saved file — every session of
+   2026-10-13 left two to four of them in a compact output folder — or set
+   `bpy.context.preferences.filepaths.save_version = 0` before saving (checked, Blender 5.2.2:
+   saved twice, no `.blend1`; without it, one).
    **An object hidden from the render exports nothing**: `hide_render` left on the sails after
    the review renders wrote an 84-byte STL, 0 triangles, with no error. Restore visibility
    before exporting; `print_check` counts the triangles.
@@ -318,10 +331,14 @@ passed every print check and the user found it "not alike at all".
 
 ```
 blender -b --factory-startup --python-exit-code 1 --python tools/print_check.py -- \
-    model.stl --process fdm --height-mm 100 \
-    --reference original.glb --slicer /Applications/PrusaSlicer.app/Contents/MacOS/PrusaSlicer \
+    model_body.stl --process fdm \
+    --reference model_body_parts.blend --slicer /Applications/PrusaSlicer.app/Contents/MacOS/PrusaSlicer \
     --json check.json
 ```
+
+**`--height-mm` SCALES the file** to that height before checking — for reading a model at
+another size (`SCALE`, below), never to state the brief's height. A file modelled at size
+needs none: given the assembly's 90 mm, a 71 mm body would be checked enlarged.
 
 STL (mm), 3MF (its own unit), GLB and .blend (metres). Exit 0 PASS, 3 FAIL, 1 error.
 
@@ -331,7 +348,9 @@ STL (mm), 3MF (its own unit), GLB and .blend (metres). Exit 0 PASS, 3 FAIL, 1 er
   pairing on every study file.
 - **`--reference`** is the file the model came from: the original before a repair, or — for a
   model built from scratch by unions — the parts saved just before the union (both sessions
-  that built one chose that, and it caught nothing false), saved as `{name}_parts.blend`; for
+  that built one chose that, and it caught nothing false), saved as `{name}_{part}_parts.blend`,
+  **one per printed part**: the tool reads every visible mesh of a .blend, so one file for two
+  parts compares each part with both; for
   a solid turned and then engraved, that solid before the engravings. A part built closed in
   one piece, with no union and no repair, has none: say so. It voxelises both meshes at the same size (largest dimension / 150) and
   compares dimensions (3 %) and volume (10 %, only when the dimensions agree and BOTH the
@@ -359,9 +378,10 @@ STL (mm), 3MF (its own unit), GLB and .blend (metres). Exit 0 PASS, 3 FAIL, 1 er
   the teapot 67 %. Not the first wall to cross: that was 2 faces at the foot of the
   lighthouse's door (0.09 % of the area) at 80 %. Walls only: an engraving's depth and a
   bar's width are not counted apart. **The rim of an engraving on a round wall reads thin**
-  (the ray leaves through the curve beside it) and weighs on the line: cast rays at the faces
-  flagged before thickening anything — on the 50 mm lighthouse every face left under 0.8 mm
-  was such a rim. A real thin wall is fixed even when that lowers the line's margin. **Always a scale of the file**: `--height-mm` does not
+  (the ray leaves through the curve beside it) and weighs on the line: look at the faces
+  flagged before thickening anything — the JSON's `thickness.thin_at` lists where they are
+  (centre in mm, wall read), and `tools/review_renders.py --close-from check.json` renders
+  them. On the 50 mm lighthouse every face left under 0.8 mm was such a rim. A real thin wall is fixed even when that lowers the line's margin. **Always a scale of the file**: `--height-mm` does not
   move it, and a height under it is a warning — the lighthouse read at 49.5 mm, 55 %, is
   under its 67 %, with 5.4 % of its area under 0.8 mm.
 
@@ -384,8 +404,8 @@ three hardware parts 0.5-2.1 mm off the body, which PrusaSlicer does not call fl
 - No resin slicing: the slicer pass is FDM with PrusaSlicer's defaults, whatever `--process`.
 - No orientation search, no support generation, no hollowing or drain holes for resin, no
   check that the model fits a given build volume, no tolerances between moving parts.
-- `fit_coupon.py` makes diamond pegs only, and measures nothing itself: the printer and the
-  hand that tries the peg do.
+- `fit_coupon.py` makes diamond pegs on their side and round pegs standing up, and measures
+  nothing itself: the printer and the hand that tries the peg do.
 - Decorative objects, not mechanical parts: a mesh modelled in Blender has no exact circle,
   no fillet, no dimension a drawing could call. A bracket, a box whose lid must close, a
   hook that takes a load belong in a CAD tool (build123d, CadQuery, OpenSCAD) — say so.

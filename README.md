@@ -460,7 +460,8 @@ plugin/
 | `plugin/tools/print_check.py` | 3D printing check, FDM or resin: raw edge counts, held parts, walls, overhangs, loss against the original, PrusaSlicer as second arbiter | ~740 |
 | `plugin/tools/cutout.swift` | Cuts the subject out of a photo with macOS Vision (14+), local and free — the alpha `fidelity_check` needs | ~30 |
 | `plugin/tools/flatten.py` | Makes a model's nearly flat faces exactly flat and lays it on the bed — curves, bevels and slopes untouched, the input never overwritten | ~290 |
-| `plugin/tools/fit_coupon.py` | Writes the test print for a peg in a hole: one hole per clearance, one with a lead-in chamfer, the peg printed the way the model's is | ~180 |
+| `plugin/tools/fit_coupon.py` | Writes the test print for a peg in a hole, diamond on its side or round standing up: one hole per clearance, one with a lead-in chamfer, the peg printed the way the model's is | ~235 |
+| `plugin/tools/review_renders.py` | The review renders without a connected Blender: matcap and colour, opposite three-quarters, top and under, framed on the vertices; close-ups at the check's thin spots | ~180 |
 | `plugin/references/validation-checklist.md` | Geometry cleanup (welding that keeps the shading) + material export audit | ~290 |
 | `plugin/references/ai-generation.md` | Backend order (TRELLIS.2 first), licences, Hunyuan3D 2.x (on request), TRELLIS.2 local (measured), concept art (FLUX.1-schnell, nano-banana), free-quota and token rules | ~430 |
 | `plugin/references/export-targets.md` | GLB/FBX/USDZ settings, headless CLI, post-export checklist | ~240 |
@@ -524,13 +525,17 @@ height only: anything wider than tall was clipped, a box measured 1:1 instead of
 `plugin/tools/test_print_check.py` builds the meshes a print can fail on — open, inverted,
 floating, too thin, a cavity, a loss against the original, a carved cup against its closed
 reference, the smallest scale of a 2 mm plate — and checks each verdict, with PrusaSlicer
-when it is there — **46/46**.
+when it is there — **54/54**.
 `plugin/tools/test_flatten.py` seeds what flattening must and must not touch: a jittered top
 made flat, a cylinder, a sphere, a dome, a wave, a 5° slope, a 0.2 mm step and a 0.2 mm bevel
 left alone, a tilted model laid on the bed — **22/22**; each case after the first was added
 when a real model broke the tool.
 `plugin/tools/test_fit_coupon.py` reads the coupon's holes and peg back from the STLs, not
-from the tool's report — each size to the micron, both parts closed — **11/11**.
+from the tool's report — each size to the micron, both parts closed, diamond and round —
+**18/18**.
+`plugin/tools/test_review_renders.py` renders a seeded block and reads the images back: one
+per view and mode, the subject spanning the frame, a close-up aimed at nothing refused —
+**7/7**.
 `plugin/tools/test_template_profile.py` reads a seeded turned part back through
 `template_profile.py` — radii, a free rod, a rod pressed against the body — **4/4**.
 

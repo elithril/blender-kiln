@@ -85,6 +85,7 @@ Lighting_Studio
 | FBX / game engine | PascalCase + prefix | `SM_WoodenChair.fbx` |
 | USDZ / AR | kebab-case | `wooden-chair.usdz` |
 | STL / print | kebab-case, `_{part}` per printed part | `dutch-windmill_body.stl`, `dutch-windmill_sails.stl` |
+| Print reference | the parts before the union, one per printed part | `dutch-windmill_body_parts.blend` |
 
 ---
 

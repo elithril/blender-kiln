@@ -18,6 +18,7 @@ them, no network. Cases:
 - a 0.4 mm wall: most faces under the FDM minimum, none for the 20 mm cube;
 - the smallest scale: a 2 mm plate takes 40 % (2 x 0.4 = 0.8 mm, its walls at the FDM floor),
   a 20 mm cube 4 % — and the dimensions at that scale are given;
+- thin spots: the 0.4 mm wall's are listed where they are, read 0.4, a mm apart; the cube has none;
 - overhang: the raised cube's underside is reported, a cube's bottom on the bed is not; a
   diamond prism modelled at 45° (the joint's peg) is not one, though float32 reads it 45.0x°;
 - the overhang warning follows the slice: "none needed" when it slices clean without supports,
@@ -152,6 +153,7 @@ with tempfile.TemporaryDirectory() as d:
     check("closed cube: 1 closed part, 0 open, 0 non-manifold, consistent",
           (r["parts"], r["closed_parts"], r["open_edges"], r["nonmanifold_edges"], r["inconsistent_edges"],
            r["nonmanifold_vertices"]) == (1, 1, 0, 0, 0, 0), (r["parts"], r["open_edges"]))
+    check("closed cube: no thin spot listed", r["thickness"]["thin_at"] == [], r["thickness"]["thin_at"])
     check("closed cube: volume 8000 mm3, no thin wall, no overhang",
           abs(r["volume_mm3"] - 8000) < 1e-3 and r["thickness"]["faces_thin_pct"] == 0 and r["overhang_area_pct"] == 0,
           (r["volume_mm3"], r["thickness"]["faces_thin_pct"], r["overhang_area_pct"]))
@@ -192,6 +194,11 @@ with tempfile.TemporaryDirectory() as d:
     rc, r, _ = run(f"{d}/wall.stl", "--process", "fdm")
     check("0.4 mm wall, FDM: most faces under 0.8 mm", r["thickness"]["area_thin_pct"] > 90,
           r["thickness"])
+    at = r["thickness"]["thin_at"]
+    check("0.4 mm wall: where — spots on the wall, read 0.4 mm, at least 1 mm apart",
+          at and all(abs(q["wall_mm"] - 0.4) < 1e-3 and 0 <= q["at_mm"][1] <= 0.4 + 1e-6 for q in at)
+          and all(sum((x - y) ** 2 for x, y in zip(q1["at_mm"], q2["at_mm"])) > 1
+                  for i, q1 in enumerate(at) for q2 in at[i + 1:]), at)
     rc, r, _ = run(f"{d}/plate2.stl", "--process", "fdm")
     th = r["thickness"]
     check("2 mm plate: do not shrink below 40 %, 8 x 0.8 x 8 mm there",

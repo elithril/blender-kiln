@@ -104,8 +104,24 @@ print mode refuses an animal, a person or a character before the first primitive
     the face measure is blind on an illustration;
   - rule 10's merge is skipped in print mode, as the checklist already said; the lighthouse
     is no longer an example of architecture to send to AI; print has no `_original.glb`, its
-    `--reference` is `{name}_parts.blend`; STLs are named `{name}_{part}.stl`; the preflight
-    points to rule 23.
+    `--reference` is one `{name}_{part}_parts.blend` per printed part; STLs are named
+    `{name}_{part}.stl`; the preflight points to rule 23.
+- **What the two sessions after those fixes still found** (the windmill again at 90 mm, now
+  sails included — 90.0 mm assembled; a mushroom house never named in the docs):
+  - **`tools/review_renders.py`**: the review renders when no Blender is connected — matcap
+    and colour, two opposite three-quarters, top and under, each view fitted to the vertices
+    as its camera sees them, close-ups at the check's thin spots; an empty frame is an error.
+    Every session had written its own; one framed on bound_box and misread 90 mm as 104.8;
+  - `print_check`'s JSON says where the thin walls are (`thickness.thin_at`: centre, wall
+    read, thinnest first) — print.md asked to look at them and nothing said where;
+  - `fit_coupon.py --shape round`: round holes and a round peg standing up, the joint a cap or
+    a flame makes, faceted so that the joint is never tighter than asked;
+  - one `--reference` per printed part (the tool reads every mesh of a .blend); `--height-mm`
+    scales, and is never the brief's height; a lathe is not JOINED on its own edges either;
+    paint regions are decided without a photo too; rules 1 and 24 say what to do headless;
+    the `.blend1` files are deleted, or `save_version = 0` (checked) stops them;
+  - the Blender workflow now also runs on a change to `flatten.py` and `fit_coupon.py`, which
+    it tested but did not watch.
 
 ### Measured — what did not make it
 

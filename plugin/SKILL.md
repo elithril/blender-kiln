@@ -64,15 +64,20 @@ nothing and the user gets no response.
 ## Iron Rules
 
 ```
- 1. ALWAYS get_scene_info() before each PHASE of the pipeline.
+ 1. ALWAYS get_scene_info() before each PHASE of the pipeline. Headless (no
+    Blender connected, rule 2): the build script prints the scene's objects
+    instead, and the log carries that line.
  2. ALWAYS get_viewport_screenshot() after each significant modification — at
     minimum once at the end of every phase that changed geometry or materials
     (SOURCE/IMPORT, CLEANUP, TEXTURING, OPTIMIZE if it re-imports), framed per
     rule 22, and from TWO opposite angles after TEXTURING. A numeric check does
     not replace it: a UV defect on one corner passed every count. When the MCP
     does not answer (Blender closed) or the open Blender is the user's (rule 16):
-    build headless and render the same views headless — Workbench, a matcap for
-    the geometry, framed close — never skip the look.
+    build headless and render the same views headless — never skip the look:
+    `tools/review_renders.py MODEL... --out DIR` (Workbench, matcap and colour,
+    two opposite three-quarters, top and under, framed on the vertices;
+    `--close-from` the check's thin spots). Every print session of 2026-10-13
+    wrote its own script; one framed on bound_box and misread a height by 15 mm.
  3. ONE asset at a time — never an entire scene at once.
  4. NEVER hard-cap poly count — alert if out of range, never block.
  5. NEVER spend money — no paid services, no credits consumed. A free service
@@ -158,7 +163,10 @@ nothing and the user gets no response.
     Surface THAT, never the raw error.
 24. ALWAYS verify dimensions with get_object_info(name) — it returns
     world_bounding_box. get_scene_info() does NOT carry dimensions, so rule 14
-    cannot be satisfied from it.
+    cannot be satisfied from it. Headless: measure on the vertices in world
+    space (`matrix_world @ v.co`), never on `bound_box` — a turned object's box
+    is larger than the object (a windmill read 104.8 mm for 90.0); for a print,
+    `print_check`'s dimensions are the measure.
 25. ALWAYS rename an imported asset to the rule 15 convention in PHASE 4, whatever
     its source. Marketplace and AI imports arrive under the source file's name.
 26. NEVER pick a rig without measuring vertices ÷ deform bones first. Below ~20
@@ -770,7 +778,7 @@ Load `references/texturing-strategy.md`. With a reference image, also `reference
 **Print set in CONFIG: skipped.** The deliverable is the STL; the GLB is a preview for the
 user, exported plain (no Draco, no texture pass) under the usual `_final.glb` name. **No
 `_original.glb`** — nothing is optimized, so there is nothing to keep it for; the file
-`print_check --reference` reads is `{name}_parts.blend` (`print.md` § The tool).
+`print_check --reference` reads is `{name}_{part}_parts.blend`, one per printed part (`print.md` § The tool).
 
 **Auto mode, glTF target:** apply the default preset without asking — textures to
 WebP, resized to the target's cap from `references/uv-materials.md` § Texture
