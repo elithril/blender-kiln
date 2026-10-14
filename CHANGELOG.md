@@ -163,6 +163,15 @@ session found by itself on a cartoon dragon, made from one flat drawing in four 
   their overlap measured, and their union checked as one object with the slicer. Each colour of
   that dragon alone FAILed three times out of four; the assembly PASSes (union 68.4 cm³, 68.2
   measured by its session with another library; overlap 0).
+- **A fresh session, given only the skill, made a cartoon fox** from a text brief: metaballs, four
+  colour parts, the assembly PASS (with supports and a 5 mm brim). What it found unclear is now
+  written: "remesh last" is about the shape, a figure's colours are cut after it; one voxel
+  range; scaling a ×10 model back before export; the figure's reference is the solid before the
+  colour cut; parts never meet vertex to vertex; metaballs in a row swell to 0.715 × r, not
+  0.574 (measured); colour renders need the GLB. `print_check` no longer says "none needed"
+  next to PrusaSlicer's *Floating bridge anchors*: it says to check with `--supports`. And the
+  hand-over of a colour figure is a `PRINT.md` next to the STLs — a user looking at the four
+  files asked how the scarf would get round the neck.
 
 ### Measured — what did not make it
 

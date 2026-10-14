@@ -822,9 +822,14 @@ def main():
             fails.append(f"PrusaSlicer: slicing failed (exit {s['slice_exit']})")
         clean = (s["manifold"] == "yes" and not s["empty_layer_count"] and not s["floating_count"]
                  and s["slice_exit"] == 0 and s["gcode"])
+        # "none needed" next to "Floating bridge anchors" read as a contradiction: a fox's session
+        # had to find --supports by itself. Those two warnings are about what hangs.
+        hanging = [x for x in other if x in ("Floating bridge anchors", "Collapsing overhang")]
         if over_at is not None:
             warns[over_at] = (f"{overhang_pct} % of the area overhangs more than {OVERHANG_DEG:.0f}° — "
                               + ("sliced with supports" if o.supports else
+                                 f"sliced without supports, but PrusaSlicer warns {', '.join(hanging)}: "
+                                 f"check with --supports" if clean and hanging else
                                  "sliced clean without supports: none needed" if clean else
                                  "and the slice is not clean: see the FAIL lines, then try --supports"))
 

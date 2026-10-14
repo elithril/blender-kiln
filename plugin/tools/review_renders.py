@@ -13,7 +13,8 @@ one measured a height from bound_box and read 104.8 mm for 90.0. This is that sc
   than the object): orthographic, each view fitted to the vertices as that camera sees them —
   the subject spans the frame's width or height, 7 % of margin each side;
 - --mode matcap (grey matcap: the geometry, what the printer sees), colour (the materials,
-  the paint plan), or both;
+  the paint plan), or both — an STL has no material, so colour needs the GLB or the .blend
+  (STLs render grey, which a fox's session took for a fault);
 - --views from front, back, left, right, top, under and the four three-quarters q1-q4
   (front -Y); the default pairs two opposite three-quarters, as rule 2 asks, with top and under;
 - --close X,Y,Z,SIZE (mm) renders a close-up there, seen from outside the model's axis;

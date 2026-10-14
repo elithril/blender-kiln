@@ -25,6 +25,7 @@ them, no network. Cases:
   end to end in one file (edges shared by four faces) and PASSes as two files — each closed, no
   overlap, their union one part; an open part, or a part floating above the others, FAILs the
   assembly; two parts overlapping are measured and warned;
+- an overhang the slicer slices clean but warns of a floating bridge anchor: --supports, not 'none needed';
 - a long bridge reported by the slicer stays a warning, and says to shape the ceiling at 45°;
 - --brim-mm reaches the slicer: a low-adhesion warning names it, and goes with a 5 mm brim;
 - thin spots: the 0.4 mm wall's are listed where they are, read 0.4, a mm apart; the cube has none;
@@ -458,6 +459,16 @@ esac
     rc, r, p = run(f"{d}/cube.stl", "--process", "fdm", "--slicer", bridge)
     check("long bridge: still a PASS, and the warning names the 45-degree ceiling of rule 6",
           rc == 0 and any("Long bridging extrusions" in w and "45° cone" in w and "rule 6" in w for w in r["warnings"]),
+          (rc, r and r["warnings"]))
+
+    # a clean slice that still warns of a floating bridge anchor: not "none needed" but --supports
+    anchors = f"{d}/anchors_prusaslicer"
+    open(anchors, "w").write(open(tall).read().replace("Low bed adhesion", "Floating bridge anchors")
+                             .replace('*" --brim-width 5 "*) exit 0 ;;', '*" --support-material "*) exit 0 ;;'))
+    os.chmod(anchors, 0o755)
+    rc, r, p = run(f"{d}/crossing.stl", "--process", "fdm", "--slicer", anchors)
+    check("overhang + 'Floating bridge anchors' without supports: says check with --supports, not 'none needed'",
+          rc == 0 and any("overhangs" in w and "--supports" in w and "none needed" not in w for w in r["warnings"]),
           (rc, r and r["warnings"]))
 
     # the overhang warning: a share, then what the slice said

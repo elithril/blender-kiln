@@ -528,7 +528,7 @@ height only: anything wider than tall was clipped, a box measured 1:1 instead of
 `plugin/tools/test_print_check.py` builds the meshes a print can fail on — open, inverted,
 floating, too thin, a cavity, a loss against the original, a carved cup against its closed
 reference, the smallest scale of a 2 mm plate — and checks each verdict, with PrusaSlicer
-when it is there, and an assembly of colour parts — **65/65**.
+when it is there, and an assembly of colour parts — **66/66**.
 `plugin/tools/test_flatten.py` seeds what flattening must and must not touch: a jittered top
 made flat, a cylinder, a sphere, a dome, a wave, a 5° slope, a 0.2 mm step and a 0.2 mm bevel
 left alone, a tilted model laid on the bed — **22/22**; each case after the first was added

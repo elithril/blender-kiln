@@ -103,12 +103,16 @@ and only a voxel remesh held, at 600,000 triangles.
    cuts half a step off (2.8°) left 0. Unions too: a diamond shaft whose lower edge lay on a
    meridian of a 64-step cap, and a 45° cone passing through the corners of an octagon, each
    left non-manifold edges until moved half a step.
-   **Remesh last.** A boolean applied after a voxel remesh (eyes engraved in a figure, a shell
+   **Remesh last** — for carving and joining the SHAPE; a figure's colour parts are cut from the
+   remeshed solid by design (§ Figures rule 5), each then checked closed by the assembly check.
+   A boolean applied after a voxel remesh (eyes engraved in a figure, a shell
    carved after a part was joined to it) left 2 to 9 edges shared by three faces: carve and
    join first, remesh at 0.2 mm once at the end, then decimate (2.35 M → 250 k triangles, still
    PASS). A part cut to fit another can leave a crumb behind (a tip hidden behind the other
    part): count islands, drop the ones hidden by the other part, and log it.
-   Parts meet by **overlapping, never face to face**: coplanar or touching faces are where an
+   Parts meet by **overlapping, never face to face nor vertex to vertex**: a cone and a sphere
+   whose rings shared their vertex positions read as 5 non-manifold edges in the STL while
+   Blender counted 0 — sink one part 0.2 mm into the other. Coplanar or touching faces are where an
    exact union leaves slivers and holes. Never `MANIFOLD` as the join: it returned a sealed,
    sliceable mesh that had dropped most of the object.
 4. **Minimum thickness, imposed while modelling**, at print size: walls 1.2 mm FDM, 0.8 mm
@@ -246,18 +250,25 @@ drawing — a stylised subject — rather than a photo.
 
 1. **Model at ten times the size.** Blender's metaball resolution stops at 0.005 (5 mm at
    1 unit = 1 m, checked on Blender 5.2.2): far too coarse for a 100 mm figure. Build it about
-   1 m tall and export at the print height — the one exception to rule 1, said in the log; every
-   thickness of rule 4 is then read ×10.
+   1 m tall — the one exception to rule 1, said in the log; every thickness of rule 4 is then
+   read ×10. **Scale the meshes back by the print height over the model's height before
+   exporting** (×0.1 for a 1 m model printed at 100 mm), then export as rule 9 says
+   (`global_scale=1000`): the STL comes out at the print height, in mm, and `print_check` reads
+   it as any other.
 2. **One metaball family per region** — body and head, each arm, the legs or feet, the tail —
    so that regions meant to stay apart do not melt together. A tube is a row of elements along a
    path, spaced about a quarter of their radius, so its outline stays even. An element shows a
    radius of **0.574 × its radius** at stiffness 2 and threshold 0.6 (measured: 0.574 at
-   resolution 0.05, 0.575 at 0.02): size the elements from the reference with that factor.
+   resolution 0.05, 0.575 at 0.02) — **alone**. In a row spaced a quarter of their radius their
+   fields add: 0.673 for two elements, **0.715 × r** from five on (measured, resolution 0.02).
+   Size a tube's elements with 0.715, a lone blob with 0.574, and check on the render.
 3. **Thin parts as closed meshes** — ears, horns, a wing's membrane, a tail's tip — overlapping
    the metaballs by at least one wall, at the minimum thickness of rule 4 once printed (a wing
    membrane at 2.4 mm printed passed the checks; not printed yet).
 4. **Convert, join and remesh once**: every metaball family and mesh part into one object, one
-   voxel remesh — about 0.45 mm once printed — then a flat cut at Z = 0 so that the feet stand.
+   voxel remesh — rule 3's 0.2 mm once printed is the safe value; 0.45 mm passed on a 100 mm
+   figure with no detail under 1.5 mm, 0.35 on an 80 mm one — then a flat cut at Z = 0 so that
+   the feet stand.
    One watertight solid, whatever overlapped (rule 3, interpenetrate then remesh).
 5. **Colours as parts** (§ Like the photo rule 9): each colour a closed part cut from the
    solid by booleans in a priority order (black, then eye white, then clothes, then skin): each
@@ -266,12 +277,17 @@ drawing — a stylised subject — rather than a photo.
    1.5 mm wide. Parts must not overlap: their union is the figure.
 6. **Check the parts together**: `print_check part1.stl part2.stl … --slicer …` checks each
    part closed, then their union as one figure (§ The tool). One colour's file alone is not a
-   printable object — the pupils float without the head that holds them.
+   printable object — the pupils float without the head that holds them. The figure's
+   `--reference` is the solid BEFORE the colour cut (its metaballs and meshes saved before the
+   remesh): check that solid alone against it first, then the colour parts as an assembly.
 7. **Hand over the assembly**: one STL per colour, and a 3MF with the parts when the 3MF
    extension is installed (rule 9). Say how to load it — all the STLs together, answered *yes*
    to "load as a single object with multiple parts", one filament per part; on a single-colour
    printer, all the parts with the same filament (no single STL holds the whole figure). Say
    where supports go (under a snout, wings, elbows, a tail's curl) and the brim for small feet.
+   **Write it in a `PRINT.md` next to the STLs, in the user's language** — not only in the log:
+   a user looking at four STLs asked how the scarf would get round the neck. Say in its first
+   line that the files are ONE print in several colours, not parts to assemble.
 
 ## A model you bring
 
