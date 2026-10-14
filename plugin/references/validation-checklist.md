@@ -289,4 +289,15 @@ bpy.ops.object.modifier_apply(modifier="Decimate")
 13. `get_viewport_screenshot()` → final validation
 
 **Auto mode:** steps 1-11 automatic, step 12 always interactive.
+
+**Print set in CONFIG: steps 1, 4, 5 and 12 change.** The model is at print size, so step 1's
+0.1 mm merges real geometry. Measured on a pumpkin built closed by exact unions: exported as
+built, `print_check` PASS (0 non-manifold); after step 1 alone, FAIL (3 edges shared by more
+than two faces) — while step 5's count still read 0 on the merged mesh. So:
+- **steps 1 and 4 are skipped** for a model built closed by `print.md` § Printable from the
+  brief; on a mesh being repaired, merge at 1e-6 m (0.001 mm), never more;
+- **step 5 is `tools/print_check.py` on the exported STL**, before and after any cleanup step:
+  a step that turns PASS into FAIL is undone, and logged;
+- **step 12 does not apply** — the detail tier is a screen budget; a print is not decimated
+  to fit it, only to keep a voxel remesh sliceable (`print.md` rule 3, remesh last).
 **Guided mode:** validate after each step.

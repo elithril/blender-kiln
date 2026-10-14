@@ -39,6 +39,11 @@
 | balanced | 8-20K tris | 1.5-5K | 300-1.5K |
 | detailed | 20-80K tris | 5-15K | 1.5-5K |
 
+**The tier decides, the platform table above is only the default when no tier is set**: a web
+hero at 18K reads "over" the platform line and "in" the balanced tier — the tier wins. A brief
+that asks for the best quality or no triangle limit is **detailed** (or custom), and is not
+proposed a reduction past twice its top: the user lifted the limit.
+
 These are SOFT ranges — a guide, not a cap. Up to twice the top is fine when the
 triangles go where they show (round parts, wires): report the count and where it goes,
 in one line, and do not cut. Past twice the top, propose a reduction (rule 6). Never block.

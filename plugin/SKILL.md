@@ -64,12 +64,20 @@ nothing and the user gets no response.
 ## Iron Rules
 
 ```
- 1. ALWAYS get_scene_info() before each PHASE of the pipeline.
+ 1. ALWAYS get_scene_info() before each PHASE of the pipeline. Headless (no
+    Blender connected, rule 2): the build script prints the scene's objects
+    instead, and the log carries that line.
  2. ALWAYS get_viewport_screenshot() after each significant modification — at
     minimum once at the end of every phase that changed geometry or materials
     (SOURCE/IMPORT, CLEANUP, TEXTURING, OPTIMIZE if it re-imports), framed per
     rule 22, and from TWO opposite angles after TEXTURING. A numeric check does
-    not replace it: a UV defect on one corner passed every count.
+    not replace it: a UV defect on one corner passed every count. When the MCP
+    does not answer (Blender closed) or the open Blender is the user's (rule 16):
+    build headless and render the same views headless — never skip the look:
+    `tools/review_renders.py MODEL... --out DIR` (Workbench, matcap and colour,
+    two opposite three-quarters, top and under, framed on the vertices;
+    `--close-from` the check's thin spots). Every print session of 2026-10-13
+    wrote its own script; one framed on bound_box and misread a height by 15 mm.
  3. ONE asset at a time — never an entire scene at once.
  4. NEVER hard-cap poly count — alert if out of range, never block.
  5. NEVER spend money — no paid services, no credits consumed. A free service
@@ -80,21 +88,37 @@ nothing and the user gets no response.
     exception is Blender's untouched factory scene (Cube, Camera, Light, nothing
     else, no .blend loaded): remove the Cube before building and log it. Any
     other pre-existing object is the user's — hide it, never delete it.
+    A headless script started with `--factory-startup` gets that Cube too: begin
+    it with `bpy.ops.wm.read_factory_settings(use_empty=True)` — a 2 m Cube saved
+    into a print's parts .blend made `--reference` fail by 40 %.
+    Print's remesh-then-decimate (`references/print.md` rule 3) is the build
+    method, not a destruction of the user's mesh: logged, not proposed. Same for
+    a reduction the brief itself asks for, on a mesh the session built.
  7. ALWAYS keep the .blend file (contains full history). In compact mode,
     only keep original + final + .blend + log. In full mode, keep all
     intermediate GLBs. ALWAYS save the .blend — it's the recovery point.
+    AND A PHASE IS NOT DONE UNTIL `{name}_log.md` SAYS SO: before starting the
+    next phase, write its line and the Checkpoint (step, time); in a measured
+    loop (a reference image, print), append each round's line before building
+    the next. Measured: three runs told to "write the log at the end of every
+    phase" left it at BRIEF, or wrote it twice at the end, while three to seven
+    versions went by. Check it yourself: `grep -A2 Checkpoint {name}_log.md`
+    must name the phase you are leaving.
  8. ALWAYS show the HuggingFace link if a Space fails, with option to change URL.
  9. NEVER generate ground/environment with AI — only the requested asset.
 10. Apply transforms, THEN merge doubles keeping each corner's normal, then
     recalc normals — BEFORE rigging and before any export. A plain merge re-smooths
     a faceted low-poly mesh (26.7% → 94.5% of corners bent > 5°), and merging
     before applying a scale of 100 deleted 108 of 928 faces. Code and numbers:
-    references/validation-checklist.md § Merge by Distance.
+    references/validation-checklist.md § Merge by Distance. **Print set in CONFIG:
+    no merge** on a model built closed — at print size it merges real geometry
+    (validation-checklist.md, print: steps 1 and 4 skipped).
 11. ALWAYS generate concept images with no background (transparent).
     Fallback: solid white. Never environment/ground/context.
 12. SINGLE VIEW by default for AI generation. Multi-view only if user
     provides their own multi-angle images.
-13. ALWAYS get characters into T-POSE if rigging is planned — and that means
+13. ALWAYS get BIPED characters into T-POSE if rigging is planned (a quadruped keeps its
+    natural standing pose, legs straight under the body) — and that means
     MEASURING the pose on import, not only forcing it at generation. A
     marketplace or downloaded character arrives in whatever pose its author
     used, and measured on three free models: none was in T-pose (A-pose at
@@ -105,7 +129,13 @@ nothing and the user gets no response.
     with get_object_info() — see rule 24.
 15. ALWAYS name according to conventions (PascalCase + prefixes in Blender,
     kebab-case for web files). See references/naming-conventions.md.
-16. ALWAYS save the .blend file in the asset output folder.
+16. ALWAYS save the .blend file in the asset output folder — and never over the
+    user's own: when the open Blender holds anything of the user's (a file, a scene,
+    objects), build in a headless Blender (rule 21) and save the .blend from there;
+    use the open Blender only to look. Measured in 5.2.2: `save_as_mainfile` renames
+    the user's file; `copy=True` drags their objects into yours;
+    `bpy.data.libraries.write` of the asset alone leaves it in no scene, and of a
+    scene, crashes Blender.
 17. ALWAYS track licenses of all resources used in the log.
 18. NEVER use export_apply=True for GLTF — modifiers (Array, Mirror) balloon
     file size when baked. Replicate instances at runtime instead.
@@ -135,7 +165,10 @@ nothing and the user gets no response.
     Surface THAT, never the raw error.
 24. ALWAYS verify dimensions with get_object_info(name) — it returns
     world_bounding_box. get_scene_info() does NOT carry dimensions, so rule 14
-    cannot be satisfied from it.
+    cannot be satisfied from it. Headless: measure on the vertices in world
+    space (`matrix_world @ v.co`), never on `bound_box` — a turned object's box
+    is larger than the object (a windmill read 104.8 mm for 90.0); for a print,
+    `print_check`'s dimensions are the measure.
 25. ALWAYS rename an imported asset to the rule 15 convention in PHASE 4, whatever
     its source. Marketplace and AI imports arrive under the source file's name.
 26. NEVER pick a rig without measuring vertices ÷ deform bones first. Below ~20
@@ -395,10 +428,11 @@ Collect these parameters. Only type and brief are mandatory — infer the rest f
 | **Type** (prop, environment, character, vehicle...) | mandatory | — |
 | **Brief** (description, context, mood) | mandatory | Feeds searches and prompts |
 | **Export target** (glTF, FBX, USDZ, multi) | glTF | Determines export rules |
+| **Print** (FDM / resin + height in mm + colours the printer has) | none | Set when the brief says it will be 3D printed. **Method by subject** — primitives for a simple object, metaballs + voxel remesh for a stylised figure; a realistic likeness from a photo is said out of reach (`print.md` § Scope, § Figures). Switches [3], [5] and [7] to `references/print.md`; target STL (+ 3MF). A single-colour printer: say which regions get painted, or which become separate parts in their own filament (`print.md` § Like the photo, rule 9) |
 | **Detail tier** (lightweight / balanced / detailed / custom) | balanced | Soft ranges, never hard caps |
 | **Visual style** (realistic, stylized, cartoon, low-poly) | realistic | Impacts sourcing + AI prompts |
 | **Mode** (auto / guided) | auto | guided = validation at each step |
-| **Storage** (compact / full) | compact | compact = original + final + .blend + log only |
+| **Storage** (compact / full) | compact | compact = original + final + .blend + log only; intermediates are removed at the end-of-session proposal (EXPORT), never silently mid-run. Auto mode with nobody to answer: keep them and list them in the hand-over. Measures are always logged |
 | **3D Backend** (none / hf-spaces / local) | none — scripted | AI only when chosen; then HF Spaces unless a local model is installed |
 | **Local model** | none | Only if installed (see `/kiln models`) |
 | **HF Space URL** | microsoft/TRELLIS.2 | Then `trellis-community/TRELLIS`. Hunyuan3D only on request (licence). Check `stage: RUNNING` first — a paused Space still answers HTTP 200. See `references/ai-generation.md` |
@@ -432,7 +466,7 @@ Ask: **"Search marketplaces or create from scratch?"**
 
 Load `references/sourcing-strategy.md`.
 
-**Preflight (rule 22) — do this BEFORE the first search:**
+**Preflight (rule 23) — do this BEFORE the first search:**
 
 ```
 get_polyhaven_status()   → {"enabled": false, "message": "...press N..."}
@@ -466,11 +500,16 @@ IF type = furniture OR simple architecture AND style = stylized
 IF type = organic (rock, tree, food, creature) OR style = realistic + detailed
     → recommend AI ("Organic forms and realistic detail = AI excels here.")
 
-IF type = complex architecture (lighthouse, cathedral)
+IF type = complex architecture (cathedral, ornate facade) AND print not set
     → recommend AI ("Complex detail = AI handles it better.")
+    # print set: a lighthouse, a windmill, a tower are simple objects — a lathe or a prism,
+    # scripted (print.md § Scope). Two print sessions read this line against it.
 
-IF type = character
-    → recommend AI
+IF type = character or creature   # decided before the style lines above, which read it otherwise
+    → the style decides: cartoon / stylised → scripted, its body ONE skin (overlapping
+      volumes or metaballs, one voxel remesh — `print.md` § Figures), never separate parts
+      glued on; realistic / detailed → recommend AI. Sessions read "cartoon → scripted" and
+      "character → AI" as a contradiction on every mascot.
     → ASK: "Will this character need rigging/animation?"
       IF yes → force T-pose in concept image prompt
               → record it: the RIG SELECTION gate in PHASE 5c depends on it
@@ -480,6 +519,28 @@ ELSE
 ```
 
 Always explain WHY the recommendation, always let the user choose.
+
+**Print set in CONFIG: the method follows the subject** (`references/print.md` § Scope). A
+simple object is built from closed primitives. **A stylised figure** — a cartoon animal, a
+character, a mascot — from metaball families and one voxel remesh (`print.md` § Figures): a
+cartoon dragon from one flat drawing came out that way. **A realistic likeness of a real animal
+or person from a photo is said at CONFIG to be out of reach of scripted modelling** — two cats,
+metaballs included, passed every check and were unacceptable to look at: offer it as a stylised
+figure, an image-to-3D generation repaired for print, or `print_check` on a model the user
+brings. A mechanical
+part (a load, a lid that must close, a size to the tenth) is said at CONFIG to belong in a CAD
+tool, and goes on only as decorative if the user agrees. Parts joined by a peg: offer
+`tools/fit_coupon.py`'s test print before modelling the joints — **in auto mode, do not wait
+for it**: model at 0.2 mm a face, write the coupon next to the model, and say in the hand-over
+that the clearance is not measured (`print.md` rule 5). Scripted, for both. **Load
+`references/print.md` § Printable from the brief before the first primitive** — model at print size, closed solids only, one volume
+(exact union as you go, or overlap + one voxel remesh), the process's minimum thickness, a flat
+base, overhangs that grow out of the part below, relief as geometry. A generated or marketplace
+mesh is repaired instead ([5]). Texturing ([5b]) carries nothing to a print. **With a reference
+image, `references/print.md` § Like the photo, for print too**: the photo method in full, openings
+read on their outer edge, details cut along the photo's camera, the `face` measure every round, and
+rounds until the gaps stop closing — **the two-round cap of `reference-fidelity.md` § 5 does not
+apply** — and the user decides it is alike.
 
 **Options:**
 
@@ -519,7 +580,8 @@ If nano-banana MCP is available, offer it as an alternative (supports iterative 
 **Scripted modeling flow:**
 
 - `execute_blender_code` with primitives + modifiers + booleans
-- Each logical part = separate object (legs, seat, back...)
+- Each logical part = separate object (legs, seat, back...) — for props. An animated
+  character's body is ONE skin, its eyes, nose and eyelids apart (`characters.md`)
 - Materials assigned per object from creation
 - `get_viewport_screenshot` for iterative validation
 
@@ -624,6 +686,10 @@ Load `references/validation-checklist.md` and execute:
 
 Execute the full cleanup sequence from `references/validation-checklist.md` § Execution Order. Check poly budget against tier from `references/topology-rules.md`.
 
+**Print set in CONFIG: not the same sequence.** Its 0.1 mm merge broke a printable model
+(PASS → FAIL) while its own count read 0; the print variant is under § Execution Order —
+no merge on a model built closed, `print_check` on the STL as the count, no tier decimation.
+
 **Poly check:** report the count against the tier. Past **2× the tier's top** → **propose decimate with before/after** (always interactive, even in auto mode); below that, say where the triangles go and keep them.
 
 **Thin parts are never decimated** — wires, bails, loops: anything an order of magnitude
@@ -634,6 +700,10 @@ non-manifold edge counts with before, and look at a close render of every thin p
 
 **Auto mode:** non-destructive cleanup runs automatically. Decimate remains interactive.
 **Guided mode:** show each step, wait for validation.
+
+**Print set in CONFIG:** after any repair (union, remesh, decimate), run `tools/print_check.py`
+with `--reference` on the file it was repaired from (`references/print.md` § The tool): a
+sealed, sliceable result can have lost most of the object, and only that comparison sees it.
 
 ### [5c] RIG SELECTION — characters only (rule 26)
 
@@ -653,7 +723,11 @@ Then pick from what Rigify ships — bone counts measured on Blender 5.0.1:
 | < 700 | **Hand-built rig, 12-20 bones.** See `references/characters.md` § Match the rig's density | 12-20 | 20-35 |
 | 700 - 3,000 | `bpy.ops.object.armature_basic_human_metarig_add()` | 35 | 20-85 |
 | > 3,000 | `bpy.ops.object.armature_human_metarig_add()` | 160 | 20+ |
-| quadruped, > 900 | `bpy.ops.object.armature_basic_quadruped_metarig_add()` | 46 | 20+ |
+| quadruped | **Hand-built, Mixamo-named** — `references/characters.md` § Animation-ready skeleton | 20-30 | 20+ |
+
+**Not Rigify's quadruped metarig**: its 34 bones are named `spine`, `front_thigh.L`… (checked,
+Blender 5.2.2) and `tools/quadruped.py` reads Mixamo names only — every quadruped session built
+the Mixamo skeleton by hand anyway.
 
 **A Rigify human needs ~3,200 vertices to be worth it.** Below that it is actively
 worse than a small rig: on a 370-vertex figure it left 107 of its 160 deform bones
@@ -714,6 +788,11 @@ Load `references/texturing-strategy.md`. With a reference image, also `reference
 
 ### [6] OPTIMIZE (interactive in guided mode)
 
+**Print set in CONFIG: skipped.** The deliverable is the STL; the GLB is a preview for the
+user, exported plain (no Draco, no texture pass) under the usual `_final.glb` name. **No
+`_original.glb`** — nothing is optimized, so there is nothing to keep it for; the file
+`print_check --reference` reads is `{name}_{part}_parts.blend`, one per printed part (`print.md` § The tool).
+
 **Auto mode, glTF target:** apply the default preset without asking — textures to
 WebP, resized to the target's cap from `references/uv-materials.md` § Texture
 Resolution per Use Case — **1024 for web/glTF, the default, whatever the tier**;
@@ -755,13 +834,20 @@ By target:
     glTF/GLB → Principled BSDF only, Draco/meshopt per optimize choice
     FBX → Apply Transform, scale 1.0, version 7.4
     USDZ → Reality Converter or usdzconvert (macOS)
+    Print → STL, global_scale=1000 (mm); 3MF too if the extension is installed
 ```
+
+**Print set in CONFIG:** the export ends with `tools/print_check.py --process … --slicer …`
+(PrusaSlicer when installed) on the STL. **PASS is required**; otherwise report each FAIL line
+as the tool printed it — never call the file printable. The hand-over gives the size it was
+modelled for and the check's `SCALE` line: people rescale in the slicer, and the STL does not
+say how far down it holds (`print.md` rule 9).
 
 **Axis conversion** handled automatically (Blender -Y/Z → glTF +Z/Y).
 
 Save in output folder per **storage mode** (compact or full). See `references/naming-conventions.md` for folder structure details. The .blend file always contains the full history — compact mode is safe.
 
-Save the .blend file via `execute_blender_code`: `bpy.ops.wm.save_as_mainfile(filepath=...)`.
+Save the .blend file via `execute_blender_code`: `bpy.ops.wm.save_as_mainfile(filepath=...)`. Only when the open file is yours alone — otherwise from the headless Blender that built it (rule 16).
 
 **Output format:**
 ```
@@ -816,6 +902,10 @@ Anim     {count or "none"}                                         Rig       {ye
 Use `execute_blender_code` to import temporarily, read stats via Python API, then undo/delete.
 For GLB: can also use `gltf-transform inspect {path}` if installed.
 
+**For a print** (the user says so, or the file is an STL or a 3MF): add `tools/print_check.py`'s
+verdict — `--slicer` when PrusaSlicer is installed — and quote each FAIL and warning as the tool
+printed it. Never call the file printable on the stats alone.
+
 ### /kiln cleanup
 
 Clean up a mesh already open in Blender (or import one first).
@@ -825,6 +915,13 @@ Clean up a mesh already open in Blender (or import one first).
 3. Load `references/validation-checklist.md` — execute full cleanup sequence
 4. `get_viewport_screenshot()` after each step
 5. If poly count high: propose decimate (always interactive)
+
+**For a print** — a model the user made and wants to print (`/kiln cleanup model.stl`): not the
+sequence above. Load `references/print.md` § A model you bring, then: `print_check` on the file,
+`tools/flatten.py` to a NEW file (never over theirs), `print_check` again, and show both verdicts
+and flatten's report — regions flattened, kept as shapes, past the tolerance, the largest move —
+with a matcap close-up of the largest flattened face before and after. Holes are reported, not
+filled: the slicer closes small ones, the user decides the rest.
 
 ### /kiln texture
 
@@ -1002,14 +1099,24 @@ Each asset produces `{name}_log.md`:
 - Texturing: zones [{zone1}: {texture}, {zone2}: {texture}]
 - Optimize: {tool}, {before_size} → {after_size}
 - Export: {format}, {final_size}, {final_faces}
+- Rounds (reference image): v{n}: silhouette {iou}, face {iou} (f {f}, offset {mm}); changed
+  {one thing}; kept / undone
+- Print check, one line per printed part: {part}: {PASS/FAIL}, {dimensions} mm, {parts} part(s),
+  supports {yes/no — from the slice, not from the overhang %}, smallest scale {N} %, warnings {…}
 
 ## Licenses
 - {resource}: {license} {attribution if needed}
 
 ## Checkpoint
+<!-- Scripted print: SOURCE and IMPORT are one step (the script builds at size), OPTIMIZE is
+     logged as skipped — the checkpoints are BRIEF, SOURCE/IMPORT, CLEANUP, EXPORT + check. -->
 - Last completed step: {step}
 - Timestamp: {datetime}
 ```
+
+**Write the log at the end of every phase, not at the end of the run** (Iron Rule 7). A run that stops
+mid-way — a crash, a context limit — resumes from it; a log left at BRIEF while the model went
+through seven versions records nothing of what was tried or undone.
 
 ---
 
@@ -1043,3 +1150,4 @@ Axis conversion at export is automatic.
 | Characters, rigging (phase 2) | `references/characters.md` |
 | Animation: routes, UniMate install and prompts | `references/animation.md` |
 | Batch mode (wizard, runner, manifest) | `references/batch-mode.md` |
+| 3D printing: modelling from the brief, check, repair | `references/print.md` |

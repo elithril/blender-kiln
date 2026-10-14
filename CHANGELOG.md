@@ -6,7 +6,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.0] — 2026-10-12
+
+kiln now models for a **3D printer** — simple objects only. Measured on sessions given the
+skill and a brief or a photo, nothing else: a dog house and a lighthouse from a brief, a
+pumpkin and a ghost from photos, a windmill (two parts) from a brief, a teapot from three
+museum photos — all printable, all but the ghost's cat looking like what was asked. That cat,
+then a real cat from its photo, passed every print check and were unacceptable to look at, so
+print mode says at CONFIG that a realistic likeness of a real animal or person is out of reach,
+and builds a stylised figure from metaball families and one voxel remesh — the method a v2.2
+session found by itself on a cartoon dragon, made from one flat drawing in four colours.
+
+### Added — 3D printing
+
+- **Print in CONFIG** (FDM or resin, height, the printer's colours) switches modelling,
+  cleanup and export to `references/print.md`: model at print size, closed solids, one
+  volume (exact union as you go, or overlap + one voxel remesh, last), minimum thickness,
+  a flat base, overhangs designed out where nobody looks and supported where the photo shows
+  them, relief as geometry, a smooth surface the printer will not facet, parts printed apart
+  when they would print in the air, STL in mm.
+- **`tools/print_check.py`**: a printability verdict, raw — open and non-manifold edges,
+  normals, held and floating parts, walls, overhangs, loss against the original (dimensions
+  and volume, closed cavities taken out exactly), and PrusaSlicer as a second arbiter
+  (`--slicer`, `--supports`). It says when it rescales. 44 seeded cases.
+- **Like the photo, for print**: openings read on their outer edge, details cut along the
+  photo's camera, a `face` measure in `fidelity_check`, and rounds until the gaps stop
+  closing — the two-round cap does not apply to print.
+- **`tools/cutout.swift`**: macOS Vision's subject lifting cuts a photo out, local and free,
+  where a background fill could not part a white ghost from a white wall.
+- **`tools/flatten.py`**, for a model you made: nearly flat faces made exactly flat, the model
+  laid level on the bed, nothing else touched — curves, folds, bevels, steps and real slopes
+  kept, no vertex past the tolerance, the input never overwritten, holes left to the slicer
+  (which closes small ones: an open-topped cube sliced fine in PrusaSlicer 2.9.6). On the
+  windmill turned 1° with 10 % of its vertices off, PrusaSlicer finished the gallery floor at
+  4 heights and held the print by one edge (629 mm of first layer); flattened, 1 height and
+  the whole base (3,317 mm). 22 seeded cases, each after the first added when a real model
+  broke the tool. `/kiln inspect` and `/kiln cleanup` gain a print variant.
+- **`print_check` gives the smallest scale** (`SCALE`, `min_scale`, `min_dims_mm`): makers
+  rescale in the slicer, an STL carries no unit, and the walls shrink with it. The scale
+  under which 1 % more of the area falls under the floor — the windmill's body 40 %, the
+  lighthouse 67 %, the teapot 67 %. The hand-over gives it with the size it was modelled for.
+  Always a scale of the FILE: measured on the mesh `--height-mm` had scaled, the walls already
+  thin there were excused and the floor moved with the model — the lighthouse read at 55 %
+  said 43 % instead of 67 %, a 2 mm plate read at 200 % said 20 % instead of 40 %. A height
+  under it is now a warning.
+- **`tools/fit_coupon.py`**: the test print for a joint — a plate with one diamond hole per
+  clearance (0.1 / 0.2 / 0.3 mm a face) and one with a 0.5 mm lead-in chamfer on the bed face,
+  and the peg on a wall, printed as on the model. About 20 minutes on PrusaSlicer's default
+  profile; both parts PASS `print_check`. 11 checks read the sizes back from the STLs.
+- print.md: a hole that opens on the bed gets a 45° lead-in chamfer (the first layer's
+  "elephant's foot" closes its mouth), and a mesh is for decorative objects, not mechanical
+  parts — a CAD tool is named for those.
+- **README § 3D printing**, with the windmill (preview and parts), the teapot against its
+  museum photo (CC BY 4.0), and the before/after drawn from PrusaSlicer's G-code by
+  `examples/print/flatten_demo.py`, which rebuilds it from the committed windmill.
+
 ### Changed
+
+- `fidelity_check` refuses a reference with no transparent pixel: measured as it was, a
+  photo's table counted as object (0.62 instead of 0.93, exit 0).
+- The cleanup's 0.1 mm merge is skipped for a model built closed — it broke a printable one.
+- Rule 7: a phase is not done until its log says so — three runs had left it at BRIEF.
+- Rule 16: never save over the user's open Blender; build headless when it holds their work.
 
 - **The showcase chest is rebuilt** by its own script, `examples/animation/chest.py`: planks, a
   barrel lid of staves, iron corners, bands, rivets, handles, lock and hasp, a heap of gold inside,
@@ -26,6 +87,112 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The TRELLIS.2 Space removes backgrounds with RMBG-2.0 (CC BY-NC 4.0)** unless the
   image already has an alpha channel — read in its `app.py`. The reference says to send
   a cut-out, or to use the TRELLIS Space, whose `rembg`/U²-Net chain is MIT/Apache-2.0.
+- **What three isolated print sessions found unclear, contradictory or silent** (a 90 mm
+  windmill, a 50 mm lighthouse, a 70 mm forge from the logo, 2026-10-13), each fixed where it
+  was read:
+  - `print_check` no longer counts a face modelled at 45° as an overhang (it reads 45.0x° in
+    an STL: every overhang the windmill, its sails and the joint's peg reported was one), and
+    never says a bare "supports": the line says what the slice said — "sliced clean without
+    supports: none needed" on the lighthouse and the forge;
+  - auto mode does not wait for the measured clearance: 0.2 mm a face, the coupon next to the
+    model, said unmeasured in the hand-over;
+  - the height asked is the assembled object's — the windmill left its sails out and stood
+    ~120 mm for "~90 mm";
+  - a lathe is closed by flat caps, not axis points, when it is engraved after: an EXACT
+    engraving re-cut the pole and left a non-manifold edge;
+  - the peg goes on the steadier part (a flame on its own 4 × 4 mm peg: low bed adhesion);
+    an engraving's depth is its shallowest point's on a round wall; an object hidden from the
+    render exports an empty STL with no error; touching pairs count as self-intersections;
+    the face measure is blind on an illustration;
+  - rule 10's merge is skipped in print mode, as the checklist already said; the lighthouse
+    is no longer an example of architecture to send to AI; print has no `_original.glb`, its
+    `--reference` is one `{name}_{part}_parts.blend` per printed part; STLs are named
+    `{name}_{part}.stl`; the preflight points to rule 23.
+- **What the two sessions after those fixes still found** (the windmill again at 90 mm, now
+  sails included — 90.0 mm assembled; a mushroom house never named in the docs):
+  - **`tools/review_renders.py`**: the review renders when no Blender is connected — matcap
+    and colour, two opposite three-quarters, top and under, each view fitted to the vertices
+    as its camera sees them, close-ups at the check's thin spots; an empty frame is an error.
+    Every session had written its own; one framed on bound_box and misread 90 mm as 104.8;
+  - `print_check`'s JSON says where the thin walls are (`thickness.thin_at`: centre, wall
+    read, thinnest first) — print.md asked to look at them and nothing said where;
+  - `fit_coupon.py --shape round`: round holes and a round peg standing up, the joint a cap or
+    a flame makes, faceted so that the joint is never tighter than asked;
+  - one `--reference` per printed part (the tool reads every mesh of a .blend); `--height-mm`
+    scales, and is never the brief's height; a lathe is not JOINED on its own edges either;
+    paint regions are decided without a photo too; rules 1 and 24 say what to do headless;
+    the `.blend1` files are deleted, or `save_version = 0` (checked) stops them;
+  - the Blender workflow now also runs on a change to `flatten.py` and `fit_coupon.py`, which
+    it tested but did not watch.
+- **What a Christmas tree found after that** (two parts, the star in its own filament on a
+  peg, 70.0 mm assembled; the session used `review_renders.py` and one reference per part
+  unprompted):
+  - `print_check` no longer counts triangles that only TOUCH as self-intersecting — a shared
+    vertex, a vertex lying on a face: each is shrunk 0.1 % and tested again. The windmill's
+    sails read 32, a forge's flame 2, the joint coupon at a 2.5 mm peg 4; all now 0, and a
+    cube with a corner pushed through its bottom still crosses itself;
+  - `print_check --brim-mm`: a tall part on a narrow foot read *Low bed adhesion* (the flame,
+    the tree) and both sessions checked a brim in PrusaSlicer by hand; the warning now names
+    the option, and the tree passes clean with 5 mm;
+  - a region the brief does not name gets its paint edge too; a small cut proves little
+    against its reference; part names may be in the brief's language; the scripted print's
+    checkpoints.
+- **Fewer supports and no long bridges, as rules** (two boxes with lids, 2026-10-13): both
+  printed with no support, but one bridged a 20 mm flat ceiling and filled 10 mm of its own
+  cavity to keep the bridge that short, the other printed a raised pattern face-down. Rule 5:
+  each part's orientation is a logged decision — zero supports, then the fewest and shortest
+  bridges, then the visible faces off the bed. Rule 6: a flat ceiling past ~10 mm becomes a
+  45° cone or vault, never a filled cavity. Rule 7: relief goes on faces that print upright or
+  up. `print_check` turns PrusaSlicer's *Long bridging extrusions* into that instruction.
+  A session without context then made a bayonet box under those rules: no support, no long
+  bridge, every orientation logged. What it still met, now written: a ceiling too wide for the
+  part's height starts its 45° vault from a ring inside the wall; test pieces go in `test/` as
+  `test_{what}.stl` (a user took two test rings for parts of the box); `review_renders.py
+  --close` reads negative coordinates as a value.
+- **Stylised figures: metaballs, not a refusal.** Print mode had refused an animal, a person or a
+  character since two cats passed every check and were unacceptable to look at. Then a colleague, on v2.2 — no print mode at all — asked for a cartoon dragon from one
+  flat drawing, for a multi-colour printer: the session built it from metaball families and one
+  voxel remesh, cut it into four colour parts with flush inlays, and wrote how to slice it, in 23
+  minutes. The cats had metaball ellipsoids too, but cone ears, exact unions and a photo to
+  match; the dragon had one family per region, one remesh, and a drawing. So the line is drawn
+  between a stylised figure and a realistic likeness, not between subjects. `print.md` § Figures writes that
+  method down — ten times the size (metaball resolution stops at 5 mm, checked), one family per
+  region, an element's visible radius 0.574 × its radius (measured), thin parts as meshes, one
+  remesh, colours by priority — and the scope sends a stylised figure there.
+- **`print_check` checks an assembly**: several files, one per colour, are each checked closed,
+  their overlap measured, and their union checked as one object with the slicer. Each colour of
+  that dragon alone FAILed three times out of four; the assembly PASSes (union 68.4 cm³, 68.2
+  measured by its session with another library; overlap 0).
+- **A fresh session, given only the skill, made a cartoon fox** from a text brief: metaballs, four
+  colour parts, the assembly PASS (with supports and a 5 mm brim). What it found unclear is now
+  written: "remesh last" is about the shape, a figure's colours are cut after it; one voxel
+  range; scaling a ×10 model back before export; the figure's reference is the solid before the
+  colour cut; parts never meet vertex to vertex; metaballs in a row swell to 0.715 × r, not
+  0.574 (measured); colour renders need the GLB. `print_check` no longer says "none needed"
+  next to PrusaSlicer's *Floating bridge anchors*: it says to check with `--supports`. And the
+  hand-over of a colour figure is a `PRINT.md` next to the STLs — a user looking at the four
+  files asked how the scarf would get round the neck.
+  An assembly's `SCALE` is now its thinnest part's: the fox's union said 20 %, its orange part —
+  thin walls between the inlays — 80 %, and the line names the part.
+- **What eight web and animation sessions met everywhere** (owls, dogs, a corgi, 2026-10-14):
+  - the creation tree settled "cartoon → scripted" against "character → AI": a character's
+    style decides, and a stylised one is scripted as ONE skin, not parts glued on;
+  - a quadruped is rigged with a hand-built Mixamo-named skeleton: Rigify's quadruped metarig
+    has 34 bones named `spine`, `front_thigh.L`… (checked; the table said 46) and
+    `tools/quadruped.py` reads Mixamo names only. The T-pose rule is for bipeds;
+  - the detail tier sets the triangle budget, the platform table is only the default; a brief
+    that lifts the limit is not proposed a reduction; a reduction the brief asks for is logged;
+  - `uv-materials.md` passed `angle_limit=66.0  # degrees`: the operator takes radians (checked:
+    default 1.152, max 90°), so it asked for 66 rad;
+  - `review_renders.py` left out the 2 m sphere a rigged glTF brings for its bones (a dog was 2 %
+    of the frame) and shows textures in colour (a textured body rendered grey).
+
+### Measured — what did not make it
+
+- **Living subjects in print mode**: a cat held by a ghost, then a real cat from its photo,
+  both PASS and both rejected on sight. Primitives cannot make an animal; no rule closed it.
+- **A single recipe for bad edges after an export**: triangulating before export fixed it
+  twice and caused it once. The rule is to check the STL after each risky step.
 
 ## [2.2.0] — 2026-10-07
 
