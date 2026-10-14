@@ -602,7 +602,7 @@ def voxel_union(V, F, size):
     return UV, UF
 
 
-def assembly(paths):
+def assembly(paths, wall):
     """Each part checked closed on its own; the overlap between parts measured; the union returned."""
     parts, Vs, Fs, own, off = [], [], [], [], 0
     for path in paths:
@@ -610,11 +610,14 @@ def assembly(paths):
         if not len(Fi):
             die(f"{path}: no triangle")
         ti, _, ni, ci = topology(Vi, Fi)
+        # each part's own smallest scale: an inlay is thin in its own right, and the union hides it
+        _, nn, aa = face_data(Vi, Fi)
+        own_scale = thickness(Vi, Fi, nn, aa, wall)["min_scale"]
         parts.append(dict(file=os.path.abspath(path), triangles=int(len(Fi)), parts=int(ni),
                           closed=bool(ci.all() and ti["open_edges"] == 0 and ti["nonmanifold_edges"] == 0
                                       and ti["inconsistent_edges"] == 0),
                           open_edges=ti["open_edges"], nonmanifold_edges=ti["nonmanifold_edges"],
-                          inconsistent_edges=ti["inconsistent_edges"]))
+                          inconsistent_edges=ti["inconsistent_edges"], min_scale=own_scale))
         own.append((Vi, Fi)); Vs.append(Vi); Fs.append(Fi + off); off += len(Vi)
     V, F = np.vstack(Vs), np.vstack(Fs)
     size = min(0.25, float(np.ptp(V, axis=0).max()) / 400)
@@ -634,7 +637,7 @@ def main():
     if len(o.model) > 1:
         if o.reference:
             die("--reference compares one model with its original: check the parts of an assembly one by one for that")
-        V, F, asm = assembly(o.model)
+        V, F, asm = assembly(o.model, MIN_WALL[o.process])
     else:
         V, F = load(o.model[0])
     o.model = o.model[0] if asm is None else " + ".join(os.path.basename(m) for m in o.model)
@@ -695,6 +698,15 @@ def main():
              floating_parts=len(floating), floating=float_info, inverted_parts=int(inverted.sum()),
              cavities=int((enclosed & (vol < 0)).sum()),
              volume_mm3=round(float(vol[closed].sum()), 3), overhang_area_pct=overhang_pct, thickness=thin)
+    if asm is not None:
+        # parts that print together shrink together: the largest of their smallest scales holds
+        # for all of them (print.md rule 9) — a fox's union said 20 %, its black inlays 79 %
+        worst = max((q for q in asm["parts"] if q["min_scale"] is not None), key=lambda q: q["min_scale"],
+                    default=None)
+        if worst is not None and (thin["min_scale"] is None or worst["min_scale"] > thin["min_scale"]):
+            thin["min_scale_union"] = thin["min_scale"]
+            thin["min_scale"] = worst["min_scale"]
+            thin["min_scale_set_by"] = os.path.basename(worst["file"])
     if thin["min_scale"] is not None:
         thin["min_dims_mm"] = [round(float(x) / scale * thin["min_scale"], 1) for x in dims]
     fails, warns = [], []
@@ -849,6 +861,7 @@ def main():
         print("  WARN ", x)
     if thin["min_scale"] is not None:
         print(f"  SCALE do not shrink below {100 * thin['min_scale']:.0f} %"
+              f"{' (set by ' + thin['min_scale_set_by'] + ', one of the parts)' if thin.get('min_scale_set_by') else ''}"
               f"{' of the file' if abs(scale - 1.0) > 0.01 else ''} "
               f"({' × '.join(f'{x:g}' for x in thin['min_dims_mm'])} mm): "
               f"1 % more of the area would fall under {thin['min_wall_mm']} mm. Enlarging is safe.")

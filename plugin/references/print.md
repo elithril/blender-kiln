@@ -462,7 +462,10 @@ STL (mm), 3MF (its own unit), GLB and .blend (metres). Exit 0 PASS, 3 FAIL, 1 er
   that holds them), and the files laid end to end in one STL share their contact faces: both
   FAIL a print that is fine. Measured on a four-colour dragon: each colour alone FAILed three
   times out of four; the assembly PASSes, its union 68.4 cm³ against the 68.2 its session had
-  measured with another library, overlap 0. `--reference` checks one model: not an assembly.
+  measured with another library, overlap 0. Its `SCALE` is the thinnest PART's, not the union's
+  (rule 9: parts that print together shrink together): a fox's union held to 20 %, its orange part
+  — thin walls between the inlays — to 80 %, and the line says which part sets it.
+  `--reference` checks one model: not an assembly.
 - **`--brim-mm`** slices with a brim that wide: *Low bed adhesion* on a tall, narrow part
   (a flame on its own base, a tree in its pot) went with 5 mm, and the warning without a brim
   names the option. The verdict then says to print with one.

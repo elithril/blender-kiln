@@ -172,6 +172,8 @@ session found by itself on a cartoon dragon, made from one flat drawing in four 
   next to PrusaSlicer's *Floating bridge anchors*: it says to check with `--supports`. And the
   hand-over of a colour figure is a `PRINT.md` next to the STLs — a user looking at the four
   files asked how the scarf would get round the neck.
+  An assembly's `SCALE` is now its thinnest part's: the fox's union said 20 %, its orange part —
+  thin walls between the inlays — 80 %, and the line names the part.
 
 ### Measured — what did not make it
 

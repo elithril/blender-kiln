@@ -21,6 +21,7 @@ them, no network. Cases:
 - self-intersections: a cube with a top corner pushed through its bottom crosses itself; the
   joint coupon at a 2.5 mm peg, whose lead-in's triangles only touch the bed face at shared
   vertices, does not (4 pairs before);
+- an assembly's smallest scale is its thinnest part's (a 2 mm plate on a block: 40 %);
 - an assembly (one file per colour): a cube on a cube, sharing the face between them, FAILs laid
   end to end in one file (edges shared by four faces) and PASSes as two files — each closed, no
   overlap, their union one part; an open part, or a part floating above the others, FAILs the
@@ -437,6 +438,11 @@ esac
           rc == 0 and a and all(q["closed"] for q in a["parts"]) and a["overlap_mm3"] < 1.0
           and r["parts"] == 1 and all(abs(x - 20) < 0.5 for x in r["dims_mm"]),
           (rc, r and r.get("dims_mm"), a and a["overlap_mm3"], p.stderr[-200:]))
+    stl(f"{d}/plate_on_top.stl", box(0, 0, 10, 20, 20, 12))
+    rc, r, _ = run(f"{d}/lower.stl", f"{d}/plate_on_top.stl", "--process", "fdm")
+    check("assembly: the smallest scale is the thinnest part's (a 2 mm plate: 40 %), not the union's",
+          r and r["thickness"]["min_scale"] == 0.4 and r["thickness"].get("min_scale_set_by") == "plate_on_top.stl",
+          r and (r["thickness"].get("min_scale"), r["thickness"].get("min_scale_union"), r["thickness"].get("min_scale_set_by")))
     rc, r, _ = run(f"{d}/lower.stl", f"{d}/open.stl", "--process", "fdm")
     check("an assembly with an open part: FAIL, the file named",
           rc == 3 and any("open.stl is not closed" in f for f in r["fails"]), (rc, r and r["fails"]))
