@@ -216,7 +216,7 @@ else:
 # existed nowhere, and outside the plugin directory besides.
 for doc in DOCS:
     base = REPO if doc == README else PLUGIN
-    for m in re.finditer(r"`((?:\.\./|plugin/|references/|examples/|tools/|docs/)[\w./-]+\.\w+)`", doc.read_text()):
+    for m in re.finditer(r"`((?:\.\./|plugin/|references/|examples/|tools/|studio/|docs/)[\w./-]+\.\w+)`", doc.read_text()):
         rel = m.group(1)
         if rel.startswith("../"):
             fail("paths", f"{doc.name} references {rel} — outside the plugin directory")

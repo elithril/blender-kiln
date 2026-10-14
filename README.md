@@ -248,6 +248,33 @@ goes to it: `unimate.py` recognises the posture and points at `quadruped.py`.
 > (`examples/animation/showcase.sh`, assets and credits alongside), not from an
 > interactive session of the skill.
 
+## Kiln Studio
+
+<p align="center">
+  <img src="docs/images/studio.webp" width="100%" alt="Kiln Studio: a lantern in the browser, a note pinned on its glass with the before and after views, Claude's reply, and the model list on the left" />
+</p>
+
+A local page for looking at what kiln made and telling it what to change.
+`/kiln studio` starts it (or reuses the one running) on the project's folder, like
+`remotion studio`; every `.glb .gltf .fbx .obj` under it shows up, and kiln's
+`_original`/`_final` stages are one model you can switch between.
+
+- **Look** — Lit, Unlit, Clay, Normals, UV checker, Faces (back faces red), wireframe,
+  sizes in metres, bones, animation clips with a scrubber.
+- **Annotate** — pin a note on a spot (it records the point in Blender coordinates, the
+  object and material hit, the camera, and a screenshot) or write one about the whole
+  model. Categories and tags organise a long list.
+- **Iterate** — `/kiln studio` hands the open notes to Claude, who changes the model,
+  re-exports and replies. The page reloads the model as the file changes and renders the
+  note's view again beside its screenshot: each note carries its before and after.
+  Compare puts the previous version and the new one side by side; one copy of the
+  previous version is kept, so a pass can be undone. History lists every version seen,
+  with its size and triangle count.
+
+Python standard library and a browser; three.js comes from a CDN. Notes live in the
+project's `.kiln-studio/`, ready to commit with the models.
+[`references/studio.md`](plugin/references/studio.md) is the reference.
+
 ## Commands
 
 | Command | Action |
@@ -265,6 +292,7 @@ goes to it: `unimate.py` recognises the posture and points at `quadruped.py`.
 | `/kiln animate` | Animate a rigged asset — routed by subject ([Animate](#animate)) |
 | `/kiln optimize` | Optimize a GLB with gltf-transform/gltfpack |
 | `/kiln convert` | Convert between formats (GLB↔USDZ↔FBX) |
+| `/kiln studio` | Open Kiln Studio; act on the notes pinned there (`/kiln studio <asset>`) |
 | `/kiln help` | List all commands and usage |
 
 ## Requirements
@@ -346,6 +374,7 @@ plugin/
 ├── SKILL.md
 ├── LICENSE
 ├── tools/                        # fidelity_check, template_profile, quadruped, motion_loop, bind_rigid_parts, unimate (+ patch), checks
+├── studio/                       # Kiln Studio: studio.py (CLI), server.py, studiolib.py, static/ (the page), tests
 └── references/
     ├── ai-generation.md
     ├── animation.md
@@ -358,6 +387,7 @@ plugin/
     ├── sourcing-strategy.md
     ├── texturing-strategy.md
     ├── reference-fidelity.md
+    ├── studio.md
     ├── topology-rules.md
     ├── uv-materials.md
     └── validation-checklist.md
@@ -388,8 +418,10 @@ plugin/
 | `plugin/references/topology-rules.md` | Poly budgets, quad rules, edge flow | ~90 |
 | `plugin/references/setup-install.md` | Model selection, install commands, post-install validation | ~70 |
 | `plugin/references/sourcing-strategy.md` | PolyHaven (MCP or public API) + Sketchfab search patterns | ~120 |
+| `plugin/references/studio.md` | Kiln Studio: starting it, acting on the user's notes, commands, storage | ~155 |
+| `plugin/studio/` | Kiln Studio: local server and CLI (stdlib Python), three.js page, tests | ~4,200 |
 
-**Total: ~4,800 lines** of production-tested 3D pipeline knowledge.
+**Total: ~5,300 lines** of production-tested 3D pipeline knowledge.
 
 ## Continuous checks
 

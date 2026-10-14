@@ -6,6 +6,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Kiln Studio
+
+- **`/kiln studio`: a local page to look at models, pin notes on them, and iterate with
+  Claude.** `studio/studio.py` starts it on the project's folder or reuses the one
+  already running, like `remotion studio`; Python standard library, three.js 0.186.1
+  from jsDelivr. Every `.glb .gltf .fbx .obj` under the folder shows up, and kiln's
+  `_original`…`_final` stages are one model with switchable stages; the output or batch
+  folder is the default category, and categories and tags can be set.
+- **Notes** pinned on a spot record the point and normal in glTF and Blender
+  coordinates, the object, mesh and material hit, a region in words, the camera and a
+  screenshot; whole-model notes record the view. `open` → `addressed` (Claude, through
+  `studio.py reply`) → `resolved` (the user only; the CLI refuses it) or `wontfix`.
+- **Before and after per note**: when a note is marked addressed, the page renders the
+  note's own view of the new version beside its screenshot. One previous copy of each
+  annotated model is kept (the version the review pass started from) for a side-by-side
+  Compare and an undoable revert — never a pile of copies. History lists every version
+  seen with its size and triangle count, the changelog, notes and replies.
+- **The page** follows the files live (server-sent events): a re-export reloads the
+  model in place, Claude's replies appear as they are written. Shading Lit, Unlit,
+  Clay, Normals, UV checker and Faces (back faces red); wireframe, grid with the front
+  marked, bounds in metres, bones, animation clips. Draco, meshopt and KTX2 decode.
+- `plugin/studio/test_studio.py` (20 tests: scan, stats, notes, history, baseline,
+  HTTP API including host and origin checks) runs in CI; `verify_docs.py` now checks
+  `studio/` paths too.
+
 ### Changed
 
 - **The showcase chest is rebuilt** by its own script, `examples/animation/chest.py`: planks, a

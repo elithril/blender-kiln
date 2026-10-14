@@ -1,6 +1,6 @@
 ---
 name: kiln
-description: "Makes and fixes 3D assets in Blender, for games, the web and AR. Use when the user wants a 3D model, prop, character or GLB/glTF/FBX/USDZ file made — from a text brief, a reference image, a free marketplace (PolyHaven, Sketchfab) or AI generation — AND when they bring an existing 3D file to fix: too heavy or too many polygons (optimize, compress, LODs), broken normals, scale or origin, materials lost on glTF export, conversion between GLB, FBX and USDZ, texturing, rigging for animation, animating it (walk and idle cycles, text-to-motion, looping clips, articulated props), or inspection. Drives Blender through a Blender MCP server (ahujasid's or the official Blender Lab one). Batch mode produces many consistent assets unattended."
+description: "Makes and fixes 3D assets in Blender, for games, the web and AR. Use when the user wants a 3D model, prop, character or GLB/glTF/FBX/USDZ file made — from a text brief, a reference image, a free marketplace (PolyHaven, Sketchfab) or AI generation — AND when they bring an existing 3D file to fix: too heavy or too many polygons (optimize, compress, LODs), broken normals, scale or origin, materials lost on glTF export, conversion between GLB, FBX and USDZ, texturing, rigging for animation, animating it (walk and idle cycles, text-to-motion, looping clips, articulated props), or inspection. Drives Blender through a Blender MCP server (ahujasid's or the official Blender Lab one). Batch mode produces many consistent assets unattended. Kiln Studio (`/kiln studio`) opens the project's models in the browser, where the user reviews them and pins notes for Claude to act on."
 allowed-tools: Bash, Read, Edit, Write, Grep, Glob, WebFetch, WebSearch, mcp__blender__*, mcp__nano-banana__*
 ---
 
@@ -33,6 +33,7 @@ Reply in the language the user wrote the request in — not the language of the 
 | `/kiln animate` | Animate a rigged asset, routed by subject: idle/walk cycles, text-to-motion, keyed props (standalone) |
 | `/kiln optimize` | Optimize a GLB with gltf-transform/gltfpack (standalone) |
 | `/kiln convert` | Convert between formats (GLB→USDZ, GLB→FBX, etc.) |
+| `/kiln studio` | Open Kiln Studio, the browser viewer where the user pins notes on models; with notes waiting, act on them (`/kiln studio <asset>`) |
 | `/kiln help` | List all commands and usage |
 
 ### Argument routing
@@ -49,6 +50,7 @@ above arrives as the skill's arguments. Route on the FIRST word:
 | `models` | Model listing / switching |
 | `status` | Pipeline state report |
 | `search`, `inspect`, `cleanup`, `texture`, `optimize`, `convert` | Standalone tools |
+| `studio` | Kiln Studio — accepts an asset id or name; load `references/studio.md` |
 | `help` | Print the command table above and stop |
 
 Anything the first word does not match is treated as an asset brief, so
@@ -770,6 +772,12 @@ Save the .blend file via `execute_blender_code`: `bpy.ops.wm.save_as_mainfile(fi
 .blend saved │ log written
 ```
 
+**Kiln Studio:** in an interactive session, once the first model of the session is
+exported, start Kiln Studio on the project root and give the user its URL in one line —
+they can look at the model there, pin notes on it, and run `/kiln studio` to hand them to
+you. `python3 <skill>/studio/studio.py` (add `--no-open` when Auto-open links is false).
+Not in batch runs. Load `references/studio.md`.
+
 **End-of-session cleanup:** At the end of a multi-asset session, propose:
 > "Session complete: {n} assets, {total_size} MB. Cleanup intermediate files? (yes / no / pick per asset)"
 >
@@ -935,6 +943,18 @@ Search 3D asset marketplaces.
    ```
 5. User can: pick a number to download, open links, refine search, or cancel
 
+### /kiln studio
+
+Kiln Studio, a local web page (`studio/studio.py`, Python standard library only) where
+the user browses every model in the project, pins notes on them, compares versions, and
+checks your fixes. Load `references/studio.md` and follow it.
+
+1. Run `studio.py notes` (or take the asset given as argument).
+2. Notes waiting → act on them, one asset per pass: `studio.py show <asset>`, read each
+   screenshot, change the model, re-export to the same file,
+   `studio.py reply <asset> <note> "…" --status addressed`. Never mark one resolved.
+3. Nothing waiting → start Studio (`studio.py [project]`), give the URL, stop.
+
 ### /kiln help
 
 Display all available commands from the Commands table above.
@@ -1043,3 +1063,4 @@ Axis conversion at export is automatic.
 | Characters, rigging (phase 2) | `references/characters.md` |
 | Animation: routes, UniMate install and prompts | `references/animation.md` |
 | Batch mode (wizard, runner, manifest) | `references/batch-mode.md` |
+| Kiln Studio: viewer, the user's notes, before/after, history | `references/studio.md` |
