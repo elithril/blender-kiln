@@ -4,21 +4,25 @@
 
 ---
 
-## Scope — simple objects ONLY
+## Scope — the method follows the subject
 
-Print mode models **simple objects**: turned or geometric shapes, and stylised figures that are
-a bell, a block or a lathe with a few details cut or engraved. Measured on six briefs: a dog
-house, a lighthouse, a pumpkin and a ghost's body passed, and looked like what was asked. A
-cat held by the ghost, then a real cat rebuilt from its photo, both passed every print check
-and were unacceptable to look at — primitives cannot make an animal, and no rule here closes
-that gap.
+Print mode models **simple objects and figures, each by its own method**:
 
-**An animal, a person, a character, a portrait of anything alive: refuse print mode at
-CONFIG, before the first primitive.** Say why in one line and offer what is honest:
-- the object reduced to a simple stylised shape the user agrees to first (a cat as a bell
-  with ears — said as such, not as a likeness);
-- or `tools/print_check.py` on a model the user brings (a sculpt, a scan, a model bought or
-  downloaded): the check works on any mesh, and `tools/flatten.py` makes its nearly flat faces
+- **A simple object** — turned or geometric, stylised, a bell, a block or a lathe with details
+  cut or engraved: closed primitives and exact unions (§ Printable from the brief). Measured: a
+  dog house, a lighthouse, a pumpkin, a ghost's body, a windmill, a teapot.
+- **A living subject — an animal, a person, a character: never from primitives.** A cat held by
+  a ghost, then a real cat rebuilt from its photo, were built of spheres, cones and cylinders:
+  both passed every print check and were unacceptable to look at. **Build it from metaballs,
+  then one voxel remesh** (§ Figures). Measured: a v2.2 session, given a single flat drawing of
+  a cartoon dragon, built it that way in 23 minutes — standing, wings, tail, clothes — as four
+  colour parts its user found "bluffant". The method was the session's own; it is written here
+  so that it is not luck. Supports are normal for what the reference shows (§ Like the photo
+  rule 8).
+- **A likeness of a real person or a real pet from a photo**: say at CONFIG that it will be a
+  stylised figure, not a portrait, and go on only if the user takes it that way.
+- **A model the user brings** (a sculpt, a scan, a model bought or downloaded):
+  `tools/print_check.py` works on any mesh, and `tools/flatten.py` makes its nearly flat faces
   flat (§ A model you bring).
 
 **A mechanical part — it carries a load, a lid must close, a size is called to the tenth: say
@@ -26,8 +30,6 @@ at CONFIG that a CAD tool is the right one** (build123d, CadQuery, OpenSCAD: exa
 fillets, dimensions). A Blender mesh has none of those, and print mode has not been measured on
 such a part. Go on only if the user takes it as decorative, and log that answer. Parts that
 join by a peg are fine: offer the joint's test print first (§ Printable from the brief rule 5).
-
-Never start one "to see": every round spent on it is spent on a result the user will reject.
 
 ---
 
@@ -231,6 +233,41 @@ PASS (overhangs 0.69 %), and its 3MF too; a lantern, 44 × 44 × 100.5 mm resin,
 remesh, a warning; sliced as FDM, the only slicer pass). The dog house's first build failed on
 its eaves: rule 6's second half comes from it.
 
+## Figures: metaballs, then one voxel remesh
+
+What a session found by itself on a character, checked here before it was written. A figure is
+organic: its volumes melt into each other, which primitives cannot do and metaballs do by
+construction.
+
+1. **Model at ten times the size.** Blender's metaball resolution stops at 0.005 (5 mm at
+   1 unit = 1 m, checked on Blender 5.2.2): far too coarse for a 100 mm figure. Build it about
+   1 m tall and export at the print height — the one exception to rule 1, said in the log; every
+   thickness of rule 4 is then read ×10.
+2. **One metaball family per region** — body and head, each arm, the legs or feet, the tail —
+   so that regions meant to stay apart do not melt together. A tube is a row of elements along a
+   path, spaced about a quarter of their radius, so its outline stays even. An element shows a
+   radius of **0.574 × its radius** at stiffness 2 and threshold 0.6 (measured: 0.574 at
+   resolution 0.05, 0.575 at 0.02): size the elements from the reference with that factor.
+3. **Thin parts as closed meshes** — ears, horns, a wing's membrane, a tail's tip — overlapping
+   the metaballs by at least one wall, at the minimum thickness of rule 4 once printed (a wing
+   membrane at 2.4 mm printed passed the checks; not printed yet).
+4. **Convert, join and remesh once**: every metaball family and mesh part into one object, one
+   voxel remesh — about 0.45 mm once printed — then a flat cut at Z = 0 so that the feet stand.
+   One watertight solid, whatever overlapped (rule 3, interpenetrate then remesh).
+5. **Colours as parts** (§ Like the photo rule 9): each colour a closed part cut from the
+   solid by booleans in a priority order (black, then eye white, then clothes, then skin): each
+   part loses the UNCUT tool shape of the parts above it, never a piece already cut to its skin
+   — that left zero-area slivers. Eyes, nostrils and a mouth line are flush inlays, at least
+   1.5 mm wide. Parts must not overlap: their union is the figure.
+6. **Check the parts together**: `print_check part1.stl part2.stl … --slicer …` checks each
+   part closed, then their union as one figure (§ The tool). One colour's file alone is not a
+   printable object — the pupils float without the head that holds them.
+7. **Hand over the assembly**: one STL per colour, and a 3MF with the parts when the 3MF
+   extension is installed (rule 9). Say how to load it — all the STLs together, answered *yes*
+   to "load as a single object with multiple parts", one filament per part; on a single-colour
+   printer, all the parts with the same filament (no single STL holds the whole figure). Say
+   where supports go (under a snout, wings, elbows, a tail's curl) and the brim for small feet.
+
 ## A model you bring
 
 `print_check` works on any mesh, and `tools/flatten.py` is the one change kiln makes to a model
@@ -396,6 +433,15 @@ STL (mm), 3MF (its own unit), GLB and .blend (metres). Exit 0 PASS, 3 FAIL, 1 er
   compared on its dimensions alone, and
   the tool says so; a reference under one voxel of volume is a FAIL, never a ratio. The
   reference is first scaled to the model's height: a uniform scale is not a loss.
+- **Several files are an assembly** — a figure in several colours, one file per colour:
+  `print_check green.stl blue.stl ivory.stl black.stl --process fdm --slicer …`. Each file is
+  checked closed on its own; the parts' overlap is measured (summed volumes less the union's) and
+  warned past 1 %; their union — one voxel remesh at 0.25 mm or finer — is checked as one object,
+  slicer included. One colour alone is not a printable object (the pupils float without the head
+  that holds them), and the files laid end to end in one STL share their contact faces: both
+  FAIL a print that is fine. Measured on a four-colour dragon: each colour alone FAILed three
+  times out of four; the assembly PASSes, its union 68.4 cm³ against the 68.2 its session had
+  measured with another library, overlap 0. `--reference` checks one model: not an assembly.
 - **`--brim-mm`** slices with a brim that wide: *Low bed adhesion* on a tall, narrow part
   (a flame on its own base, a tree in its pot) went with 5 mm, and the warning without a brim
   names the option. The verdict then says to print with one.

@@ -426,7 +426,7 @@ Collect these parameters. Only type and brief are mandatory — infer the rest f
 | **Type** (prop, environment, character, vehicle...) | mandatory | — |
 | **Brief** (description, context, mood) | mandatory | Feeds searches and prompts |
 | **Export target** (glTF, FBX, USDZ, multi) | glTF | Determines export rules |
-| **Print** (FDM / resin + height in mm + colours the printer has) | none | Set when the brief says it will be 3D printed. **Simple objects only** — refused for an animal, a person, a character (`print.md` § Scope). Switches [3], [5] and [7] to `references/print.md`; target STL (+ 3MF). A single-colour printer: say which regions get painted, or which become separate parts in their own filament (`print.md` § Like the photo, rule 9) |
+| **Print** (FDM / resin + height in mm + colours the printer has) | none | Set when the brief says it will be 3D printed. **Method by subject** — primitives for a simple object, metaballs + voxel remesh for an animal, a person, a character (`print.md` § Scope, § Figures). Switches [3], [5] and [7] to `references/print.md`; target STL (+ 3MF). A single-colour printer: say which regions get painted, or which become separate parts in their own filament (`print.md` § Like the photo, rule 9) |
 | **Detail tier** (lightweight / balanced / detailed / custom) | balanced | Soft ranges, never hard caps |
 | **Visual style** (realistic, stylized, cartoon, low-poly) | realistic | Impacts sourcing + AI prompts |
 | **Mode** (auto / guided) | auto | guided = validation at each step |
@@ -515,16 +515,17 @@ ELSE
 
 Always explain WHY the recommendation, always let the user choose.
 
-**Print set in CONFIG: simple objects only** (`references/print.md` § Scope). An animal, a
-person, a character or a portrait of anything alive is refused at CONFIG, before the first
-primitive — offer a stylised simple shape the user agrees to, or `print_check` on a model they
-bring. Measured: two cats passed every check and were unacceptable to look at. A mechanical
+**Print set in CONFIG: the method follows the subject** (`references/print.md` § Scope). A
+simple object is built from closed primitives. **An animal, a person or a character is never
+built from primitives** — two cats passed every check and were unacceptable to look at — but
+from metaballs and one voxel remesh (`print.md` § Figures): a cartoon dragon from one flat
+drawing came out that way. A likeness of a real person or pet is said to be a stylised figure,
+not a portrait. A mechanical
 part (a load, a lid that must close, a size to the tenth) is said at CONFIG to belong in a CAD
 tool, and goes on only as decorative if the user agrees. Parts joined by a peg: offer
 `tools/fit_coupon.py`'s test print before modelling the joints — **in auto mode, do not wait
 for it**: model at 0.2 mm a face, write the coupon next to the model, and say in the hand-over
-that the clearance is not measured (`print.md` rule 5). For a simple
-object, scripted. **Load
+that the clearance is not measured (`print.md` rule 5). Scripted, for both. **Load
 `references/print.md` § Printable from the brief before the first primitive** — model at print size, closed solids only, one volume
 (exact union as you go, or overlap + one voxel remesh), the process's minimum thickness, a flat
 base, overhangs that grow out of the part below, relief as geometry. A generated or marketplace

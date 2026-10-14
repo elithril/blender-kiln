@@ -1,12 +1,18 @@
 """Check that a model will print — counted on the raw triangles, then confirmed by a slicer.
 
     blender -b --factory-startup --python-exit-code 1 --python tools/print_check.py -- \\
-        model.stl|model.3mf|model.glb|model.blend --process fdm|resin \\
+        model.stl|model.3mf|model.glb|model.blend [part2.stl …] --process fdm|resin \\
         [--height-mm H] [--parts N] [--reference original.glb|.blend|.stl] \\
         [--slicer /path/to/PrusaSlicer|name] [--slicer-timeout S] [--json out.json]
 
 Exit codes: 0 PASS, 3 FAIL, 1 error (unreadable file, bad arguments, slicer missing or
 timed out).
+
+Several files are an ASSEMBLY — one figure printed in several colours, one file per colour.
+A colour alone is not printable (pupils float without the head that holds them), and the files
+laid end to end share their contact faces, which reads as edges shared by four faces. So each
+file is checked closed on its own, the parts' overlap is measured, and their union — one voxel
+remesh of them all, 0.25 mm or finer — is checked as one object, slicer included.
 
 Units: STL is read as millimetres, 3MF by its own `unit`, GLB and .blend as metres. With
 --height-mm the model is scaled uniformly to that height; every figure is in mm after it.
@@ -103,7 +109,7 @@ class Parser(argparse.ArgumentParser):
 
 def args():
     p = Parser(prog="print_check.py")
-    p.add_argument("model")
+    p.add_argument("model", nargs="+", help="one file, or one per part of an assembly (a colour each)")
     p.add_argument("--process", required=True, choices=("fdm", "resin"))
     p.add_argument("--height-mm", type=float)
     p.add_argument("--parts", type=int, help="expected number of parts (default: any)")
@@ -578,9 +584,60 @@ def slicer(name, V, F, timeout, supports=False, brim=0.0):
 
 # ── main ─────────────────────────────────────────────────────────────────────────────────
 
+def voxel_union(V, F, size):
+    """One closed surface around everything: the parts of an assembly, touching or overlapping,
+    remeshed together. The lowest point is put back where it was — the voxel grid moves it."""
+    import bpy
+    me = bpy.data.meshes.new("pc_union")
+    me.from_pydata(V.tolist(), [], F.tolist())
+    ob = bpy.data.objects.new("pc_union", me); bpy.context.scene.collection.objects.link(ob)
+    md = ob.modifiers.new("r", "REMESH"); md.mode = "VOXEL"; md.voxel_size = size; md.adaptivity = 0.0
+    ev = ob.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    um = ev.to_mesh(); um.calc_loop_triangles()
+    UV = np.array([v.co for v in um.vertices], dtype=float).reshape(-1, 3)
+    UF = np.array([t.vertices for t in um.loop_triangles], dtype=np.int64).reshape(-1, 3)
+    ev.to_mesh_clear(); bpy.data.objects.remove(ob); bpy.data.meshes.remove(me)
+    if len(UV):
+        UV[:, 2] += float(V[:, 2].min()) - float(UV[:, 2].min())
+    return UV, UF
+
+
+def assembly(paths):
+    """Each part checked closed on its own; the overlap between parts measured; the union returned."""
+    parts, Vs, Fs, own, off = [], [], [], [], 0
+    for path in paths:
+        Vi, Fi = load(path)
+        if not len(Fi):
+            die(f"{path}: no triangle")
+        ti, _, ni, ci = topology(Vi, Fi)
+        parts.append(dict(file=os.path.abspath(path), triangles=int(len(Fi)), parts=int(ni),
+                          closed=bool(ci.all() and ti["open_edges"] == 0 and ti["nonmanifold_edges"] == 0
+                                      and ti["inconsistent_edges"] == 0),
+                          open_edges=ti["open_edges"], nonmanifold_edges=ti["nonmanifold_edges"],
+                          inconsistent_edges=ti["inconsistent_edges"]))
+        own.append((Vi, Fi)); Vs.append(Vi); Fs.append(Fi + off); off += len(Vi)
+    V, F = np.vstack(Vs), np.vstack(Fs)
+    size = min(0.25, float(np.ptp(V, axis=0).max()) / 400)
+    UV, UF = voxel_union(V, F, size)
+    if not len(UF):
+        die("the assembly's union is empty")
+    # overlap = what the parts count twice: their volumes summed, less the union's
+    vsum = sum(voxel_volume(Vi, Fi, size) for Vi, Fi in own)
+    vunion = voxel_volume(UV, UF, size)
+    return UV, UF, dict(parts=parts, voxel_mm=round(size, 4), volume_parts_mm3=round(vsum, 1),
+                        volume_union_mm3=round(vunion, 1), overlap_mm3=round(max(vsum - vunion, 0.0), 1))
+
+
 def main():
     o = args()
-    V, F = load(o.model)
+    asm = None
+    if len(o.model) > 1:
+        if o.reference:
+            die("--reference compares one model with its original: check the parts of an assembly one by one for that")
+        V, F, asm = assembly(o.model)
+    else:
+        V, F = load(o.model[0])
+    o.model = o.model[0] if asm is None else " + ".join(os.path.basename(m) for m in o.model)
     if not len(F):
         die(f"{o.model}: no triangle")
     native_h = float(V[:, 2].max() - V[:, 2].min())
@@ -631,7 +688,7 @@ def main():
     overhang_pct = round(100 * area[down].sum() / max(area.sum(), 1e-30), 2)
     thin = thickness(V, F, n, area, MIN_WALL[o.process], scale)
 
-    r = dict(file=os.path.abspath(o.model), process=o.process, triangles=int(len(F)), vertices=int(len(V)),
+    r = dict(file=os.path.abspath(o.model) if asm is None else o.model, process=o.process, triangles=int(len(F)), vertices=int(len(V)),
              scale=scale, dims_mm=[round(float(x), 3) for x in dims],
              parts=int(nparts), closed_parts=int(closed.sum()), empty_parts=int((~real).sum()), **topo,
              self_intersecting_pairs=selfx, intersecting_part_pairs=len(inter),
@@ -641,6 +698,17 @@ def main():
     if thin["min_scale"] is not None:
         thin["min_dims_mm"] = [round(float(x) / scale * thin["min_scale"], 1) for x in dims]
     fails, warns = [], []
+    if asm is not None:
+        r["assembly"] = asm
+        for q in asm["parts"]:
+            if not q["closed"]:
+                fails.append(f"assembly: {os.path.basename(q['file'])} is not closed on its own "
+                             f"({q['open_edges']} open, {q['nonmanifold_edges']} non-manifold edges)")
+        if asm["overlap_mm3"] > 0.01 * max(asm["volume_union_mm3"], 1e-9) and asm["overlap_mm3"] > 1.0:
+            warns.append(f"assembly: the parts overlap by {asm['overlap_mm3']} mm3 — a slicer prints that volume "
+                         f"in one colour or the other; cut each part by the ones above it")
+        warns.append(f"assembly of {len(asm['parts'])} files: their union checked as one object "
+                     f"(voxel {asm['voxel_mm']} mm) — load them in the slicer as ONE object with several parts")
     # A rescale hides a model built at the wrong size: one at 93.7 mm passed as 100 mm in silence.
     if abs(scale - 1.0) > 0.01:
         warns.append(f"scaled x{scale:.3f} to {o.height_mm:g} mm: the file itself is {native_h:.1f} mm tall "

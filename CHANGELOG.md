@@ -13,7 +13,9 @@ skill and a brief or a photo, nothing else: a dog house and a lighthouse from a 
 pumpkin and a ghost from photos, a windmill (two parts) from a brief, a teapot from three
 museum photos — all printable, all but the ghost's cat looking like what was asked. That cat,
 then a real cat from its photo, passed every print check and were unacceptable to look at, so
-print mode refuses an animal, a person or a character before the first primitive.
+print mode never builds an animal, a person or a character from primitives — it builds them
+from metaballs and one voxel remesh, the method a v2.2 session found by itself on a cartoon
+dragon, made from one flat drawing in four colours.
 
 ### Added — 3D printing
 
@@ -147,6 +149,19 @@ print mode refuses an animal, a person or a character before the first primitive
   part's height starts its 45° vault from a ring inside the wall; test pieces go in `test/` as
   `test_{what}.stl` (a user took two test rings for parts of the box); `review_renders.py
   --close` reads negative coordinates as a value.
+- **Figures: metaballs, not a refusal.** Print mode had refused an animal, a person or a
+  character since two cats built of primitives passed every check and were unacceptable to look
+  at. Then a colleague, on v2.2 — no print mode at all — asked for a cartoon dragon from one
+  flat drawing, for a multi-colour printer: the session built it from metaball families and one
+  voxel remesh, cut it into four colour parts with flush inlays, and wrote how to slice it, in 23
+  minutes. The refusal was about the method, not the subject. `print.md` § Figures writes that
+  method down — ten times the size (metaball resolution stops at 5 mm, checked), one family per
+  region, an element's visible radius 0.574 × its radius (measured), thin parts as meshes, one
+  remesh, colours by priority — and the scope now sends a living subject there.
+- **`print_check` checks an assembly**: several files, one per colour, are each checked closed,
+  their overlap measured, and their union checked as one object with the slicer. Each colour of
+  that dragon alone FAILed three times out of four; the assembly PASSes (union 68.4 cm³, 68.2
+  measured by its session with another library; overlap 0).
 
 ### Measured — what did not make it
 

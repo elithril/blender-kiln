@@ -21,6 +21,10 @@ them, no network. Cases:
 - self-intersections: a cube with a top corner pushed through its bottom crosses itself; the
   joint coupon at a 2.5 mm peg, whose lead-in's triangles only touch the bed face at shared
   vertices, does not (4 pairs before);
+- an assembly (one file per colour): a cube on a cube, sharing the face between them, FAILs laid
+  end to end in one file (edges shared by four faces) and PASSes as two files — each closed, no
+  overlap, their union one part; an open part, or a part floating above the others, FAILs the
+  assembly; two parts overlapping are measured and warned;
 - a long bridge reported by the slicer stays a warning, and says to shape the ceiling at 45°;
 - --brim-mm reaches the slicer: a low-adhesion warning names it, and goes with a 5 mm brim;
 - thin spots: the 0.4 mm wall's are listed where they are, read 0.4, a mm apart; the cube has none;
@@ -416,6 +420,35 @@ esac
     check("--brim-mm 5: passed to the slicer, no adhesion warning, the brim said",
           rc == 0 and r["slicer"]["brim_mm"] == 5 and not any("adhesion" in w for w in r["warnings"])
           and any("5 mm brim" in w for w in r["warnings"]), (rc, r and r["warnings"]))
+
+    # an assembly: one file per colour, sharing their contact faces
+    stl(f"{d}/lower.stl", box(0, 0, 0, 20, 20, 10))
+    stl(f"{d}/upper.stl", box(0, 0, 10, 20, 20, 20))
+    stl(f"{d}/stacked_one_file.stl", box(0, 0, 0, 20, 20, 10) + box(0, 0, 10, 20, 20, 20))
+    stl(f"{d}/high.stl", box(5, 5, 30, 15, 15, 40))
+    stl(f"{d}/overlapping.stl", box(0, 0, 5, 20, 20, 15))
+    rc, r, _ = run(f"{d}/stacked_one_file.stl", "--process", "fdm")
+    check("two colours laid end to end in one file: FAIL, edges shared by four faces",
+          rc == 3 and r["nonmanifold_edges"] > 0, (rc, r and r["nonmanifold_edges"]))
+    rc, r, p = run(f"{d}/lower.stl", f"{d}/upper.stl", "--process", "fdm")
+    a = r and r.get("assembly")
+    check("the same as an assembly of two files: PASS, both closed, no overlap, one part 20 x 20 x 20",
+          rc == 0 and a and all(q["closed"] for q in a["parts"]) and a["overlap_mm3"] < 1.0
+          and r["parts"] == 1 and all(abs(x - 20) < 0.5 for x in r["dims_mm"]),
+          (rc, r and r.get("dims_mm"), a and a["overlap_mm3"], p.stderr[-200:]))
+    rc, r, _ = run(f"{d}/lower.stl", f"{d}/open.stl", "--process", "fdm")
+    check("an assembly with an open part: FAIL, the file named",
+          rc == 3 and any("open.stl is not closed" in f for f in r["fails"]), (rc, r and r["fails"]))
+    rc, r, _ = run(f"{d}/lower.stl", f"{d}/upper.stl", f"{d}/high.stl", "--process", "fdm")
+    check("an assembly with a part above the others: FAIL, floating", rc == 3 and r["floating_parts"] >= 1,
+          (rc, r and r["floating_parts"]))
+    rc, r, _ = run(f"{d}/lower.stl", f"{d}/overlapping.stl", "--process", "fdm")
+    check("two parts overlapping by 2000 mm3: measured and warned",
+          r and abs(r["assembly"]["overlap_mm3"] - 2000) < 200 and any("overlap by" in w for w in r["warnings"]),
+          (r and r["assembly"]["overlap_mm3"], r and r["warnings"]))
+    rc, r, p = run(f"{d}/lower.stl", f"{d}/upper.stl", "--process", "fdm", "--reference", f"{d}/lower.stl")
+    check("an assembly with --reference: exit 1, said, no traceback",
+          rc == 1 and "Traceback" not in p.stderr and "assembly" in p.stderr, (rc, p.stderr[-200:]))
 
     # a long bridge: the warning says what to change (print.md rule 6), not only that it happened
     bridge = f"{d}/bridge_prusaslicer"

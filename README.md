@@ -129,7 +129,7 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. By
 - **Rebuild from a photo, measured**: an inventory from enlarged crops, the size and camera settled first, the silhouette and materials measured against the photo, every joint rendered and looked at, the last measure on the shipped GLB ([how](plugin/references/reference-fidelity.md))
 - **Textures from CC0 scans**: Poly Haven texture sets chosen against the photo, tinted to its palette, worn by the form, baked to UVs — procedural only when no scan fits
 - **A 3D template when one exists**: proportions read off a mesh generated from the same photo (TRELLIS.2, run locally) with `plugin/tools/template_profile.py` — measured, never shipped
-- **3D printing, simple objects only**: model for an FDM or resin printer from a brief or a photo — closed, at size, smooth, supports only where the object needs them — and a raw printability verdict with PrusaSlicer as second arbiter ([`plugin/tools/print_check.py`](plugin/tools/print_check.py)). Refused for an animal or a person: two cats passed every check and were unacceptable to look at ([how](plugin/references/print.md))
+- **3D printing, objects and figures**: model for an FDM or resin printer from a brief or a photo — closed, at size, smooth, supports only where the object needs them — and a raw printability verdict with PrusaSlicer as second arbiter ([`plugin/tools/print_check.py`](plugin/tools/print_check.py)). Objects from primitives; an animal, a person or a character from metaballs and a voxel remesh — never from primitives: two cats built that way passed every check and were unacceptable to look at ([how](plugin/references/print.md))
 - **Both Blender MCP servers**: ahujasid's `mcp-for-blender` and the Blender Foundation's official Lab MCP, the one behind Claude's Blender connector
 - **Multi-method creation**: scripted modeling (Blender Python, the default), geometry nodes, marketplace sourcing, or optional AI generation (TRELLIS.2 / TRELLIS / TripoSR Spaces, MIT; Hunyuan3D on request only)
 - **Local AI generation, never required**: TRELLIS.2 on Apple Silicon (measured) or Hunyuan3D-2 Mini, for offline work
@@ -271,10 +271,11 @@ A teapot from three museum photos, decoration engraved for the brush. Measured o
 given the skill and nothing else: a dog house and a lighthouse from a brief, a pumpkin, a
 ghost, the windmill and this teapot — printable, and like what was asked.
 
-**Two cats were not.** The one the ghost holds, then a real cat from its photo, passed every
-check and were unacceptable to look at: primitives cannot make an animal. So print mode
-**refuses an animal, a person or a character** before the first primitive, and offers
-instead to check a model you bring.
+**Two cats were not.** The one the ghost holds, then a real cat from its photo, were built of
+spheres, cones and cylinders: they passed every check and were unacceptable to look at. So
+print mode **never builds an animal, a person or a character from primitives** — it builds
+them from **metaballs and one voxel remesh**, the way a v2.2 session made a cartoon dragon,
+standing, winged and dressed, from one flat drawing, as four colour parts.
 
 ### A model you made: flatten it, then check it
 
@@ -298,8 +299,8 @@ are, no vertex moves past the tolerance, the input is never overwritten.
 
 - **None of these models has been printed yet.** Everything here was checked by PrusaSlicer
   2.9.6 and by renders, not on a bed.
-- **Simple objects only**: turned, geometric, stylised shapes. An animal, a person or a
-  character is refused.
+- **Figures by metaballs, not yet by a measured series**: the method comes from one session on
+  one character. A likeness of a real person or pet is a stylised figure, not a portrait.
 - **FDM, checked with PrusaSlicer's default profile.** No resin slicing, no orientation
   search, no support generation, no build-volume check.
 - **Scaled down in the slicer, a model loses its thin walls.** `print_check` says how far:
@@ -456,8 +457,8 @@ plugin/
 | `plugin/references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~480 |
 | `plugin/tools/fidelity_check.py` | Renders a model under a studio HDRI and measures shape and material gaps against its reference | ~685 |
 | `plugin/tools/template_profile.py` | Reads a turned object's real profile off a 3D template (a generated mesh, a scan), to model from | ~120 |
-| `plugin/references/print.md` | 3D printing, simple objects only (refused for an animal or a person): modelling for the printer from the brief (FDM / resin), what the check counts, what it does not, flattening a model you bring | ~400 |
-| `plugin/tools/print_check.py` | 3D printing check, FDM or resin: raw edge counts, held parts, walls, overhangs, loss against the original, PrusaSlicer as second arbiter | ~740 |
+| `plugin/references/print.md` | 3D printing, the method by subject (primitives for objects, metaballs for figures): modelling for the printer from the brief (FDM / resin), what the check counts, what it does not, flattening a model you bring | ~500 |
+| `plugin/tools/print_check.py` | 3D printing check, FDM or resin: raw edge counts, held parts, walls, overhangs, loss against the original, PrusaSlicer as second arbiter | ~850 |
 | `plugin/tools/cutout.swift` | Cuts the subject out of a photo with macOS Vision (14+), local and free — the alpha `fidelity_check` needs | ~30 |
 | `plugin/tools/flatten.py` | Makes a model's nearly flat faces exactly flat and lays it on the bed — curves, bevels and slopes untouched, the input never overwritten | ~290 |
 | `plugin/tools/fit_coupon.py` | Writes the test print for a peg in a hole, diamond on its side or round standing up: one hole per clearance, one with a lead-in chamfer, the peg printed the way the model's is | ~235 |
@@ -525,7 +526,7 @@ height only: anything wider than tall was clipped, a box measured 1:1 instead of
 `plugin/tools/test_print_check.py` builds the meshes a print can fail on — open, inverted,
 floating, too thin, a cavity, a loss against the original, a carved cup against its closed
 reference, the smallest scale of a 2 mm plate — and checks each verdict, with PrusaSlicer
-when it is there — **59/59**.
+when it is there, and an assembly of colour parts — **65/65**.
 `plugin/tools/test_flatten.py` seeds what flattening must and must not touch: a jittered top
 made flat, a cylinder, a sphere, a dome, a wave, a 5° slope, a 0.2 mm step and a 0.2 mm bevel
 left alone, a tilted model laid on the bed — **22/22**; each case after the first was added
