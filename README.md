@@ -129,7 +129,7 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. By
 - **Rebuild from a photo, measured**: an inventory from enlarged crops, the size and camera settled first, the silhouette and materials measured against the photo, every joint rendered and looked at, the last measure on the shipped GLB ([how](plugin/references/reference-fidelity.md))
 - **Textures from CC0 scans**: Poly Haven texture sets chosen against the photo, tinted to its palette, worn by the form, baked to UVs — procedural only when no scan fits
 - **A 3D template when one exists**: proportions read off a mesh generated from the same photo (TRELLIS.2, run locally) with `plugin/tools/template_profile.py` — measured, never shipped
-- **3D printing, objects and figures**: model for an FDM or resin printer from a brief or a photo — closed, at size, smooth, supports only where the object needs them — and a raw printability verdict with PrusaSlicer as second arbiter ([`plugin/tools/print_check.py`](plugin/tools/print_check.py)). Objects from primitives; an animal, a person or a character from metaballs and a voxel remesh — never from primitives: two cats built that way passed every check and were unacceptable to look at ([how](plugin/references/print.md))
+- **3D printing, objects and figures**: model for an FDM or resin printer from a brief or a photo — closed, at size, smooth, supports only where the object needs them — and a raw printability verdict with PrusaSlicer as second arbiter ([`plugin/tools/print_check.py`](plugin/tools/print_check.py)). Objects from primitives, stylised figures from metaballs and a voxel remesh; a realistic likeness of a real animal or person is said out of reach — two cats passed every check and were unacceptable to look at ([how](plugin/references/print.md))
 - **Both Blender MCP servers**: ahujasid's `mcp-for-blender` and the Blender Foundation's official Lab MCP, the one behind Claude's Blender connector
 - **Multi-method creation**: scripted modeling (Blender Python, the default), geometry nodes, marketplace sourcing, or optional AI generation (TRELLIS.2 / TRELLIS / TripoSR Spaces, MIT; Hunyuan3D on request only)
 - **Local AI generation, never required**: TRELLIS.2 on Apple Silicon (measured) or Hunyuan3D-2 Mini, for offline work
@@ -271,11 +271,12 @@ A teapot from three museum photos, decoration engraved for the brush. Measured o
 given the skill and nothing else: a dog house and a lighthouse from a brief, a pumpkin, a
 ghost, the windmill and this teapot — printable, and like what was asked.
 
-**Two cats were not.** The one the ghost holds, then a real cat from its photo, were built of
-spheres, cones and cylinders: they passed every check and were unacceptable to look at. So
-print mode **never builds an animal, a person or a character from primitives** — it builds
-them from **metaballs and one voxel remesh**, the way a v2.2 session made a cartoon dragon,
-standing, winged and dressed, from one flat drawing, as four colour parts.
+**Two cats were not.** The one the ghost holds, then a real cat from its photo — metaball
+ellipsoids, cone ears, exact unions — passed every check and were unacceptable to look at. A
+**stylised** figure is another matter: a v2.2 session made a cartoon dragon, standing, winged
+and dressed, from one flat drawing, in four colour parts, from **metaball families and one
+voxel remesh**. So print mode builds a stylised figure that way, and says at CONFIG that a
+**realistic likeness** of a real animal or person is out of reach of scripted modelling.
 
 ### A model you made: flatten it, then check it
 
@@ -299,8 +300,9 @@ are, no vertex moves past the tolerance, the input is never overwritten.
 
 - **None of these models has been printed yet.** Everything here was checked by PrusaSlicer
   2.9.6 and by renders, not on a bed.
-- **Figures by metaballs, not yet by a measured series**: the method comes from one session on
-  one character. A likeness of a real person or pet is a stylised figure, not a portrait.
+- **Stylised figures by metaballs, measured once**: the method comes from one session on one
+  cartoon character. A realistic likeness of a real animal or person from a photo is out of
+  reach: two cats failed, metaballs included.
 - **FDM, checked with PrusaSlicer's default profile.** No resin slicing, no orientation
   search, no support generation, no build-volume check.
 - **Scaled down in the slicer, a model loses its thin walls.** `print_check` says how far:

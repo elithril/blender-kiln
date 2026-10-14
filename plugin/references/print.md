@@ -11,16 +11,18 @@ Print mode models **simple objects and figures, each by its own method**:
 - **A simple object** — turned or geometric, stylised, a bell, a block or a lathe with details
   cut or engraved: closed primitives and exact unions (§ Printable from the brief). Measured: a
   dog house, a lighthouse, a pumpkin, a ghost's body, a windmill, a teapot.
-- **A living subject — an animal, a person, a character: never from primitives.** A cat held by
-  a ghost, then a real cat rebuilt from its photo, were built of spheres, cones and cylinders:
-  both passed every print check and were unacceptable to look at. **Build it from metaballs,
-  then one voxel remesh** (§ Figures). Measured: a v2.2 session, given a single flat drawing of
-  a cartoon dragon, built it that way in 23 minutes — standing, wings, tail, clothes — as four
-  colour parts its user found "bluffant". The method was the session's own; it is written here
-  so that it is not luck. Supports are normal for what the reference shows (§ Like the photo
-  rule 8).
-- **A likeness of a real person or a real pet from a photo**: say at CONFIG that it will be a
-  stylised figure, not a portrait, and go on only if the user takes it that way.
+- **A stylised figure — a cartoon animal, a character, a mascot, from a drawing or a
+  description: metaball families, then one voxel remesh** (§ Figures). Measured once: a v2.2
+  session, given a single flat drawing of a cartoon dragon, built it that way in 23 minutes —
+  standing, wings, tail, clothes — as four colour parts its user found "bluffant". The method
+  was the session's own; it is written here so that it is not luck. Supports are normal for
+  what the reference shows (§ Like the photo rule 8).
+- **A realistic likeness of a real animal or person, from a photo: say at CONFIG that scripted
+  modelling does not reach it.** A cat held by a ghost, then a real cat rebuilt from its photo —
+  metaball ellipsoids for head and body, cones for the ears, exact unions — passed every print
+  check and were unacceptable to look at. Offer what is honest: the subject as a stylised
+  cartoon figure, said as such (above); an image-to-3D generation (`ai-generation.md`),
+  repaired for print in [5]; or `print_check` on a model the user brings.
 - **A model the user brings** (a sculpt, a scan, a model bought or downloaded):
   `tools/print_check.py` works on any mesh, and `tools/flatten.py` makes its nearly flat faces
   flat (§ A model you bring).
@@ -235,9 +237,12 @@ its eaves: rule 6's second half comes from it.
 
 ## Figures: metaballs, then one voxel remesh
 
-What a session found by itself on a character, checked here before it was written. A figure is
-organic: its volumes melt into each other, which primitives cannot do and metaballs do by
-construction.
+What a session found by itself on a cartoon character, checked here before it was written. A
+stylised figure is organic: its volumes melt into each other, which primitives cannot do and
+metaballs do by construction. It is not a way to a realistic likeness: a cat from its photo,
+made of metaball ellipsoids, was still unacceptable (§ Scope). What differed on the figure that
+worked: one family per region, every part joined by ONE remesh rather than exact unions, and a
+drawing — a stylised subject — rather than a photo.
 
 1. **Model at ten times the size.** Blender's metaball resolution stops at 0.005 (5 mm at
    1 unit = 1 m, checked on Blender 5.2.2): far too coarse for a 100 mm figure. Build it about

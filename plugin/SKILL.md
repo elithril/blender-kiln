@@ -426,7 +426,7 @@ Collect these parameters. Only type and brief are mandatory — infer the rest f
 | **Type** (prop, environment, character, vehicle...) | mandatory | — |
 | **Brief** (description, context, mood) | mandatory | Feeds searches and prompts |
 | **Export target** (glTF, FBX, USDZ, multi) | glTF | Determines export rules |
-| **Print** (FDM / resin + height in mm + colours the printer has) | none | Set when the brief says it will be 3D printed. **Method by subject** — primitives for a simple object, metaballs + voxel remesh for an animal, a person, a character (`print.md` § Scope, § Figures). Switches [3], [5] and [7] to `references/print.md`; target STL (+ 3MF). A single-colour printer: say which regions get painted, or which become separate parts in their own filament (`print.md` § Like the photo, rule 9) |
+| **Print** (FDM / resin + height in mm + colours the printer has) | none | Set when the brief says it will be 3D printed. **Method by subject** — primitives for a simple object, metaballs + voxel remesh for a stylised figure; a realistic likeness from a photo is said out of reach (`print.md` § Scope, § Figures). Switches [3], [5] and [7] to `references/print.md`; target STL (+ 3MF). A single-colour printer: say which regions get painted, or which become separate parts in their own filament (`print.md` § Like the photo, rule 9) |
 | **Detail tier** (lightweight / balanced / detailed / custom) | balanced | Soft ranges, never hard caps |
 | **Visual style** (realistic, stylized, cartoon, low-poly) | realistic | Impacts sourcing + AI prompts |
 | **Mode** (auto / guided) | auto | guided = validation at each step |
@@ -516,11 +516,13 @@ ELSE
 Always explain WHY the recommendation, always let the user choose.
 
 **Print set in CONFIG: the method follows the subject** (`references/print.md` § Scope). A
-simple object is built from closed primitives. **An animal, a person or a character is never
-built from primitives** — two cats passed every check and were unacceptable to look at — but
-from metaballs and one voxel remesh (`print.md` § Figures): a cartoon dragon from one flat
-drawing came out that way. A likeness of a real person or pet is said to be a stylised figure,
-not a portrait. A mechanical
+simple object is built from closed primitives. **A stylised figure** — a cartoon animal, a
+character, a mascot — from metaball families and one voxel remesh (`print.md` § Figures): a
+cartoon dragon from one flat drawing came out that way. **A realistic likeness of a real animal
+or person from a photo is said at CONFIG to be out of reach of scripted modelling** — two cats,
+metaballs included, passed every check and were unacceptable to look at: offer it as a stylised
+figure, an image-to-3D generation repaired for print, or `print_check` on a model the user
+brings. A mechanical
 part (a load, a lid that must close, a size to the tenth) is said at CONFIG to belong in a CAD
 tool, and goes on only as decorative if the user agrees. Parts joined by a peg: offer
 `tools/fit_coupon.py`'s test print before modelling the joints — **in auto mode, do not wait
