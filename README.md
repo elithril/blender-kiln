@@ -538,7 +538,8 @@ from the tool's report — each size to the micron, both parts closed, diamond a
 **18/18**.
 `plugin/tools/test_review_renders.py` renders a seeded block and reads the images back: one
 per view and mode, the subject spanning the frame, a close-up aimed at nothing refused, a
-close-up at negative coordinates read as a value — **8/8**.
+close-up at negative coordinates read as a value, a rigged GLB framed without its bone sphere,
+a texture shown in colour — **10/10**.
 `plugin/tools/test_template_profile.py` reads a seeded turned part back through
 `template_profile.py` — radii, a free rod, a rod pressed against the body — **4/4**.
 

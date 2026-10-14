@@ -92,7 +92,8 @@ nothing and the user gets no response.
     it with `bpy.ops.wm.read_factory_settings(use_empty=True)` — a 2 m Cube saved
     into a print's parts .blend made `--reference` fail by 40 %.
     Print's remesh-then-decimate (`references/print.md` rule 3) is the build
-    method, not a destruction of the user's mesh: logged, not proposed.
+    method, not a destruction of the user's mesh: logged, not proposed. Same for
+    a reduction the brief itself asks for, on a mesh the session built.
  7. ALWAYS keep the .blend file (contains full history). In compact mode,
     only keep original + final + .blend + log. In full mode, keep all
     intermediate GLBs. ALWAYS save the .blend — it's the recovery point.
@@ -116,7 +117,8 @@ nothing and the user gets no response.
     Fallback: solid white. Never environment/ground/context.
 12. SINGLE VIEW by default for AI generation. Multi-view only if user
     provides their own multi-angle images.
-13. ALWAYS get characters into T-POSE if rigging is planned — and that means
+13. ALWAYS get BIPED characters into T-POSE if rigging is planned (a quadruped keeps its
+    natural standing pose, legs straight under the body) — and that means
     MEASURING the pose on import, not only forcing it at generation. A
     marketplace or downloaded character arrives in whatever pose its author
     used, and measured on three free models: none was in T-pose (A-pose at
@@ -503,8 +505,11 @@ IF type = complex architecture (cathedral, ornate facade) AND print not set
     # print set: a lighthouse, a windmill, a tower are simple objects — a lathe or a prism,
     # scripted (print.md § Scope). Two print sessions read this line against it.
 
-IF type = character
-    → recommend AI
+IF type = character or creature   # decided before the style lines above, which read it otherwise
+    → the style decides: cartoon / stylised → scripted, its body ONE skin (overlapping
+      volumes or metaballs, one voxel remesh — `print.md` § Figures), never separate parts
+      glued on; realistic / detailed → recommend AI. Sessions read "cartoon → scripted" and
+      "character → AI" as a contradiction on every mascot.
     → ASK: "Will this character need rigging/animation?"
       IF yes → force T-pose in concept image prompt
               → record it: the RIG SELECTION gate in PHASE 5c depends on it
@@ -575,7 +580,8 @@ If nano-banana MCP is available, offer it as an alternative (supports iterative 
 **Scripted modeling flow:**
 
 - `execute_blender_code` with primitives + modifiers + booleans
-- Each logical part = separate object (legs, seat, back...)
+- Each logical part = separate object (legs, seat, back...) — for props. An animated
+  character's body is ONE skin, its eyes, nose and eyelids apart (`characters.md`)
 - Materials assigned per object from creation
 - `get_viewport_screenshot` for iterative validation
 
@@ -717,7 +723,11 @@ Then pick from what Rigify ships — bone counts measured on Blender 5.0.1:
 | < 700 | **Hand-built rig, 12-20 bones.** See `references/characters.md` § Match the rig's density | 12-20 | 20-35 |
 | 700 - 3,000 | `bpy.ops.object.armature_basic_human_metarig_add()` | 35 | 20-85 |
 | > 3,000 | `bpy.ops.object.armature_human_metarig_add()` | 160 | 20+ |
-| quadruped, > 900 | `bpy.ops.object.armature_basic_quadruped_metarig_add()` | 46 | 20+ |
+| quadruped | **Hand-built, Mixamo-named** — `references/characters.md` § Animation-ready skeleton | 20-30 | 20+ |
+
+**Not Rigify's quadruped metarig**: its 34 bones are named `spine`, `front_thigh.L`… (checked,
+Blender 5.2.2) and `tools/quadruped.py` reads Mixamo names only — every quadruped session built
+the Mixamo skeleton by hand anyway.
 
 **A Rigify human needs ~3,200 vertices to be worth it.** Below that it is actively
 worse than a small rig: on a 370-vertex figure it left 107 of its 160 deform bones

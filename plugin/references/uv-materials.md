@@ -20,7 +20,8 @@ obj = bpy.context.active_object
 bpy.ops.object.mode_set(mode='EDIT')
 bpy.ops.mesh.select_all(action='SELECT')
 bpy.ops.uv.smart_project(
-    angle_limit=66.0,      # degrees
+    angle_limit=1.152,     # RADIANS (66°): 66.0 asks for 66 rad, clamped to 90°
+                           # (checked, Blender 5.2.2: default 1.152 rad = 66°, max 90°)
     island_margin=0.02,    # margin between islands
     area_weight=0.0,
     correct_aspect=True,

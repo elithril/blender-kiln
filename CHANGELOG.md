@@ -174,6 +174,18 @@ session found by itself on a cartoon dragon, made from one flat drawing in four 
   files asked how the scarf would get round the neck.
   An assembly's `SCALE` is now its thinnest part's: the fox's union said 20 %, its orange part —
   thin walls between the inlays — 80 %, and the line names the part.
+- **What eight web and animation sessions met everywhere** (owls, dogs, a corgi, 2026-10-14):
+  - the creation tree settled "cartoon → scripted" against "character → AI": a character's
+    style decides, and a stylised one is scripted as ONE skin, not parts glued on;
+  - a quadruped is rigged with a hand-built Mixamo-named skeleton: Rigify's quadruped metarig
+    has 34 bones named `spine`, `front_thigh.L`… (checked; the table said 46) and
+    `tools/quadruped.py` reads Mixamo names only. The T-pose rule is for bipeds;
+  - the detail tier sets the triangle budget, the platform table is only the default; a brief
+    that lifts the limit is not proposed a reduction; a reduction the brief asks for is logged;
+  - `uv-materials.md` passed `angle_limit=66.0  # degrees`: the operator takes radians (checked:
+    default 1.152, max 90°), so it asked for 66 rad;
+  - `review_renders.py` left out the 2 m sphere a rigged glTF brings for its bones (a dog was 2 %
+    of the frame) and shows textures in colour (a textured body rendered grey).
 
 ### Measured — what did not make it
 

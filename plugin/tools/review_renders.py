@@ -14,7 +14,9 @@ one measured a height from bound_box and read 104.8 mm for 90.0. This is that sc
   the subject spans the frame's width or height, 7 % of margin each side;
 - --mode matcap (grey matcap: the geometry, what the printer sees), colour (the materials,
   the paint plan), or both — an STL has no material, so colour needs the GLB or the .blend
-  (STLs render grey, which a fox's session took for a fault);
+  (STLs render grey, which a fox's session took for a fault); a textured model shows its
+  textures, an untextured one its materials' colours;
+- a rigged glTF's bone display shape (a 2 m sphere the importer adds) is left out of the frame;
 - --views from front, back, left, right, top, under and the four three-quarters q1-q4
   (front -Y); the default pairs two opposite three-quarters, as rule 2 asks, with top and under;
 - --close X,Y,Z,SIZE (mm) renders a close-up there, seen from outside the model's axis;
@@ -88,7 +90,18 @@ def load(path):
                 bpy.context.scene.collection.objects.link(o)
     else:
         die(f"{path}: STL, GLB/glTF or .blend")
-    new = [o for o in bpy.data.objects if o not in before and o.type == "MESH"]
+    # A rigged glTF brings its bones' display shape along — a 2 m Icosphere in the
+    # "glTF_not_exported" collection — and framing on it left a dog 2 % of the frame.
+    shapes = {pb.custom_shape for o in bpy.data.objects if o.type == "ARMATURE" and o.pose
+              for pb in o.pose.bones if pb.custom_shape}
+    new = []
+    for o in bpy.data.objects:
+        if o in before or o.type != "MESH":
+            continue
+        if o in shapes or any(c.name.startswith("glTF_not_exported") for c in o.users_collection):
+            o.hide_render = True
+            continue
+        new.append(o)
     if not new:
         die(f"{path}: no mesh in it")
     return new
@@ -153,7 +166,10 @@ def main():
     for mode in modes:
         sh = sc.display.shading
         sh.light = "MATCAP" if mode == "matcap" else "STUDIO"
-        sh.color_type = "SINGLE" if mode == "matcap" else "MATERIAL"
+        # MATERIAL shows a material's flat colour only: a textured body rendered grey, read as a fault
+        textured = any(n.type == "TEX_IMAGE" for o in meshes for m in o.data.materials if m and m.node_tree
+                       for n in m.node_tree.nodes)
+        sh.color_type = "SINGLE" if mode == "matcap" else ("TEXTURE" if textured else "MATERIAL")
         sh.single_color = (0.8, 0.8, 0.8)
         for name, at, s, (az, el) in shots:
             az, el = math.radians(az), math.radians(el)
