@@ -31,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Batch token estimate**: in a batch folder, the wizard's formula read off
   `batch-manifest.yaml`: the asset's, the batch's and what is left to run, ±50%; the
   batch's range on its folder header in the list.
+- **Eye button for the pins**: the toolbar's Pins toggle is now an eye floating under the
+  model's name (crossed out while hidden, P still works), shown only when the model has at
+  least one pin in the notes being listed.
 - `test_studio.py`: 36 tests (live stage order, build record, CLI target, image headers,
   health on shipped and unshipped stages, fidelity by hash, manifest estimate, events).
 

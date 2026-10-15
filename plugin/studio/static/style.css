@@ -165,7 +165,22 @@ button.tag.on { color: var(--molten); border-color: rgb(214 126 44 / 0.55); back
   pointer-events: none;
 }
 #titlebar > * { pointer-events: auto; }
+.title-col { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; pointer-events: none !important; }
+.title-col > * { pointer-events: auto; }
 .title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+#t-pins {
+  display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0;
+  background: var(--glass); backdrop-filter: blur(8px); color: var(--ash);
+}
+#t-pins[hidden] { display: none; }
+#t-pins:hover { background: var(--soot-2); color: var(--bone); }
+#t-pins.on:hover { color: var(--molten); }
+#t-pins.on { color: var(--molten); }
+#t-pins svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+#t-pins .eye-off, #t-pins:not(.on) .eye { display: none; }
+#t-pins:not(.on) .eye-off { display: block; }
+/* The eye sits where the build phases start: they move over while it is there. */
+#stage:has(#t-pins:not([hidden])) #buildbar { left: 52px; }
 #asset-name { margin: 0; font-size: 18px; letter-spacing: -0.015em; text-shadow: 0 1px 8px rgb(0 0 0 / 0.5); }
 #stage[data-bg="light"] #asset-name { color: var(--ink); text-shadow: none; }
 .chips { display: flex; gap: 4px; flex-wrap: wrap; }

@@ -86,7 +86,11 @@ viewer.onAnimate = () => {
 function syncToolbar() {
   $$('#toolbar [data-shade]').forEach((b) => b.classList.toggle('on', b.dataset.shade === viewer.opts.shade));
   $$('#toolbar [data-opt]').forEach((b) => b.classList.toggle('on', !!viewer.opts[b.dataset.opt]));
-  $('#t-pins').classList.toggle('on', state.pinsOn);
+  const pins = $('#t-pins'), label = state.pinsOn ? 'Hide pins' : 'Show pins';
+  pins.classList.toggle('on', state.pinsOn);
+  pins.setAttribute('aria-pressed', String(state.pinsOn));
+  pins.setAttribute('aria-label', label);
+  pins.title = `${label} (P)`;
   $('#t-compare').classList.toggle('on', !!state.compare);
   $('#t-pin').classList.toggle('on', state.pinning);
   $('#t-bg').textContent = { dark: 'Dark', mid: 'Mid', light: 'Light' }[viewer.opts.bg];
@@ -385,8 +389,11 @@ function shownNotes() {
 function renderPins() {
   const box = $('#pins');
   box.innerHTML = '';
+  const pinned = state.detail ? shownNotes().filter((n) => n.anchor) : [];
+  // The eye only appears once there is a pin on the model to hide.
+  $('#t-pins').hidden = !pinned.length;
   if (!state.detail) return;
-  const notes = state.pinsOn ? shownNotes().filter((n) => n.anchor) : [];
+  const notes = state.pinsOn ? pinned : [];
   for (const n of notes) {
     const el = document.createElement('div');
     el.className = `pin ${n.status}${state.hl === n.id ? ' hl' : ''}`;
@@ -1227,7 +1234,7 @@ document.addEventListener('keydown', (e) => {
   else if (lower === 'g') setOpt('grid', !viewer.opts.grid);
   else if (lower === 'b') setOpt('bounds', !viewer.opts.bounds);
   else if (lower === 'k' && state.clientStats?.skinned) setOpt('skeleton', !viewer.opts.skeleton);
-  else if (lower === 'p') $('#t-pins').click();
+  else if (lower === 'p' && !$('#t-pins').hidden) $('#t-pins').click();
   else if (lower === 'c') toggleCompare();
   else if (lower === 'n') { e.preventDefault(); state.pinning ? cancelDraft() : startPin(); }
   else if (lower === 'm') { e.preventDefault(); startGeneral(); }

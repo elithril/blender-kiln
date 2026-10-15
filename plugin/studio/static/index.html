@@ -51,9 +51,15 @@
   <div id="pins"></div>
 
   <div id="titlebar" hidden>
-    <div class="title">
-      <h2 id="asset-name"></h2>
-      <div id="variants" class="chips" role="tablist" aria-label="Variant"></div>
+    <div class="title-col">
+      <div class="title">
+        <h2 id="asset-name"></h2>
+        <div id="variants" class="chips" role="tablist" aria-label="Variant"></div>
+      </div>
+      <button id="t-pins" class="on" title="Hide pins (P)" aria-label="Hide pins" aria-pressed="true" hidden>
+        <svg class="eye" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+        <svg class="eye-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 5.1A9.8 9.8 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-2.4 3.3M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18"/></svg>
+      </button>
     </div>
     <div id="asset-stats" class="stats"></div>
   </div>
@@ -83,7 +89,6 @@
       <button data-opt="grid" class="on" title="Ground grid, front arrow (G)">Grid</button>
       <button data-opt="bounds" title="Bounds with sizes (B)">Size</button>
       <button data-opt="skeleton" id="t-skel" title="Skeleton (K)" hidden>Bones</button>
-      <button id="t-pins" class="on" title="Show pins (P)">Pins</button>
       <button id="t-bg" title="Background: dark, mid, light">Bg</button>
     </div>
     <div class="group">

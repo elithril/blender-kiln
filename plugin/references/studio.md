@@ -187,7 +187,8 @@ first folder holding `.kiln-studio/`); pass `--root PROJECT` from elsewhere.
   changed since they last looked.
 - **Centre:** orbit, pan, zoom; shading Lit / Unlit / Clay / Normals / UV checker /
   Faces (back faces red: flipped normals and holes); wireframe, grid with the front
-  marked, bounds with sizes in metres, bones; preset views; animation clips with a
+  marked, bounds with sizes in metres, bones; under the model's name, an eye that hides
+  the note pins (there once the model has one); preset views; animation clips with a
   scrubber; **Compare**: the previous version or another stage side by side, one camera
   for both, size and triangle change shown.
 - **Right:** Notes (pin or whole-model, statuses, threads, before/after shots,
