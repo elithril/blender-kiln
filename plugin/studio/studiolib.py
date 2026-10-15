@@ -17,6 +17,7 @@ Everything Studio writes lives in `<project>/.kiln-studio/`:
     assets/<key>/notes.json         notes, with their threads
     assets/<key>/history.json       versions seen (hash, size, tris) + changelog
     assets/<key>/shots/             a screenshot per note, and per "addressed" reply
+    assets/<key>/live.json          the build kiln is running: its phases, step by step
     baseline/<key>/                 ONE previous copy of the model (n-1), git-ignored
     cache/thumbs/<key>/<hash>.webp  a small render of each version seen, git-ignored
     cache/server.log
@@ -50,8 +51,17 @@ DATA_DIR = ".kiln-studio"
 MODEL_EXTS = (".glb", ".gltf", ".fbx", ".obj")
 # kiln's pipeline stages, best first: the default variant is the most finished one.
 KILN_STAGES = ("final", "optimized", "textured", "clean", "original")
+# The scratch export kiln writes after each phase while it builds: first while it is the
+# newest file of the asset (the build is under way), last once a real stage is newer.
+LIVE = "live"
 FORMAT_ORDER = (".glb", ".gltf", ".fbx", ".obj")
-STAGE_RE = re.compile(r"^(?P<name>.+)_(?P<stage>" + "|".join(KILN_STAGES) + r")$")
+STAGE_RE = re.compile(r"^(?P<name>.+)_(?P<stage>" + "|".join(KILN_STAGES + (LIVE,)) + r")$")
+# kiln's phases, in pipeline order; rig and animate only show when a build reports them.
+PHASES = ("config", "brief", "source", "import", "cleanup", "texture", "rig", "animate", "optimize", "export")
+OPTIONAL_PHASES = ("rig", "animate")
+PHASE_ALIASES = {"texturing": "texture", "5b": "texture", "rigging": "rig", "5c": "rig",
+                 "animation": "animate", "5d": "animate", "opt": "optimize", "sourcing": "source",
+                 "create": "source", "creation": "source", "model": "source", "modeling": "source"}
 # Unity's Library/ and Temp/ hold thousands of cached imports, never source models.
 SKIP_DIRS = {"node_modules", "__pycache__", "venv", "site-packages", "Library", "Temp"}
 STATUSES = ("open", "addressed", "resolved", "wontfix")
@@ -245,6 +255,7 @@ def _group_dir(project: Project, d: Path, models: list[str]) -> list[Asset]:
     siblings = sorted(f for f in os.listdir(d) if f.lower().endswith(SIDE_EXTS) and not f.startswith(".")
                       and _within(project, d / f))
     groups: dict[tuple[str, bool], list[tuple[str, str]]] = {}
+    mtimes = {f: (d / f).stat().st_mtime for f in models}
     for f in models:
         stem, ext = os.path.splitext(f)
         m = STAGE_RE.match(stem)
@@ -259,10 +270,15 @@ def _group_dir(project: Project, d: Path, models: list[str]) -> list[Asset]:
             groups[(name, True)].extend(groups.pop((name, False)))
     out = []
     for (name, kiln), items in groups.items():
+        newest_other = max((mtimes[f] for label, f in items if label != LIVE), default=0.0)
+
         def order(item: tuple[str, str]) -> tuple[int, int]:
             label, f = item
             ext = os.path.splitext(f)[1].lower()
-            stage = KILN_STAGES.index(label) if label in KILN_STAGES else len(KILN_STAGES)
+            if label == LIVE:
+                stage = -1 if mtimes[f] >= newest_other else len(KILN_STAGES)
+            else:
+                stage = KILN_STAGES.index(label) if label in KILN_STAGES else len(KILN_STAGES)
             return (stage, FORMAT_ORDER.index(ext) if ext in FORMAT_ORDER else 9)
         items.sort(key=order)
         variants = []
@@ -698,6 +714,7 @@ def observe(project: Project, asset: Asset) -> list[dict]:
     if all(last_seen(load_history(project, asset.id)).get(v.label) == v.hash for v in asset.variants):
         return []
     project.ensure()
+    live = load_live(project, asset.id) if any(v.label.startswith(LIVE) for v in asset.variants) else None
     # ...and decide under it, so the server and the CLI never both record one version.
     with Lock(project):
         evs = load_history(project, asset.id)
@@ -706,10 +723,14 @@ def observe(project: Project, asset: Asset) -> list[dict]:
         for v in asset.variants:
             if last.get(v.label) != v.hash:
                 st = variant_stats(v) or {}
-                new.append({"type": "version", "at": now(), "variant": v.label, "file": v.rel,
-                            "hash": v.hash, "size": v.size,
-                            "mtime": datetime.fromtimestamp(v.mtime, timezone.utc).isoformat(timespec="seconds"),
-                            "tris": st.get("tris"), "first": v.label not in last})
+                e = {"type": "version", "at": now(), "variant": v.label, "file": v.rel,
+                     "hash": v.hash, "size": v.size,
+                     "mtime": datetime.fromtimestamp(v.mtime, timezone.utc).isoformat(timespec="seconds"),
+                     "tris": st.get("tris"), "first": v.label not in last}
+                if live and v.label.startswith(LIVE):
+                    # Which phase this snapshot closed: the build record, version by version.
+                    e["phase"], e["step"] = live.get("phase"), (live.get("steps") or [{}])[-1].get("text", "")
+                new.append(e)
         if new:
             evs.extend(new)
             write_json(history_path(project, asset.id), {"asset": asset.id, "events": evs})
@@ -834,6 +855,85 @@ def revert(project: Project, asset: Asset) -> dict:
     return b
 
 
+# ── live: the build kiln is running ──────────────────────────────────────────
+
+
+def live_path(project: Project, asset_id: str) -> Path:
+    return project.asset_dir(asset_id) / "live.json"
+
+
+def load_live(project: Project, asset_id: str) -> dict | None:
+    try:
+        return read_json(live_path(project, asset_id), None)
+    except ValueError:
+        return None
+
+
+def norm_phase(phase: str) -> str:
+    # "cleanup", "CLEANUP", "[5] CLEANUP", "5b", "texturing" are all accepted.
+    p = (phase or "").strip().lower()
+    p = PHASE_ALIASES.get(p, p)
+    if p not in PHASES:
+        p = re.sub(r"^\[?\d+[a-z]?\]?\s*", "", p)
+        p = PHASE_ALIASES.get(p, p)
+    if p not in PHASES:
+        raise ValueError(f"unknown phase {phase!r}: one of {', '.join(PHASES)}")
+    return p
+
+
+def live_files(project: Project, asset_id: str) -> list[Path]:
+    """The scratch `<name>_live.*` exports of a kiln asset folder."""
+    d = project.inside(asset_id)
+    name = d.name
+    return [p for ext in (".glb", ".gltf") if (p := d / f"{name}_{LIVE}{ext}").is_file()]
+
+
+def set_live(project: Project, asset_id: str, phase: str | None = None, text: str = "",
+             end: bool = False) -> dict:
+    """Record a step of a build. The asset need not exist yet: `asset_id` is its kiln folder
+    (`generated-assets/wooden-chair`), which is the id it gets once a model lands there.
+
+    A step on a build that ended starts a new one. `end` closes the build; the scratch
+    `_live` export is the caller's to remove (end_live does both).
+    """
+    project.ensure()
+    with Lock(project):
+        cur = load_live(project, asset_id)
+        t = now()
+        if not cur or (cur.get("state") != "building" and not end):
+            cur = {"asset": asset_id, "state": "building", "started": t, "phase": None, "steps": []}
+        if phase:
+            cur["phase"] = norm_phase(phase)
+        elif end:
+            cur["phase"] = "export"   # the build ends with its export
+        if phase or text:
+            cur["steps"] = (cur.get("steps") or [])[-199:] + [{"at": t, "phase": cur.get("phase"), "text": text.strip()}]
+        if end:
+            cur["state"] = "done"
+            cur["ended"] = t
+        cur["updated"] = t
+        write_json(live_path(project, asset_id), cur)
+        return cur
+
+
+def end_live(project: Project, asset_id: str, text: str = "", keep_file: bool = False) -> tuple[dict, list[str]]:
+    """Close the build, and remove the scratch `_live` export unless asked to keep it:
+    kiln wrote it for the view, and compact storage keeps only original, final, .blend, log."""
+    state = set_live(project, asset_id, text=text, end=True)
+    removed = []
+    if not keep_file:
+        for p in live_files(project, asset_id):
+            removed.append(project.rel(p))
+            p.unlink()
+    return state, removed
+
+
+def live_summary(live: dict | None) -> dict | None:
+    if not live:
+        return None
+    return {k: live.get(k) for k in ("state", "phase", "started", "updated", "ended")}
+
+
 # ── summaries for the page and the CLI ───────────────────────────────────────
 
 
@@ -856,6 +956,7 @@ def asset_summary(project: Project, a: Asset, catalog: dict) -> dict:
         "updated": max(v.mtime for v in a.variants),
         "baseline": b and {"hash": b["hash"], "variant": b["variant"], "at": b["at"]},
         "pending_shots": len(pending_shots(notes, a)),
+        "live": live_summary(load_live(project, a.id)) if a.kiln else None,
     }
 
 
@@ -871,4 +972,5 @@ def asset_detail(project: Project, a: Asset, catalog: dict) -> dict:
     out["pending"] = pending_shots(out["notes"], a)
     versions = {e["hash"] for e in out["history"] if e.get("type") == "version"}
     out["thumbs"] = sorted(h for h in versions if has_thumb(project, a.id, h))
+    out["live"] = load_live(project, a.id) if a.kiln else None
     return out

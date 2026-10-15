@@ -6,6 +6,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Kiln Studio: watch it built, check it
+
+- **Live view.** While kiln builds, Kiln Studio opens the model and reloads it after each
+  phase. `studio/blender_live.py` runs inside Blender, appended to the phase's last
+  `execute_blender_code` call: it exports `<name>/<name>_live.glb` (hidden name, then moved
+  into place) and records the phase in `.kiln-studio/assets/<key>/live.json`.
+  `studio.py live <name> --end` closes the build and removes the export. The page shows
+  the phases above the model and a "building" mark in the list, follows the newest stage,
+  refits the view as the model grows, and files each live version in History under its
+  phase, with a render. Studio now starts once the brief is confirmed.
+- **Checks tab and `studio.py checks`**: triangles against the detail tier's soft range
+  (WARN only past twice the top, rule 4), size against the usual height of a chair, table,
+  door or character, ground contact and centring, texture sizes (read from the image
+  headers in the file) against the target's cap, Draco/meshopt and WebP/KTX2 on `_final`
+  only, and the licences in the production log (CC-BY: credit; NC: WARN). Without a log,
+  the tier and type are assumed and the check says so.
+- **Fidelity beside the model**: `tools/fidelity_check.py` also writes `fidelity.json`
+  (with the model's hash, the view, elevation and azimuth) and appends a line per run to
+  `fidelity_log.jsonl`. With `--out <name>/review/<view>/`, the Checks tab shows the IoU
+  and its rounds, whether the measured file is the current one, the overlay or the
+  side-by-side, the ranked gaps, the per-band widths, the joints, and a Photo's view
+  button. `test_fidelity_check.py`: 29/29.
+- **Batch token estimate**: in a batch folder, the wizard's formula read off
+  `batch-manifest.yaml`: the asset's, the batch's and what is left to run, ±50%; the
+  batch's range on its folder header in the list.
+- `test_studio.py`: 36 tests (live stage order, build record, CLI target, image headers,
+  health on shipped and unshipped stages, fidelity by hash, manifest estimate, events).
+
 ### Added — Kiln Studio
 
 - **`/kiln studio`: a local page to look at models, pin notes on them, and iterate with

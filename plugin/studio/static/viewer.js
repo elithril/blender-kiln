@@ -373,6 +373,11 @@ export class Viewer {
     this.controls.update();
   }
 
+  // Frame the model from a direction given as [x, y, z] (three.js axes).
+  lookFrom(dir) {
+    this.frame(new THREE.Vector3(...dir));
+  }
+
   view(name) {
     const dirs = {
       front: [0, 0, 1], back: [0, 0, -1], right: [1, 0, 0], left: [-1, 0, 0],

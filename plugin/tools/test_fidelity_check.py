@@ -22,7 +22,7 @@ test writes its own tiny HDRI. Cases:
 - --view and --azimuth on a 2 x 1 x 1 box: 2:1 from the front, 1:1 from the side or at 90°,
   and 2.12:1 at 45° (2 cos 45° + sin 45°) — the 3/4 view most product photos are.
 """
-import json, os, subprocess, sys, tempfile
+import hashlib, json, os, subprocess, sys, tempfile
 
 BLENDER = os.environ.get("BLENDER", "/Applications/Blender.app/Contents/MacOS/Blender")
 TOOL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fidelity_check.py")
@@ -155,10 +155,18 @@ with tempfile.TemporaryDirectory() as d:
     def check(name, ok, got):
         checks.append(ok); print(f"{'PASS' if ok else 'FAIL'}  {name}  ({got})")
 
-    _, same, _ = measure(d, f"{d}/vase.glb")
+    _, same, out = measure(d, f"{d}/vase.glb")
     shape_gaps = [g for g in same["gaps"] if g.startswith("band") and "width" in g]
     check("model vs its own render: IoU near 1", same["iou"] > 0.95, round(same["iou"], 3))
     check("model vs its own render: no shape gap", not shape_gaps, shape_gaps)
+    saved = json.load(open(f"{out}/fidelity.json"))
+    vase_hash = hashlib.sha1(open(f"{d}/vase.glb", "rb").read()).hexdigest()[:12]
+    check("fidelity.json: the printed measure, with the model's hash and the view",
+          saved["iou"] == same["iou"] and saved["model_hash"] == vase_hash and saved["view"] == "front",
+          (saved.get("model_hash"), vase_hash))
+    measure(d, f"{d}/vase.glb")
+    rounds = open(f"{out}/fidelity_log.jsonl").read().splitlines()
+    check("fidelity_log.jsonl: one line per run, kept across runs", len(rounds) == 2, len(rounds))
 
     _, wide, _ = measure(d, f"{d}/vase_wide.glb")
     body = [b for b in wide["shape"] if b["band"] >= 3]

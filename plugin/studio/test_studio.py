@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Kiln Studio's tests: scan, stats, notes, history, baseline, and the HTTP API.
+"""Kiln Studio's tests: scan, stats, notes, history, baseline, the live build, checks, and the HTTP API.
 
     python3 plugin/studio/test_studio.py
 
@@ -9,7 +9,9 @@ Standard library only, no network, no browser: models are tiny GLBs built here.
 from __future__ import annotations
 
 import base64
+import contextlib
 import http.client
+import io
 import json
 import os
 import shutil
@@ -22,20 +24,30 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import checks  # noqa: E402
 import server  # noqa: E402
+import studio  # noqa: E402
 import studiolib as sl  # noqa: E402
 
 JPEG = b"\xff\xd8\xff\xe0" + b"\0" * 16
 
 
-def glb(path: Path, *, scale: float = 1.0, tris: int = 1, name: str = "SM_Box") -> Path:
-    """A valid GLB with one mesh of `tris` triangles, 1 m tall (times `scale`)."""
+def png(w: int, h: int) -> bytes:
+    """A PNG header: enough for a size reader, not a decodable image."""
+    return b"\x89PNG\r\n\x1a\n" + struct.pack(">I", 13) + b"IHDR" + struct.pack(">II", w, h) + b"\x08\x06\0\0\0"
+
+
+def glb(path: Path, *, scale: float = 1.0, tris: int = 1, name: str = "SM_Box",
+        lift: float = 0.0, image: bytes | None = None, mime: str = "image/png",
+        extensions: list[str] | None = None) -> Path:
+    """A valid GLB with one mesh of `tris` triangles, 1 m tall (times `scale`), standing on
+    the ground (raised by `lift`); with `image`, a base colour texture embedded in it."""
     n = tris * 3
     positions = b"".join(struct.pack("<3f", (i % 2) * 0.5, (i % 3) * 0.5, 0.25) for i in range(n))
     gltf = {
         "asset": {"version": "2.0", "generator": "test"},
         "scene": 0, "scenes": [{"nodes": [0]}],
-        "nodes": [{"name": name, "mesh": 0, "scale": [scale, scale, scale], "translation": [0, 0.5, 0]}],
+        "nodes": [{"name": name, "mesh": 0, "scale": [scale, scale, scale], "translation": [0, 0.5 + lift, 0]}],
         "meshes": [{"name": name + "_Mesh", "primitives": [{"attributes": {"POSITION": 0}, "material": 0}]}],
         "materials": [{"name": "M_Wood"}],
         "accessors": [{"bufferView": 0, "componentType": 5126, "count": n, "type": "VEC3",
@@ -43,9 +55,18 @@ def glb(path: Path, *, scale: float = 1.0, tris: int = 1, name: str = "SM_Box") 
         "bufferViews": [{"buffer": 0, "byteLength": len(positions)}],
         "buffers": [{"byteLength": len(positions)}],
     }
+    body = positions + b"\0" * (-len(positions) % 4)
+    if image is not None:
+        gltf["images"] = [{"bufferView": 1, "mimeType": mime, "name": "T_Box_BaseColor"}]
+        gltf["textures"] = [{"source": 0}]
+        gltf["materials"][0]["pbrMetallicRoughness"] = {"baseColorTexture": {"index": 0}}
+        gltf["bufferViews"].append({"buffer": 0, "byteOffset": len(body), "byteLength": len(image)})
+        body += image + b"\0" * (-len(image) % 4)
+        gltf["buffers"][0]["byteLength"] = len(body)
+    if extensions:
+        gltf["extensionsUsed"] = list(extensions)
     js = json.dumps(gltf).encode()
     js += b" " * (-len(js) % 4)
-    body = positions + b"\0" * (-len(positions) % 4)
     total = 12 + 8 + len(js) + 8 + len(body)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(struct.pack("<4sII", b"glTF", 2, total)
@@ -265,6 +286,197 @@ class History(Base):
         self.assertEqual(sl.load_history(self.p, "m")[-1]["text"], "rounded the edges")
 
 
+class Live(Base):
+    def test_live_stage_leads_while_newest(self) -> None:
+        d = self.tmp / "generated-assets" / "chair"
+        glb(d / "chair_original.glb")
+        live = glb(d / "chair_live.glb")
+        t = time.time()
+        os.utime(d / "chair_original.glb", (t - 60, t - 60))
+        os.utime(live, (t, t))
+        [a] = sl.scan(self.p)
+        self.assertEqual([v.label for v in a.variants], ["live", "original"])
+        glb(d / "chair_final.glb")
+        os.utime(d / "chair_final.glb", (t + 60, t + 60))
+        [a] = sl.scan(self.p)
+        self.assertEqual([v.label for v in a.variants], ["final", "original", "live"])
+
+    def test_build_record_before_the_first_export(self) -> None:
+        aid = "generated-assets/chair"
+        sl.set_live(self.p, aid, "[3] SOURCE", "blockout")
+        st = sl.set_live(self.p, aid, "5b", "oak scan")
+        self.assertEqual((st["state"], st["phase"]), ("building", "texture"))
+        self.assertEqual([x["phase"] for x in st["steps"]], ["source", "texture"])
+        with self.assertRaises(ValueError):
+            sl.set_live(self.p, aid, "polish")
+        # The asset appears with its first export, under the same id, its version filed under the phase.
+        glb(self.tmp / aid / "chair_live.glb")
+        [a] = sl.scan(self.p)
+        self.assertEqual(a.id, aid)
+        [e] = sl.observe(self.p, a)
+        self.assertEqual((e["variant"], e["phase"], e["step"]), ("live", "texture", "oak scan"))
+        self.assertEqual(sl.asset_summary(self.p, a, {})["live"]["phase"], "texture")
+        state, removed = sl.end_live(self.p, aid)
+        self.assertEqual(state["state"], "done")
+        self.assertEqual(removed, [f"{aid}/chair_live.glb"])
+        self.assertFalse((self.tmp / aid / "chair_live.glb").exists())
+        # A step after the end starts a new build.
+        self.assertEqual(len(sl.set_live(self.p, aid, "cleanup")["steps"]), 1)
+
+    def test_cli_resolves_a_folder_not_exported_yet(self) -> None:
+        cwd = os.getcwd()
+        os.chdir(self.tmp)
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                studio.main(["live", "generated-assets/lamp", "--phase", "brief", "--root", str(self.tmp)])
+            self.assertEqual(sl.load_live(self.p, "generated-assets/lamp")["phase"], "brief")
+            with self.assertRaises(SystemExit):
+                studio.main(["live", "../elsewhere", "--phase", "brief", "--root", str(self.tmp)])
+        finally:
+            os.chdir(cwd)
+
+
+LOG = """# Crate — Production Log
+
+## Config
+- Type: prop
+- Target: glTF
+- Tier: lightweight
+- Style: stylized
+
+## Licenses
+- Wood texture: CC0 (Poly Haven)
+- Lantern model: CC-BY 4.0, credit "someone" on Sketchfab
+"""
+
+MANIFEST = """# batch-manifest.yaml — generated by /kiln batch wizard
+batch:
+  name: corporate-office              # kebab-case identifier
+  description: "Modern corporate office, open space # not a comment"
+
+config:
+  tier: balanced
+
+assets:
+  - name: desk
+    brief: "Modern desk: light wood top"
+    method: scripted
+    materials: [wood, metal]
+    status: done
+    result:
+      faces: 2100
+      status: ignored-nested
+  - name: chair
+    method: ai
+    status: pending
+  - name: keyboard
+    method: marketplace
+    status: failed
+  - name: cables
+    method: geometry-nodes
+  - name: mystery
+    method: telepathy
+"""
+
+
+class Checks(Base):
+    def test_image_sizes_from_headers(self) -> None:
+        self.assertEqual(checks.image_size(png(2048, 1024)), (2048, 1024, "png"))
+        jpeg = b"\xff\xd8" + b"\xff\xe0" + struct.pack(">H", 16) + b"\0" * 14 \
+            + b"\xff\xc0" + struct.pack(">HBHH", 17, 8, 512, 768) + b"\0" * 12
+        self.assertEqual(checks.image_size(jpeg), (768, 512, "jpeg"))
+        vp8x = b"RIFF" + b"\0" * 4 + b"WEBPVP8X" + b"\0" * 8 + (1023).to_bytes(3, "little") + (511).to_bytes(3, "little")
+        self.assertEqual(checks.image_size(vp8x), (1024, 512, "webp"))
+        ktx2 = b"\xabKTX 20\xbb\r\n\x1a\n" + b"\0" * 8 + struct.pack("<II", 256, 128)
+        self.assertEqual(checks.image_size(ktx2), (256, 128, "ktx2"))
+        self.assertIsNone(checks.image_size(b"nothing"))
+
+    def _asset(self, **kw) -> sl.Asset:
+        d = self.tmp / "generated-assets" / "crate"
+        glb(d / "crate_original.glb", image=png(4096, 4096))
+        glb(d / "crate_final.glb", **kw)
+        (d / "crate_log.md").write_text(LOG)
+        [a] = sl.scan(self.p)
+        return a
+
+    def test_shipped_file_against_kiln_rules(self) -> None:
+        a = self._asset(tris=4000, image=png(2048, 2048), lift=0.2)
+        c = checks.asset_checks(self.p, a)
+        self.assertEqual(c["shipped"], "final")
+        by = {r["key"]: r for r in c["health"]["final"]}
+        # lightweight prop: 300–1.5K, 4,000 is past twice the top
+        self.assertEqual(by["tris"]["level"], "warn")
+        self.assertIn("lightweight prop", by["tris"]["text"])
+        self.assertEqual(by["ground"]["level"], "warn")
+        self.assertIn("floats 0.200 m", by["ground"]["text"])
+        self.assertEqual(by["textures"]["level"], "warn")
+        self.assertEqual(by["textures"]["images"][0]["slots"], ["baseColor"])
+        self.assertEqual(by["compression"]["level"], "warn")
+        self.assertEqual(by["licence"]["level"], "info")
+        self.assertEqual([e["kind"] for e in by["licence"]["entries"]], ["free", "attribution required"])
+        # The original stage is not shipped: its 4K texture and no Draco are not faults.
+        orig = {r["key"]: r for r in c["health"]["original"]}
+        self.assertEqual((orig["textures"]["level"], orig["compression"]["level"]), ("info", "info"))
+
+    def test_an_optimized_final_passes(self) -> None:
+        a = self._asset(tris=1000, image=png(1024, 1024)[:0] + b"RIFF\0\0\0\0WEBPVP8X" + b"\0" * 8
+                        + (1023).to_bytes(3, "little") + (1023).to_bytes(3, "little"), mime="image/webp",
+                        extensions=["KHR_draco_mesh_compression", "EXT_texture_webp"])
+        by = {r["key"]: r for r in checks.asset_checks(self.p, a)["health"]["final"]}
+        for k in ("tris", "scale", "ground", "textures", "compression"):
+            self.assertEqual(by[k]["level"], "ok", (k, by[k]["text"]))
+
+    def test_size_against_the_expected_height_and_units(self) -> None:
+        glb(self.tmp / "props" / "chair.glb", scale=2.0)
+        glb(self.tmp / "props" / "pebble.glb", scale=0.005)
+        by_name = {a.name: a for a in sl.scan(self.p)}
+        chair = {r["key"]: r for r in checks.health(self.p, by_name["chair"], by_name["chair"].primary)}
+        self.assertEqual(chair["scale"]["level"], "info")
+        self.assertIn("a chair is usually ~0.85 m", chair["scale"]["text"])
+        pebble = {r["key"]: r for r in checks.health(self.p, by_name["pebble"], by_name["pebble"].primary)}
+        self.assertEqual(pebble["scale"]["level"], "warn")
+
+    def test_fidelity_runs_follow_the_model(self) -> None:
+        a = self._asset()
+        rev = self.tmp / "generated-assets" / "crate" / "review" / "front"
+        rev.mkdir(parents=True)
+        (rev / "overlay.png").write_bytes(png(8, 8))
+        final = a.variant("final")
+        (rev / "fidelity.json").write_text(json.dumps({
+            "iou": 0.861, "gaps": ["band 2/5: width +12%"], "shape": [], "view": "front", "elevation": 12,
+            "model": str(final.path), "model_hash": sl.file_hash(final.path), "reference": "/nowhere/ref.png"}))
+        (rev / "fidelity_log.jsonl").write_text('{"iou": 0.79}\n{"iou": 0.861}\n')
+        [run] = checks.fidelity_runs(self.p, a)
+        self.assertEqual((run["measured"], run["current"]), ("final", True))
+        self.assertEqual([t["iou"] for t in run["trend"]], [0.79, 0.861])
+        self.assertEqual(run["overlay"], "generated-assets/crate/review/front/overlay.png")
+        self.assertIsNone(run["reference"])   # outside the project: not served
+        glb(final.path, tris=9)
+        [a] = sl.scan(self.p)
+        [run] = checks.fidelity_runs(self.p, a)
+        self.assertEqual((run["measured"], run["current"]), (None, False))
+
+    def test_batch_estimate_from_the_manifest(self) -> None:
+        m = checks.parse_manifest(MANIFEST)
+        self.assertEqual(m["name"], "corporate-office")
+        self.assertEqual([(x["name"], x.get("method"), x.get("status")) for x in m["assets"]],
+                         [("desk", "scripted", "done"), ("chair", "ai", "pending"), ("keyboard", "marketplace", "failed"),
+                          ("cables", "geometry-nodes", None), ("mystery", "telepathy", None)])
+        b = self.tmp / "generated-assets" / "batch-office"
+        b.mkdir(parents=True)
+        (b / "batch-manifest.yaml").write_text(MANIFEST)
+        glb(b / "chair" / "chair_final.glb")
+        [a] = sl.scan(self.p)
+        est = checks.asset_checks(self.p, a)["batch"]
+        # scripted 30K + ai 60K + marketplace 20K + geometry nodes 40K = 150K;
+        # high: (30 + 80 + 20 + 40) x 1.5 = 255K
+        self.assertEqual(est["range"], [150_000, 255_000])
+        self.assertEqual(est["remaining"], {"assets": 3, "range": [120_000, 210_000]})
+        self.assertEqual(est["asset"]["range"], (60_000, 120_000))
+        self.assertEqual(est["unknown"], ["mystery"])
+        self.assertEqual(checks.fmt_range(est["range"]), "~150K–255K tokens")
+
+
 class Api(Base):
     def setUp(self) -> None:
         super().setUp()
@@ -371,6 +583,33 @@ class Api(Base):
         self.assertEqual(ev["variants"]["final"], sl.file_hash(self.f))
         hist = sl.load_history(self.p, "generated-assets/crate")
         self.assertEqual(hist[-1]["tris"], 7)
+
+    def test_live_event_on_a_build_step(self) -> None:
+        q = self.studio.subscribe()
+        sl.set_live(self.p, "generated-assets/crate", "cleanup", "welded")
+        deadline = time.time() + 5
+        ev = None
+        while time.time() < deadline and not ev:
+            try:
+                e = q.get(timeout=0.5)
+                ev = e if e["type"] == "live" else None
+            except Exception:
+                pass
+        self.assertIsNotNone(ev)
+        self.assertEqual((ev["id"], ev["live"]["phase"]), ("generated-assets/crate", "cleanup"))
+        code, d = self.req("GET", "/api/asset/generated-assets%2Fcrate")
+        self.assertEqual(d["live"]["steps"][-1]["text"], "welded")
+        self.assertEqual(d["checks"]["shipped"], "final")
+        self.assertIn("final", d["checks"]["health"])
+
+    def test_batch_estimates_in_the_listing(self) -> None:
+        b = self.tmp / "generated-assets" / "batch-office"
+        b.mkdir(parents=True)
+        (b / "batch-manifest.yaml").write_text(MANIFEST)
+        glb(b / "desk" / "desk_final.glb")
+        self.studio.refresh()
+        code, data = self.req("GET", "/api/assets")
+        self.assertEqual(data["batches"]["generated-assets/batch-office"]["range"], [150_000, 255_000])
 
 
 if __name__ == "__main__":

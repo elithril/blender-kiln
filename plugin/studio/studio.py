@@ -8,6 +8,8 @@
     studio.py log ASSET "what changed"
     studio.py snapshot ASSET [--variant LABEL] | revert ASSET
     studio.py meta ASSET [--category C] [--tags a,b]
+    studio.py checks ASSET [--json]
+    studio.py live FOLDER [--phase P] [--text "what it did"] | live FOLDER --end [--keep-file]
 
 PROJECT is any folder (default: the current one). Studio finds every .glb .gltf
 .fbx .obj under it, groups kiln's _original/_final stages into one asset, and keeps
@@ -35,11 +37,12 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import checks  # noqa: E402
 import studiolib as sl  # noqa: E402
 
 DEFAULT_PORT = 4840
 COMMANDS = ("open", "serve", "stop", "status", "list", "notes", "show", "history",
-            "reply", "log", "snapshot", "revert", "meta")
+            "reply", "log", "snapshot", "revert", "meta", "checks", "live")
 
 
 # ── the server's lifecycle ───────────────────────────────────────────────────
@@ -260,6 +263,7 @@ def cmd_show(args) -> None:
     if detail["baseline"]:
         b = detail["baseline"]
         print(f"previous version (n-1): {project.root / b['file']}  [{b['variant']} {b['hash']}, {b['reason']}]")
+    _print_checks(project, a, brief=True)
     print(f"\n{len(notes)} note(s)" + ("" if args.all or args.status else " active (open + addressed); --all for every note"))
     for n in notes:
         ver = n.get("version", {})
@@ -313,6 +317,105 @@ def cmd_history(args) -> None:
         elif t == "reply":
             st = f" [{e['status']}]" if e.get("status") else ""
             print(f"{e['at']}  reply     {e['id']} by {e['by']}{st}: {e['text'][:80]}")
+
+
+LEVEL_MARK = {"ok": "ok  ", "info": "note", "warn": "WARN"}
+
+
+def _print_checks(project: sl.Project, a: sl.Asset, brief: bool = False) -> None:
+    c = checks.asset_checks(project, a)
+    live = sl.load_live(project, a.id) if a.kiln else None
+    if live:
+        steps = live.get("steps") or []
+        last = steps[-1] if steps else {}
+        print(f"build: {live['state']}, phase {live.get('phase') or '-'}"
+              + (f" ({last.get('text')})" if last.get("text") else "") + f", updated {live.get('updated')}")
+    labels = [c["shipped"]] if brief and c["shipped"] else list(c["health"])
+    for label in labels:
+        rows = c["health"][label]
+        if brief:
+            rows = [r for r in rows if r["level"] != "ok"]
+            if not rows:
+                print(f"checks [{label}]: all ok")
+                continue
+        print(f"checks [{label}]" + (" (the shipped file)" if label == c["shipped"] else "") + ":")
+        for r in rows:
+            print(f"  {LEVEL_MARK[r['level']]}  {r['label']}: {r['text']}")
+            for e in r.get("entries", []) if not brief else []:
+                print(f"          {e['kind']}: {e['text']}")
+    for run in c["fidelity"][:1 if brief else None]:
+        where = f"{run['view']}" + (f", elevation {run['elevation']}°" if run.get("elevation") else "") \
+            + (f", azimuth {run['azimuth']}°" if run.get("azimuth") else "")
+        on = run["measured"] or ("an earlier version" if run["current"] is False else run.get("model") or "?")
+        trend = " -> ".join(f"{t['iou']:.3f}" for t in run["trend"] if t.get("iou") is not None)
+        iou = f"{run['iou']:.3f}" if isinstance(run.get("iou"), (int, float)) else "?"
+        print(f"fidelity ({run['dir']}, {where}, on {on}): silhouette IoU {iou}"
+              + (f" [{trend}]" if trend and not brief else "") + f", {len(run['gaps'])} gap(s)")
+        for g in run["gaps"][:3 if brief else None]:
+            print(f"  - {g}")
+    b = c["batch"]
+    if b:
+        mine = b["asset"]
+        print(f"batch {b['name']} ({b['manifest']}): {b['assets']} assets, {checks.fmt_range(b['range'])}; "
+              f"{b['remaining']['assets']} left, {checks.fmt_range(b['remaining']['range'])} ({b['note']})")
+        if mine:
+            print(f"  this asset: {mine['method'] or '?'}, {mine['status']}, {checks.fmt_range(mine['range'])}")
+
+
+def cmd_checks(args) -> None:
+    project = find_project(args.root)
+    a = _asset(project, args.asset)
+    sl.observe(project, a)
+    if args.json:
+        print(json.dumps(checks.asset_checks(project, a), indent=2))
+        return
+    print(f"# {a.id}")
+    _print_checks(project, a)
+
+
+def _live_target(project: sl.Project, target: str) -> str:
+    """An existing asset, or the kiln output folder of one not exported yet."""
+    try:
+        return project.find(target).id
+    except KeyError:
+        pass
+    p = Path(target)
+    if p.suffix.lower() in sl.MODEL_EXTS:
+        p = p.parent
+    if not p.is_absolute():
+        # From the current folder if it is inside the project, else from the project root.
+        here = (Path.cwd() / p).resolve()
+        p = here if (here == project.root or project.root in here.parents) else project.root / p
+    try:
+        rel = project.rel(p)
+    except ValueError:
+        raise SystemExit(f"{target!r} is not inside the project {project.root}")
+    if rel in (".", ""):
+        raise SystemExit("pass the asset's output folder (generated-assets/<name>), not the project root")
+    return rel
+
+
+def cmd_live(args) -> None:
+    project = find_project(args.root)
+    aid = _live_target(project, args.target)
+    try:
+        if args.end:
+            state, removed = sl.end_live(project, aid, text=args.text or "", keep_file=args.keep_file)
+            print(f"{aid}: build done" + (f"; removed {', '.join(removed)}" if removed else ""))
+            return
+        if not args.phase and not args.text:
+            live = sl.load_live(project, aid)
+            if not live:
+                print(f"{aid}: no build recorded")
+                return
+            print(f"{aid}: {live['state']}, phase {live.get('phase') or '-'}, started {live['started']}")
+            for st in live.get("steps", [])[-12:]:
+                print(f"  {st['at']}  {st.get('phase') or '-':9s} {st.get('text', '')}")
+            return
+        state = sl.set_live(project, aid, args.phase, args.text or "")
+    except ValueError as e:
+        raise SystemExit(str(e))
+    print(f"{aid}: {state['state']}, phase {state.get('phase') or '-'}")
 
 
 def _image(path: str | None) -> bytes | None:
@@ -423,6 +526,15 @@ def main(argv: list[str] | None = None) -> None:
     m.add_argument("asset")
     m.add_argument("--category")
     m.add_argument("--tags", help="comma-separated; empty string clears")
+    ck = p("checks", cmd_checks, "kiln's checks: tier, size, textures, compression, licences, fidelity, batch estimate")
+    ck.add_argument("asset")
+    ck.add_argument("--json", action="store_true")
+    lv = p("live", cmd_live, "record a build step for the live view (or show the build)")
+    lv.add_argument("target", help="the asset, or its kiln output folder before its first export")
+    lv.add_argument("--phase", help=f"one of {', '.join(sl.PHASES)}")
+    lv.add_argument("--text", help="what the step did, in a few words")
+    lv.add_argument("--end", action="store_true", help="the build is done: close it and remove the _live export")
+    lv.add_argument("--keep-file", action="store_true", help="with --end: keep the _live export")
     args = ap.parse_args(argv)
     try:
         args.fn(args)

@@ -328,7 +328,7 @@ curl -s -A "$UA" https://api.polyhaven.com/files/studio_small_09 \
   | xargs curl -s -A "$UA" -o studio_small_09_1k.hdr
 # --max-tris: the tier's top (rule 4: reported last, a reduction proposed only past 2x). --view/--elevation: where the photo's camera stood (§1)
 blender -b --factory-startup --python-exit-code 1 --python <skill>/tools/fidelity_check.py -- \
-  --reference ref.png --model asset_final.glb --hdri studio_small_09_1k.hdr --out review/ \
+  --reference ref.png --model asset_final.glb --hdri studio_small_09_1k.hdr --out <name>/review/front/ \
   --max-tris 5000 --view front --elevation 12 --azimuth 0
 ```
 
@@ -352,8 +352,12 @@ modeling, never chosen by the score.** Picking the angle at which the model bein
 scores best is circular. With a close camera the ellipses open toward the bottom: take the
 rim nearest mid-height. Never rescale the whole model to raise the score.
 
+**`--out` goes in the asset's folder, one per view: `<name>/review/<view>/`.** Kiln Studio
+reads it there (`studio.md` § 3) and shows the user the measure, its rounds and the images
+beside the model.
+
 It writes `overlay.png` (red: reference only, cyan: model only) and `side_by_side.png`,
-and one `FIDELITY {...}` JSON line: silhouette IoU overall and per height band, width and
+`fidelity.json` and a line per run in `fidelity_log.jsonl`, and prints one `FIDELITY {...}` JSON line: silhouette IoU overall and per height band, width and
 core-width differences per band, and per band the material numbers — luminance,
 saturation, warmth (R−B), highlight share, texture detail, grain, value spread. Look at
 both images, then fix the listed gaps.

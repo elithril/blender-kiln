@@ -1,4 +1,4 @@
-// Kiln Studio. Talks to server.py; the 3D view is viewer.js.
+// Kiln Studio. Talks to server.py; the 3D view is viewer.js; the Checks tab reads checks.py.
 // Notes go open → addressed (Claude changed the model and replied) → resolved (you
 // checked it) or won't fix. Each note keeps a screenshot of the model as it was; when
 // Claude marks one addressed, the page renders the same view of the new version
@@ -18,6 +18,13 @@ const pct = (a, b) => (b ? Math.round(((a - b) / b) * 100) : 0);
 const ACTIVE = new Set(['open', 'addressed']);
 const SHADES = ['lit', 'unlit', 'clay', 'normals', 'uv', 'faces'];
 const STATUS_LABEL = { open: 'open', addressed: 'addressed', resolved: 'resolved', wontfix: "won't fix" };
+// kiln's phases (studiolib.PHASES); rig and animate show only when a build reports them.
+const PHASES = ['config', 'brief', 'source', 'import', 'cleanup', 'texture', 'rig', 'animate', 'optimize', 'export'];
+const OPTIONAL_PHASES = new Set(['rig', 'animate']);
+const LEVEL_LABEL = { ok: 'ok', info: 'note', warn: 'check' };
+// 1500 → 1.5K, as checks.kfmt.
+const fmtK = (n) => (n >= 1e6 ? `${+(n / 1e6).toFixed(2)}M` : n >= 1000 ? `${+(n / 1000).toFixed(1)}K` : `${n}`);
+const fmtTok = (r) => (!r ? '–' : r[0] === r[1] ? `~${fmtK(r[0])} tokens` : `~${fmtK(r[0])}–${fmtK(r[1])} tokens`);
 
 function ago(iso) {
   if (!iso) return '';
@@ -34,7 +41,7 @@ function ago(iso) {
 const prefs = JSON.parse(localStorage.getItem('kiln-studio:prefs') || '{}');
 const savePrefs = () => localStorage.setItem('kiln-studio:prefs', JSON.stringify(prefs));
 const state = {
-  root: '', assets: [], byId: new Map(),
+  root: '', assets: [], byId: new Map(), batches: {},
   id: null, detail: null, variant: null, clientStats: null,
   tags: new Set(), noteFilter: 'active', pinsOn: prefs.pins ?? true,
   pinning: false, draft: null, hl: null, editing: null, replying: null,
@@ -151,6 +158,7 @@ async function fetchAssets() {
   state.root = data.root;
   state.assets = data.assets;
   state.byId = new Map(data.assets.map((a) => [a.id, a]));
+  state.batches = data.batches || {};
   if (!Object.keys(seen).length) seen = JSON.parse(localStorage.getItem(`kiln-studio:seen:${data.root}`) || '{}');
   $('#project').textContent = data.root;
   $('#project').title = data.root;
@@ -216,7 +224,9 @@ function renderList() {
     const d = document.createElement('details');
     d.open = filtering || !collapsed.has(cat) || group.some((a) => a.id === state.id);
     const open = group.reduce((s, a) => s + a.counts.open, 0);
-    d.innerHTML = `<summary><span class="cat" title="${esc(cat || 'project root')}">${esc(cat || 'project root')}</span><span class="n">${group.length}${open ? ` · ${open} open` : ''}</span></summary>`;
+    const b = state.batches[cat];
+    const est = b ? `<span class="est" title="Batch ${esc(b.name)}: token estimate for its ${b.assets} assets, ±50% (batch-mode.md). ${b.remaining.assets} left to run: ${esc(fmtTok(b.remaining.range))}.">${esc(fmtTok(b.range).replace(' tokens', ' tok'))}</span>` : '';
+    d.innerHTML = `<summary><span class="cat" title="${esc(cat || 'project root')}">${esc(cat || 'project root')}</span><span class="n">${group.length}${open ? ` · ${open} open` : ''}${est}</span></summary>`;
     d.addEventListener('toggle', () => {
       if (filtering) return;
       d.open ? collapsed.delete(cat) : collapsed.add(cat);
@@ -237,11 +247,12 @@ function itemEl(a) {
   el.tabIndex = 0;
   const v = a.variants[0];
   const changed = seen[a.id] && seen[a.id] !== v.hash && a.id !== state.id;
-  const sub = [a.tris != null ? `${fmtN(a.tris)} tris` : v.ext.slice(1).toUpperCase(),
+  const building = a.live?.state === 'building';
+  const sub = building ? `building · ${a.live.phase || 'starting'}` : [a.tris != null ? `${fmtN(a.tris)} tris` : v.ext.slice(1).toUpperCase(),
     a.variants.length > 1 ? `${a.variants.length} ${a.kiln ? 'stages' : 'files'}` : fmtB(v.size)].join(' · ');
   el.innerHTML = `<img class="thumb" alt="" ${a.thumb ? `src="${esc(fileUrl(a.thumb))}"` : ''}>
     <div style="min-width:0"><div class="name" title="${esc(a.id)}">${esc(a.name)}</div><div class="sub">${esc(sub)}</div></div>
-    <span class="badges">${changed ? '<span class="badge changed" title="Changed since you last looked">new</span>' : ''}${a.counts.open ? `<span class="badge open" title="Open notes">${a.counts.open}</span>` : ''}${a.counts.addressed ? `<span class="badge addressed" title="Addressed by Claude: check them">${a.counts.addressed}</span>` : ''}</span>`;
+    <span class="badges">${building ? '<span class="badge building" title="kiln is building it: open it to watch">●</span>' : ''}${changed ? '<span class="badge changed" title="Changed since you last looked">new</span>' : ''}${a.counts.open ? `<span class="badge open" title="Open notes">${a.counts.open}</span>` : ''}${a.counts.addressed ? `<span class="badge addressed" title="Addressed by Claude: check them">${a.counts.addressed}</span>` : ''}</span>`;
   el.onclick = () => go(a.id);
   el.onkeydown = (e) => { if (e.key === 'Enter') go(a.id); };
   if (!a.thumb) thumbObserver.observe(el);
@@ -339,7 +350,9 @@ function renderAll() {
   renderNotes();
   renderPins();
   renderDetails();
+  renderChecks();
   renderHistory();
+  renderBuild();
   syncToolbar();
   $('#t-skel').hidden = !state.clientStats?.skinned;
 }
@@ -542,7 +555,7 @@ canvas.addEventListener('pointerleave', () => ($('#hover').hidden = true));
 
 function switchTab(name) {
   $$('.tabs [data-tab]').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
-  for (const t of ['notes', 'details', 'history']) $(`#tab-${t}`).hidden = t !== name;
+  for (const t of ['notes', 'checks', 'details', 'history']) $(`#tab-${t}`).hidden = t !== name;
 }
 $$('.tabs [data-tab]').forEach((b) => (b.onclick = () => switchTab(b.dataset.tab)));
 $$('[data-nf]').forEach((b) => (b.onclick = () => {
@@ -813,6 +826,120 @@ async function baselineAction(act) {
   } catch (e) { toast(e.message, true, 8000); }
 }
 
+// ── build strip: the phases of the build kiln is running ─────────────────────
+
+function renderBuild() {
+  const live = state.detail?.live;
+  const bar = $('#buildbar');
+  const on = live?.state === 'building';
+  bar.hidden = !on;
+  stage.classList.toggle('building', on);
+  if (!on) return;
+  const steps = live.steps || [];
+  const reported = new Set(steps.map((x) => x.phase).filter(Boolean));
+  const cur = PHASES.indexOf(live.phase);
+  const shown = PHASES.filter((p) => !OPTIONAL_PHASES.has(p) || reported.has(p));
+  $('.state', bar).textContent = 'Building';
+  $('.phases', bar).innerHTML = shown.map((p) => {
+    const i = PHASES.indexOf(p);
+    const cls = i < cur ? 'done' : i === cur ? 'cur' : '';
+    return `<li class="${cls}" title="${esc(p)}">${esc(p)}</li>`;
+  }).join('');
+  const last = steps[steps.length - 1];
+  $('.step', bar).textContent = [last?.text, ago(live.updated)].filter(Boolean).join(' · ');
+  $('.step', bar).title = `Started ${new Date(live.started).toLocaleString()}`;
+}
+// "12 s ago" goes stale on its own.
+setInterval(() => { if (state.detail?.live?.state === 'building') renderBuild(); }, 15000);
+
+// ── checks panel: kiln's rules, the reference photo, the batch estimate ──────
+
+function checksFor(label) {
+  const c = state.detail?.checks;
+  return c ? c.health[label] || [] : [];
+}
+
+function renderChecks() {
+  const d = state.detail, c = d.checks, v = currentVariant();
+  const tab = $('#tab-checks');
+  if (!c) { tab.innerHTML = ''; return; }
+  const rows = checksFor(v.label);
+  const warn = rows.filter((r) => r.level === 'warn').length;
+  $('#c-count').textContent = warn ? `(${warn})` : '';
+  const blocks = [];
+  const isShip = c.shipped === v.label;
+  const head = d.kiln ? (isShip ? `${esc(v.label)} · the shipped file` : `${esc(v.label)} · not the shipped file${c.shipped ? ` (${esc(c.shipped)} is)` : ''}`) : esc(v.label);
+  blocks.push(`<div class="block"><h3>Health · ${head}</h3>${rows.map(checkRow).join('') || '<p class="dim">Nothing to check.</p>'}
+    ${c.config && Object.keys(c.config).length ? `<p class="dim small">From the production log: ${Object.entries(c.config).filter(([k]) => ['type', 'tier', 'target', 'style'].includes(k)).map(([k, x]) => `${esc(k)} <b>${esc(x)}</b>`).join(' · ')}</p>` : ''}</div>`);
+  if (c.fidelity.length) blocks.push(fidelityBlock(c.fidelity));
+  if (c.batch) blocks.push(batchBlock(c.batch));
+  tab.innerHTML = blocks.join('');
+  $$('[data-img]', tab).forEach((x) => (x.onclick = () => lightbox(JSON.parse(x.dataset.img))));
+  $$('[data-photo-view]', tab).forEach((x) => (x.onclick = () => photoView(JSON.parse(x.dataset.photoView))));
+  $$('[data-fv]', tab).forEach((x) => (x.onclick = () => {
+    const run = x.closest('.run');
+    $$('[data-fv]', run).forEach((y) => y.classList.toggle('on', y === x));
+    $$('img[data-which]', run).forEach((img) => (img.hidden = img.dataset.which !== x.dataset.fv));
+  }));
+}
+
+function checkRow(r) {
+  let more = '';
+  if (r.entries?.length) more = `<ul class="sub">${r.entries.map((e) => `<li class="${e.level}">${esc(e.kind)}: ${esc(e.text)}</li>`).join('')}</ul>`;
+  if (r.images?.length) more = `<ul class="sub">${r.images.map((i) => `<li>${esc(i.slots.join(', ') || i.name)} · ${i.w ? `${i.w}×${i.h}` : 'size unknown'} ${esc((i.format || '').toUpperCase())}</li>`).join('')}</ul>`;
+  return `<div class="check ${r.level}"><span class="lvl" title="${LEVEL_LABEL[r.level]}"></span><div><b>${esc(r.label)}</b><div class="txt">${esc(r.text)}</div>${more}</div></div>`;
+}
+
+// The direction fidelity_check.py's camera looked from (its render(): Blender front is -Y,
+// azimuth turns toward +X, elevation tilts down), in three.js coordinates (Blender x, z, -y).
+function photoDir(run) {
+  const base = { front: [0, -1], back: [0, 1], left: [-1, 0], right: [1, 0] }[run.view];
+  if (!base) return [0, 1, 0.0001];
+  const a = (run.azimuth || 0) * Math.PI / 180, e = (run.elevation || 0) * Math.PI / 180;
+  const hx = base[0] * Math.cos(a) - base[1] * Math.sin(a), hy = base[0] * Math.sin(a) + base[1] * Math.cos(a);
+  const bx = hx * Math.cos(e), by = hy * Math.cos(e), bz = Math.sin(e);
+  return [bx, bz, -by];
+}
+function photoView(run) {
+  viewer.lookFrom(photoDir(run));
+  toast(`The photo's view: ${run.view}${run.elevation ? `, ${run.elevation}° up` : ''}${run.azimuth ? `, ${run.azimuth}° round` : ''}. Perspective here, orthographic in the measure.`);
+}
+
+function fidelityBlock(runs) {
+  const one = (r, i) => {
+    const iou = typeof r.iou === 'number' ? r.iou.toFixed(3) : '–';
+    const trend = (r.trend || []).filter((t) => typeof t.iou === 'number').map((t) => t.iou.toFixed(3));
+    const where = [r.view, r.elevation ? `${r.elevation}° up` : '', r.azimuth ? `${r.azimuth}° round` : ''].filter(Boolean).join(' · ');
+    const on = r.measured ? `on ${esc(r.measured)} <span class="mono">${esc((r.model_hash || '').slice(0, 7))}</span> <span class="status addressed">current</span>`
+      : r.current === false ? `on an earlier version <span class="mono">${esc((r.model_hash || '').slice(0, 7))}</span> <span class="status open">re-measure</span>` : esc(r.model || '');
+    const imgs = [r.overlay && { src: fileUrl(r.overlay), caption: 'Overlay: red is the photo only, cyan the model only', which: 'overlay' },
+      r.side_by_side && { src: fileUrl(r.side_by_side), caption: 'The photo and the render, side by side', which: 'side' }].filter(Boolean);
+    const joints = (r.joints || []).map((j) => ({ src: fileUrl(j), caption: j.split('/').pop() }));
+    const body = `
+      <div class="iou"><span class="big">${iou}</span><span class="dim">silhouette IoU · information, not a target${trend.length > 1 ? `<br>rounds ${trend.join(' → ')}` : ''}</span></div>
+      <p class="meta">${esc(where)} · ${on}${r.reference_name ? ` · photo ${esc(r.reference_name)}` : ''}</p>
+      ${imgs.length ? `<div class="seg small fv">${imgs.map((m, k) => `<button data-fv="${m.which}" class="${k ? '' : 'on'}">${m.which === 'overlay' ? 'Overlay' : 'Side by side'}</button>`).join('')}<button class="ghost" data-photo-view='${esc(JSON.stringify(r))}' title="Turn the model to where the photo's camera stood">Photo's view</button></div>
+        <div class="fv-img">${imgs.map((m, k) => `<img src="${esc(m.src)}" alt="${esc(m.caption)}" data-which="${m.which}" ${k ? 'hidden' : ''} data-img='${esc(JSON.stringify(imgs.map(({ src, caption }) => ({ src, caption }))))}'>`).join('')}</div>` : ''}
+      ${r.gaps?.length ? `<h4>Gaps, largest first</h4><ol class="gaps">${r.gaps.map((g) => `<li>${esc(g)}</li>`).join('')}</ol>` : '<p class="dim">No gap above tolerance.</p>'}
+      ${r.shape?.length ? `<h4>Per height band (1 = top)</h4><table class="vt"><tr><th>Band</th><th style="text-align:right">Width</th><th style="text-align:right">Core</th><th style="text-align:right">IoU</th></tr>${r.shape.map((b) => `<tr><td>${b.band}</td><td class="num">${pctS(b.full_width)}</td><td class="num">${pctS(b.core_width)}</td><td class="num">${b.iou.toFixed(2)}</td></tr>`).join('')}</table>` : ''}
+      ${joints.length ? `<h4>Joints: look at each</h4><div class="joints">${joints.map((j) => `<img src="${esc(j.src)}" alt="${esc(j.caption)}" data-img='${esc(JSON.stringify(joints))}'>`).join('')}</div>` : ''}`;
+    return `<details class="run" ${i ? '' : 'open'}><summary>${esc(r.dir)} · ${esc(r.view)} · ${iou}${r.at ? ` · ${ago(r.at)}` : ''}</summary>${body}</details>`;
+  };
+  return `<div class="block fidelity"><h3>Against the reference photo</h3>${runs.map(one).join('')}</div>`;
+}
+const pctS = (x) => (typeof x === 'number' ? `${x > 0 ? '+' : ''}${Math.round(x * 100)}%` : '–');
+
+function batchBlock(b) {
+  const a = b.asset;
+  const methods = Object.entries(b.by_method).map(([m, n]) => `${n} ${esc(m)}`).join(', ');
+  return `<div class="block"><h3>Batch · ${esc(b.name)}</h3><dl class="kv">
+    ${a ? `<dt>This asset</dt><dd>${esc(a.method || '?')} · ${esc(a.status)} · ${esc(fmtTok(a.range))}</dd>` : ''}
+    <dt>Whole batch</dt><dd>${b.assets} assets (${methods || '–'}) · ${esc(fmtTok(b.range))}</dd>
+    <dt>Left to run</dt><dd>${b.remaining.assets} · ${esc(fmtTok(b.remaining.range))}</dd>
+    ${b.unknown.length ? `<dt>No estimate</dt><dd>${b.unknown.map(esc).join(', ')} (unknown method)</dd>` : ''}
+  </dl><p class="dim small">${esc(b.note)}. The wizard's formula: scripted ~30K, marketplace ~20K, geometry nodes ~40K, AI ~60–80K per asset; high end ×1.5. From <span class="mono">${esc(b.manifest)}</span>.</p></div>`;
+}
+
 // ── history panel ────────────────────────────────────────────────────────────
 
 function renderHistory() {
@@ -828,6 +955,13 @@ function renderHistory() {
     ev.push({ type: 'note', at: n.created, n });
     for (const r of n.thread || []) ev.push({ type: 'reply', at: r.at, n, r });
   }
+  // The build's steps; a step that a live export closed is already its version's entry.
+  if (d.live) {
+    const filed = new Set(d.history.filter((e) => e.type === 'version' && e.phase).map((e) => `${e.phase}|${e.step || ''}`));
+    ev.push({ type: 'build', at: d.live.started, text: 'Build started' });
+    for (const st of d.live.steps || []) if (!filed.has(`${st.phase}|${st.text || ''}`)) ev.push({ type: 'step', at: st.at, st });
+    if (d.live.ended) ev.push({ type: 'build', at: d.live.ended, text: 'Build done' });
+  }
   ev.sort((x, y) => (x.at < y.at ? 1 : x.at > y.at ? -1 : 0));
   const current = new Map(d.variants.map((v) => [v.label, v.hash]));
   const key = keyOf(d.id);
@@ -839,9 +973,12 @@ function renderHistory() {
       const delta = p ? ` <span class="${dz > 0 ? 'up' : 'down'}">${dz > 0 ? '+' : ''}${dz}% size</span>${dt ? ` <span class="${dt > 0 ? 'up' : 'down'}">${dt > 0 ? '+' : ''}${dt}% tris</span>` : ''}` : '';
       const img = d.thumbs.includes(e.hash) ? `<img src="${esc(fileUrl(`.kiln-studio/cache/thumbs/${key}/${e.hash}.webp`))}" alt="" data-full="${esc(e.hash)}">` : '';
       const isCur = current.get(e.variant) === e.hash;
-      return li('version', e, `<div class="h">${e.first ? 'First seen' : 'New version'}: ${esc(e.variant)} <span class="mono">${esc(e.hash.slice(0, 7))}</span>${isCur ? ' <span class="status addressed">current</span>' : ''}</div>`,
+      const phase = e.phase ? ` <span class="phase">${esc(e.phase)}</span>${e.step ? ` ${esc(e.step)}` : ''}` : '';
+      return li('version', e, `<div class="h">${e.first ? 'First seen' : 'New version'}: ${esc(e.variant)} <span class="mono">${esc(e.hash.slice(0, 7))}</span>${isCur ? ' <span class="status addressed">current</span>' : ''}${phase}</div>`,
         `<div class="d">${fmtB(e.size)}${e.tris != null ? ` · ${fmtN(e.tris)} tris` : ''}${delta}</div>${img}`);
     }
+    if (e.type === 'build') return li('build', e, `<div class="h">${esc(e.text)}</div>`);
+    if (e.type === 'step') return li('step', e, `<div class="h"><span class="phase">${esc(e.st.phase || 'step')}</span></div>`, e.st.text ? `<div class="d">${esc(e.st.text)}</div>` : '');
     if (e.type === 'log') return li('log', e, `<div class="h">${e.by === 'claude' ? 'Claude' : 'You'}: changelog</div>`, `<div class="d">${esc(e.text)}</div>`);
     if (e.type === 'baseline') return li('baseline', e, `<div class="h">Kept ${esc(e.variant)} <span class="mono">${esc(e.hash.slice(0, 7))}</span> as the previous version</div>`, `<div class="d dim">${esc(e.reason)}</div>`);
     if (e.type === 'revert') return li('revert', e, `<div class="h">Put back ${esc(e.variant)} <span class="mono">${esc(e.hash.slice(0, 7))}</span></div>`);
@@ -1018,15 +1155,38 @@ function liveEvents() {
     }
     if (ev.type === 'model' && ev.id === state.id) {
       const v = currentVariant();
+      const wasNewest = v && v.label === state.detail.variants[0].label;
       const old = new Map(state.detail.variants.map((x) => [x.label, x.hash]));
       await fetchDetail();
       const changed = Object.entries(ev.variants).filter(([l, h]) => old.get(l) !== h).map(([l]) => l);
-      if (changed.length) toast(`Model updated: ${changed.join(', ')}`);
-      if (v && changed.includes(v.label)) await loadVariant(v.label, { keepCamera: true });
+      const newest = state.detail.variants[0].label;
+      if (changed.length && !(changed.length === 1 && changed[0] === 'live')) toast(`Model updated: ${changed.join(', ')}`);
+      // Watching the newest stage (the live build, then _final): follow it.
+      if (wasNewest && newest !== v.label) await loadVariant(newest, { keepCamera: true });
+      else if (v && changed.includes(v.label)) await loadVariant(v.label, { keepCamera: true });
+      // A model being built grows: keep the angle the user chose, fit it again.
+      if (currentVariant()?.label === 'live' && state.detail.live?.state === 'building' && !state.compare) viewer.frame();
       else if (!v || !state.detail.variants.some((x) => x.label === v.label)) await loadVariant(state.detail.variants[0].label, { keepCamera: true });
       markSeen(state.byId.get(state.id));
       for (const x of state.detail.variants) if (!state.detail.thumbs.includes(x.hash)) queueThumb(state.id, x);
       queueAfterShots(state.detail);
+    }
+    if (ev.type === 'live') {
+      // Nothing open yet: open the model being built, to watch it.
+      if (!state.id && ev.live?.state === 'building') {
+        if (!state.byId.has(ev.id)) await fetchAssets();
+        go(ev.id);
+        return;
+      }
+      if (ev.id === state.id) {
+        const before = state.detail?.live?.phase;
+        await fetchDetail();
+        const live = state.detail.live;
+        if (live?.state === 'building' && live.phase && live.phase !== before) {
+          const last = (live.steps || []).slice(-1)[0];
+          toast(`Building: ${live.phase}${last?.text ? ` · ${last.text}` : ''}`);
+        } else if (live?.state === 'done') toast('Build done');
+      }
     }
     if (ev.type === 'notes' && ev.id === state.id) {
       clearTimeout(detailTimer);

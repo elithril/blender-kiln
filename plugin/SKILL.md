@@ -384,6 +384,23 @@ User can switch model or backend at any time during a session.
 [1] CONFIG → [2] BRIEF → [3] SOURCE → [4] IMPORT → [5] CLEANUP → [5b] TEXTURING → [5c] RIG (characters) → [5d] ANIMATE (optional) → [6] OPTIMIZE → [7] EXPORT
 ```
 
+**Live view.** In an interactive session, start Kiln Studio once the brief is confirmed
+(`python3 <skill>/studio/studio.py <project root>`, `--no-open` when Auto-open links is
+false) and give the user the URL in one line: the page opens the model as it is built. Then
+end every phase that changed geometry or materials — where rule 2 takes its screenshot —
+with these lines appended to that phase's last `execute_blender_code` call, so they cost
+no extra call:
+
+```python
+import sys; sys.path.insert(0, "<skill>/studio"); import blender_live
+blender_live.snapshot("<project root>", "<output folder>/<name>", "cleanup", "welded, normals out")
+```
+
+It exports the scene to `<name>/<name>_live.glb` (uncompressed, `export_apply` off) and
+records the phase and a few words on what it did. At EXPORT, once `_final` is written,
+`studio.py live <name> --end` closes the build and removes `_live.glb`. Off in batch runs
+and when CONFIG's Live view is off. `references/studio.md` § 2 has the rest.
+
 ### [1] CONFIG — Collect Parameters
 
 **First launch:** before collecting parameters, run the environment scan from `/kiln setup` (Step 1 only — auto-detect, no install prompts). Display the summary so the user sees what's available. If critical components are missing (e.g. Blender MCP not connected), warn and offer to run full `/kiln setup`.
@@ -405,6 +422,7 @@ Collect these parameters. Only type and brief are mandatory — infer the rest f
 | **Local model** | none | Only if installed (see `/kiln models`) |
 | **HF Space URL** | microsoft/TRELLIS.2 | Then `trellis-community/TRELLIS`. Hunyuan3D only on request (licence). Check `stage: RUNNING` first — a paused Space still answers HTTP 200. See `references/ai-generation.md` |
 | **Auto-open links** | false | Configurable mid-session |
+| **Live view** | on (interactive), off (batch) | Kiln Studio reloads the model after each phase — see § Live view below |
 | **Output folder** (absolute path) | `./generated-assets/` | Confirmed at launch |
 
 **Detail tier ranges:** see `references/topology-rules.md` § Detail Tiers. Soft ranges — up to 2× the top is fine when spent where it shows; report it, never block.
@@ -772,11 +790,14 @@ Save the .blend file via `execute_blender_code`: `bpy.ops.wm.save_as_mainfile(fi
 .blend saved │ log written
 ```
 
-**Kiln Studio:** in an interactive session, once the first model of the session is
-exported, start Kiln Studio on the project root and give the user its URL in one line —
-they can look at the model there, pin notes on it, and run `/kiln studio` to hand them to
-you. `python3 <skill>/studio/studio.py` (add `--no-open` when Auto-open links is false).
-Not in batch runs. Load `references/studio.md`.
+**Kiln Studio:** in an interactive session, close the live view once `_final` is written
+(`studio.py live <name> --end`), then run `studio.py checks <name>` and report its WARN
+lines with the export summary: triangles against the tier, ground contact, texture caps,
+Draco/WebP on `_final`, licences. If Studio was not started at BRIEF (Live view off), start
+it now on the project root and give the user its URL in one line — they can look at the
+model there, pin notes on it, and run `/kiln studio` to hand them to you.
+`python3 <skill>/studio/studio.py` (add `--no-open` when Auto-open links is false). Not in
+batch runs. Load `references/studio.md`.
 
 **End-of-session cleanup:** At the end of a multi-asset session, propose:
 > "Session complete: {n} assets, {total_size} MB. Cleanup intermediate files? (yes / no / pick per asset)"
@@ -954,6 +975,10 @@ checks your fixes. Load `references/studio.md` and follow it.
    screenshot, change the model, re-export to the same file,
    `studio.py reply <asset> <note> "…" --status addressed`. Never mark one resolved.
 3. Nothing waiting → start Studio (`studio.py [project]`), give the URL, stop.
+
+Its Checks tab, and `studio.py checks <asset>`, read kiln's rules off the file — tier
+range, size, ground, texture cap, compression, licences — with the fidelity measure and,
+in a batch folder, the wizard's token estimate.
 
 ### /kiln help
 

@@ -18,6 +18,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
+import checks
 import studiolib as sl
 
 VERSION = "1.0.0"
@@ -77,7 +78,7 @@ class Studio:
         base = self.project.data / "assets"
         if base.is_dir():
             for d in base.iterdir():
-                for name in ("notes.json", "history.json"):
+                for name in ("notes.json", "history.json", "live.json"):
                     p = d / name
                     try:
                         out[f"{d.name}/{name}"] = p.stat().st_mtime
@@ -116,12 +117,26 @@ class Studio:
                 self.emit({"type": "model", "id": aid,
                            "variants": {v.label: v.hash for v in a.variants}})
                 listing = True
+        # A model that lands while its build is under way: its build steps were written
+        # before it existed, so no live event named it yet.
+        for aid in set(sig) - set(prev_sig):
+            if assets[aid].kiln:
+                live = sl.load_live(self.project, aid)
+                if live and live.get("state") == "building":
+                    self.emit({"type": "live", "id": aid, "live": sl.live_summary(live)})
         store = self._store_files()
         keys = {sl.asset_key(aid): aid for aid in assets}
         for k in set(store) | set(self.store_sig):
             if store.get(k) != self.store_sig.get(k):
                 if k == "catalog.json":
                     listing = True
+                elif k.endswith("/live.json"):
+                    # A build step: the phase strip, and the list's "building" badge.
+                    aid = keys.get(k.split("/")[0])
+                    if aid:
+                        live = sl.load_live(self.project, aid)
+                        self.emit({"type": "live", "id": aid, "live": sl.live_summary(live)})
+                        listing = True
                 else:
                     aid = keys.get(k.split("/")[0])
                     if aid:
@@ -253,12 +268,25 @@ def make_handler(studio: Studio, port_ref: list[int]):
                     cat = sl.load_catalog(project)
                     with studio.lock:
                         assets = list(studio.assets.values())
+                    rows = [sl.asset_summary(project, a, cat) for a in assets]
+                    # The batch folders' token estimates, for the list's category headers.
+                    batches = {}
+                    for folder in {a.default_category for a in assets if a.kiln and a.default_category}:
+                        est = checks.batch_estimate(project, folder)
+                        if est:
+                            batches[folder] = {k: est[k] for k in ("name", "assets", "range", "remaining", "manifest")}
                     return self._json({"root": str(project.root), "name": project.root.name,
-                                       "assets": [sl.asset_summary(project, a, cat) for a in assets]})
+                                       "assets": rows, "batches": batches})
                 if parts[:2] == ["api", "asset"] and len(parts) == 3:
                     a = studio.asset(parts[2])
                     sl.observe(project, a)
-                    return self._json(sl.asset_detail(project, a, sl.load_catalog(project)))
+                    detail = sl.asset_detail(project, a, sl.load_catalog(project))
+                    try:
+                        detail["checks"] = checks.asset_checks(project, a)
+                    except Exception as e:  # a check must never hide the model
+                        print(f"kiln-studio: checks {a.id}: {e!r}", flush=True)
+                        detail["checks"] = None
+                    return self._json(detail)
                 return self._err(404, "not found")
             except KeyError as e:
                 return self._err(404, str(e).strip("'\""))

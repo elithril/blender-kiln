@@ -58,6 +58,12 @@
     <div id="asset-stats" class="stats"></div>
   </div>
 
+  <div id="buildbar" hidden aria-live="polite">
+    <span class="state"></span>
+    <ol class="phases" aria-label="Build phases"></ol>
+    <span class="step"></span>
+  </div>
+
   <div id="compare-labels" hidden>
     <span id="cmp-left"></span>
     <span id="cmp-right"></span>
@@ -108,7 +114,8 @@
   <div id="empty">
     <div>
       <p class="big">No model picked</p>
-      <p>Choose one on the left. Models re-exported by Claude show up here on their own.</p>
+      <p>Choose one on the left. Models re-exported by Claude show up here on their own,
+        and a model kiln is building opens here as it is built.</p>
     </div>
   </div>
   <div id="loading" hidden><span></span>Loading model…</div>
@@ -120,6 +127,7 @@
 <aside id="side" aria-label="Notes and details" hidden>
   <div class="tabs" role="tablist">
     <button role="tab" data-tab="notes" class="on">Notes <span id="n-count"></span></button>
+    <button role="tab" data-tab="checks">Checks <span id="c-count"></span></button>
     <button role="tab" data-tab="details">Details</button>
     <button role="tab" data-tab="history">History</button>
   </div>
@@ -145,6 +153,7 @@
     <footer id="handoff"></footer>
   </section>
 
+  <section id="tab-checks" class="tab" hidden></section>
   <section id="tab-details" class="tab" hidden></section>
   <section id="tab-history" class="tab" hidden></section>
 </aside>

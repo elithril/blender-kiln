@@ -27,22 +27,82 @@ python3 <skill>/studio/studio.py [PROJECT] [--asset ID] [--no-open]
   is false, pass `--no-open` and give the user the printed URL.
 - `--asset generated-assets/wooden-chair` opens on that model.
 
-**When to start it:** at the end of EXPORT in an interactive session, once the first
-model of the session is written, say one line — "Kiln Studio shows it at <url>: pin
+**When to start it:** in an interactive session, once the brief is confirmed, so the user
+watches the model being built (§ 2); with Live view off, at the end of EXPORT, once the
+first model of the session is written. Say one line — "Kiln Studio shows it at <url>: pin
 notes on it and run `/kiln studio` when you want me to act on them" — and start it.
 In batch or unattended runs, do not start it; print the command in the final summary.
 On `/kiln studio` with no notes to act on, start it and stop there.
 
 What it finds: every `.glb .gltf .fbx .obj` under the folder, skipping hidden folders,
 `node_modules`, Unity's `Library/` and `Temp/`. Kiln's
-`<name>/<name>_{original,clean,textured,optimized,final}.glb` is **one** asset whose
+`<name>/<name>_{original,clean,textured,optimized,final,live}.glb` is **one** asset whose
 stages are switchable variants, with its `.blend`, `_log.md` and images listed beside
 it; the folder above (the output or batch folder) is its default category. Excluding
 more: `.kiln-studio/config.json` → `{"exclude": ["site/public/*"]}`.
 
 ---
 
-## 2. `/kiln studio [asset]` — act on the user's notes
+## 2. Live view — the model as it is built
+
+While kiln builds, the page shows the scene after each phase. At the end of every phase
+that changed geometry or materials (where rule 2 takes its screenshot), append to that
+phase's last `execute_blender_code` call:
+
+```python
+import sys; sys.path.insert(0, "<skill>/studio"); import blender_live
+blender_live.snapshot("<project root>", "generated-assets/wooden-chair", "cleanup", "welded, normals out")
+```
+
+- The folder is the asset's output folder, relative to the project root; the asset takes
+  its name. It exports the scene to `wooden-chair/wooden-chair_live.glb` — written under a
+  hidden name and moved into place, uncompressed, `export_apply` off (rule 18) — and
+  records the phase (`config brief source import cleanup texture rig animate optimize
+  export`; `[5b] TEXTURING` and `5b` work too) with what it did, in a few words.
+- `export=False` records a step without exporting (a phase that changed nothing visible).
+  From a shell: `studio.py live generated-assets/wooden-chair --phase brief --text "…"`.
+- The page opens a model being built if none is open, shows the phases above it, reloads
+  it as each export lands and refits the view, and files each version in History under
+  its phase, with a render. `_live` is the default stage while it is the newest file.
+- **At EXPORT,** once `_final` is written: `studio.py live wooden-chair --end` closes the
+  build and removes `_live.glb` — compact storage keeps original, final, `.blend` and log
+  (`--keep-file` keeps it). History keeps every live version's size, triangles and render.
+
+Off in batch runs: nobody watches them, and the wizard's token estimate does not count it.
+
+---
+
+## 3. Checks — kiln's rules, read off the file
+
+The page's **Checks** tab, and `studio.py checks <asset>` (`show` prints its warnings),
+read the production log and the model file:
+
+| Check | From | Level |
+|---|---|---|
+| Triangles against the detail tier's soft range | log's Type and Tier, `topology-rules.md` | note above the top, WARN past twice it (rule 4: never blocks) |
+| Size, and the usual height of a chair, table, door or character | `validation-checklist.md` § Scale | WARN under 1 cm or over 100 m |
+| On the ground at Z = 0, centred on the origin | the bounds | WARN on a kiln asset |
+| Texture sizes against the target's cap: 1024 for web, 2048 for console/PC | images read in the file | WARN on `_final` |
+| Draco or meshopt geometry, WebP or KTX2 textures | `extensionsUsed`, image formats | WARN on `_final`; other stages are not shipped |
+| Licences | the log's Licenses section | note for CC-BY (credit), WARN for non-commercial |
+
+With no log, the tier is assumed balanced and the type a prop, and the check says so.
+Report the WARN lines with the export summary; none of them is a target to tune to.
+
+**Against the reference photo.** `tools/fidelity_check.py` writes `fidelity.json` and a
+`fidelity_log.jsonl` line per run into its `--out`. With `--out <name>/review/<view>/` (one
+folder per reference view), the tab shows the silhouette IoU and its rounds, whether the
+measured file is the current one (by hash), the overlay and side-by-side, the ranked gaps,
+the per-band widths, the joint renders, and a **Photo's view** button that turns the model
+to where the photo's camera stood.
+
+**In a batch folder,** it shows the wizard's token estimate from `batch-manifest.yaml`
+(`batch-mode.md` § Step 4): this asset's, the whole batch's and what is left to run, ±50%;
+the list shows the batch's range on its folder header.
+
+---
+
+## 4. `/kiln studio [asset]` — act on the user's notes
 
 1. **Pick the work.** With an asset argument, that asset (`chair` works when the name
    is unambiguous). Without one, run `studio.py notes`: one asset listed → take it;
@@ -97,7 +157,7 @@ more: `.kiln-studio/config.json` → `{"exclude": ["site/public/*"]}`.
 
 ---
 
-## 3. Commands
+## 5. Commands
 
 | Command | Does |
 |---|---|
@@ -112,13 +172,15 @@ more: `.kiln-studio/config.json` → `{"exclude": ["site/public/*"]}`.
 | `studio.py snapshot <asset>` | Keep the file as it is now as the previous version |
 | `studio.py revert <asset>` | Put the previous version back; the replaced one becomes the previous (undoable) |
 | `studio.py meta <asset> --category C --tags a,b` | Organise: category and tags (empty clears) |
+| `studio.py checks <asset>` | Tier, size, ground, textures, compression, licences, fidelity, batch estimate (`--json`) |
+| `studio.py live <folder> --phase P --text "…"` | Record a build step; alone, show the build; `--end` closes it and removes `_live` |
 
 The commands other than `open` find the project from the current folder upwards (the
 first folder holding `.kiln-studio/`); pass `--root PROJECT` from elsewhere.
 
 ---
 
-## 4. What the user sees
+## 6. What the user sees
 
 - **Left:** every model with a thumbnail, grouped by category (the folder by default;
   editable), filterable by text, tags and note state; a "new" badge when a model
@@ -129,15 +191,16 @@ first folder holding `.kiln-studio/`); pass `--root PROJECT` from elsewhere.
   scrubber; **Compare**: the previous version or another stage side by side, one camera
   for both, size and triangle change shown.
 - **Right:** Notes (pin or whole-model, statuses, threads, before/after shots,
-  "Looks right" / "Not yet"), Details (stages, stats, textures, organise, previous
-  version, side files and the log), History (every version seen with its render,
-  size and triangle change, and every note and reply).
+  "Looks right" / "Not yet"), Checks (§ 3), Details (stages, stats, textures, organise,
+  previous version, side files and the log), History (every version seen with its render,
+  size and triangle change, the build's phases, and every note and reply).
+- **While kiln builds:** a "building" mark in the list, and the phases above the model.
 
 Only one previous copy of a model is ever kept. The record of what a model looked like
 at each step is the screenshot on each note and the version renders — a few tens of
 kilobytes each, not a copy of the model.
 
-## 5. Storage
+## 7. Storage
 
 ```
 PROJECT/.kiln-studio/
@@ -146,6 +209,7 @@ PROJECT/.kiln-studio/
 ├── assets/<id with / as ~>/
 │   ├── notes.json                notes and their threads
 │   ├── history.json              versions seen + changelog
+│   ├── live.json                 the last build: its phases, step by step
 │   └── shots/                    one per note, one per "addressed" reply
 ├── baseline/<id>/                the one previous copy (git-ignored)
 └── cache/                        version renders, server log (git-ignored)
