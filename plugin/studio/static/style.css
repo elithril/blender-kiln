@@ -142,6 +142,23 @@ button.tag.on { color: var(--molten); border-color: rgb(214 126 44 / 0.55); back
 .badge.changed { background: transparent; color: var(--molten); border: 1px solid rgb(255 181 71 / 0.5); font-weight: 600; }
 .badge.building { background: transparent; color: var(--molten); font-size: 10px; animation: glow 1.6s ease-in-out infinite; }
 @keyframes glow { 50% { opacity: 0.35; } }
+/* What kiln is working on: waiting (a ring), on it (breathing), done (green) until looked at. */
+.badges { align-items: center; }
+.wdot { flex: none; width: 8px; height: 8px; margin: 0 4px; border-radius: 50%; transition: background-color 0.4s, border-color 0.4s; }
+.wdot.queued { border: 1.5px solid var(--ash-dim); }
+.wdot.active { background: var(--molten); animation: breathe 1.8s ease-in-out infinite; }
+.wdot.done { background: var(--ok); }
+@keyframes breathe {
+  0%, 100% { transform: scale(0.8); opacity: 0.55; box-shadow: 0 0 0 0 rgb(255 181 71 / 0); }
+  50% { transform: scale(1.15); opacity: 1; box-shadow: 0 0 7px 2px rgb(255 181 71 / 0.45); }
+}
+#work { display: flex; align-items: center; gap: 4px; margin: -2px 10px 6px; font-size: 12px; color: var(--ash); }
+#work .wdot { margin: 0 6px 0 4px; }
+#work button { padding: 1px 6px; font-size: 12px; }
+#work .go { border: 0; background: none; color: inherit; padding: 1px 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+#work .go[data-id] { cursor: pointer; }
+#work .go[data-id]:hover { color: var(--molten); }
+#work .clear { margin-left: auto; }
 #list summary .est { margin-left: 6px; color: var(--ash-dim); font-family: var(--mono); font-size: 11px; }
 
 /* ── centre: the stage ────────────────────────────────────────────────────── */

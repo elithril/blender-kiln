@@ -84,9 +84,12 @@ class Studio:
                         out[f"{d.name}/{name}"] = p.stat().st_mtime
                     except FileNotFoundError:
                         pass
-        cat = self.project.data / "catalog.json"
-        if cat.exists():
-            out["catalog.json"] = cat.stat().st_mtime
+        for name in ("catalog.json", "work.json"):
+            p = self.project.data / name
+            try:
+                out[name] = p.stat().st_mtime
+            except FileNotFoundError:
+                pass
         return out
 
     def refresh(self, initial: bool = False) -> None:
@@ -130,6 +133,9 @@ class Studio:
             if store.get(k) != self.store_sig.get(k):
                 if k == "catalog.json":
                     listing = True
+                elif k == "work.json":
+                    # Which models a kiln command is on: the list's dots.
+                    self.emit({"type": "work", "work": sl.work_view(sl.load_work(self.project))})
                 elif k.endswith("/live.json"):
                     # A build step: the phase strip, and the list's "building" badge.
                     aid = keys.get(k.split("/")[0])
@@ -276,7 +282,8 @@ def make_handler(studio: Studio, port_ref: list[int]):
                         if est:
                             batches[folder] = {k: est[k] for k in ("name", "assets", "range", "remaining", "manifest")}
                     return self._json({"root": str(project.root), "name": project.root.name,
-                                       "assets": rows, "batches": batches})
+                                       "assets": rows, "batches": batches,
+                                       "work": sl.work_view(sl.load_work(project))})
                 if parts[:2] == ["api", "asset"] and len(parts) == 3:
                     a = studio.asset(parts[2])
                     sl.observe(project, a)
@@ -301,6 +308,11 @@ def make_handler(studio: Studio, port_ref: list[int]):
             parts = self._route()
             try:
                 body = self._body() if method != "DELETE" else {}
+                if method == "POST" and parts == ["api", "work", "check"]:
+                    # The user looked at these models (all the finished ones when none named).
+                    ids = body.get("assets")
+                    run = sl.check_work(project, [str(i) for i in ids] if isinstance(ids, list) else None)
+                    return self._json({"work": sl.work_view(run)})
                 if parts[:2] != ["api", "asset"] or len(parts) < 4:
                     return self._err(404, "not found")
                 a = studio.asset(parts[2])

@@ -934,6 +934,188 @@ def live_summary(live: dict | None) -> dict | None:
     return {k: live.get(k) for k in ("state", "phase", "started", "updated", "ended")}
 
 
+# ── work: which models a kiln command is on ──────────────────────────────────
+#
+# One run per project, `.kiln-studio/work.json`: the models a command works through, in
+# order, each queued → active → done. The page shows a dot per model (waiting, breathing,
+# green); a done model's dot goes once the user has looked at it, and the run with it.
+
+WORK_STATES = ("queued", "active", "done", "dropped")
+# A run with no word from kiln for this long died with its session: stop showing it working.
+WORK_STALE = 2 * 3600
+
+
+def work_path(project: Project) -> Path:
+    return project.data / "work.json"
+
+
+def load_work(project: Project) -> dict | None:
+    try:
+        return read_json(work_path(project), None)
+    except ValueError:
+        return None
+
+
+def _work_item(run: dict, asset_id: str) -> dict:
+    for it in run["items"]:
+        if it["asset"] == asset_id:
+            return it
+    raise KeyError(f"{asset_id!r} is not in the run ({', '.join(it['asset'] for it in run['items'])})")
+
+
+def _activate(it: dict, t: str) -> None:
+    it["state"] = "active"
+    it["started"] = it.get("started") or t
+
+
+def _finish(it: dict, t: str, text: str = "") -> None:
+    it["state"] = "done"
+    it["ended"] = t
+    if text.strip():
+        it["text"] = text.strip()
+
+
+def _update_work(project: Project, fn) -> dict:
+    project.ensure()
+    with Lock(project):
+        run = load_work(project)
+        t = now()
+        run = fn(run, t)
+        run["updated"] = t
+        if run["state"] == "running" and not any(it["state"] in ("queued", "active") for it in run["items"]):
+            run["state"] = "done"
+            run["ended"] = t
+        write_json(work_path(project), run)
+        return run
+
+
+def start_work(project: Project, asset_ids: list[str], label: str = "") -> dict:
+    """A new run over these models, in this order, the first one active. It replaces the
+    last run, its unchecked dots included."""
+    ids = list(dict.fromkeys(asset_ids))
+    if not ids:
+        raise ValueError("name at least one model")
+
+    def fn(_old, t):
+        items = [{"asset": a, "state": "queued"} for a in ids]
+        _activate(items[0], t)
+        return {"id": new_id("w"), "label": label.strip(), "state": "running", "started": t, "items": items}
+    return _update_work(project, fn)
+
+
+def _running(run: dict | None) -> dict:
+    if not run or run.get("state") != "running":
+        raise ValueError("no run under way: start one with `studio.py work start <asset>...`")
+    return run
+
+
+def work_next(project: Project, text: str = "") -> dict:
+    """The active model is done; the next queued one becomes active."""
+    def fn(run, t):
+        run = _running(run)
+        for it in run["items"]:
+            if it["state"] == "active":
+                _finish(it, t, text)
+        nxt = next((it for it in run["items"] if it["state"] == "queued"), None)
+        if nxt:
+            _activate(nxt, t)
+        return run
+    return _update_work(project, fn)
+
+
+def work_begin(project: Project, asset_id: str) -> dict:
+    """Work on this model now, out of order; the one active before it is done. A model not
+    in the run joins it; with no run under way, this starts one."""
+    def fn(run, t):
+        if not run or run.get("state") != "running":
+            return {"id": new_id("w"), "label": "", "state": "running", "started": t,
+                    "items": [{"asset": asset_id, "state": "active", "started": t}]}
+        for it in run["items"]:
+            if it["state"] == "active" and it["asset"] != asset_id:
+                _finish(it, t)
+        try:
+            _activate(_work_item(run, asset_id), t)
+        except KeyError:
+            run["items"].append({"asset": asset_id, "state": "active", "started": t})
+        return run
+    return _update_work(project, fn)
+
+
+def work_done(project: Project, asset_id: str, text: str = "") -> dict:
+    def fn(run, t):
+        _finish(_work_item(_running(run), asset_id), t, text)
+        return run
+    return _update_work(project, fn)
+
+
+def end_work(project: Project, text: str = "") -> dict:
+    """Close the run: the active model is done, the ones never started are dropped."""
+    def fn(run, t):
+        run = _running(run)
+        for it in run["items"]:
+            if it["state"] == "active":
+                _finish(it, t)
+            elif it["state"] == "queued":
+                it["state"] = "dropped"
+        if text.strip():
+            run["text"] = text.strip()
+        run["state"] = "done"
+        run["ended"] = t
+        return run
+    return _update_work(project, fn)
+
+
+def check_work(project: Project, asset_ids: list[str] | None = None) -> dict | None:
+    """The user looked: these models' green dots go (all the done ones when None).
+    A finished run whose done models are all checked is cleared."""
+    with Lock(project):
+        run = load_work(project)
+        if not run:
+            return None
+        changed = False
+        for it in run["items"]:
+            if it["state"] == "done" and not it.get("checked") and (asset_ids is None or it["asset"] in asset_ids):
+                it["checked"] = now()
+                changed = True
+        if run["state"] != "running" and all(it.get("checked") or it["state"] != "done" for it in run["items"]):
+            work_path(project).unlink(missing_ok=True)
+            return None
+        if changed:
+            write_json(work_path(project), run)
+        return run
+
+
+def _age(iso: str | None) -> float:
+    try:
+        return time.time() - datetime.fromisoformat(iso).timestamp()
+    except (TypeError, ValueError):
+        return float("inf")
+
+
+def work_view(run: dict | None) -> dict | None:
+    """What the page shows: each model's dot (queued, active, done), and the run's progress.
+    Checked and dropped models have none; a stale run shows only what it finished."""
+    if not run:
+        return None
+    stale = run.get("state") == "running" and _age(run.get("updated")) > WORK_STALE
+    dots = {}
+    for it in run["items"]:
+        st = it["state"]
+        if stale and st in ("queued", "active"):
+            continue
+        if st == "dropped" or (st == "done" and it.get("checked")):
+            continue
+        dots[it["asset"]] = {k: it.get(k) for k in ("state", "started", "ended", "text")}
+    if not dots:
+        return None
+    done = sum(it["state"] == "done" for it in run["items"])
+    total = sum(it["state"] != "dropped" for it in run["items"])
+    active = next((it["asset"] for it in run["items"] if it["state"] == "active" and not stale), None)
+    return {"id": run["id"], "label": run.get("label", ""), "running": run["state"] == "running" and not stale,
+            "stale": stale, "done": done, "total": total, "active": active,
+            "started": run.get("started"), "updated": run.get("updated"), "dots": dots}
+
+
 # ── summaries for the page and the CLI ───────────────────────────────────────
 
 

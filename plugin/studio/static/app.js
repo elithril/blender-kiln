@@ -46,6 +46,7 @@ const state = {
   tags: new Set(), noteFilter: 'active', pinsOn: prefs.pins ?? true,
   pinning: false, draft: null, hl: null, editing: null, replying: null,
   compare: null, // { target: 'baseline' | variant label }
+  work: null, // which models a kiln command is on: studiolib.work_view
   loadSeq: 0,
 };
 let seen = {};
@@ -163,12 +164,14 @@ async function fetchAssets() {
   state.assets = data.assets;
   state.byId = new Map(data.assets.map((a) => [a.id, a]));
   state.batches = data.batches || {};
+  state.work = data.work || null;
   if (!Object.keys(seen).length) seen = JSON.parse(localStorage.getItem(`kiln-studio:seen:${data.root}`) || '{}');
   $('#project').textContent = data.root;
   $('#project').title = data.root;
   document.title = `${data.name} · Kiln Studio`;
   renderTags();
   renderList();
+  renderWork();
   queuePendingShots();
 }
 
@@ -252,15 +255,85 @@ function itemEl(a) {
   const v = a.variants[0];
   const changed = seen[a.id] && seen[a.id] !== v.hash && a.id !== state.id;
   const building = a.live?.state === 'building';
+  const dot = state.work?.dots[a.id];
   const sub = building ? `building · ${a.live.phase || 'starting'}` : [a.tris != null ? `${fmtN(a.tris)} tris` : v.ext.slice(1).toUpperCase(),
     a.variants.length > 1 ? `${a.variants.length} ${a.kiln ? 'stages' : 'files'}` : fmtB(v.size)].join(' · ');
   el.innerHTML = `<img class="thumb" alt="" ${a.thumb ? `src="${esc(fileUrl(a.thumb))}"` : ''}>
     <div style="min-width:0"><div class="name" title="${esc(a.id)}">${esc(a.name)}</div><div class="sub">${esc(sub)}</div></div>
-    <span class="badges">${building ? '<span class="badge building" title="kiln is building it: open it to watch">●</span>' : ''}${changed ? '<span class="badge changed" title="Changed since you last looked">new</span>' : ''}${a.counts.open ? `<span class="badge open" title="Open notes">${a.counts.open}</span>` : ''}${a.counts.addressed ? `<span class="badge addressed" title="Addressed by Claude: check them">${a.counts.addressed}</span>` : ''}</span>`;
+    <span class="badges">${workDot(dot)}${building && dot?.state !== 'active' ? '<span class="badge building" title="kiln is building it: open it to watch">●</span>' : ''}${changed ? '<span class="badge changed" title="Changed since you last looked">new</span>' : ''}${a.counts.open ? `<span class="badge open" title="Open notes">${a.counts.open}</span>` : ''}${a.counts.addressed ? `<span class="badge addressed" title="Addressed by Claude: check them">${a.counts.addressed}</span>` : ''}</span>`;
   el.onclick = () => go(a.id);
   el.onkeydown = (e) => { if (e.key === 'Enter') go(a.id); };
   if (!a.thumb) thumbObserver.observe(el);
   return el;
+}
+
+// ── what kiln is working on ──────────────────────────────────────────────────
+// A kiln command run on models here reports them (studio.py work): a dot per model,
+// waiting, breathing while kiln is on it, green once done until the user has looked.
+
+const WORK_TITLE = {
+  queued: 'Waiting: kiln works on it later in this run',
+  active: 'Kiln is working on it',
+  done: 'Kiln is done with it: open it to check',
+};
+function workDot(d) {
+  if (!d) return '';
+  const title = [WORK_TITLE[d.state], d.text].filter(Boolean).join(' · ');
+  return `<span class="wdot ${d.state}" role="img" aria-label="${esc(title)}" title="${esc(title)}"></span>`;
+}
+
+function renderWork() {
+  const w = state.work;
+  for (const el of $$('#list .item')) {
+    const d = w?.dots[el.dataset.id];
+    const cur = $('.wdot', el);
+    if (!d) { cur?.remove(); continue; }
+    if (cur?.classList.contains(d.state)) continue;
+    cur?.remove();
+    $('.badges', el).insertAdjacentHTML('afterbegin', workDot(d));
+    $('.badge.building', el)?.toggleAttribute('hidden', d.state === 'active');
+  }
+  const bar = $('#work');
+  bar.hidden = !w;
+  if (!w) return;
+  const left = Object.values(w.dots).filter((d) => d.state === 'done').length;
+  const name = (id) => state.byId.get(id)?.name || id.split('/').pop();
+  const what = w.label ? ` · ${esc(w.label)}` : '';
+  bar.innerHTML = w.running
+    ? `<span class="wdot active"></span><button class="go" ${w.active ? `data-id="${esc(w.active)}"` : ''}>Kiln${what} · ${w.done} of ${w.total}${w.active ? ` · ${esc(name(w.active))}` : ''}</button>`
+    : `<span class="wdot done"></span><span title="${esc(w.label || '')}">Kiln is done · ${left} to check</span><button class="clear" title="Clear the green dots without opening each model">Clear</button>`;
+  const go_ = $('.go', bar);
+  if (go_) go_.onclick = () => go_.dataset.id && go(go_.dataset.id);
+  const clear = $('.clear', bar);
+  if (clear) clear.onclick = () => checkWork(null);
+}
+
+// The user looked at these models (null: all of them): their green dots go.
+async function checkWork(ids) {
+  const w = state.work;
+  if (!w) return;
+  const done = Object.entries(w.dots).filter(([id, d]) => d.state === 'done' && (!ids || ids.includes(id))).map(([id]) => id);
+  if (!done.length) return;
+  for (const id of done) delete w.dots[id];
+  if (!w.running && !Object.keys(w.dots).length) state.work = null;
+  renderWork();
+  try { await api('/api/work/check', { method: 'POST', body: { assets: ids ? done : null } }); } catch { /* the next work event says */ }
+}
+
+function onWork(next, prev) {
+  state.work = next;
+  renderWork();
+  if (!next) return;
+  const name = (id) => state.byId.get(id)?.name || id.split('/').pop();
+  if (next.running && next.active && next.active !== prev?.active) {
+    const finished = prev?.active && next.dots[prev.active]?.state === 'done';
+    toast(finished ? `Kiln is done with ${name(prev.active)} · now on ${name(next.active)}` : `Kiln is working on ${name(next.active)}`);
+    // Nothing open yet: open the model kiln is on.
+    if (!state.id) go(next.active);
+  } else if (!next.running && prev?.running && !next.stale) {
+    const n = Object.values(next.dots).filter((d) => d.state === 'done').length;
+    toast(`Kiln is done: ${n} model${n === 1 ? '' : 's'} to check`);
+  }
 }
 
 const thumbObserver = new IntersectionObserver((entries) => {
@@ -296,6 +369,7 @@ async function openAsset(id) {
   if (!a) { toast(`No model "${id}" in this project`, true); return; }
   if (state.compare) toggleCompare(false);
   cancelDraft();
+  const left = state.id;
   state.id = id;
   state.hl = null;
   state.editing = state.replying = null;
@@ -307,6 +381,8 @@ async function openAsset(id) {
   const keep = state.detail.variants.find((v) => v.label === state.variant);
   await loadVariant(keep ? keep.label : state.detail.variants[0].label, { keepCamera: false });
   markSeen(a);
+  // Opening a model kiln finished, or leaving the one you watched it finish: checked.
+  checkWork([id, left].filter(Boolean));
   for (const v of state.detail.variants) if (!state.detail.thumbs.includes(v.hash)) queueThumb(id, v);
   queueAfterShots(state.detail);
 }
@@ -1177,6 +1253,11 @@ function liveEvents() {
       markSeen(state.byId.get(state.id));
       for (const x of state.detail.variants) if (!state.detail.thumbs.includes(x.hash)) queueThumb(state.id, x);
       queueAfterShots(state.detail);
+    }
+    if (ev.type === 'work') {
+      const prev = state.work;
+      if (ev.work?.active && !state.byId.has(ev.work.active)) await fetchAssets();
+      onWork(ev.work, prev);
     }
     if (ev.type === 'live') {
       // Nothing open yet: open the model being built, to watch it.

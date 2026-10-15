@@ -124,6 +124,9 @@ the list shows the batch's range on its folder header.
    was already tried. A note "made on an earlier version" was pinned before the last
    export: trust the object and material names over the exact point.
 
+   **Show the user what you are on** before you change anything:
+   `studio.py work start <asset> [<asset>...] --label "acting on notes"` (§ 5).
+
 3. **Keep a way back.** Studio keeps one previous copy of each annotated model, taken
    when the user's first note on that version was saved — the user compares against
    it and can put it back. If the user asked for a change in chat rather than in a
@@ -150,14 +153,48 @@ the list shows the batch's range on its folder header.
    - A change that was not asked for in a note: `studio.py log <asset> "what changed"`
      puts it in the asset's history.
 
-6. **Wrap up** with the notes addressed, the ones waiting on the user, and the link
+6. **Next model.** `studio.py work next` — this one's dot goes green, the next one's
+   starts breathing. Stopping before the list is done: `studio.py work end`.
+
+7. **Wrap up** with the notes addressed, the ones waiting on the user, and the link
    (`studio.py open --asset <asset> --no-open` prints it). Don't commit unless asked;
    when you do, commit `.kiln-studio/` (notes, screenshots, history, catalog) with the
    model files — its own `.gitignore` already leaves out the model copy and the cache.
 
 ---
 
-## 5. Commands
+## 5. Work — which models you are on
+
+Whenever a command changes models the page shows — `/kiln studio` on notes, `/kiln
+optimize`, `/kiln texture`, `/kiln cleanup`, `/kiln convert` on files in the project —
+and Studio is running (`studio.py status`), say which ones before the first change. Each
+gets a dot in the page's list: a ring while it waits, breathing while you are on it,
+green when you are done; a line above the list reads "Kiln · optimize · 1 of 3 · table".
+
+```bash
+python3 <skill>/studio/studio.py work start chair table lamp --label "optimize"   # chair active
+python3 <skill>/studio/studio.py work next --text "8.2K → 2.4K tris"            # chair done, table active
+python3 <skill>/studio/studio.py work next                                       # … lamp done: the run ends
+```
+
+- `start` takes the models in the order you will take them; the first is active at
+  once. It replaces any earlier run. One model is a run of one.
+- `next` closes the active model (`--text`: what was done, in a few words — the dot's
+  tooltip) and moves to the next; after the last one the run is done.
+- Out of order: `work begin <asset>` (the active one counts as done; a model not in the
+  run joins it), `work done <asset>`. Stopping early: `work end` — the active model is
+  done, the ones not started lose their dot. `work` alone prints the run.
+- Call `next` once the model is re-exported, so the green dot and the reloaded model
+  arrive together.
+- The user clears a green dot by opening the model, or by leaving the one they watched
+  finish; **Clear** above the list clears them all. When none is left, the run is gone.
+- A run with no word from you for two hours is treated as stopped: its breathing and
+  waiting dots go, the green ones stay.
+- Not in batch runs: nobody watches them, and their models do not exist yet.
+
+---
+
+## 6. Commands
 
 | Command | Does |
 |---|---|
@@ -174,13 +211,14 @@ the list shows the batch's range on its folder header.
 | `studio.py meta <asset> --category C --tags a,b` | Organise: category and tags (empty clears) |
 | `studio.py checks <asset>` | Tier, size, ground, textures, compression, licences, fidelity, batch estimate (`--json`) |
 | `studio.py live <folder> --phase P --text "…"` | Record a build step; alone, show the build; `--end` closes it and removes `_live` |
+| `studio.py work start <asset>... --label L` | Show the user which models a command works on (§ 5); `next`, `begin <asset>`, `done <asset>`, `end`; alone, show the run |
 
 The commands other than `open` find the project from the current folder upwards (the
 first folder holding `.kiln-studio/`); pass `--root PROJECT` from elsewhere.
 
 ---
 
-## 6. What the user sees
+## 7. What the user sees
 
 - **Left:** every model with a thumbnail, grouped by category (the folder by default;
   editable), filterable by text, tags and note state; a "new" badge when a model
@@ -196,17 +234,20 @@ first folder holding `.kiln-studio/`); pass `--root PROJECT` from elsewhere.
   previous version, side files and the log), History (every version seen with its render,
   size and triangle change, the build's phases, and every note and reply).
 - **While kiln builds:** a "building" mark in the list, and the phases above the model.
+- **While a command works on models** (§ 5): a dot on each — waiting, breathing, green —
+  and its progress above the list; a toast as it moves from one model to the next.
 
 Only one previous copy of a model is ever kept. The record of what a model looked like
 at each step is the screenshot on each note and the version renders — a few tens of
 kilobytes each, not a copy of the model.
 
-## 7. Storage
+## 8. Storage
 
 ```
 PROJECT/.kiln-studio/
 ├── .gitignore                    baseline/, cache/, server.json
 ├── catalog.json                  category and tags per asset
+├── work.json                     the models a command is working through (§ 5)
 ├── assets/<id with / as ~>/
 │   ├── notes.json                notes and their threads
 │   ├── history.json              versions seen + changelog

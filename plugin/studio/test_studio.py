@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Kiln Studio's tests: scan, stats, notes, history, baseline, the live build, checks, and the HTTP API.
+"""Kiln Studio's tests: scan, stats, notes, history, baseline, the live build, work runs, checks, and the HTTP API.
 
     python3 plugin/studio/test_studio.py
 
@@ -336,6 +336,81 @@ class Live(Base):
             os.chdir(cwd)
 
 
+class Work(Base):
+    A, B, C = "out/chair", "out/table", "out/lamp"
+
+    def dots(self) -> dict:
+        v = sl.work_view(sl.load_work(self.p))
+        return {k: d["state"] for k, d in v["dots"].items()} if v else {}
+
+    def test_a_run_moves_through_its_models(self) -> None:
+        sl.start_work(self.p, [self.A, self.B, self.C, self.A], "acting on notes")
+        self.assertEqual(self.dots(), {self.A: "active", self.B: "queued", self.C: "queued"})
+        sl.work_next(self.p, "seat lowered")
+        self.assertEqual(self.dots(), {self.A: "done", self.B: "active", self.C: "queued"})
+        # Out of order: the lamp now, the table counts as done.
+        sl.work_begin(self.p, self.C)
+        self.assertEqual(self.dots(), {self.A: "done", self.B: "done", self.C: "active"})
+        run = sl.work_next(self.p)
+        self.assertEqual(run["state"], "done")
+        v = sl.work_view(run)
+        self.assertEqual((v["running"], v["done"], v["total"], v["active"]), (False, 3, 3, None))
+        self.assertEqual(run["items"][0]["text"], "seat lowered")
+
+    def test_checked_dots_go_then_the_run(self) -> None:
+        sl.start_work(self.p, [self.A, self.B])
+        sl.work_next(self.p)
+        sl.check_work(self.p, [self.A])   # looked at it while kiln works on the table
+        self.assertEqual(self.dots(), {self.B: "active"})
+        sl.work_next(self.p)
+        self.assertEqual(self.dots(), {self.B: "done"})
+        self.assertIsNone(sl.check_work(self.p, [self.B]))
+        self.assertIsNone(sl.load_work(self.p))
+        # "Clear" checks every done model at once.
+        sl.start_work(self.p, [self.A, self.B])
+        sl.work_next(self.p)
+        sl.work_next(self.p)
+        self.assertIsNone(sl.check_work(self.p))
+        self.assertIsNone(sl.load_work(self.p))
+
+    def test_end_drops_the_rest_and_a_stale_run_stops_working(self) -> None:
+        sl.start_work(self.p, [self.A, self.B, self.C])
+        sl.end_work(self.p, "stopped: the user asked")
+        self.assertEqual(self.dots(), {self.A: "done"})
+        self.assertEqual(sl.work_view(sl.load_work(self.p))["total"], 1)
+        with self.assertRaises(ValueError):
+            sl.work_next(self.p)
+        sl.start_work(self.p, [self.A, self.B])
+        sl.work_next(self.p)
+        run = sl.load_work(self.p)
+        run["updated"] = "2020-01-01T00:00:00+00:00"
+        sl.write_json(sl.work_path(self.p), run)
+        v = sl.work_view(sl.load_work(self.p))
+        self.assertEqual((v["running"], v["stale"], v["active"]), (False, True, None))
+        self.assertEqual(self.dots(), {self.A: "done"})
+
+    def test_begin_without_a_run_starts_one(self) -> None:
+        sl.work_begin(self.p, self.B)
+        self.assertEqual(self.dots(), {self.B: "active"})
+        sl.work_begin(self.p, self.A)
+        self.assertEqual(self.dots(), {self.B: "done", self.A: "active"})
+
+    def test_cli(self) -> None:
+        glb(self.tmp / "out" / "chair" / "chair_final.glb")
+        glb(self.tmp / "out" / "table" / "table_final.glb")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            studio.main(["work", "start", "chair", "table", "--label", "acting on notes", "--root", str(self.tmp)])
+            studio.main(["work", "next", "--text", "seat lowered", "--root", str(self.tmp)])
+            studio.main(["work", "--root", str(self.tmp)])
+        self.assertEqual(self.dots(), {"out/chair": "done", "out/table": "active"})
+        self.assertIn("acting on notes: running, 1/2 done", out.getvalue())
+        with self.assertRaises(SystemExit), contextlib.redirect_stdout(io.StringIO()):
+            studio.main(["work", "start", "sofa", "--root", str(self.tmp)])
+        with self.assertRaises(SystemExit), contextlib.redirect_stdout(io.StringIO()):
+            studio.main(["work", "done", "--root", str(self.tmp)])
+
+
 LOG = """# Crate — Production Log
 
 ## Config
@@ -601,6 +676,29 @@ class Api(Base):
         self.assertEqual(d["live"]["steps"][-1]["text"], "welded")
         self.assertEqual(d["checks"]["shipped"], "final")
         self.assertIn("final", d["checks"]["health"])
+
+    def test_work_events_and_check(self) -> None:
+        q = self.studio.subscribe()
+        sl.start_work(self.p, ["generated-assets/crate"], "optimize")
+        deadline = time.time() + 5
+        ev = None
+        while time.time() < deadline and not ev:
+            try:
+                e = q.get(timeout=0.5)
+                ev = e if e["type"] == "work" else None
+            except Exception:
+                pass
+        self.assertIsNotNone(ev)
+        self.assertEqual(ev["work"]["active"], "generated-assets/crate")
+        sl.work_next(self.p)
+        code, data = self.req("GET", "/api/assets")
+        self.assertEqual(data["work"]["dots"]["generated-assets/crate"]["state"], "done")
+        code, r = self.req("POST", "/api/work/check", {"assets": ["generated-assets/crate"]})
+        self.assertEqual((code, r["work"]), (200, None))
+        code, data = self.req("GET", "/api/assets")
+        self.assertIsNone(data["work"])
+        code, _ = self.req("POST", "/api/work/check", {}, headers={"Origin": "http://evil.example"})
+        self.assertEqual(code, 403)
 
     def test_batch_estimates_in_the_listing(self) -> None:
         b = self.tmp / "generated-assets" / "batch-office"

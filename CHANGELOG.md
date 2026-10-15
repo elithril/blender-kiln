@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Kiln Studio: what kiln is working on
+
+- **A dot per model while a command works on it.** `studio.py work start <asset>...
+  --label "…"` names the models a command will change, in order; `work next` moves on;
+  `work begin`, `work done` and `work end` cover out-of-order work and stopping early. The
+  run lives in `.kiln-studio/work.json`; the server streams it, and the page puts a dot
+  on each model in the list — a ring while it waits, breathing while kiln is on it, green
+  when done — with "Kiln · optimize · 1 of 3 · table" above the list and a toast at each
+  hand-over. A green dot goes once the user opens that model (or leaves the one they
+  watched finish); **Clear** takes them all; the run goes with the last one. A run with
+  no word for two hours stops showing work in progress. `/kiln studio` and the standalone
+  commands report their models when Studio is running; not in batch runs.
+  `test_studio.py`: 42 tests.
+
 ### Added — Kiln Studio: watch it built, check it
 
 - **Live view.** While kiln builds, Kiln Studio opens the model and reloads it after each

@@ -273,6 +273,8 @@ A local page for looking at what kiln made and telling it what to change.
 - **Watch it built** — once the brief is confirmed, the page opens the model kiln is
   building and reloads it after each phase, the phases shown above it; History keeps a
   render of every phase. One extra line in the phase's last Blender call, no extra call.
+- **See what kiln is on** — when a command works through several models, each gets a dot
+  in the list: waiting, breathing while kiln is on it, green when done, until you open it.
 - **Check** — the Checks tab reads kiln's rules off the file: triangles against the
   detail tier, size and ground contact, texture sizes against the target's cap, Draco and
   WebP on `_final`, the licences the log records. Beside them, the fidelity measure
@@ -426,7 +428,7 @@ plugin/
 | `plugin/references/topology-rules.md` | Poly budgets, quad rules, edge flow | ~90 |
 | `plugin/references/setup-install.md` | Model selection, install commands, post-install validation | ~70 |
 | `plugin/references/sourcing-strategy.md` | PolyHaven (MCP or public API) + Sketchfab search patterns | ~120 |
-| `plugin/references/studio.md` | Kiln Studio: starting it, live view, checks, acting on the user's notes, commands, storage | ~220 |
+| `plugin/references/studio.md` | Kiln Studio: starting it, live view, checks, acting on the user's notes, work in progress, commands, storage | ~260 |
 | `plugin/studio/` | Kiln Studio: local server and CLI (stdlib Python), checks, live view from Blender, three.js page, tests | ~5,800 |
 
 **Total: ~5,300 lines** of production-tested 3D pipeline knowledge.

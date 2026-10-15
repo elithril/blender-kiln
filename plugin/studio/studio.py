@@ -10,6 +10,7 @@
     studio.py meta ASSET [--category C] [--tags a,b]
     studio.py checks ASSET [--json]
     studio.py live FOLDER [--phase P] [--text "what it did"] | live FOLDER --end [--keep-file]
+    studio.py work start ASSET... [--label L] | next | begin ASSET | done ASSET | end [--text T]
 
 PROJECT is any folder (default: the current one). Studio finds every .glb .gltf
 .fbx .obj under it, groups kiln's _original/_final stages into one asset, and keeps
@@ -42,7 +43,7 @@ import studiolib as sl  # noqa: E402
 
 DEFAULT_PORT = 4840
 COMMANDS = ("open", "serve", "stop", "status", "list", "notes", "show", "history",
-            "reply", "log", "snapshot", "revert", "meta", "checks", "live")
+            "reply", "log", "snapshot", "revert", "meta", "checks", "live", "work")
 
 
 # ── the server's lifecycle ───────────────────────────────────────────────────
@@ -418,6 +419,42 @@ def cmd_live(args) -> None:
     print(f"{aid}: {state['state']}, phase {state.get('phase') or '-'}")
 
 
+def _print_work(run: dict | None) -> None:
+    if not run:
+        print("no run")
+        return
+    mark = {"queued": "·", "active": ">", "done": "✓", "dropped": "-"}
+    done = sum(it["state"] == "done" for it in run["items"])
+    total = sum(it["state"] != "dropped" for it in run["items"])
+    print(f"{run.get('label') or 'run'}: {run['state']}, {done}/{total} done")
+    for it in run["items"]:
+        extra = " (checked)" if it.get("checked") else ""
+        print(f"  {mark[it['state']]} {it['asset']}{extra}" + (f"  {it['text']}" if it.get("text") else ""))
+
+
+def cmd_work(args) -> None:
+    project = find_project(args.root)
+    try:
+        if args.action == "start":
+            if not args.assets:
+                raise SystemExit("work start: name the models, in the order you will take them")
+            run = sl.start_work(project, [_asset(project, a).id for a in args.assets], args.label or "")
+        elif args.action == "next":
+            run = sl.work_next(project, args.text or "")
+        elif args.action in ("begin", "done"):
+            if len(args.assets) != 1:
+                raise SystemExit(f"work {args.action}: name one model")
+            aid = _asset(project, args.assets[0]).id
+            run = sl.work_begin(project, aid) if args.action == "begin" else sl.work_done(project, aid, args.text or "")
+        elif args.action == "end":
+            run = sl.end_work(project, args.text or "")
+        else:
+            run = sl.load_work(project)
+    except (KeyError, ValueError) as e:
+        raise SystemExit(str(e).strip("'\""))
+    _print_work(run)
+
+
 def _image(path: str | None) -> bytes | None:
     if not path:
         return None
@@ -535,6 +572,11 @@ def main(argv: list[str] | None = None) -> None:
     lv.add_argument("--text", help="what the step did, in a few words")
     lv.add_argument("--end", action="store_true", help="the build is done: close it and remove the _live export")
     lv.add_argument("--keep-file", action="store_true", help="with --end: keep the _live export")
+    wk = p("work", cmd_work, "tell the page which models a command is working on (alone: show the run)")
+    wk.add_argument("action", nargs="?", choices=("start", "next", "begin", "done", "end", "show"), default="show")
+    wk.add_argument("assets", nargs="*", help="start: the models, in order; begin/done: one model")
+    wk.add_argument("--label", help="start: what the run does, in a few words (\"acting on notes\")")
+    wk.add_argument("--text", help="next/done/end: what was done, in a few words")
     args = ap.parse_args(argv)
     try:
         args.fn(args)

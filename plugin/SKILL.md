@@ -830,6 +830,14 @@ Note: "Reusable prompts" (concept art prompt, generation params) are stored in t
 
 These commands work independently — no need to run the full pipeline.
 
+**Kiln Studio shows what you are on.** When a command changes models that a running
+Kiln Studio shows (`studio.py status` answers for the project), tell it before the first
+change and as you go, so the page puts a dot on each model — waiting, breathing while you
+work on it, green when done: `studio.py work start <asset>... --label "optimize"` (in the
+order you will take them; the first is active), `studio.py work next` after each one,
+`studio.py work end` if you stop early. One model is a run of one. Not in batch runs.
+`references/studio.md` § 5 has the rest.
+
 ### /kiln inspect
 
 Inspect any 3D file without importing it into the pipeline.
@@ -971,9 +979,11 @@ the user browses every model in the project, pins notes on them, compares versio
 checks your fixes. Load `references/studio.md` and follow it.
 
 1. Run `studio.py notes` (or take the asset given as argument).
-2. Notes waiting → act on them, one asset per pass: `studio.py show <asset>`, read each
-   screenshot, change the model, re-export to the same file,
-   `studio.py reply <asset> <note> "…" --status addressed`. Never mark one resolved.
+2. Notes waiting → act on them, one asset per pass: `studio.py work start <asset>...
+   --label "acting on notes"` with the assets you will take, `studio.py show <asset>`,
+   read each screenshot, change the model, re-export to the same file,
+   `studio.py reply <asset> <note> "…" --status addressed`, then `studio.py work next`.
+   Never mark one resolved.
 3. Nothing waiting → start Studio (`studio.py [project]`), give the URL, stop.
 
 Its Checks tab, and `studio.py checks <asset>`, read kiln's rules off the file — tier
