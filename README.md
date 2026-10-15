@@ -248,6 +248,43 @@ goes to it: `unimate.py` recognises the posture and points at `quadruped.py`.
 > (`examples/animation/showcase.sh`, assets and credits alongside), not from an
 > interactive session of the skill.
 
+## Kiln Studio
+
+<p align="center">
+  <img src="docs/images/studio.webp" width="100%" alt="Kiln Studio: a lantern in the browser, a note pinned on its glass with the before and after views, Claude's reply, and the model list on the left" />
+</p>
+
+A local page for looking at what kiln made and telling it what to change.
+`/kiln studio` starts it (or reuses the one running) on the project's folder, like
+`remotion studio`; every `.glb .gltf .fbx .obj` under it shows up, and kiln's
+`_original`/`_final` stages are one model you can switch between.
+
+- **Look** — Lit, Unlit, Clay, Normals, UV checker, Faces (back faces red), wireframe,
+  sizes in metres, bones, animation clips with a scrubber.
+- **Annotate** — pin a note on a spot (it records the point in Blender coordinates, the
+  object and material hit, the camera, and a screenshot) or write one about the whole
+  model. Categories and tags organise a long list.
+- **Iterate** — `/kiln studio` hands the open notes to Claude, who changes the model,
+  re-exports and replies. The page reloads the model as the file changes and renders the
+  note's view again beside its screenshot: each note carries its before and after.
+  Compare puts the previous version and the new one side by side; one copy of the
+  previous version is kept, so a pass can be undone. History lists every version seen,
+  with its size and triangle count.
+- **Watch it built** — once the brief is confirmed, the page opens the model kiln is
+  building and reloads it after each phase, the phases shown above it; History keeps a
+  render of every phase. One extra line in the phase's last Blender call, no extra call.
+- **See what kiln is on** — when a command works through several models, each gets a dot
+  in the list: waiting, breathing while kiln is on it, green when done, until you open it.
+- **Check** — the Checks tab reads kiln's rules off the file: triangles against the
+  detail tier, size and ground contact, texture sizes against the target's cap, Draco and
+  WebP on `_final`, the licences the log records. Beside them, the fidelity measure
+  against the reference photo (IoU and its rounds, overlay, gaps, joints, the photo's
+  view), and in a batch folder the wizard's token estimate.
+
+Python standard library and a browser; three.js comes from a CDN. Notes live in the
+project's `.kiln-studio/`, ready to commit with the models.
+[`references/studio.md`](plugin/references/studio.md) is the reference.
+
 ## Commands
 
 | Command | Action |
@@ -265,6 +302,7 @@ goes to it: `unimate.py` recognises the posture and points at `quadruped.py`.
 | `/kiln animate` | Animate a rigged asset — routed by subject ([Animate](#animate)) |
 | `/kiln optimize` | Optimize a GLB with gltf-transform/gltfpack |
 | `/kiln convert` | Convert between formats (GLB↔USDZ↔FBX) |
+| `/kiln studio` | Open Kiln Studio; act on the notes pinned there (`/kiln studio <asset>`) |
 | `/kiln help` | List all commands and usage |
 
 ## Requirements
@@ -346,6 +384,7 @@ plugin/
 ├── SKILL.md
 ├── LICENSE
 ├── tools/                        # fidelity_check, template_profile, quadruped, motion_loop, bind_rigid_parts, unimate (+ patch), checks
+├── studio/                       # Kiln Studio: studio.py (CLI), server.py, studiolib.py, checks.py, blender_live.py, static/ (the page), tests
 └── references/
     ├── ai-generation.md
     ├── animation.md
@@ -358,6 +397,7 @@ plugin/
     ├── sourcing-strategy.md
     ├── texturing-strategy.md
     ├── reference-fidelity.md
+    ├── studio.md
     ├── topology-rules.md
     ├── uv-materials.md
     └── validation-checklist.md
@@ -388,8 +428,10 @@ plugin/
 | `plugin/references/topology-rules.md` | Poly budgets, quad rules, edge flow | ~90 |
 | `plugin/references/setup-install.md` | Model selection, install commands, post-install validation | ~70 |
 | `plugin/references/sourcing-strategy.md` | PolyHaven (MCP or public API) + Sketchfab search patterns | ~120 |
+| `plugin/references/studio.md` | Kiln Studio: starting it, live view, checks, acting on the user's notes, work in progress, commands, storage | ~260 |
+| `plugin/studio/` | Kiln Studio: local server and CLI (stdlib Python), checks, live view from Blender, three.js page, tests | ~5,800 |
 
-**Total: ~4,800 lines** of production-tested 3D pipeline knowledge.
+**Total: ~5,300 lines** of production-tested 3D pipeline knowledge.
 
 ## Continuous checks
 
@@ -436,7 +478,8 @@ claims to measure — a model against its own render (IoU 0.998), the same model
 colour as non-metal, silent), metal in hard scattered islands (reported; one soft region,
 silent), metal painted mostly as non-metal (reported), grain measured but never listed as a gap,
 joint close-ups (a rod resting on a sphere rendered; sunk or free,
-not), and `--view` and `--azimuth` on a 2 x 1 x 1 box — **27/27**. Its first run caught the tool framing views by
+not), `--view` and `--azimuth` on a 2 x 1 x 1 box, and the measure saved for Kiln Studio
+(`fidelity.json` with the model's hash, one log line per run) — **29/29**. Its first run caught the tool framing views by
 height only: anything wider than tall was clipped, a box measured 1:1 instead of 2:1.
 `plugin/tools/test_template_profile.py` reads a seeded turned part back through
 `template_profile.py` — radii, a free rod, a rod pressed against the body — **4/4**.

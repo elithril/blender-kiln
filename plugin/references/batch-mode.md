@@ -111,6 +111,9 @@ Or: Launch / Later
 - geometry-nodes: ~40K tokens/asset
 - Multiply total by 1.0 (low) and 1.5 (high) for the range
 
+Kiln Studio reads the same formula off the manifest once it is written, and shows the
+batch's range, what is left to run, and each asset's (`studio.md` § 3).
+
 Allow the user to adjust any line before validation. Accept formats like:
 - `"3 → ai"` — change method
 - `"5 tier detailed"` — change tier

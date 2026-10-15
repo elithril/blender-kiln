@@ -6,6 +6,107 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — Kiln Studio: note pictures, a third of the size and sharper on the spot
+
+- A pinned note keeps two pictures instead of one: the view, cropped to the model and
+  the pin (1024 px at most), and a 640 px close-up rendered nearer the pin along the
+  line the user looked at it, so a detail pinned from far away is still readable. WebP,
+  JPEG where the browser cannot write WebP (Safari): 26 kB for both against 60 kB for the
+  old 1400 px JPEG, measured on the same view, and about half the image tokens when
+  Claude reads them. A whole-model note keeps the cropped view only (14 kB).
+- The pin is marked by four ticks around it, not a ringed dot on it: the spot stays visible.
+- The note stores the crop and the close-up's camera (`view`), so the "after" render
+  frames both pictures the same way. The card shows the close-ups; enlarged, each view
+  has its close-up in the corner, and a click swaps them. `studio.py show` prints the
+  close-up's path. Notes made before keep their single JPEG. `test_studio.py`: 44 tests.
+
+### Changed — Kiln Studio: Checks in plain words, with the fix
+
+- Every check says what it found and why it matters ("Floats 0.200 m above the ground:
+  it will hover when placed in a scene"), without kiln's rule numbers or phase names, then
+  **How to fix**: the command to run for that model (`/kiln optimize barrel`, copied on
+  click) or what to ask Claude. An **Ask Claude** button opens a note on the model with
+  the request written out; `/kiln studio` picks it up. `studio.py checks` prints the fix
+  under each line. Licence entries read "credit the author", "not for commercial use".
+- Compression is a note, not a warning, when the log's target is Unity, Unreal or PC:
+  the engine packs the file on import, and Draco and WebP are web formats.
+- `/kiln optimize` takes a Studio asset name and works on its `_final` file.
+  `test_studio.py`: 43 tests.
+
+### Added — Kiln Studio: what kiln is working on
+
+- **A dot per model while a command works on it.** `studio.py work start <asset>...
+  --label "…"` names the models a command will change, in order; `work next` moves on;
+  `work begin`, `work done` and `work end` cover out-of-order work and stopping early. The
+  run lives in `.kiln-studio/work.json`; the server streams it, and the page puts a dot
+  on each model in the list — a ring while it waits, breathing while kiln is on it, green
+  when done — with "Kiln · optimize · 1 of 3 · table" above the list and a toast at each
+  hand-over. A green dot goes once the user opens that model (or leaves the one they
+  watched finish); **Clear** takes them all; the run goes with the last one. A run with
+  no word for two hours stops showing work in progress. `/kiln studio` and the standalone
+  commands report their models when Studio is running; not in batch runs.
+  `test_studio.py`: 42 tests.
+
+### Added — Kiln Studio: watch it built, check it
+
+- **Live view.** While kiln builds, Kiln Studio opens the model and reloads it after each
+  phase. `studio/blender_live.py` runs inside Blender, appended to the phase's last
+  `execute_blender_code` call: it exports `<name>/<name>_live.glb` (hidden name, then moved
+  into place) and records the phase in `.kiln-studio/assets/<key>/live.json`.
+  `studio.py live <name> --end` closes the build and removes the export. The page shows
+  the phases above the model and a "building" mark in the list, follows the newest stage,
+  refits the view as the model grows, and files each live version in History under its
+  phase, with a render. Studio now starts once the brief is confirmed.
+- **Checks tab and `studio.py checks`**: triangles against the detail tier's soft range
+  (WARN only past twice the top, rule 4), size against the usual height of a chair, table,
+  door or character, ground contact and centring, texture sizes (read from the image
+  headers in the file) against the target's cap, Draco/meshopt and WebP/KTX2 on `_final`
+  only, and the licences in the production log (CC-BY: credit; NC: WARN). Without a log,
+  the tier and type are assumed and the check says so.
+- **Fidelity beside the model**: `tools/fidelity_check.py` also writes `fidelity.json`
+  (with the model's hash, the view, elevation and azimuth) and appends a line per run to
+  `fidelity_log.jsonl`. With `--out <name>/review/<view>/`, the Checks tab shows the IoU
+  and its rounds, whether the measured file is the current one, the overlay or the
+  side-by-side, the ranked gaps, the per-band widths, the joints, and a Photo's view
+  button. `test_fidelity_check.py`: 29/29.
+- **Batch token estimate**: in a batch folder, the wizard's formula read off
+  `batch-manifest.yaml`: the asset's, the batch's and what is left to run, ±50%; the
+  batch's range on its folder header in the list.
+- **Eye button for the pins**: the toolbar's Pins toggle is now an eye floating under the
+  model's name (crossed out while hidden, P still works), shown only when the model has at
+  least one pin in the notes being listed.
+- **Which pins**: hovering the eye unfurls two choices under it: *Hide fixed pins* hides
+  the blue pins Claude has addressed (and the grey ones when all notes are listed), *Hide
+  pins behind the model* hides those on its far side instead of fading them. A dot on the eye
+  while either is on; the note picked in the list keeps its pin.
+- `test_studio.py`: 36 tests (live stage order, build record, CLI target, image headers,
+  health on shipped and unshipped stages, fidelity by hash, manifest estimate, events).
+
+### Added — Kiln Studio
+
+- **`/kiln studio`: a local page to look at models, pin notes on them, and iterate with
+  Claude.** `studio/studio.py` starts it on the project's folder or reuses the one
+  already running, like `remotion studio`; Python standard library, three.js 0.186.1
+  from jsDelivr. Every `.glb .gltf .fbx .obj` under the folder shows up, and kiln's
+  `_original`…`_final` stages are one model with switchable stages; the output or batch
+  folder is the default category, and categories and tags can be set.
+- **Notes** pinned on a spot record the point and normal in glTF and Blender
+  coordinates, the object, mesh and material hit, a region in words, the camera and a
+  screenshot; whole-model notes record the view. `open` → `addressed` (Claude, through
+  `studio.py reply`) → `resolved` (the user only; the CLI refuses it) or `wontfix`.
+- **Before and after per note**: when a note is marked addressed, the page renders the
+  note's own view of the new version beside its screenshot. One previous copy of each
+  annotated model is kept (the version the review pass started from) for a side-by-side
+  Compare and an undoable revert — never a pile of copies. History lists every version
+  seen with its size and triangle count, the changelog, notes and replies.
+- **The page** follows the files live (server-sent events): a re-export reloads the
+  model in place, Claude's replies appear as they are written. Shading Lit, Unlit,
+  Clay, Normals, UV checker and Faces (back faces red); wireframe, grid with the front
+  marked, bounds in metres, bones, animation clips. Draco, meshopt and KTX2 decode.
+- `plugin/studio/test_studio.py` (20 tests: scan, stats, notes, history, baseline,
+  HTTP API including host and origin checks) runs in CI; `verify_docs.py` now checks
+  `studio/` paths too.
+
 ### Changed
 
 - **The showcase chest is rebuilt** by its own script, `examples/animation/chest.py`: planks, a
