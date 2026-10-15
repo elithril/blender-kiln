@@ -75,6 +75,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Eye button for the pins**: the toolbar's Pins toggle is now an eye floating under the
   model's name (crossed out while hidden, P still works), shown only when the model has at
   least one pin in the notes being listed.
+- **Which pins**: hovering the eye unfurls two choices under it: *Hide fixed pins* hides
+  the blue pins Claude has addressed (and the grey ones when all notes are listed), *Hide
+  pins behind the model* hides those on its far side instead of fading them. A dot on the eye
+  while either is on; the note picked in the list keeps its pin.
 - `test_studio.py`: 36 tests (live stage order, build record, CLI target, image headers,
   health on shipped and unshipped stages, fidelity by hash, manifest estimate, events).
 

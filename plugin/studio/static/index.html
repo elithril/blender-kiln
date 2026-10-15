@@ -57,10 +57,16 @@
         <h2 id="asset-name"></h2>
         <div id="variants" class="chips" role="tablist" aria-label="Variant"></div>
       </div>
-      <button id="t-pins" class="on" title="Hide pins (P)" aria-label="Hide pins" aria-pressed="true" hidden>
-        <svg class="eye" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
-        <svg class="eye-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 5.1A9.8 9.8 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-2.4 3.3M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18"/></svg>
-      </button>
+      <div id="pins-ctl" hidden>
+        <button id="t-pins" class="on" title="Hide pins (P)" aria-label="Hide pins" aria-pressed="true">
+          <svg class="eye" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg class="eye-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 5.1A9.8 9.8 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-2.4 3.3M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18"/></svg>
+        </button>
+        <div class="pins-menu" role="group" aria-label="Which pins">
+          <button id="t-pins-open" aria-pressed="false" title="Hide the blue pins Claude has already fixed (and grey closed ones), keep the ones still to do"><i class="sw"></i>Hide fixed pins<i class="mini-pin" aria-hidden="true"></i></button>
+          <button id="t-pins-front" aria-pressed="false" title="Pins on the far side of the model are shown faded; this hides them instead"><i class="sw"></i>Hide pins behind the model</button>
+        </div>
+      </div>
     </div>
     <div id="asset-stats" class="stats"></div>
   </div>

@@ -188,18 +188,49 @@ button.tag.on { color: var(--molten); border-color: rgb(214 126 44 / 0.55); back
 .title-col > * { pointer-events: auto; }
 .title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
 #t-pins {
-  display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0;
+  position: relative; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0;
   background: var(--glass); backdrop-filter: blur(8px); color: var(--ash);
 }
-#t-pins[hidden] { display: none; }
+#pins-ctl { position: relative; z-index: 3; }
+#pins-ctl[hidden] { display: none; }
 #t-pins:hover { background: var(--soot-2); color: var(--bone); }
 #t-pins.on:hover { color: var(--molten); }
 #t-pins.on { color: var(--molten); }
 #t-pins svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 #t-pins .eye-off, #t-pins:not(.on) .eye { display: none; }
 #t-pins:not(.on) .eye-off { display: block; }
+/* A dot on the eye while some pins are filtered out. */
+#t-pins.filtered::after {
+  content: ""; position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--molten); box-shadow: 0 0 0 2px var(--soot);
+}
+/* Hovering the eye unfurls which pins to show, downwards. The top padding bridges the gap
+   so the pointer can travel from the eye to the menu without it folding back. Keyboard
+   focus opens it too; a click's focus does not, or it would stay open after. */
+.pins-menu {
+  position: absolute; top: 100%; left: 0; padding-top: 6px;
+  display: flex; flex-direction: column; align-items: stretch; gap: 2px;
+  clip-path: inset(0 0 100% 0); opacity: 0; pointer-events: none;
+  transition: clip-path 0.22s var(--ease), opacity 0.15s;
+}
+#pins-ctl:hover .pins-menu, #pins-ctl:has(:focus-visible) .pins-menu {
+  clip-path: inset(0 -12px -12px -12px); opacity: 1; pointer-events: auto;
+}
+.pins-menu button {
+  display: flex; align-items: center; gap: 7px; padding: 4px 10px 4px 8px; font-size: 12px; text-align: left;
+  background: var(--glass); backdrop-filter: blur(8px); color: var(--ash);
+}
+.pins-menu button:hover { color: var(--bone); }
+.pins-menu button.on { color: var(--molten); background: rgb(36 26 18 / 0.85); }
+.pins-menu .sw { width: 10px; height: 10px; border-radius: 3px; border: 1.5px solid currentColor; flex: none; opacity: 0.7; }
+.pins-menu button.on .sw { background: currentColor; opacity: 1; }
+/* A small blue pin, so the label points at the pins it hides. */
+.pins-menu .mini-pin { width: 9px; height: 9px; margin-left: 1px; border-radius: 50% 50% 50% 2px; transform: rotate(-45deg); background: var(--kiln); flex: none; }
+/* The note picked in the list keeps its pin through either filter. */
+#pins.open-only .pin:not(.open, .draft, .hl) { display: none; }
+#pins.front-only .pin.hidden-behind:not(.hl) { display: none; }
 /* The eye sits where the build phases start: they move over while it is there. */
-#stage:has(#t-pins:not([hidden])) #buildbar { left: 52px; }
+#stage:has(#pins-ctl:not([hidden])) #buildbar { left: 52px; }
 #asset-name { margin: 0; font-size: 18px; letter-spacing: -0.015em; text-shadow: 0 1px 8px rgb(0 0 0 / 0.5); }
 #stage[data-bg="light"] #asset-name { color: var(--ink); text-shadow: none; }
 .chips { display: flex; gap: 4px; flex-wrap: wrap; }

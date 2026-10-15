@@ -44,6 +44,7 @@ const state = {
   root: '', assets: [], byId: new Map(), batches: {},
   id: null, detail: null, variant: null, clientStats: null,
   tags: new Set(), noteFilter: 'active', pinsOn: prefs.pins ?? true,
+  pinsOpenOnly: !!prefs.pinsOpenOnly, pinsFrontOnly: !!prefs.pinsFrontOnly,
   pinning: false, draft: null, hl: null, editing: null, replying: null,
   compare: null, // { target: 'baseline' | variant label }
   work: null, // which models a kiln command is on: studiolib.work_view
@@ -92,6 +93,11 @@ function syncToolbar() {
   pins.setAttribute('aria-pressed', String(state.pinsOn));
   pins.setAttribute('aria-label', label);
   pins.title = `${label} (P)`;
+  pins.classList.toggle('filtered', state.pinsOn && (state.pinsOpenOnly || state.pinsFrontOnly));
+  for (const [id, on] of [['#t-pins-open', state.pinsOpenOnly], ['#t-pins-front', state.pinsFrontOnly]]) {
+    $(id).classList.toggle('on', on);
+    $(id).setAttribute('aria-pressed', String(on));
+  }
   $('#t-compare').classList.toggle('on', !!state.compare);
   $('#t-pin').classList.toggle('on', state.pinning);
   $('#t-bg').textContent = { dark: 'Dark', mid: 'Mid', light: 'Light' }[viewer.opts.bg];
@@ -110,6 +116,14 @@ $$('#views [data-view]').forEach((b) => (b.onclick = () => viewer.view(b.dataset
 $('#t-frame').onclick = () => viewer.frame();
 $('#t-bg').onclick = () => setOpt('bg', { dark: 'mid', mid: 'light', light: 'dark' }[viewer.opts.bg]);
 $('#t-pins').onclick = () => { state.pinsOn = !state.pinsOn; prefs.pins = state.pinsOn; savePrefs(); renderPins(); syncToolbar(); };
+// Picking which pins to see also brings them back if they were hidden.
+function setPinFilter(key, on) {
+  state[key] = on; prefs[key] = on;
+  if (on) state.pinsOn = prefs.pins = true;
+  savePrefs(); renderPins(); syncToolbar();
+}
+$('#t-pins-open').onclick = () => setPinFilter('pinsOpenOnly', !state.pinsOpenOnly);
+$('#t-pins-front').onclick = () => setPinFilter('pinsFrontOnly', !state.pinsFrontOnly);
 $('#t-compare').onclick = () => toggleCompare();
 $('#t-pin').onclick = () => (state.pinning ? cancelDraft() : startPin());
 $('#t-general').onclick = () => startGeneral();
@@ -475,7 +489,9 @@ function renderPins() {
   box.innerHTML = '';
   const pinned = state.detail ? shownNotes().filter((n) => n.anchor) : [];
   // The eye only appears once there is a pin on the model to hide.
-  $('#t-pins').hidden = !pinned.length;
+  $('#pins-ctl').hidden = !pinned.length;
+  box.classList.toggle('open-only', state.pinsOpenOnly);
+  box.classList.toggle('front-only', state.pinsFrontOnly);
   if (!state.detail) return;
   const notes = state.pinsOn ? pinned : [];
   for (const n of notes) {
@@ -1338,7 +1354,7 @@ document.addEventListener('keydown', (e) => {
   else if (lower === 'g') setOpt('grid', !viewer.opts.grid);
   else if (lower === 'b') setOpt('bounds', !viewer.opts.bounds);
   else if (lower === 'k' && state.clientStats?.skinned) setOpt('skeleton', !viewer.opts.skeleton);
-  else if (lower === 'p' && !$('#t-pins').hidden) $('#t-pins').click();
+  else if (lower === 'p' && !$('#pins-ctl').hidden) $('#t-pins').click();
   else if (lower === 'c') toggleCompare();
   else if (lower === 'n') { e.preventDefault(); state.pinning ? cancelDraft() : startPin(); }
   else if (lower === 'm') { e.preventDefault(); startGeneral(); }
