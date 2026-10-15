@@ -284,11 +284,15 @@ def cmd_show(args) -> None:
             print(f"   camera (Blender) at {_fmt3(cam.get('position_blender'))} looking at {_fmt3(cam.get('target_blender'))}")
         if n.get("shot"):
             print(f"   screenshot: {project.root / n['shot']}")
+        if n.get("detail"):
+            print(f"   close-up of the pin: {project.root / n['detail']}")
         for r in n.get("thread", []):
             st = f" -> {r['status']}" if r.get("status") else ""
             print(f"   > {r['by']} ({r['at']}{st}): {r['text']}")
             if r.get("shot"):
                 print(f"     screenshot: {project.root / r['shot']}")
+            if r.get("detail"):
+                print(f"     close-up: {project.root / r['detail']}")
 
 
 def cmd_history(args) -> None:

@@ -506,6 +506,11 @@ dialog form { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12
 #lightbox figure > div { flex: 1; min-width: 0; }
 #lightbox img { max-width: 100%; max-height: 78vh; border-radius: 8px; display: block; }
 #lightbox:has(.lb-note) img { max-height: 58vh; }
+#lightbox .lb-pic { position: relative; }
+#lightbox img.inset {
+  position: absolute; right: 8px; top: 8px; width: 32%; max-width: 220px; cursor: zoom-in;
+  border: 2px solid var(--line-strong); box-shadow: 0 4px 16px rgb(0 0 0 / 0.5);
+}
 #lightbox .lb-note {
   margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line);
   max-height: 22vh; overflow: auto;

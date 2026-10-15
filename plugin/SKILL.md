@@ -982,7 +982,7 @@ checks your fixes. Load `references/studio.md` and follow it.
 1. Run `studio.py notes` (or take the asset given as argument).
 2. Notes waiting → act on them, one asset per pass: `studio.py work start <asset>...
    --label "acting on notes"` with the assets you will take, `studio.py show <asset>`,
-   read each screenshot, change the model, re-export to the same file,
+   read each note's close-up and screenshot, change the model, re-export to the same file,
    `studio.py reply <asset> <note> "…" --status addressed`, then `studio.py work next`.
    Never mark one resolved.
 3. Nothing waiting → start Studio (`studio.py [project]`), give the URL, stop.

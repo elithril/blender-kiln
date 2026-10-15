@@ -127,9 +127,13 @@ the list shows the batch's range on its folder header.
    It prints each model file (size, triangles, Blender dimensions), the `.blend`, the
    log, and every open or addressed note: its text, the pinned point in **Blender
    coordinates** (metres, Z up, front −Y) with face normal, the object, mesh and
-   material hit, a rough region ("top, front (−Y), +X side"), the camera, the screenshot
-   path, and the thread. **Read each screenshot** — "this bit" means nothing without
-   it; the ringed spot is the pin. Read earlier replies before redoing something that
+   material hit, a rough region ("top, front (−Y), +X side"), the camera, the pictures,
+   and the thread. **Read the pictures** — "this bit" means nothing without them. A pin
+   has two: the **close-up** (`close-up of the pin:`), rendered nearer along the user's
+   line of sight, to see what is at the spot — read it first; and the **screenshot**,
+   the view cropped to the model, to see where it is. Four orange ticks point at the
+   pin and leave the spot itself uncovered. A whole-model note has the screenshot only,
+   and older notes a full-view JPEG with the spot ringed. Read earlier replies before redoing something that
    was already tried. A note "made on an earlier version" was pinned before the last
    export: trust the object and material names over the exact point.
 
@@ -238,7 +242,8 @@ first folder holding `.kiln-studio/`); pass `--root PROJECT` from elsewhere.
   the note pins (there once the model has one); preset views; animation clips with a
   scrubber; **Compare**: the previous version or another stage side by side, one camera
   for both, size and triangle change shown.
-- **Right:** Notes (pin or whole-model, statuses, threads, before/after shots,
+- **Right:** Notes (pin or whole-model, statuses, threads, before/after shots — the
+  close-ups on the card, the view with its close-up in the corner when enlarged,
   "Looks right" / "Not yet"), Checks (§ 3: each finding, how to fix it, Ask Claude), Details (stages, stats, textures, organise,
   previous version, side files and the log), History (every version seen with its render,
   size and triangle change, the build's phases, and every note and reply).
@@ -247,8 +252,8 @@ first folder holding `.kiln-studio/`); pass `--root PROJECT` from elsewhere.
   and its progress above the list; a toast as it moves from one model to the next.
 
 Only one previous copy of a model is ever kept. The record of what a model looked like
-at each step is the screenshot on each note and the version renders — a few tens of
-kilobytes each, not a copy of the model.
+at each step is the pictures on each note and the version renders — WebP, 10 to 20
+kilobytes each (JPEG where the browser cannot write WebP), not a copy of the model.
 
 ## 8. Storage
 
@@ -261,7 +266,7 @@ PROJECT/.kiln-studio/
 │   ├── notes.json                notes and their threads
 │   ├── history.json              versions seen + changelog
 │   ├── live.json                 the last build: its phases, step by step
-│   └── shots/                    one per note, one per "addressed" reply
+│   └── shots/                    per note and per "addressed" reply: the view, and a pin's close-up (_detail)
 ├── baseline/<id>/                the one previous copy (git-ignored)
 └── cache/                        version renders, server log (git-ignored)
 ```

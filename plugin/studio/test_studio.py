@@ -30,6 +30,7 @@ import studio  # noqa: E402
 import studiolib as sl  # noqa: E402
 
 JPEG = b"\xff\xd8\xff\xe0" + b"\0" * 16
+WEBP = b"RIFF\x10\0\0\0WEBPVP8 " + b"\0" * 16
 
 
 def png(w: int, h: int) -> bytes:
@@ -208,6 +209,27 @@ class Notes(Base):
             sl.reply(self.p, self.a, n["id"], "done", by="claude", status="resolved")
         sl.reply(self.p, self.a, n["id"], "", by="user", status="resolved")
         self.assertEqual(sl.load_notes(self.p, self.a.id)[0]["status"], "resolved")
+
+    def test_view_and_close_up(self) -> None:
+        view = {"crop": [0.2, -0.5, 0.8, 0.9], "detail": {"position": [0, 1, 2], "target": [0, 1, 0], "fov": 35},
+                "junk": "<script>"}
+        n = sl.add_note(self.p, self.a, "dent here", anchor={"point": [0, 1, 0]}, view=view, shot=WEBP, detail=WEBP)
+        self.assertTrue(n["shot"].endswith(f"{n['id']}.webp"))
+        self.assertTrue(n["detail"].endswith(f"{n['id']}_detail.webp"))
+        self.assertEqual(n["view"], {"crop": [0.2, 0.0, 0.8, 0.9],
+                                     "detail": {"position": [0, 1, 2], "target": [0, 1, 0], "fov": 35.0}})
+        self.assertIsNone(sl.clean_view({"crop": [0.5, 0, 0.4, 1], "detail": {"fov": 500}}))
+        r = sl.reply(self.p, self.a, n["id"], "filled", by="claude", status="addressed")
+        sl.set_reply_shot(self.p, self.a.id, n["id"], r["id"], WEBP, WEBP)
+        [got] = sl.load_notes(self.p, self.a.id)
+        self.assertTrue(got["thread"][0]["detail"].endswith("_detail.webp"))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            studio.main(["show", "chair", "--root", str(self.tmp)])
+        self.assertIn("close-up of the pin:", out.getvalue())
+        self.assertIn("close-up:", out.getvalue())
+        sl.delete_note(self.p, self.a.id, n["id"])
+        self.assertEqual(list((self.p.asset_dir(self.a.id) / "shots").iterdir()), [])
 
     def test_delete_removes_shots(self) -> None:
         n = sl.add_note(self.p, self.a, "x", shot=JPEG)
@@ -647,6 +669,15 @@ class Api(Base):
         self.assertEqual(code, 200)
         code, data = self.req("GET", "/api/assets")
         self.assertEqual((data["assets"][0]["category"], data["assets"][0]["tags"]), ("props", ["wood"]))
+        webp = "data:image/webp;base64," + base64.b64encode(WEBP).decode()
+        code, n2 = self.req("POST", "/api/asset/generated-assets%2Fcrate/notes",
+                            {"text": "dent", "anchor": {"point": [0, 0.5, 0]}, "shot": webp, "detail": webp,
+                             "view": {"crop": [0.1, 0.1, 0.9, 0.9]}})
+        self.assertEqual(code, 200, n2)
+        self.assertTrue(n2["detail"].endswith("_detail.webp"))
+        self.assertEqual(n2["view"], {"crop": [0.1, 0.1, 0.9, 0.9]})
+        code, _ = self.req("POST", "/api/asset/generated-assets%2Fcrate/notes", {"text": "x", "detail": "data:image/webp;base64,AAAA"})
+        self.assertEqual(code, 400)
         code, _ = self.req("POST", "/api/asset/generated-assets%2Fcrate/notes", {"text": "  "})
         self.assertEqual(code, 400)
         code, _ = self.req("POST", "/api/asset/generated-assets%2Fcrate/notes", {"text": "x", "shot": "data:image/jpeg;base64,AAAA"})

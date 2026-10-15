@@ -318,12 +318,14 @@ def make_handler(studio: Studio, port_ref: list[int]):
                 a = studio.asset(parts[2])
                 rest = parts[3:]
                 shot = _decode_image(body["shot"]) if body.get("shot") else None
+                detail = _decode_image(body["detail"]) if body.get("detail") else None
                 if method == "POST" and rest == ["notes"]:
                     text = str(body.get("text", "")).strip()
                     if not text:
                         raise ValueError("a note needs text")
                     note = sl.add_note(project, a, text, variant=body.get("variant"),
-                                       anchor=body.get("anchor"), camera=body.get("camera"), shot=shot)
+                                       anchor=body.get("anchor"), camera=body.get("camera"),
+                                       view=body.get("view"), shot=shot, detail=detail)
                     return self._json(note)
                 if len(rest) >= 2 and rest[0] == "notes":
                     nid = rest[1]
@@ -341,7 +343,7 @@ def make_handler(studio: Studio, port_ref: list[int]):
                     if method == "POST" and len(rest) == 5 and rest[2] == "thread" and rest[4] == "shot":
                         if not sl.REPLY_ID_RE.match(rest[3]) or not shot:
                             raise ValueError("bad reply id or no shot")
-                        return self._json({"shot": sl.set_reply_shot(project, a.id, nid, rest[3], shot)})
+                        return self._json({"shot": sl.set_reply_shot(project, a.id, nid, rest[3], shot, detail)})
                 if method == "PUT" and rest == ["meta"]:
                     tags = body.get("tags")
                     return self._json(sl.set_meta(project, a.id, category=body.get("category"),

@@ -514,23 +514,55 @@ export class Viewer {
     r.setScissorTest(false);
   }
 
-  // A JPEG of the view, background included, with an optional ring on a point.
-  screenshot({ ring = null, maxWidth = 1400, quality = 0.88 } = {}) {
+  // A note's pictures, as the user sees the model now (shading, wireframe, pose):
+  // `shot`, the view cropped to the model (and the pin), and for a pin `detail`, a
+  // close-up rendered nearer along the user's line of sight to it, the spot marked
+  // without being covered. `view` is what an "after" render needs to frame both again.
+  screenshot({ pin = null } = {}) {
     this.draw();
     const src = this.renderer.domElement;
-    const scale = Math.min(1, maxWidth / src.width);
-    const c = document.createElement('canvas');
-    c.width = Math.round(src.width * scale);
-    c.height = Math.round(src.height * scale);
-    const g = c.getContext('2d');
-    paintBackground(g, c.width, c.height, this.opts.bg);
-    g.drawImage(src, 0, 0, c.width, c.height);
-    if (ring) {
-      const s = this.toScreen(ring);
-      const k = c.width / this.size.w;
-      drawRing(g, s.x * k, s.y * k, Math.max(14, c.width / 60));
+    const v = this.viewRect(), k = src.width / this.size.w;
+    const crop = this.a.model ? modelCrop(this.a.box, this.camera, pin) : [0, 0, 1, 1];
+    const full = document.createElement('canvas');
+    full.width = Math.round(v.w * k); full.height = Math.round(v.h * k);
+    const g = full.getContext('2d');
+    paintBackground(g, full.width, full.height, this.opts.bg);
+    g.drawImage(src, v.x * k, v.y * k, full.width, full.height, 0, 0, full.width, full.height);
+    let mark = null;
+    if (pin) {
+      const q = new THREE.Vector3().fromArray(pin).project(this.camera);
+      mark = [(q.x + 1) / 2, (1 - q.y) / 2];
     }
-    return c.toDataURL('image/jpeg', quality);
+    const view = { crop };
+    const out = { shot: finishShot(full, { crop, max: SHOT_MAX, mark }), view };
+    if (pin && this.a.model) {
+      const cam = closeUpCamera(this.camera, pin, this.a.box);
+      view.detail = { position: r4(cam.position.toArray()), target: r4(pin), fov: +cam.fov.toFixed(3) };
+      cam.aspect = 1;
+      cam.updateProjectionMatrix();
+      // One square frame in the corner of the canvas, read back at once, then the view
+      // is drawn again: nothing shows on screen.
+      const side = Math.min(src.width, src.height), r = this.renderer;
+      r.setScissorTest(true);
+      r.setViewport(0, 0, side / r.getPixelRatio(), side / r.getPixelRatio());
+      r.setScissor(0, 0, side / r.getPixelRatio(), side / r.getPixelRatio());
+      r.clear();
+      r.render(this.a.scene, cam);
+      if (this.opts.wire) {
+        this.a.scene.overrideMaterial = this.wireMat;
+        r.render(this.a.scene, cam);
+        this.a.scene.overrideMaterial = null;
+      }
+      r.setScissorTest(false);
+      const sq = document.createElement('canvas');
+      sq.width = sq.height = side;
+      const gs = sq.getContext('2d');
+      paintBackground(gs, side, side, this.opts.bg);
+      gs.drawImage(src, 0, src.height - side, side, side, 0, 0, side, side);
+      out.detail = finishShot(sq, { max: DETAIL_MAX, mark: [0.5, 0.5], quality: 0.82 });
+      this.draw();
+    }
+    return out;
   }
 
   dispose() {
@@ -549,14 +581,79 @@ export function paintBackground(g, w, h, bg) {
   g.fillRect(0, 0, w, h);
 }
 
-function drawRing(g, x, y, r) {
-  g.lineWidth = Math.max(3, r / 5);
-  g.strokeStyle = 'rgba(20,13,7,0.85)';
-  g.beginPath(); g.arc(x, y, r + g.lineWidth * 0.6, 0, Math.PI * 2); g.stroke();
-  g.strokeStyle = '#ff5a14';
-  g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke();
-  g.fillStyle = '#ffb547';
-  g.beginPath(); g.arc(x, y, Math.max(2.5, r / 6), 0, Math.PI * 2); g.fill();
+// ── note pictures ──────────────────────────────────────────────────────────
+// Small enough to keep (WebP, ~10-20 kB), sharp enough for Claude to read the spot.
+
+const SHOT_MAX = 1024;   // the view, long edge
+const DETAIL_MAX = 640;  // the close-up, square
+
+// Four ticks pointing at the spot from around it: the spot itself stays visible.
+function drawMark(g, x, y, r) {
+  const gap = r * 0.45, len = r * 0.55;
+  const ticks = (w, color) => {
+    g.lineWidth = w; g.strokeStyle = color; g.lineCap = 'round';
+    g.beginPath();
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      g.moveTo(x + dx * gap, y + dy * gap);
+      g.lineTo(x + dx * (gap + len), y + dy * (gap + len));
+    }
+    g.stroke();
+  };
+  ticks(Math.max(4, r / 5) + 3, 'rgba(20,13,7,0.85)');
+  ticks(Math.max(4, r / 5), '#ff5a14');
+}
+
+// Crop (fractions of the view) and scale a picture, mark the spot, and encode it:
+// WebP, or JPEG where the browser cannot write WebP (Safari gives a PNG back).
+function finishShot(src, { crop = [0, 0, 1, 1], max, mark = null, quality = 0.8 }) {
+  const sx = crop[0] * src.width, sy = crop[1] * src.height;
+  const sw = (crop[2] - crop[0]) * src.width, sh = (crop[3] - crop[1]) * src.height;
+  const scale = Math.min(1, max / Math.max(sw, sh));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(sw * scale)); c.height = Math.max(1, Math.round(sh * scale));
+  const g = c.getContext('2d');
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(src, sx, sy, sw, sh, 0, 0, c.width, c.height);
+  if (mark) {
+    const x = (mark[0] * src.width - sx) * scale, y = (mark[1] * src.height - sy) * scale;
+    drawMark(g, x, y, Math.max(14, Math.max(c.width, c.height) / 34));
+  }
+  const webp = c.toDataURL('image/webp', quality);
+  return webp.startsWith('data:image/webp') ? webp : c.toDataURL('image/jpeg', Math.min(0.9, quality + 0.05));
+}
+
+// The model's outline on screen (and the pin), with a margin, as fractions of the view.
+function modelCrop(box, camera, pin) {
+  const pts = [];
+  for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) pts.push(new THREE.Vector3(x, y, z));
+  if (pin) pts.push(new THREE.Vector3().fromArray(pin));
+  let x0 = 1, y0 = 1, x1 = 0, y1 = 0;
+  for (const p of pts) {
+    const q = p.project(camera);
+    if (q.z > 1) return [0, 0, 1, 1];   // a corner behind the camera: inside the model
+    const x = (q.x + 1) / 2, y = (1 - q.y) / 2;
+    x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+  }
+  const m = 0.06 * Math.max(x1 - x0, y1 - y0) + 0.02;
+  const c = [x0 - m, y0 - m, x1 + m, y1 + m].map((v) => Math.min(1, Math.max(0, v)));
+  // Next to nothing to cut: keep the whole view.
+  return (c[2] - c[0]) * (c[3] - c[1]) > 0.8 ? [0, 0, 1, 1] : c.map((v) => +v.toFixed(4));
+}
+
+// Nearer the pin along the line the user looked at it: what they saw past stays clear.
+// It spans 30% of the model's size, or 60% of what the view shows there if zoomed in.
+function closeUpCamera(camera, pin, box) {
+  const p = new THREE.Vector3().fromArray(pin);
+  const u = p.clone().sub(camera.position);
+  const dPin = u.length();
+  u.normalize();
+  const half = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+  const span = Math.min(0.3 * box.getSize(new THREE.Vector3()).length(), 0.6 * 2 * dPin * half);
+  const dist = span / 2 / half;
+  const cam = new THREE.PerspectiveCamera(camera.fov, 1, Math.max(dist / 100, 0.0005), dist * 200);
+  cam.position.copy(p).addScaledVector(u, -dist);
+  cam.lookAt(p);
+  return cam;
 }
 
 export function fmtM(m) {
@@ -579,8 +676,51 @@ export class Offscreen {
   }
 
   // camera: a saved note camera, or null to frame three-quarter front.
-  async render(url, ext, { w = 320, h = 240, camera = null, ring = null, type = 'image/webp', quality = 0.82, bg = 'dark' } = {}) {
+  async render(url, ext, { w = 320, h = 240, camera = null, type = 'image/webp', quality = 0.82, bg = 'dark' } = {}) {
+    const c = await this.draw(url, ext, { w, h, camera, bg });
+    return c.toDataURL(type, quality);
+  }
+
+  // A note's "after": its view and close-up again, framed as the note's own (studio's
+  // screenshot()), of the version Claude exported. Without a saved view (older notes),
+  // the whole view as it was.
+  async noteShots(url, ext, note, { bg = 'dark' } = {}) {
+    const cam = note.camera, view = note.view || {}, pin = note.anchor?.point || null;
+    const crop = view.crop || [0, 0, 1, 1];
+    const aspect = cam.aspect || 4 / 3;
+    // Large enough that the cropped part still makes SHOT_MAX pixels.
+    const w = Math.min(4096, Math.ceil(SHOT_MAX / Math.max(crop[2] - crop[0], (crop[3] - crop[1]) / aspect)));
     const loaded = await loadModel(this.loaders, url, ext);
+    try {
+      const full = this.paint(loaded, w, Math.round(w / aspect), cam, bg);
+      let mark = null;
+      if (pin) {
+        const q = new THREE.Vector3().fromArray(pin).project(this.lastCamera);
+        mark = [(q.x + 1) / 2, (1 - q.y) / 2];
+      }
+      const out = { shot: finishShot(full, { crop, max: SHOT_MAX, mark }) };
+      if (pin && view.detail) {
+        const sq = this.paint(loaded, DETAIL_MAX, DETAIL_MAX, { ...view.detail, aspect: 1 }, bg);
+        out.detail = finishShot(sq, { max: DETAIL_MAX, mark: [0.5, 0.5], quality: 0.82 });
+      }
+      return out;
+    } finally {
+      disposeTree(loaded.root);
+      this.renderer.renderLists.dispose();
+    }
+  }
+
+  async draw(url, ext, { w, h, camera, bg }) {
+    const loaded = await loadModel(this.loaders, url, ext);
+    try {
+      return this.paint(loaded, w, h, camera, bg);
+    } finally {
+      disposeTree(loaded.root);
+      this.renderer.renderLists.dispose();
+    }
+  }
+
+  paint(loaded, w, h, camera, bg) {
     const scene = new THREE.Scene();
     scene.environment = this.env;
     const key = new THREE.DirectionalLight(0xfff1e0, 1.1);
@@ -604,20 +744,15 @@ export class Offscreen {
       cam.near = Math.max(dist / 1000, 0.001); cam.far = dist * 100;
     }
     cam.updateProjectionMatrix();
+    this.lastCamera = cam;
     this.renderer.setSize(w, h, false);
     this.renderer.render(scene, cam);
+    scene.remove(loaded.root);   // the model is drawn again for the close-up
     const c = document.createElement('canvas');
     c.width = w; c.height = h;
     const g = c.getContext('2d');
     paintBackground(g, w, h, bg);
     g.drawImage(this.canvas, 0, 0);
-    if (ring) {
-      const q = new THREE.Vector3().fromArray(ring).project(cam);
-      drawRing(g, ((q.x + 1) / 2) * w, ((1 - q.y) / 2) * h, Math.max(14, w / 60));
-    }
-    const url_ = c.toDataURL(type, quality);
-    disposeTree(loaded.root);
-    this.renderer.renderLists.dispose();
-    return url_;
+    return c;
   }
 }

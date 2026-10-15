@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — Kiln Studio: note pictures, a third of the size and sharper on the spot
+
+- A pinned note keeps two pictures instead of one: the view, cropped to the model and
+  the pin (1024 px at most), and a 640 px close-up rendered nearer the pin along the
+  line the user looked at it, so a detail pinned from far away is still readable. WebP,
+  JPEG where the browser cannot write WebP (Safari): 26 kB for both against 60 kB for the
+  old 1400 px JPEG, measured on the same view, and about half the image tokens when
+  Claude reads them. A whole-model note keeps the cropped view only (14 kB).
+- The pin is marked by four ticks around it, not a ringed dot on it: the spot stays visible.
+- The note stores the crop and the close-up's camera (`view`), so the "after" render
+  frames both pictures the same way. The card shows the close-ups; enlarged, each view
+  has its close-up in the corner, and a click swaps them. `studio.py show` prints the
+  close-up's path. Notes made before keep their single JPEG. `test_studio.py`: 44 tests.
+
 ### Changed — Kiln Studio: Checks in plain words, with the fix
 
 - Every check says what it found and why it matters ("Floats 0.200 m above the ground:

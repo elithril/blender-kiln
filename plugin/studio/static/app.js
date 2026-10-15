@@ -139,7 +139,12 @@ function confirmDialog(text, ok = 'OK') {
 // extra: trusted HTML shown under the images (already escaped by the caller).
 function lightbox(items, extra = '') {
   const fig = $('#lightbox figure');
-  fig.innerHTML = items.map((it) => `<div><img src="${esc(it.src)}" alt=""><figcaption>${esc(it.caption || '')}</figcaption></div>`).join('');
+  // An item's close-up sits in its corner; clicking either swaps them.
+  fig.innerHTML = items.map((it) => `<div class="lb-pic"><img src="${esc(it.src)}" alt="">${it.inset ? `<img class="inset" src="${esc(it.inset)}" alt="Close-up of the spot" title="Close-up: click to swap">` : ''}<figcaption>${esc(it.caption || '')}</figcaption></div>`).join('');
+  $$('img.inset', fig).forEach((x) => (x.onclick = () => {
+    const main = x.parentElement.querySelector('img:not(.inset)');
+    [main.src, x.src] = [x.src, main.src];
+  }));
   $('#lightbox .lb-extra').innerHTML = extra;
   $('#lightbox').showModal();
 }
@@ -583,11 +588,11 @@ async function saveNote() {
   const btn = $('#composer-save');
   btn.disabled = true;
   try {
-    // The view as it is now, the pin ringed: what the model looked like when you asked.
-    const shot = viewer.screenshot({ ring: draft.anchor?.point });
+    // The view as it is now, and for a pin a close-up of it: what you asked about.
+    const { shot, detail, view } = viewer.screenshot({ pin: draft.anchor?.point });
     const note = await assetApi(id, '/notes', {
       method: 'POST',
-      body: { text, variant: state.variant, anchor: draft.anchor, camera: viewer.cameraState(), shot },
+      body: { text, variant: state.variant, anchor: draft.anchor, camera: viewer.cameraState(), view, shot, detail },
     });
     cancelDraft();
     state.noteFilter = 'active';
@@ -665,8 +670,11 @@ function noteEl(n) {
   const waiting = lastAddressed && !lastAddressed.shot && d.pending.some((p) => p.reply === lastAddressed.id);
   const a = n.anchor;
   const shots = [];
-  if (n.shot) shots.push(`<figure><img src="${esc(fileUrl(n.shot))}" alt="The model when the note was made" data-shot="before"><figcaption>Before</figcaption></figure>`);
-  if (after) shots.push(`<figure><img src="${esc(fileUrl(after.shot))}" alt="The model after the change" data-shot="after"><figcaption>After</figcaption></figure>`);
+  // The close-ups when both have one (the spot is what the note is about); the views otherwise.
+  const close = n.detail && (!after || after.detail);
+  const pic = (x) => fileUrl(close ? x.detail : x.shot);
+  if (n.shot) shots.push(`<figure><img src="${esc(pic(n))}" alt="The model when the note was made" data-shot="before"><figcaption>Before${close ? ' · close-up' : ''}</figcaption></figure>`);
+  if (after) shots.push(`<figure><img src="${esc(pic(after))}" alt="The model after the change" data-shot="after"><figcaption>After${close ? ' · close-up' : ''}</figcaption></figure>`);
   else if (waiting) shots.push('<div class="pending">Rendering the after view…</div>');
   const el = document.createElement('article');
   el.className = `note ${n.status}${state.hl === n.id ? ' hl' : ''}`;
@@ -761,9 +769,10 @@ async function noteAction(n, act, el) {
 
 function openShots(n) {
   const items = [];
-  if (n.shot) items.push({ src: fileUrl(n.shot), caption: `Before · ${n.version?.variant || ''} ${n.version?.hash?.slice(0, 7) || ''} · ${ago(n.created)}` });
+  const inset = (x) => (x.detail ? fileUrl(x.detail) : null);
+  if (n.shot) items.push({ src: fileUrl(n.shot), inset: inset(n), caption: `Before · ${n.version?.variant || ''} ${n.version?.hash?.slice(0, 7) || ''} · ${ago(n.created)}` });
   const after = latestShot(n);
-  if (after) items.push({ src: fileUrl(after.shot), caption: `After · ${after.version?.variant || ''} ${after.version?.hash?.slice(0, 7) || ''} · ${ago(after.at)}` });
+  if (after) items.push({ src: fileUrl(after.shot), inset: inset(after), caption: `After · ${after.version?.variant || ''} ${after.version?.hash?.slice(0, 7) || ''} · ${ago(after.at)}` });
   if (!items.length) return;
   // The ask under the pictures, with the thread: what to look for in the after.
   const a = n.anchor;
@@ -1204,13 +1213,9 @@ function queueAfterShots(detail) {
     if (!n || !v || !n.camera) continue;
     queued.add(key);
     jobs.unshift({ key, run: async () => {
-      // The same view as the note's own screenshot, of the version Claude exported.
-      const aspect = n.camera.aspect || 4 / 3;
-      const w = 1200, h = Math.round(w / aspect);
-      const shot = await off().render(fileUrl(v.file, v.hash), v.ext, {
-        w, h, camera: n.camera, ring: n.anchor?.point, type: 'image/jpeg', quality: 0.88, bg: viewer.opts.bg,
-      });
-      await assetApi(detail.id, `/notes/${n.id}/thread/${p.reply}/shot`, { method: 'POST', body: { shot } });
+      // The note's own view and close-up, of the version Claude exported.
+      const shots = await off().noteShots(fileUrl(v.file, v.hash), v.ext, n, { bg: viewer.opts.bg });
+      await assetApi(detail.id, `/notes/${n.id}/thread/${p.reply}/shot`, { method: 'POST', body: shots });
     } });
   }
   pump();

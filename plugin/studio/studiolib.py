@@ -567,20 +567,49 @@ def save_shot(project: Project, asset_id: str, stem: str, data: bytes) -> str:
     return project.rel(p)
 
 
+def _nums(v, n: int, lo: float = -1e9, hi: float = 1e9) -> list[float] | None:
+    if not (isinstance(v, list) and len(v) == n and all(isinstance(x, (int, float)) for x in v)):
+        return None
+    return [min(hi, max(lo, float(x))) for x in v]
+
+
+def clean_view(view) -> dict | None:
+    """How a note's pictures were framed, so the "after" ones match: `crop`, the part of
+    the view kept (fractions: x0, y0, x1, y1), and for a pin `detail`, the close-up's
+    camera (glTF frame). Anything else the page sends is dropped."""
+    if not isinstance(view, dict):
+        return None
+    out: dict = {}
+    crop = _nums(view.get("crop"), 4, 0.0, 1.0)
+    if crop and crop[2] > crop[0] and crop[3] > crop[1]:
+        out["crop"] = crop
+    d = view.get("detail")
+    if isinstance(d, dict):
+        pos, tgt, fov = _nums(d.get("position"), 3), _nums(d.get("target"), 3), d.get("fov")
+        if pos and tgt and isinstance(fov, (int, float)) and 1 <= fov <= 120:
+            out["detail"] = {"position": pos, "target": tgt, "fov": float(fov)}
+    return out or None
+
+
 def add_note(project: Project, asset: Asset, text: str, *, variant: str | None = None,
-             anchor: dict | None = None, camera: dict | None = None,
-             shot: bytes | None = None, by: str = "user") -> dict:
-    """A new note on the variant as it is now. Also takes the n-1 baseline."""
+             anchor: dict | None = None, camera: dict | None = None, view: dict | None = None,
+             shot: bytes | None = None, detail: bytes | None = None, by: str = "user") -> dict:
+    """A new note on the variant as it is now. Also takes the n-1 baseline.
+
+    `shot` is the view (cropped to the model); `detail`, for a pin, a close-up of it."""
     project.ensure()
     v = asset.variant(variant)
     nid = new_id("n")
     note = {
         "id": nid, "kind": "pin" if anchor else "general", "text": text.strip(),
         "status": "open", "by": by, "created": now(), "version": version_ref(v),
-        "anchor": anchor, "camera": camera, "shot": None, "thread": [],
+        "anchor": anchor, "camera": camera, "view": clean_view(view), "shot": None, "detail": None,
+        "thread": [],
     }
     if shot:
         note["shot"] = save_shot(project, asset.id, nid, shot)
+    if detail:
+        note["detail"] = save_shot(project, asset.id, f"{nid}_detail", detail)
     with Lock(project):
         notes = load_notes(project, asset.id)
         notes.append(note)
@@ -631,13 +660,18 @@ def reply(project: Project, asset: Asset, note_id: str, text: str, *, by: str,
     return entry
 
 
-def set_reply_shot(project: Project, asset_id: str, note_id: str, reply_id: str, shot: bytes) -> str:
+def set_reply_shot(project: Project, asset_id: str, note_id: str, reply_id: str, shot: bytes,
+                   detail: bytes | None = None) -> str:
+    """The "after" of an addressed reply: the note's view and, for a pin, its close-up."""
     rel = save_shot(project, asset_id, f"{note_id}_{reply_id}", shot)
+    rel_d = save_shot(project, asset_id, f"{note_id}_{reply_id}_detail", detail) if detail else None
 
     def apply(n: dict) -> None:
         for r in n.get("thread", []):
             if r["id"] == reply_id:
                 r["shot"] = rel
+                if rel_d:
+                    r["detail"] = rel_d
                 return
         raise KeyError(f"no reply {reply_id}")
 
