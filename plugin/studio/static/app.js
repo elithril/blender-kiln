@@ -260,7 +260,7 @@ function itemEl(a) {
     a.variants.length > 1 ? `${a.variants.length} ${a.kiln ? 'stages' : 'files'}` : fmtB(v.size)].join(' · ');
   el.innerHTML = `<img class="thumb" alt="" ${a.thumb ? `src="${esc(fileUrl(a.thumb))}"` : ''}>
     <div style="min-width:0"><div class="name" title="${esc(a.id)}">${esc(a.name)}</div><div class="sub">${esc(sub)}</div></div>
-    <span class="badges">${workDot(dot)}${building && dot?.state !== 'active' ? '<span class="badge building" title="kiln is building it: open it to watch">●</span>' : ''}${changed ? '<span class="badge changed" title="Changed since you last looked">new</span>' : ''}${a.counts.open ? `<span class="badge open" title="Open notes">${a.counts.open}</span>` : ''}${a.counts.addressed ? `<span class="badge addressed" title="Addressed by Claude: check them">${a.counts.addressed}</span>` : ''}</span>`;
+    <span class="badges">${building && dot?.state !== 'active' ? '<span class="badge building" title="kiln is building it: open it to watch">●</span>' : ''}${changed ? '<span class="badge changed" title="Changed since you last looked">new</span>' : ''}${a.counts.open ? `<span class="badge open" title="Open notes">${a.counts.open}</span>` : ''}${a.counts.addressed ? `<span class="badge addressed" title="Addressed by Claude: check them">${a.counts.addressed}</span>` : ''}<span class="wslot">${workDot(dot)}</span></span>`;
   el.onclick = () => go(a.id);
   el.onkeydown = (e) => { if (e.key === 'Enter') go(a.id); };
   if (!a.thumb) thumbObserver.observe(el);
@@ -284,13 +284,16 @@ function workDot(d) {
 
 function renderWork() {
   const w = state.work;
+  // While a run shows, every row keeps the dot's slot at its right edge: dots in one
+  // column, chips that do not move as dots come and go.
+  $('#list').classList.toggle('working', !!w);
   for (const el of $$('#list .item')) {
     const d = w?.dots[el.dataset.id];
     const cur = $('.wdot', el);
     if (!d) { cur?.remove(); continue; }
     if (cur?.classList.contains(d.state)) continue;
     cur?.remove();
-    $('.badges', el).insertAdjacentHTML('afterbegin', workDot(d));
+    $('.wslot', el).innerHTML = workDot(d);
     $('.badge.building', el)?.toggleAttribute('hidden', d.state === 'active');
   }
   const bar = $('#work');

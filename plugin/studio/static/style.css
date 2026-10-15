@@ -144,7 +144,9 @@ button.tag.on { color: var(--molten); border-color: rgb(214 126 44 / 0.55); back
 @keyframes glow { 50% { opacity: 0.35; } }
 /* What kiln is working on: waiting (a ring), on it (breathing), done (green) until looked at. */
 .badges { align-items: center; }
-.wdot { flex: none; width: 8px; height: 8px; margin: 0 4px; border-radius: 50%; transition: background-color 0.4s, border-color 0.4s; }
+.wslot { display: none; flex: none; width: 16px; justify-content: flex-end; }
+#list.working .wslot { display: flex; }
+.wdot { flex: none; width: 8px; height: 8px; margin-right: 4px; border-radius: 50%; transition: background-color 0.4s, border-color 0.4s; }
 .wdot.queued { border: 1.5px solid var(--ash-dim); }
 .wdot.active { background: var(--molten); animation: breathe 1.8s ease-in-out infinite; }
 .wdot.done { background: var(--ok); }
