@@ -961,6 +961,8 @@ function renderChecks() {
   if (c.batch) blocks.push(batchBlock(c.batch));
   tab.innerHTML = blocks.join('');
   $$('[data-img]', tab).forEach((x) => (x.onclick = () => lightbox(JSON.parse(x.dataset.img))));
+  $$('[data-copy]', tab).forEach((x) => (x.onclick = () => copy(x.dataset.copy)));
+  $$('[data-ask]', tab).forEach((x) => (x.onclick = () => askClaude(x.dataset.ask)));
   $$('[data-photo-view]', tab).forEach((x) => (x.onclick = () => photoView(JSON.parse(x.dataset.photoView))));
   $$('[data-fv]', tab).forEach((x) => (x.onclick = () => {
     const run = x.closest('.run');
@@ -969,11 +971,24 @@ function renderChecks() {
   }));
 }
 
+// `/kiln optimize chair` in a fix: a command, copied on click.
+const withCmds = (t) => esc(t).replace(/`([^`]+)`/g, (_, c) => `<code class="cmd" data-copy="${c}" title="Copy, then run it in Claude Code">${c}</code>`);
+
 function checkRow(r) {
   let more = '';
-  if (r.entries?.length) more = `<ul class="sub">${r.entries.map((e) => `<li class="${e.level}">${esc(e.kind)}: ${esc(e.text)}</li>`).join('')}</ul>`;
+  if (r.entries?.length) more = `<ul class="sub">${r.entries.map((e) => `<li class="${e.level}">${esc(e.label || e.kind)}: ${esc(e.text)}</li>`).join('')}</ul>`;
   if (r.images?.length) more = `<ul class="sub">${r.images.map((i) => `<li>${esc(i.slots.join(', ') || i.name)} · ${i.w ? `${i.w}×${i.h}` : 'size unknown'} ${esc((i.format || '').toUpperCase())}</li>`).join('')}</ul>`;
-  return `<div class="check ${r.level}"><span class="lvl" title="${LEVEL_LABEL[r.level]}"></span><div><b>${esc(r.label)}</b><div class="txt">${esc(r.text)}</div>${more}</div></div>`;
+  const fix = r.level !== 'ok' && (r.fix || r.ask)
+    ? `<div class="fix">${r.fix ? `<span><b>How to fix:</b> ${withCmds(r.fix)}</span>` : ''}${r.ask ? `<button class="small" data-ask="${esc(r.ask)}" title="Write it as a note on this model, for /kiln studio to pick up">Ask Claude</button>` : ''}</div>`
+    : '';
+  return `<div class="check ${r.level}"><span class="lvl" title="${LEVEL_LABEL[r.level]}"></span><div><b>${esc(r.label)}</b><div class="txt">${esc(r.text)}</div>${fix}${more}</div></div>`;
+}
+
+// "Ask Claude" on a check: the whole-model note, written for the user to read and save.
+function askClaude(text) {
+  startGeneral();
+  $('#composer-text').value = text;
+  $('#composer-text').focus();
 }
 
 // The direction fidelity_check.py's camera looked from (its render(): Blender front is -Y,
@@ -1002,7 +1017,7 @@ function fidelityBlock(runs) {
       r.side_by_side && { src: fileUrl(r.side_by_side), caption: 'The photo and the render, side by side', which: 'side' }].filter(Boolean);
     const joints = (r.joints || []).map((j) => ({ src: fileUrl(j), caption: j.split('/').pop() }));
     const body = `
-      <div class="iou"><span class="big">${iou}</span><span class="dim">silhouette IoU · information, not a target${trend.length > 1 ? `<br>rounds ${trend.join(' → ')}` : ''}</span></div>
+      <div class="iou"><span class="big">${iou}</span><span class="dim">how closely the outline matches the photo (IoU: 1 is identical) · a guide, not a target${trend.length > 1 ? `<br>rounds ${trend.join(' → ')}` : ''}</span></div>
       <p class="meta">${esc(where)} · ${on}${r.reference_name ? ` · photo ${esc(r.reference_name)}` : ''}</p>
       ${imgs.length ? `<div class="seg small fv">${imgs.map((m, k) => `<button data-fv="${m.which}" class="${k ? '' : 'on'}">${m.which === 'overlay' ? 'Overlay' : 'Side by side'}</button>`).join('')}<button class="ghost" data-photo-view='${esc(JSON.stringify(r))}' title="Turn the model to where the photo's camera stood">Photo's view</button></div>
         <div class="fv-img">${imgs.map((m, k) => `<img src="${esc(m.src)}" alt="${esc(m.caption)}" data-which="${m.which}" ${k ? 'hidden' : ''} data-img='${esc(JSON.stringify(imgs.map(({ src, caption }) => ({ src, caption }))))}'>`).join('')}</div>` : ''}

@@ -482,8 +482,13 @@ class Checks(Base):
         # lightweight prop: 300–1.5K, 4,000 is past twice the top
         self.assertEqual(by["tris"]["level"], "warn")
         self.assertIn("lightweight prop", by["tris"]["text"])
+        self.assertIn("/kiln optimize crate", by["compression"]["fix"])
+        self.assertIn("/kiln optimize crate", by["textures"]["fix"])
+        for k in ("tris", "ground", "textures", "compression"):
+            self.assertTrue(by[k]["fix"] and by[k]["ask"], k)
+            self.assertNotRegex(by[k]["text"] + by[k]["fix"], r"rule \d|OPTIMIZE", k)
         self.assertEqual(by["ground"]["level"], "warn")
-        self.assertIn("floats 0.200 m", by["ground"]["text"])
+        self.assertIn("Floats 0.200 m above the ground", by["ground"]["text"])
         self.assertEqual(by["textures"]["level"], "warn")
         self.assertEqual(by["textures"]["images"][0]["slots"], ["baseColor"])
         self.assertEqual(by["compression"]["level"], "warn")
@@ -500,6 +505,14 @@ class Checks(Base):
         by = {r["key"]: r for r in checks.asset_checks(self.p, a)["health"]["final"]}
         for k in ("tris", "scale", "ground", "textures", "compression"):
             self.assertEqual(by[k]["level"], "ok", (k, by[k]["text"]))
+            self.assertIsNone(by[k]["fix"], k)
+
+    def test_desktop_targets_are_not_told_to_compress(self) -> None:
+        a = self._asset(tris=1000, image=png(2048, 2048))
+        (self.tmp / "generated-assets" / "crate" / "crate_log.md").write_text(LOG.replace("Target: glTF", "Target: Unity (FBX)"))
+        by = {r["key"]: r for r in checks.asset_checks(self.p, a)["health"]["final"]}
+        self.assertEqual((by["compression"]["level"], by["compression"]["fix"]), ("info", None))
+        self.assertEqual(by["textures"]["level"], "ok")   # 2048 is the cap for PC
 
     def test_size_against_the_expected_height_and_units(self) -> None:
         glb(self.tmp / "props" / "chair.glb", scale=2.0)
@@ -507,7 +520,7 @@ class Checks(Base):
         by_name = {a.name: a for a in sl.scan(self.p)}
         chair = {r["key"]: r for r in checks.health(self.p, by_name["chair"], by_name["chair"].primary)}
         self.assertEqual(chair["scale"]["level"], "info")
-        self.assertIn("a chair is usually ~0.85 m", chair["scale"]["text"])
+        self.assertIn("a chair is usually about 0.85 m", chair["scale"]["text"])
         pebble = {r["key"]: r for r in checks.health(self.p, by_name["pebble"], by_name["pebble"].primary)}
         self.assertEqual(pebble["scale"]["level"], "warn")
 

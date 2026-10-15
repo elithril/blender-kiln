@@ -58,8 +58,11 @@ def kfmt(n: float) -> str:
     return f"{int(n)}"
 
 
-def _check(key: str, label: str, level: str, text: str, **extra) -> dict:
-    return {"key": key, "label": label, "level": level, "text": text, **extra}
+def _check(key: str, label: str, level: str, text: str, *, fix: str | None = None,
+           ask: str | None = None, **extra) -> dict:
+    """One row: `text` says what is found, for the user; `fix`, how to put it right
+    (commands in backquotes); `ask`, the request a note to Claude would make."""
+    return {"key": key, "label": label, "level": level, "text": text, "fix": fix, "ask": ask, **extra}
 
 
 # ── the production log ───────────────────────────────────────────────────────
@@ -245,7 +248,8 @@ def _tris_check(tris: int, cfg: dict, name: str) -> dict:
     assumed = []
     if tier not in TIERS:
         if tier == "custom":
-            return _check("tris", "Triangles", "info", f"{tris:,} tris, custom tier: no range to compare with",
+            return _check("tris", "Triangles", "info",
+                          f"{tris:,} triangles. The detail tier is custom, so there is no usual range to compare with.",
                           value=tris)
         tier = "balanced"
         assumed.append("tier")
@@ -253,20 +257,30 @@ def _tris_check(tris: int, cfg: dict, name: str) -> dict:
         assumed.append("type")
     cat = category_of(cfg.get("type", ""))
     lo, hi = TIERS[tier][cat]
-    rng = f"{tier} {CATEGORY_LABEL[cat]} range {kfmt(lo)}–{kfmt(hi)}"
-    note = f" (assumed {' and '.join(assumed)}: no production log says)" if assumed else ""
+    what = f"a {tier} {CATEGORY_LABEL[cat]}"
+    t = f"{tris:,} triangle{'' if tris == 1 else 's'}"
+    rng = f"{kfmt(lo)}–{kfmt(hi)}"
+    note = (f" (No production log gives its {' or '.join(assumed)}: assumed {what}.)") if assumed else ""
     base = {"value": tris, "range": [lo, hi], "tier": tier, "category": cat}
+    ask = (f"Reduce the triangle count toward the usual range for {what} ({rng}) without changing "
+           f"the silhouette. Show me the result before keeping it.")
     if tris > 2 * hi:
         return _check("tris", "Triangles", "warn",
-                      f"{tris:,} tris, over twice the {rng} (+{tris / hi - 1:.0%}): propose a reduction, "
-                      f"never cut silently (rule 6){note}", **base)
+                      f"{t}: more than twice the usual {rng} for {what}. "
+                      f"Heavy to download and to draw.{note}",
+                      fix="Ask Claude to reduce it. You see the result before anything is kept.",
+                      ask=ask, **base)
     if tris > hi:
         return _check("tris", "Triangles", "info",
-                      f"{tris:,} tris, above the {rng} (+{tris / hi - 1:.0%}): fine where they show "
-                      f"(round parts, wires); report it, do not cut (rule 4){note}", **base)
+                      f"{t}: {tris / hi - 1:.0%} above the usual {rng} for {what}. "
+                      f"Fine if the extra detail shows, on curves or thin parts.{note}",
+                      fix="Nothing to do if it looks right. To lighten it, ask Claude for a reduction.",
+                      ask=ask, **base)
     if tris < lo:
-        return _check("tris", "Triangles", "info", f"{tris:,} tris, under the {rng}: fine if it reads{note}", **base)
-    return _check("tris", "Triangles", "ok", f"{tris:,} tris, within the {rng}{note}", **base)
+        return _check("tris", "Triangles", "info",
+                      f"{t}: fewer than the usual {rng} for {what}. Fine if it still looks right.{note}",
+                      **base)
+    return _check("tris", "Triangles", "ok", f"{t}: within the usual {rng} for {what}.{note}", **base)
 
 
 def _scale_checks(st: dict, cfg: dict, name: str, kiln: bool) -> list[dict]:
@@ -277,25 +291,38 @@ def _scale_checks(st: dict, cfg: dict, name: str, kiln: bool) -> list[dict]:
     out = []
     x, y, z = dims
     biggest = max(dims)
+    rescale = "Ask Claude to rescale it to its real-world size."
     if biggest < 0.01:
         out.append(_check("scale", "Size", "warn",
-                          f"{biggest * 1000:.1f} mm at its largest: probably exported in the wrong unit (1 unit = 1 m)"))
+                          f"{biggest * 1000:.1f} mm across at its largest: far too small. It was probably "
+                          f"exported in the wrong unit (Blender works in metres).",
+                          fix=rescale, ask=f"Rescale the model to its real-world size in metres: it is "
+                                          f"{biggest * 1000:.1f} mm across now."))
     elif biggest > 100:
         out.append(_check("scale", "Size", "warn",
-                          f"{biggest:,.0f} m at its largest: probably exported in the wrong unit (1 unit = 1 m)"))
+                          f"{biggest:,.0f} m across at its largest: far too big. It was probably exported "
+                          f"in the wrong unit (Blender works in metres).",
+                          fix=rescale, ask=f"Rescale the model to its real-world size in metres: it is "
+                                          f"{biggest:,.0f} m across now."))
     else:
         words = _words(name, cfg.get("type", ""))
         hit = next((k for k in EXPECTED_HEIGHT if k in words), None)
         if hit:
             want = EXPECTED_HEIGHT[hit]
             off = z / want - 1
-            level = "info" if abs(off) > 0.35 else "ok"
-            out.append(_check("scale", "Size", level,
-                              f"{z:.2f} m tall; a {hit} is usually ~{want:.2f} m"
-                              + (f" ({off:+.0%}): check the scale, or say why" if level == "info" else ""),
-                              value=z, expected=want))
+            if abs(off) > 0.35:
+                out.append(_check("scale", "Size", "info",
+                                  f"{z:.2f} m tall, while a {hit} is usually about {want:.2f} m ({off:+.0%}).",
+                                  fix="If that is not on purpose, ask Claude to rescale it.",
+                                  ask=f"Rescale to a realistic height: it is {z:.2f} m tall, and a {hit} "
+                                      f"is usually about {want:.2f} m.",
+                                  value=z, expected=want))
+            else:
+                out.append(_check("scale", "Size", "ok",
+                                  f"{z:.2f} m tall: about right for a {hit} (usually about {want:.2f} m).",
+                                  value=z, expected=want))
         else:
-            out.append(_check("scale", "Size", "ok", f"{x:.2f} × {y:.2f} × {z:.2f} m (X × Y × Z), 1 unit = 1 m"))
+            out.append(_check("scale", "Size", "ok", f"{x:.2f} × {y:.2f} × {z:.2f} m (width × depth × height)."))
     # kiln's convention: origin at the centre of the base, sitting on Z = 0 (glTF Y).
     zmin = bb["min"][1]
     tol = max(0.001, 0.01 * z)
@@ -303,76 +330,104 @@ def _scale_checks(st: dict, cfg: dict, name: str, kiln: bool) -> list[dict]:
     cy = -(bb["min"][2] + bb["max"][2]) / 2   # Blender Y is glTF -Z
     off_c = max(abs(cx) / max(x, 1e-6), abs(cy) / max(y, 1e-6))
     lvl = "warn" if kiln else "info"
+    ground = ("Move the model so its base sits on the ground (Z = 0), with the origin at the centre "
+              "of the base.")
     if abs(zmin) > tol:
         out.append(_check("ground", "On the ground", lvl,
-                          f"{'floats' if zmin > 0 else 'sinks'} {abs(zmin):.3f} m {'above' if zmin > 0 else 'below'} "
-                          f"Z = 0: kiln sets the origin at the centre of the base", value=zmin))
+                          f"Floats {zmin:.3f} m above the ground: it will hover when placed in a scene."
+                          if zmin > 0 else
+                          f"Sinks {-zmin:.3f} m below the ground: it will be partly buried when placed in a scene.",
+                          fix="Ask Claude to set its base on the ground.", ask=ground, value=zmin))
     elif off_c > 0.05:
         out.append(_check("ground", "On the ground", "info",
-                          f"on Z = 0, off-centre by X {cx:+.3f} m, Y {cy:+.3f} m: the origin is not under the middle"))
+                          f"On the ground, but its origin is off-centre (X {cx:+.3f} m, Y {cy:+.3f} m): "
+                          f"it will land beside the spot you place it on.",
+                          fix="Ask Claude to centre the origin under the model.",
+                          ask="Put the origin at the centre of the model's base, without moving it off the ground."))
     else:
-        out.append(_check("ground", "On the ground", "ok", "on Z = 0, centred on the origin"))
+        out.append(_check("ground", "On the ground", "ok", "Sits on the ground, centred on its origin."))
     return out
 
 
-def _texture_checks(ims: list[dict], cfg: dict, is_shipped: bool, label: str) -> list[dict]:
+def _target_name(cfg: dict) -> str:
+    t = cfg.get("target")
+    return t if t else "the web (assumed: no production log gives a target)"
+
+
+def _texture_checks(ims: list[dict], cfg: dict, is_shipped: bool, label: str, name: str) -> list[dict]:
     if not ims:
         return []
     cap = texture_cap(cfg.get("target", ""))
-    target = cfg.get("target") or "glTF (assumed)"
+    target = _target_name(cfg)
     known = [i for i in ims if i["w"]]
     over = [i for i in known if max(i["w"], i["h"]) > cap]
     biggest = max((max(i["w"], i["h"]) for i in known), default=0)
-    sizes = ", ".join(f"{i['w']}×{i['h']}" + (f" {'/'.join(i['slots'])}" if i["slots"] else "") for i in known[:6])
-    sizes += f", +{len(known) - 6}" if len(known) > 6 else ""
+    n = f"{len(ims)} image{'' if len(ims) == 1 else 's'}"
     out = []
     if not is_shipped:
         out.append(_check("textures", "Textures", "info",
-                          f"{len(ims)} image(s), largest {biggest}px — the cap ({cap}px for {target}) is checked "
-                          f"on _final; {label} is not the shipped file", images=ims))
+                          f"{n}, the largest {biggest}px. Sizes are checked on the final file; this is the "
+                          f"{label} stage, kept at full size on purpose.", images=ims))
     elif over:
         out.append(_check("textures", "Textures", "warn",
-                          f"{len(over)} of {len(ims)} image(s) above the {cap}px cap for {target}: {sizes}. "
-                          f"OPTIMIZE resizes them (2048 only for console/PC or close-ups)", images=ims))
+                          f"{len(over)} of {n} {'is' if len(over) == 1 else 'are'} larger than {cap}px, the usual limit for {target}. Larger "
+                          f"textures make the file slower to download and heavier on memory.",
+                          fix=f"Run `/kiln optimize {name}`: it resizes them to {cap}px.",
+                          ask=f"Resize the textures of the final file to {cap}px.", images=ims))
     else:
-        out.append(_check("textures", "Textures", "ok", f"{len(ims)} image(s), all within the {cap}px cap for {target}",
+        out.append(_check("textures", "Textures", "ok", f"{n}, all within {cap}px, the usual limit for {target}.",
                           images=ims))
     return out
 
 
-def _compression_checks(st: dict, ims: list[dict], is_shipped: bool, label: str) -> list[dict]:
+def _compression_checks(st: dict, ims: list[dict], cfg: dict, is_shipped: bool, label: str, name: str) -> list[dict]:
     ext = set(st.get("extensions", []))
     draco = "KHR_draco_mesh_compression" in ext
     meshopt = "EXT_meshopt_compression" in ext
     geo = "Draco" if draco else "meshopt" if meshopt else None
     fmts = {i["format"] for i in ims if i["format"]}
     light = fmts and fmts <= {"webp", "ktx2", "avif"}
+    extra = {"draco": draco, "meshopt": meshopt, "formats": sorted(fmts)}
     if not is_shipped:
         return [_check("compression", "Compression", "info",
-                       f"{label} keeps the uncompressed file on purpose; compression is checked on _final")]
-    parts, level = [], "ok"
-    if geo:
-        parts.append(f"geometry {geo}" + (" (the client needs a Draco decoder)" if draco else ""))
-    else:
-        level = "warn"
-        parts.append("geometry not compressed: OPTIMIZE adds Draco, as its own step (rule 20)")
-    if ims:
-        if light:
-            parts.append(f"textures {', '.join(sorted(f.upper() for f in fmts))}")
-        else:
-            level = "warn"
-            parts.append(f"textures {', '.join(sorted(f.upper() for f in fmts)) or 'of unknown format'}: OPTIMIZE converts them to WebP")
-    return [_check("compression", "Compression", level, "; ".join(parts), draco=draco, meshopt=meshopt,
-                   formats=sorted(fmts))]
+                       f"Not compressed, on purpose: only the final file is. This is the {label} stage.", **extra)]
+    heavy_tex = bool(ims) and not light
+    tex = ", ".join(sorted(f.upper() for f in fmts)) or "of an unknown format"
+    if geo and not heavy_tex:
+        done = f"The shape is compressed ({geo})" + (f", the textures are {tex}" if ims else "") + "."
+        if draco:
+            done += " Whatever shows it needs a Draco decoder (three.js: DRACOLoader)."
+        return [_check("compression", "Compression", "ok", done, **extra)]
+    if texture_cap(cfg.get("target", "")) == CAP_DESKTOP:
+        # Unity and Unreal import the file and pack it themselves: Draco and WebP are web formats.
+        return [_check("compression", "Compression", "info",
+                       f"Not compressed for the web, which is fine for {cfg.get('target')}: the engine packs it "
+                       f"on import.", **extra)]
+    parts = []
+    if not geo:
+        parts.append("The shape is not compressed, so the file is bigger than it needs to be on the web "
+                     "(often 5 to 10 times).")
+    if heavy_tex:
+        parts.append(f"The textures are {tex}; WebP is usually several times smaller.")
+    return [_check("compression", "Compression", "warn", " ".join(parts),
+                   fix=f"Run `/kiln optimize {name}`: it compresses the file without changing how it looks.",
+                   ask="Optimize the final file for the web: textures to WebP, then Draco compression, "
+                       "as separate steps.", **extra)]
+
+
+LICENCE_KIND = {"non-commercial": "not for commercial use", "attribution required": "credit the author",
+                "free": "free to use", "check the terms": "read the terms"}
 
 
 def licence_check(log: dict, has_log: bool) -> dict:
     if not has_log:
-        return _check("licence", "Licences", "info", "no production log beside the model: licences unknown")
+        return _check("licence", "Licences", "info",
+                      "Unknown: there is no production log next to the model to say where its parts came from.",
+                      fix="If it uses anything downloaded, check those licences before you publish it.")
     lines = [b for b in log["sections"].get("licenses", log["sections"].get("licences", []))
              if not re.match(r"^\s*(none|n/?a|-)\s*$", b, re.I)]
     if not lines:
-        return _check("licence", "Licences", "info", "the log records no licence")
+        return _check("licence", "Licences", "info", "The production log lists no outside sources.")
     entries, level = [], "ok"
     for b in lines:
         if re.search(r"\bNC\b|non-?commercial", b, re.I):
@@ -383,10 +438,18 @@ def licence_check(log: dict, has_log: bool) -> dict:
             kind, lv = "free", "ok"
         else:
             kind, lv = "check the terms", "info"
-        entries.append({"text": b, "kind": kind, "level": lv})
+        entries.append({"text": b, "kind": kind, "label": LICENCE_KIND[kind], "level": lv})
         level = max(level, lv, key=RANK.get)
-    head = {"ok": "free to use", "info": "credit or terms needed", "warn": "non-commercial use only"}[level]
-    return _check("licence", "Licences", level, f"{len(entries)} source(s), {head}", entries=entries)
+    n = f"{len(entries)} outside source{'' if len(entries) == 1 else 's'}"
+    if level == "warn":
+        return _check("licence", "Licences", "warn", f"{n}, some not for commercial use.",
+                      fix="Keep it out of anything you sell, or ask Claude to replace those parts.",
+                      ask="Replace the non-commercial parts of this model with free (CC0) ones.", entries=entries)
+    if level == "info":
+        return _check("licence", "Licences", "info", f"{n}: some need a credit or have terms to read.",
+                      fix="Credit the authors listed below wherever you publish the model, and read any terms marked.",
+                      entries=entries)
+    return _check("licence", "Licences", "ok", f"{n}, all free to use.", entries=entries)
 
 
 _health_cache: dict[tuple, list[dict]] = {}
@@ -409,9 +472,12 @@ def health(project: sl.Project, asset: sl.Asset, v: sl.Variant, log: dict | None
     out: list[dict] = []
     st = sl.variant_stats(v)
     if st is None:
-        out.append(_check("format", "Format", "info", f"{v.path.suffix.upper().lstrip('.')}: Studio reads stats from glTF files only"))
+        out.append(_check("format", "Format", "info",
+                          f"{v.path.suffix.upper().lstrip('.')} file: Studio checks glTF and GLB files only.",
+                          fix=f"For the checks, ask Claude for a GLB copy: `/kiln convert {asset.name}`."))
     elif "error" in st:
-        out.append(_check("format", "Format", "warn", f"could not read the file: {st['error']}"))
+        out.append(_check("format", "Format", "warn", f"Studio could not read the file ({st['error']}).",
+                          fix=f"Export it again from Blender, or have Claude look at it: `/kiln inspect {asset.name}`."))
     else:
         out.append(_tris_check(st["tris"], cfg, asset.name))
         out += _scale_checks(st, cfg, asset.name, asset.kiln)
@@ -419,8 +485,8 @@ def health(project: sl.Project, asset: sl.Asset, v: sl.Variant, log: dict | None
             ims = images(project, v.path, sl.read_gltf_json(v.path))
         except (OSError, ValueError, KeyError, IndexError, TypeError):
             ims = []
-        out += _texture_checks(ims, cfg, is_shipped, v.label)
-        out += _compression_checks(st, ims, is_shipped, v.label)
+        out += _texture_checks(ims, cfg, is_shipped, v.label, asset.name)
+        out += _compression_checks(st, ims, cfg, is_shipped, v.label, asset.name)
     if asset.kiln or logp:
         out.append(licence_check(log, bool(logp)))
     if len(_health_cache) > 512:

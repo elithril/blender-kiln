@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — Kiln Studio: Checks in plain words, with the fix
+
+- Every check says what it found and why it matters ("Floats 0.200 m above the ground:
+  it will hover when placed in a scene"), without kiln's rule numbers or phase names, then
+  **How to fix**: the command to run for that model (`/kiln optimize barrel`, copied on
+  click) or what to ask Claude. An **Ask Claude** button opens a note on the model with
+  the request written out; `/kiln studio` picks it up. `studio.py checks` prints the fix
+  under each line. Licence entries read "credit the author", "not for commercial use".
+- Compression is a note, not a warning, when the log's target is Unity, Unreal or PC:
+  the engine packs the file on import, and Draco and WebP are web formats.
+- `/kiln optimize` takes a Studio asset name and works on its `_final` file.
+  `test_studio.py`: 43 tests.
+
 ### Added — Kiln Studio: what kiln is working on
 
 - **A dot per model while a command works on it.** `studio.py work start <asset>...

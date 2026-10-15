@@ -83,11 +83,20 @@ read the production log and the model file:
 | Size, and the usual height of a chair, table, door or character | `validation-checklist.md` § Scale | WARN under 1 cm or over 100 m |
 | On the ground at Z = 0, centred on the origin | the bounds | WARN on a kiln asset |
 | Texture sizes against the target's cap: 1024 for web, 2048 for console/PC | images read in the file | WARN on `_final` |
-| Draco or meshopt geometry, WebP or KTX2 textures | `extensionsUsed`, image formats | WARN on `_final`; other stages are not shipped |
+| Draco or meshopt geometry, WebP or KTX2 textures | `extensionsUsed`, image formats | WARN on `_final` for a web target; a note for Unity/Unreal/PC, whose engine packs the file itself; other stages are not shipped |
 | Licences | the log's Licenses section | note for CC-BY (credit), WARN for non-commercial |
 
 With no log, the tier is assumed balanced and the type a prop, and the check says so.
 Report the WARN lines with the export summary; none of them is a target to tune to.
+
+Each check is written for the user: what was found and why it matters, then **How to
+fix** — the command to run, such as `/kiln optimize <name>` (copied on click), or "ask
+Claude" — and an **Ask Claude** button that opens a note on the model with the request
+written out, for the user to read and save; `/kiln studio` then picks it up like any note.
+`studio.py checks` prints the same fix under each line. The wording leaves out kiln's
+rules, but they still hold when you act on one: a reduction is a proposal the user sees
+before it is kept (rules 4 and 6), and OPTIMIZE runs resize, WebP and Draco as separate
+steps (rule 20).
 
 **Against the reference photo.** `tools/fidelity_check.py` writes `fidelity.json` and a
 `fidelity_log.jsonl` line per run into its `--out`. With `--out <name>/review/<view>/` (one
@@ -230,7 +239,7 @@ first folder holding `.kiln-studio/`); pass `--root PROJECT` from elsewhere.
   scrubber; **Compare**: the previous version or another stage side by side, one camera
   for both, size and triangle change shown.
 - **Right:** Notes (pin or whole-model, statuses, threads, before/after shots,
-  "Looks right" / "Not yet"), Checks (§ 3), Details (stages, stats, textures, organise,
+  "Looks right" / "Not yet"), Checks (§ 3: each finding, how to fix it, Ask Claude), Details (stages, stats, textures, organise,
   previous version, side files and the log), History (every version seen with its render,
   size and triangle change, the build's phases, and every note and reply).
 - **While kiln builds:** a "building" mark in the list, and the phases above the model.

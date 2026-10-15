@@ -342,8 +342,10 @@ def _print_checks(project: sl.Project, a: sl.Asset, brief: bool = False) -> None
         print(f"checks [{label}]" + (" (the shipped file)" if label == c["shipped"] else "") + ":")
         for r in rows:
             print(f"  {LEVEL_MARK[r['level']]}  {r['label']}: {r['text']}")
+            if r.get("fix") and r["level"] != "ok":
+                print(f"        fix: {r['fix'].replace('`', '')}")
             for e in r.get("entries", []) if not brief else []:
-                print(f"          {e['kind']}: {e['text']}")
+                print(f"          {e.get('label', e['kind'])}: {e['text']}")
     for run in c["fidelity"][:1 if brief else None]:
         where = f"{run['view']}" + (f", elevation {run['elevation']}°" if run.get("elevation") else "") \
             + (f", azimuth {run['azimuth']}°" if run.get("azimuth") else "")

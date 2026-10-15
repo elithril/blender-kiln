@@ -909,7 +909,8 @@ Animate a rigged asset (standalone PHASE 5d): `/kiln animate SK_Cat.glb walk, id
 
 Optimize a GLB file with CLI tools.
 
-1. Ask for input file path (or use current pipeline asset)
+1. Ask for input file path (or use current pipeline asset). A Kiln Studio asset name
+   (`/kiln optimize barrel`, as the Checks tab suggests) means its `_final` file.
 2. Show current stats: file size, face count, texture sizes
 3. Load `references/cli-tools.md`
 4. Propose options:
