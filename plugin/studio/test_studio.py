@@ -1107,6 +1107,14 @@ class Mcp(Base):
         cfg = json.loads((Path(server.__file__).resolve().parent.parent / ".mcp.json").read_text())
         spec = cfg["mcpServers"]["kiln-studio"]
         self.assertEqual(spec["args"], ["${CLAUDE_PLUGIN_ROOT}/studio/mcp_server.py"])
+        self.assertEqual(spec["env"], {"CLAUDE_PROJECT_DIR": "${CLAUDE_PROJECT_DIR}"})
+        # The skill may call the four tools by the names Claude Code gives a plugin's MCP
+        # tools: mcp__plugin_<plugin>_<server>__<tool>.
+        plugin = json.loads((Path(server.__file__).resolve().parent.parent / ".claude-plugin" / "plugin.json").read_text())["name"]
+        skill = (Path(server.__file__).resolve().parent.parent / "SKILL.md").read_text().split("\n---", 1)[0]
+        allowed = re.search(r"^allowed-tools: (.+)$", skill, re.M).group(1).split(", ")
+        for t in [x["name"] for x in self.rpc("tools/list")["result"]["tools"]]:
+            self.assertIn(f"mcp__plugin_{plugin}_kiln-studio__{t}", allowed)
         self.rpc("initialize", {"protocolVersion": "2024-11-05"})
         self.assertEqual(self.rpc("ping")["result"], {})
         self.assertEqual(self.rpc("nope")["error"]["code"], -32601)

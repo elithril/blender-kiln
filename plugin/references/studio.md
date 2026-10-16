@@ -385,7 +385,16 @@ and the notes; it writes nothing but note replies.
 | `reply_to_note` | `studio.py reply`: `status` addressed, open or wontfix — never resolved |
 | `set_camera` | Turns the open page's view: `view` (front, back, left, right, top, iso), a `note`'s own view, or `position_blender` and `target_blender`; with `asset`, opens it first |
 
-It finds the project from `KILN_STUDIO_ROOT`, `CLAUDE_PROJECT_DIR` or the session's folder,
+Their full names, as Claude Code calls a plugin's MCP tools (`mcp__plugin_<plugin>_<server>__<tool>`):
+`mcp__plugin_blender-kiln_kiln-studio__get_selection`, `…__get_notes`, `…__reply_to_note`,
+`…__set_camera` — the skill's `allowed-tools` lists all four.
+
+**When to call `get_selection`:** before anything the user says about what is on their
+screen without naming it — "what am I looking at", "fix this", "this note", "here", "the
+one open" — and at the start of `/kiln studio` without an argument when Studio is open.
+Then `get_notes` for that model; `set_camera` to show the user a change from the note's view.
+
+It finds the project from `KILN_STUDIO_ROOT`, `CLAUDE_PROJECT_DIR` (the plugin passes it) or the session's folder,
 upwards (each tool takes `root`). Without a running Studio, `get_selection` and `set_camera`
 say so; `get_notes` and `reply_to_note` work from the files alone. Use `set_camera` to show
 the user what you changed, from the note's camera, before asking them to look.

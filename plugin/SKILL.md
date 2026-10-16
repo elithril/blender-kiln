@@ -1,7 +1,7 @@
 ---
 name: kiln
 description: "Makes and fixes 3D assets in Blender, for games, the web and AR. Use when the user wants a 3D model, prop, character or GLB/glTF/FBX/USDZ file made — from a text brief, a reference image, a free marketplace (PolyHaven, Sketchfab) or AI generation — AND when they bring an existing 3D file to fix: too heavy or too many polygons (optimize, compress, LODs), broken normals, scale or origin, materials lost on glTF export, conversion between GLB, FBX and USDZ, texturing, rigging for animation, animating it (walk and idle cycles, text-to-motion, looping clips, articulated props), or inspection. Drives Blender through a Blender MCP server (ahujasid's or the official Blender Lab one). Batch mode produces many consistent assets unattended. Kiln Studio (`/kiln studio`) opens the project's models in the browser, where the user reviews them and pins notes for Claude to act on."
-allowed-tools: Bash, Read, Edit, Write, Grep, Glob, WebFetch, WebSearch, mcp__blender__*, mcp__nano-banana__*
+allowed-tools: Bash, Read, Edit, Write, Grep, Glob, WebFetch, WebSearch, mcp__blender__*, mcp__nano-banana__*, mcp__plugin_blender-kiln_kiln-studio__get_selection, mcp__plugin_blender-kiln_kiln-studio__get_notes, mcp__plugin_blender-kiln_kiln-studio__reply_to_note, mcp__plugin_blender-kiln_kiln-studio__set_camera
 ---
 
 # blender-kiln — The 3D Asset Forge
@@ -986,6 +986,11 @@ checks your fixes. Load `references/studio.md` and follow it.
    `studio.py reply <asset> <note> "…" --status addressed`, then `studio.py work next`.
    Never mark one resolved.
 3. Nothing waiting → start Studio (`studio.py [project]`), give the URL, stop.
+
+When the user points at Studio without naming the model — "what am I looking at",
+"fix this", "this note", "here" — call the kiln-studio MCP tool `get_selection` first
+(`mcp__plugin_blender-kiln_kiln-studio__get_selection`): it names the model, stage, camera
+and picked note the open page shows. `references/studio.md` § 11 has the other three.
 
 Its Checks tab, and `studio.py checks <asset>`, read kiln's rules off the file — tier
 range, size, ground, texture cap, compression, licences — with the fidelity measure and,
