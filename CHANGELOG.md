@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Kiln Studio: every command by name (⌘K)
+
+- ⌘K (Ctrl+K), from anywhere on the page, even while typing: the commands that apply now,
+  each with its key (46 with a model open), filtered on every word typed; Enter runs the
+  one picked, ↑ ↓ move. Typing a model's name opens it. `?` still lists the keys.
+
 ### Changed — Kiln Studio v1: the approved design
 
 - The page is the prototype approved for v1 (`kiln-3.0/studio-prototype`), on the real

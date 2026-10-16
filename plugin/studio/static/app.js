@@ -1671,6 +1671,7 @@ const KEYS = [
   ['M', 'Note on the whole model'],
   ['⌘↵ · Esc', 'Save the note · cancel'],
   ['Space', 'Play, pause the animation'],
+  ['⌘K', 'Every command, by name'],
   ['?', 'This list'],
 ];
 function showKeys() {
@@ -1713,6 +1714,112 @@ document.addEventListener('keydown', (e) => {
   const fn = keyActions[k] || (state.detail ? (modelKeys[k] ?? (k.length === 1 ? modelKeys[k.toLowerCase()] : null)) : null);
   if (fn) { e.preventDefault(); fn(); }
 });
+
+// ── command palette (⌘K): every action, with its key ────────────────────────
+// Each command: its group, its words, the key that does the same, and whether it
+// applies now (`when`). Typing filters on every word; Enter runs the one picked.
+
+const hasModel = () => !!state.detail && !!viewer.a.model;
+function commands() {
+  const C = [];
+  // label: English, translated when shown; or { text } already in the user's language.
+  const add = (group, label, keys, run, when = () => true) => C.push({ group, label, keys, run, when });
+  add('List', 'Find a model', ['/'], keyActions['/']);
+  add('List', 'Next model', ['↓'], () => step(1), () => state.assets.length > 1);
+  add('List', 'Previous model', ['↑'], () => step(-1), () => state.assets.length > 1);
+  add('List', 'Group by folders', [], () => { state.group = prefs.group = 'folders'; savePrefs(); syncGroup(); flipRender(); }, () => state.group !== 'folders');
+  add('List', 'Group by state', [], () => { state.group = prefs.group = 'state'; savePrefs(); syncGroup(); flipRender(); }, () => state.group !== 'state');
+  add('List', 'Compact rows', [], () => { state.density = prefs.density = 'compact'; savePrefs(); syncDensity(); renderList(); }, () => state.density !== 'compact');
+  add('List', 'Normal rows', [], () => { state.density = prefs.density = 'normal'; savePrefs(); syncDensity(); renderList(); }, () => state.density !== 'normal');
+  for (const [k, label] of [['addressed', 'Show the notes to check'], ['open', 'Show the open notes'], ['working', "Show the models in Claude's run"], ['building', 'Show the models being built']]) {
+    add('List', label, [], () => { state.pill = k; renderStrip(); renderList(); if (!isOpen(left)) setPanel(left, true); });
+  }
+  add('List', 'Show every model', [], () => { state.pill = null; state.tags.clear(); $('#search').value = ''; $('#filter').value = 'all'; renderTags(); renderStrip(); renderList(); }, () => state.pill || state.tags.size || $('#search').value || $('#filter').value !== 'all');
+  add('Panels', 'Fold or unfold the model list', ['['], keyActions['[']);
+  add('Panels', 'Fold or unfold the notes panel', [']'], keyActions[']']);
+  add('Panels', 'Fold or unfold both panels', ['\\'], keyActions['\\']);
+  for (const [tab, label] of [['notes', 'Notes'], ['checks', 'Checks'], ['details', 'Details'], ['history', 'History']]) add('Panels', `Open the ${label} tab`, [], () => ensureRight(tab), hasModel); // the four strings are in the dictionary
+  for (const [k, v, label] of [['1', 'front', 'Front view'], ['2', 'back', 'Back view'], ['3', 'left', 'Left view'], ['4', 'right', 'Right view'], ['5', 'top', 'Top view'], ['6', 'iso', 'Three-quarter view']]) add('View', label, [k], () => viewer.view(v), hasModel);
+  add('View', 'Frame the model', ['F'], () => viewer.frame(), hasModel);
+  for (const [m, label] of [['lit', 'Lit'], ['unlit', 'Unlit'], ['clay', 'Clay'], ['normals', 'Normals'], ['uv', 'UV checker'], ['faces', 'Faces: back faces in red']]) add('Shading', `Shading: ${label}`, [], () => setOpt('shade', m), () => hasModel() && viewer.opts.shade !== m);
+  add('Shading', 'Next shading', ['S'], () => cycleShade(1), hasModel);
+  add('Shading', 'Previous shading', ['⇧S'], () => cycleShade(-1), hasModel);
+  add('View', 'Wireframe on or off', ['W'], () => setOpt('wire', !viewer.opts.wire), hasModel);
+  add('View', 'Grid on or off', ['G'], () => setOpt('grid', !viewer.opts.grid), hasModel);
+  add('View', 'Sizes on or off', ['B'], () => setOpt('bounds', !viewer.opts.bounds), hasModel);
+  add('View', 'Bones on or off', ['K'], () => setOpt('skeleton', !viewer.opts.skeleton), () => hasModel() && state.clientStats?.skinned);
+  add('View', 'Next background', [], () => setOpt('bg', { dark: 'mid', mid: 'light', light: 'dark' }[viewer.opts.bg]), hasModel);
+  add('View', 'Play or pause the animation', ['Space'], () => setPlaying(!viewer.playing), () => hasModel() && state.clientStats?.clips?.length);
+  add('Pins', 'Show or hide the pins', ['P'], togglePins, () => hasModel() && !$('#pinsctl').hidden);
+  add('Pins', 'Hide fixed pins on or off', [], () => setPinFilter('hideFixed', !state.hideFixed), () => hasModel() && !$('#pinsctl').hidden);
+  add('Pins', 'Hide pins behind the model on or off', [], () => setPinFilter('hideBehind', !state.hideBehind), () => hasModel() && !$('#pinsctl').hidden);
+  add('Compare', 'Compare with the previous version', ['C'], () => setCompare('split'), () => hasModel() && !state.compare && compareTargets().length);
+  add('Compare', 'Compare side by side', ['⇧C'], () => (state.compare ? switchCompareMode('side') : setCompare('side')), () => hasModel() && state.compare?.mode !== 'side' && compareTargets().length);
+  add('Compare', 'Compare with a divider', ['⇧C'], () => switchCompareMode('split'), () => state.compare?.mode === 'side');
+  add('Compare', 'Stop comparing', ['C'], () => setCompare(null), () => !!state.compare);
+  add('Notes', 'Pin a note, then click the model', ['N'], startPin, hasModel);
+  add('Notes', 'Note on the whole model', ['M'], () => startGeneral(), hasModel);
+  add('Notes', 'Copy the command for Claude', [], () => copy(`/kiln studio ${state.detail.id}`), () => hasModel() && state.detail.counts.open > 0);
+  add('Notes', 'Show all notes, closed ones too', [], () => { setNoteFilter('all'); renderNotes(); renderPins(); ensureRight('notes'); }, () => hasModel() && state.noteFilter !== 'all');
+  add('Notes', 'Show the active notes only', [], () => { setNoteFilter('active'); renderNotes(); renderPins(); }, () => hasModel() && state.noteFilter !== 'active');
+  add('Help', 'Keyboard shortcuts', ['?'], showKeys);
+  for (const run of paletteExtras) run(add);
+  for (const a of state.assets) add('Model', { text: t('Open {name}', { name: a.name }) }, [], () => go(a.id), () => a.id !== state.id);
+  return C.filter((c) => { try { return c.when(); } catch { return false; } });
+}
+const paletteExtras = [];
+
+let palItems = [], palSel = 0;
+const labelOf = (c) => c.label.text || t(c.label);
+function openPalette() {
+  const d = $('#palette');
+  if (d.open) { d.close(); return; }
+  document.querySelector('dialog[open]')?.close();
+  $('#pal-q').value = '';
+  renderPalette();
+  d.showModal();
+  $('#pal-q').focus();
+}
+function renderPalette() {
+  const words = $('#pal-q').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  palItems = commands().filter((c) => {
+    const hay = `${t(c.group)} ${labelOf(c)} ${c.label.text || c.label} ${c.keys.join(' ')}`.toLowerCase();
+    return words.every((w) => hay.includes(w));
+  });
+  // Models only once you type: the list starts with what you can do.
+  if (!words.length) palItems = palItems.filter((c) => c.group !== 'Model');
+  palSel = Math.min(palSel, Math.max(0, palItems.length - 1));
+  $('#pal-list').innerHTML = palItems.length
+    ? palItems.map((c, i) => `<li role="option" id="pal-${i}" data-i="${i}" aria-selected="${i === palSel}"><span class="g">${esc(t(c.group))}</span><span class="l">${esc(labelOf(c))}</span><span class="k">${c.keys.map((k) => `<kbd>${esc(k)}</kbd>`).join('')}</span></li>`).join('')
+    : `<li class="empty">${esc(t('No command matches'))}</li>`;
+  $('#pal-q').setAttribute('aria-activedescendant', palItems.length ? `pal-${palSel}` : '');
+  $$('#pal-list li[data-i]').forEach((li) => {
+    li.onmousemove = () => { if (palSel !== +li.dataset.i) { palSel = +li.dataset.i; markPalette(); } };
+    li.onclick = () => runPalette(+li.dataset.i);
+  });
+}
+function markPalette() {
+  $$('#pal-list li[data-i]').forEach((li) => li.setAttribute('aria-selected', String(+li.dataset.i === palSel)));
+  $(`#pal-${palSel}`)?.scrollIntoView({ block: 'nearest' });
+  $('#pal-q').setAttribute('aria-activedescendant', `pal-${palSel}`);
+}
+function runPalette(i) {
+  const c = palItems[i];
+  if (!c) return;
+  $('#palette').close();
+  setTimeout(() => c.run(), 0);
+}
+$('#pal-q').addEventListener('input', () => { palSel = 0; renderPalette(); });
+$('#pal-q').addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); palSel = (palSel + (e.key === 'ArrowDown' ? 1 : -1) + palItems.length) % Math.max(1, palItems.length); markPalette(); }
+  if (e.key === 'Enter') { e.preventDefault(); runPalette(palSel); }
+});
+$('#palette').addEventListener('click', (e) => { if (e.target === $('#palette')) $('#palette').close(); });
+$('#t-palette').onclick = openPalette;
+// ⌘K / Ctrl+K from anywhere, typing or not.
+document.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 'k') { e.preventDefault(); e.stopImmediatePropagation(); openPalette(); }
+}, true);
 
 // ── boot ─────────────────────────────────────────────────────────────────────
 

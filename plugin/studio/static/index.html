@@ -151,6 +151,7 @@
       <button class="btn" id="t-bg" title="Background: dark, mid, light" data-i18n-attr="title">Bg</button>
       <span class="vsep"></span>
       <button class="btn" id="t-compare" title="Compare with the previous version (C)" aria-pressed="false" data-i18n data-i18n-attr="title">Compare</button>
+      <button class="btn icon" id="t-palette" aria-label="All commands (⌘K)" title="All commands (⌘K)" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M9 6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3z"/></svg></button>
       <button class="btn icon" id="t-keys" aria-label="Keyboard shortcuts (?)" title="Keys (?)" data-i18n-attr="aria-label,title">?</button>
     </div>
   </div>
@@ -215,6 +216,11 @@
   <h3 data-i18n>Keys</h3>
   <dl id="keys-list"></dl>
   <form method="dialog"><button class="btn" data-i18n>Close</button></form>
+</dialog>
+<dialog id="palette" aria-label="Commands" data-i18n-attr="aria-label">
+  <div class="pal-in"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="pal-q" type="text" placeholder="Type a command or a model" autocomplete="off" spellcheck="false" aria-label="Filter commands" aria-controls="pal-list" data-i18n-attr="placeholder,aria-label"><kbd>Esc</kbd></div>
+  <ul id="pal-list" role="listbox" aria-label="Commands" data-i18n-attr="aria-label"></ul>
+  <div class="pal-foot dim"><span><kbd>↑</kbd> <kbd>↓</kbd> <span data-i18n>to move</span></span><span><kbd>↵</kbd> <span data-i18n>to run</span></span><span><kbd>?</kbd> <span data-i18n>all the keys</span></span></div>
 </dialog>
 <dialog id="confirm"><p></p><form method="dialog"><button class="btn" value="cancel" data-i18n>Cancel</button><button class="btn accent" value="ok">OK</button></form></dialog>
 

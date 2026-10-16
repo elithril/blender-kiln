@@ -271,7 +271,8 @@ screen they lie over the view, one at a time, and the rails stay.
   and its progress above the list; a toast as it moves from one model to the next.
 - **Keys:** `/` find, `↑ ↓` previous and next model, `1`–`6` views, `F` frame, `S` / `⇧S`
   shading, `W G B K` wire, grid, size, bones, `P` pins, `C` / `⇧C` compare and its layout,
-  `N` pin a note, `M` whole-model note, `Space` play, `?` the list.
+  `N` pin a note, `M` whole-model note, `Space` play, `?` the list. **⌘K** (Ctrl+K) opens
+  every command by name, with its key: type to filter, Enter runs it; a model's name opens it.
 
 Only one previous copy of a model is ever kept. The record of what a model looked like
 at each step is the pictures on each note and the version renders — WebP, 10 to 20

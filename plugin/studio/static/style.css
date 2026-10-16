@@ -522,3 +522,18 @@ dialog::backdrop { background: rgba(5,6,9,.72); backdrop-filter: blur(2px); }
 .ghead .gl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 #stages[hidden] { display: none !important; }
 .logo svg path { fill: var(--accent); }
+
+/* command palette (⌘K) */
+#palette { width: min(560px, calc(100vw - 24px)); padding: 0; margin-top: 12vh; }
+#palette .pal-in { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+#palette .pal-in svg { width: 15px; height: 15px; stroke: var(--text-3); fill: none; stroke-width: 2; flex: none; }
+#palette .pal-in input { flex: 1; min-width: 0; height: 30px; border: 0; background: transparent; font-size: 14px; color: var(--text); }
+#palette .pal-in input:focus { outline: none; }
+#pal-list { list-style: none; margin: 0; padding: 6px; max-height: min(52vh, 420px); overflow-y: auto; }
+#pal-list li { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 7px; cursor: pointer; color: var(--text-2); font-size: 13px; }
+#pal-list li .g { font: 500 10px/1 var(--mono); color: var(--text-3); text-transform: uppercase; letter-spacing: .05em; width: 64px; flex: none; }
+#pal-list li .l { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#pal-list li .k { display: flex; gap: 3px; flex: none; }
+#pal-list li[aria-selected="true"] { background: var(--panel-3); color: var(--text); box-shadow: inset 2px 0 0 var(--accent); }
+#pal-list li.empty { cursor: default; color: var(--text-3); justify-content: center; }
+#palette .pal-foot { display: flex; gap: 14px; padding: 8px 12px; border-top: 1px solid var(--line); font-size: 11px; }
