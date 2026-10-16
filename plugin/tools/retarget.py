@@ -348,13 +348,25 @@ def retarget(rig: Rig, g, joints0, hips, mapping, align=True):
 
 
 # ── arm clearance (adapted from upstream's arm_clearance.py) ────────────────────────────
-# SOMA roles the arms must stay out of. Upstream: torso, neck, head, the shoulders.
-BODY_ROLES = ("Spine1", "Spine2", "Chest", "Neck1", "Neck2", "Head", "LeftShoulder", "RightShoulder")
-ARM_ROLES = ("Arm", "ForeArm", "Hand")
-BODY_PERCENTILE = 85
-HEAD_TO_TORSO = 1.1
-TORSO_ROLES = ("Spine1", "Spine2", "Chest")
+# SOMA roles the arms must stay out of. Upstream: torso, neck, head, the shoulders, and only
+# the elbow, forearm and hand are kept out. kiln adds the hips (the belly and the pelvis), a
+# point at 80% of the upper arm, and thicker capsules (95th percentile of the skin's distance
+# to its bone, upstream 85th): on the kiln child the upper arm through the flanks was 2,170 of
+# the walk's 2,638 mm² of arm through body, on the Hunyuan humanoid the arms through the hips
+# 1,176 of 1,538. What the clearance adds is capped at 25 degrees, so a hanging arm stays a
+# hanging arm: uncapped, with points at 50% and 80% of the upper arm, the child's arms were
+# swung out 61-78 degrees (median) to clear its round belly, back to its rest A-pose. The
+# thighs stay out, as upstream found: their outline held hanging arms out like wings.
+BODY_ROLES = ("Hips", "Spine1", "Spine2", "Chest", "Neck1", "Neck2", "Head", "LeftShoulder", "RightShoulder")
+UPSTREAM_BODY_ROLES = BODY_ROLES[1:]
+UPPER_ARM_POINTS = (0.8,)        # along the upper arm, shoulder to elbow
+MAX_SWING_DEG = 25.0             # the largest swing out the clearance may add to an arm
 ARM_PERCENTILE = 60
+BODY_PERCENTILE = 95
+UPSTREAM_BODY_PERCENTILE = 85
+HEAD_TO_TORSO = 1.1
+ARM_ROLES = ("Arm", "ForeArm", "Hand")
+TORSO_ROLES = ("Spine1", "Spine2", "Chest")
 
 
 def point_segment(p, a, b):
@@ -382,9 +394,11 @@ class Proxy:
     arms: dict
     side_shoulder: dict
     margin: float
+    max_swing: float = 180.0
 
 
-def build_proxy(rig: Rig, mapping, body_roles=BODY_ROLES) -> Proxy | None:
+def build_proxy(rig: Rig, mapping, body_roles=BODY_ROLES, percentile=BODY_PERCENTILE,
+                max_swing=MAX_SWING_DEG) -> Proxy | None:
     """Capsules round the body's bones, each as thick as the skin it carries, from the rest."""
     by_role = {}
     for bone in rig.order:
@@ -400,12 +414,12 @@ def build_proxy(rig: Rig, mapping, body_roles=BODY_ROLES) -> Proxy | None:
         arms[s] = {"upper": bones[0], "fore": bones[1], "hand": bones[2], "radius": {b: r.get(b, 0.0) for b in bones}}
     if not arms:
         return None
-    body = skin_radii(rig.points, rig.owners, segs, [by_role[r] for r in body_roles if r in by_role], BODY_PERCENTILE)
+    body = skin_radii(rig.points, rig.owners, segs, [by_role[r] for r in body_roles if r in by_role], percentile)
     torso = max((r for b, r in body.items() if mapping[b] in TORSO_ROLES), default=None)
     if torso is not None:
         body = {b: (min(r, torso * HEAD_TO_TORSO) if mapping[b] == "Head" else r) for b, r in body.items()}
     return Proxy(body=body, arms=arms, side_shoulder={s: by_role.get(f"{s}Shoulder") for s in SIDES},
-                 margin=0.01 * height)
+                 margin=0.01 * height, max_swing=max_swing)
 
 
 def _sideways(direction, along):
@@ -415,15 +429,17 @@ def _sideways(direction, along):
     return side / n if n > 1e-6 else np.zeros(3)
 
 
-def arm_swing(seg, proxy: Proxy, side, iterations=10):
-    """Rotation about the shoulder taking one arm's elbow, forearm and hand out of every capsule."""
+def arm_swing(seg, proxy: Proxy, side, iterations=10, upper_points=UPPER_ARM_POINTS):
+    """Rotation about the shoulder taking one arm's upper arm, elbow, forearm and hand out of
+    every capsule."""
     arm = proxy.arms[side]
     pivot = seg[arm["upper"]][0]
     caps = [(seg[b][0], seg[b][1], r) for b, r in proxy.body.items() if b != proxy.side_shoulder.get(side)]
     fa, fb = seg[arm["fore"]]
     ha, hb = seg[arm["hand"]]
     r = arm["radius"]
-    points = [(fa, r[arm["fore"]]), ((fa + fb) / 2, r[arm["fore"]]), (ha, r[arm["hand"]]), (hb, r[arm["hand"]])]
+    points = [(pivot + u * (fa - pivot), r[arm["upper"]]) for u in upper_points]
+    points += [(fa, r[arm["fore"]]), ((fa + fb) / 2, r[arm["fore"]]), (ha, r[arm["hand"]]), (hb, r[arm["hand"]])]
     total = np.eye(3)
     for _ in range(iterations):
         worst, push = 0.0, None
@@ -445,6 +461,10 @@ def arm_swing(seg, proxy: Proxy, side, iterations=10):
         step = rotation_between(p - pivot, p + normal * worst - pivot)
         total = step @ total
         points = [(pivot + step @ (q - pivot), rr) for q, rr in points]
+    v = log_rot(total)
+    ang = float(np.linalg.norm(v))
+    if ang > np.radians(proxy.max_swing):
+        total = exp_rot(v * np.radians(proxy.max_swing) / ang)
     return total
 
 
@@ -485,7 +505,7 @@ def segments(rig: Rig, pose):
     return out
 
 
-def clear_arms(rig: Rig, frames, proxy: Proxy, cyclic=False) -> dict:
+def clear_arms(rig: Rig, frames, proxy: Proxy, cyclic=False, upper_points=UPPER_ARM_POINTS) -> dict:
     """Swing each arm out of the body wherever it went in, in place. Returns the swings' sizes."""
     report = {}
     sides = list(proxy.arms)
@@ -493,7 +513,7 @@ def clear_arms(rig: Rig, frames, proxy: Proxy, cyclic=False) -> dict:
     for wr, root in frames:
         seg = segments(rig, posed(rig.rest, rig.parents, rig.order, wr, root)[0])
         for s in sides:
-            sw[s].append(arm_swing(seg, proxy, s))
+            sw[s].append(arm_swing(seg, proxy, s, upper_points=upper_points))
     for s in sides:
         deg = [float(np.degrees(np.linalg.norm(log_rot(r)))) for r in sw[s]]
         report[s] = dict(largest_deg=round(max(deg), 1), median_deg=round(float(np.median(deg)), 1))

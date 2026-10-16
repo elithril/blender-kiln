@@ -95,7 +95,7 @@ def parse(argv):
     an.add_argument("--take", choices=("A", "B"), default="A")
     an.add_argument("--stiff-fingers", action="store_true", help="fingers follow the hand rigidly")
     an.add_argument("--no-measure", action="store_true", help="skip the measures JSON (faster)")
-    an.add_argument("--no-fix", default="", help="leave out kiln's corrections, for comparison: feet")
+    an.add_argument("--no-fix", default="", help="leave out kiln's corrections, for comparison: feet,arms")
     return ap.parse_args(argv)
 
 
@@ -174,7 +174,9 @@ def blender_animate(args) -> int:  # pragma: no cover - needs bpy
     rig = R.Rig(rest={b.name: np.array(b.matrix_local) for b in bones},
                 tails={b.name: np.array(b.tail_local) for b in bones},
                 parents=parents, up=up, points=np.array(points), owners=owners, weights=weights)
-    proxy = R.build_proxy(rig, mapping)
+    arms_kiln = "arms" not in skip
+    proxy = R.build_proxy(rig, mapping, R.BODY_ROLES, R.BODY_PERCENTILE, R.MAX_SWING_DEG) if arms_kiln else \
+        R.build_proxy(rig, mapping, R.UPSTREAM_BODY_ROLES, R.UPSTREAM_BODY_PERCENTILE, 180.0)
 
     sc = bpy.context.scene
     sc.render.fps, sc.render.fps_base = 30, 1
@@ -189,7 +191,7 @@ def blender_animate(args) -> int:  # pragma: no cover - needs bpy
         g, joints0, hips, fps = R.load_motion(npz)
         g, hips = R.resample(g, hips, args.speed)
         frames, info = R.retarget(rig, g, joints0, hips, mapping)
-        swings = R.clear_arms(rig, frames, proxy) if proxy else {}
+        swings = R.clear_arms(rig, frames, proxy, upper_points=R.UPPER_ARM_POINTS if arms_kiln else ()) if proxy else {}
         contacts = R.soma_contacts(g, joints0, hips, fps, args.speed)
         feet = R.lock_feet(rig, frames, fps, contacts) if "feet" not in skip else {}
         act = bpy.data.actions.new(name)

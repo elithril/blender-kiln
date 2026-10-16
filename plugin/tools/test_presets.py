@@ -13,6 +13,8 @@ kiln child's joints, a skin of tubes and box feet, 100% to one bone each):
 - the provenance names the motions' licence for every clip;
 - feet: the walk's standing feet slide < 50 mm/s and no skin goes 5 mm under the floor, where
   the same clip with --no-fix feet slides and sinks (the regression direction);
+- arms: the jump's hands and forearms, which hang into the wide hips, cross the body < 500 mm²,
+  where upstream's clearance (--no-fix arms: torso, neck and head only) leaves > 500;
 - a rig missing a leg bone is refused, naming it.
 """
 import json
@@ -52,8 +54,10 @@ for _b in [b for b in HEADS if b.startswith("Left")]:
     HEADS["Right" + _b[4:]] = (-x, y, z)
     p = PARENT[_b]
     PARENT["Right" + _b[4:]] = "Right" + p[4:] if p.startswith("Left") else p
-RADIUS = {"Hips": 0.075, "Spine": 0.07, "Spine1": 0.075, "Spine2": 0.07, "Neck": 0.03, "Head": 0.11,
-          "Shoulder": 0.03, "Arm": 0.022, "ForeArm": 0.02, "Hand": 0.02, "Fingers": 0.012, "Fingers2": 0.01,
+# Wide hips, like the chibi child's (0.11 from the spine) and the Hunyuan humanoid's: hanging
+# hands go into them, which upstream's clearance (torso, neck, head only) leaves.
+RADIUS = {"Hips": 0.11, "Spine": 0.09, "Spine1": 0.085, "Spine2": 0.08, "Neck": 0.03, "Head": 0.11,
+          "Shoulder": 0.012, "Arm": 0.022, "ForeArm": 0.02, "Hand": 0.02, "Fingers": 0.012, "Fingers2": 0.01,
           "Fingers3": 0.008, "UpLeg": 0.035, "Leg": 0.03}
 
 
@@ -111,8 +115,10 @@ def build(out, drop=()):  # pragma: no cover - needs bpy
         if b in drop or b.endswith(("Foot", "ToeBase")):
             continue
         key = b[4:] if b.startswith("Left") else b[5:] if b.startswith("Right") else b
-        tail = ad.bones[b].tail_local
-        tube(HEADS[b], tail, RADIUS[key], b)
+        a, tail = Vector(HEADS[b]), ad.bones[b].tail_local
+        if b.startswith(("Left", "Right")):     # limbs stop short of their joints: no crossing at a bend
+            a, tail = a.lerp(tail, 0.15), a.lerp(tail, 0.85)
+        tube(a, tail, RADIUS[key], b)
     for s, sx in (("Left", 1), ("Right", -1)):
         if s + "Foot" not in drop:
             box((sx * 0.072 - 0.03, -0.05, 0.0), (sx * 0.072 + 0.03, 0.035, 0.08), s + "Foot")
@@ -194,15 +200,19 @@ def main():
               "NVIDIA Open Model License" in prov["source"]["motion_licence"] and len(prov["clips"]) == 2
               and all(c["sha256"] == presets.sha256(presets.MOTIONS / f"{c['preset']}.npz") for c in prov["clips"]))
         meas = json.loads((tmp / "SK_Test_rigged_animated.measures.json").read_text())
-        nofix = subprocess.run([sys.executable, str(HERE / "presets.py"), "animate", "--asset", str(rig), "--motion", "walk",
-                                "--no-fix", "feet", "--out", str(tmp / "nofix")], capture_output=True, text=True, env=env)
-        raw = json.loads((tmp / "nofix" / "SK_Test_rigged_animated.measures.json").read_text())["walk"] \
-            if nofix.returncode == 0 else None
+        nofix = subprocess.run([sys.executable, str(HERE / "presets.py"), "animate", "--asset", str(rig), "--motion", "walk,jump",
+                                "--no-fix", "feet,arms", "--out", str(tmp / "nofix")], capture_output=True, text=True, env=env)
+        raws = json.loads((tmp / "nofix" / "SK_Test_rigged_animated.measures.json").read_text()) \
+            if nofix.returncode == 0 else {}
+        raw = raws.get("walk")
         w = meas["walk"]
         check(f"feet planted: walk slides {w['foot_slide']['mm_s']} mm/s, {w['floor']['below_mm']} mm under the floor "
               f"(without the fix: {raw and raw['foot_slide']['mm_s']} mm/s, {raw and raw['floor']['below_mm']} mm)",
               raw and w["foot_slide"]["mm_s"] < 50 and w["floor"]["below_mm"] < 5
               and (raw["foot_slide"]["mm_s"] > 50 or raw["floor"]["below_mm"] > 5))
+        j, rj = meas["jump"]["skin"]["mean_arm_body_mm2"], raws.get("jump", {}).get("skin", {}).get("mean_arm_body_mm2")
+        check(f"arms out of the hips: jump {j} mm² of arm through body (upstream's clearance: {rj} mm²)",
+              rj is not None and j < 500 < rj)
     bad_run = subprocess.run([sys.executable, str(HERE / "presets.py"), "animate", "--asset", str(bad),
                               "--motion", "walk", "--out", str(tmp)], capture_output=True, text=True, env=env)
     check("a rig without LeftFoot is refused, naming it", bad_run.returncode != 0 and "LeftFoot" in bad_run.stdout + bad_run.stderr,
