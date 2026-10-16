@@ -95,6 +95,7 @@ def parse(argv):
     an.add_argument("--take", choices=("A", "B"), default="A")
     an.add_argument("--stiff-fingers", action="store_true", help="fingers follow the hand rigidly")
     an.add_argument("--no-measure", action="store_true", help="skip the measures JSON (faster)")
+    an.add_argument("--no-fix", default="", help="leave out kiln's corrections, for comparison: feet")
     return ap.parse_args(argv)
 
 
@@ -135,6 +136,7 @@ def blender_animate(args) -> int:  # pragma: no cover - needs bpy
     import retarget as R
 
     names = check_motions(args)
+    skip = {x.strip() for x in args.no_fix.split(",") if x.strip()}
     cat = catalogue()
     asset = args.asset.resolve()
     out = (args.out or asset.parent).resolve()
@@ -158,7 +160,7 @@ def blender_animate(args) -> int:  # pragma: no cover - needs bpy
     arm_rot = np.array(arm.matrix_world.to_3x3().normalized())
     up = arm_rot.T @ np.array([0.0, 0.0, 1.0])
     inv = np.array(arm.matrix_world.inverted())
-    points, owners = [], []
+    points, owners, weights = [], [], []
     for mesh in (o for o in bpy.data.objects if o.type == "MESH" and o.find_armature() == arm):
         to_arm = inv @ np.array(mesh.matrix_world)
         gname = {g.index: g.name for g in mesh.vertex_groups}
@@ -168,9 +170,10 @@ def blender_animate(args) -> int:  # pragma: no cover - needs bpy
                 continue
             points.append((to_arm @ np.append(np.array(v.co), 1.0))[:3])
             owners.append(gname[best.group])
+            weights.append({gname[x.group]: x.weight for x in v.groups if x.weight > 0 and gname.get(x.group) in parents})
     rig = R.Rig(rest={b.name: np.array(b.matrix_local) for b in bones},
                 tails={b.name: np.array(b.tail_local) for b in bones},
-                parents=parents, up=up, points=np.array(points), owners=owners)
+                parents=parents, up=up, points=np.array(points), owners=owners, weights=weights)
     proxy = R.build_proxy(rig, mapping)
 
     sc = bpy.context.scene
@@ -187,6 +190,8 @@ def blender_animate(args) -> int:  # pragma: no cover - needs bpy
         g, hips = R.resample(g, hips, args.speed)
         frames, info = R.retarget(rig, g, joints0, hips, mapping)
         swings = R.clear_arms(rig, frames, proxy) if proxy else {}
+        contacts = R.soma_contacts(g, joints0, hips, fps, args.speed)
+        feet = R.lock_feet(rig, frames, fps, contacts) if "feet" not in skip else {}
         act = bpy.data.actions.new(name)
         ad.action = act
         for t, basis in enumerate(R.bases(rig, frames)):
@@ -203,7 +208,7 @@ def blender_animate(args) -> int:  # pragma: no cover - needs bpy
             strip.action_slot = act.slots[0]
         ad.action = None
         report[name] = dict(frames=len(frames), seconds=round((len(frames) - 1) / fps, 2),
-                            hip_scale=round(info["hip_scale"], 3), arm_swing=swings)
+                            hip_scale=round(info["hip_scale"], 3), arm_swing=swings, feet=feet)
         prov.append(dict(clip=name, preset=preset["id"], take=take, prompt=preset["prompt"],
                          made_with=preset["made_with"], seed=preset["seed"], speed=args.speed,
                          frames=len(frames), fps=fps, file=f"tools/motions/{npz.name}", sha256=sha256(npz)))

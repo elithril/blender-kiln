@@ -320,6 +320,7 @@ class Rig:
     up: np.ndarray
     points: np.ndarray  # skin vertices at rest
     owners: list        # each vertex's dominant bone
+    weights: list | None = None   # each vertex's {bone: weight}, for the feet's true skinned heights
 
     def __post_init__(self):
         self.order = parent_first(self.parents)
@@ -506,3 +507,254 @@ def clear_arms(rig: Rig, frames, proxy: Proxy, cyclic=False) -> dict:
 def bases(rig: Rig, frames):
     """Blender matrix_basis (4x4) per bone per frame."""
     return [posed(rig.rest, rig.parents, rig.order, wr, root)[1] for wr, root in frames]
+
+
+# ── foot locking (kiln) ───────────────────────────────────────────────────────────────────
+# Upstream copies the clip's hips and turns, so a foot meant to stand slides wherever the
+# character's legs are not the actor's: 293 mm/s on the kiln child's walk, 568 on the Hunyuan
+# humanoid's, and that one's soles 38 mm under the floor. Here each foot is pinned while it
+# stands: the skin points it rolls on stay where they were on the frame before, the lowest
+# one on the floor, and a two-bone solve moves the thigh and shin to put the ankle there.
+# Standing is read off the actor, not the rig: on the chibi child the retargeted swing foot
+# dips 23 mm under the floor while the standing one sits 5-8 mm above it, so the rig's own
+# heights pick the wrong frames. SOMA's ankle or toe joint, near its lowest and slow, is not
+# fooled: an actor's standing foot moves < 0.1 m/s and swings at 1-10 m/s in these clips.
+CONTACT_HEIGHT = 0.035   # m above that joint's lowest in the clip (SOMA is a 1.7 m actor)
+CONTACT_SPEED = 0.40     # m/s of the clip's own time
+# A foot in the air clears the floor by this x H (H = 2.5 cm x height / 1.7 m, the foot-skate
+# scale): the chibi child's swing foot skimmed 0-6 mm over it at 1.5 m/s, which reads as a
+# foot dragged along the floor, not lifted.
+LIFT = 0.8
+FOOT_SKATE_H = 0.025
+ROLL_SET_MM = 3.0        # the points a foot rolls on: within 3 mm of its lowest (the measure's)
+FLOOR_MARGIN = 0.001     # the lowest sole point sits this far above the rest floor
+EDGE_EASE = 6            # frames over which a correction eases in and out, at a clip's ends
+REACH = 0.995            # a leg straighter than this share of its length cannot be solved
+
+
+def soma_joints(g, joints0, hips) -> np.ndarray:
+    """[T, 77, 3] SOMA joint positions (Y up) of a clip, by forward kinematics."""
+    n = soma_tpose(g[:1], joints0)
+    X = np.zeros((len(g), 77, 3))
+    X[:, 0] = hips
+    for j, p in enumerate(SOMA77_PARENTS):
+        if p >= 0:
+            X[:, j] = X[:, p] + np.einsum("tij,j->ti", g[:, p], n[j] - n[p])
+    return X
+
+
+def soma_contacts(g, joints0, hips, fps, speed=1.0) -> dict:
+    """Per side, the frames the actor stands on that foot: its ankle or toe joint low and slow."""
+    X = soma_joints(g, joints0, hips)
+    out = {}
+    for s in SIDES:
+        c = np.zeros(len(g), bool)
+        for jn in ("Foot", "ToeBase"):
+            x = X[:, SOMA_INDEX[s + jn]]
+            h = x[:, 1] - x[:, 1].min()
+            v = np.linalg.norm(np.diff(x[:, [0, 2]], axis=0), axis=1) * fps / speed
+            v = np.minimum(np.r_[v[:1], v], np.r_[v, v[-1:]])     # slower of the steps in and out
+            c |= (h < CONTACT_HEIGHT) & (v < CONTACT_SPEED)
+        out[s] = c
+    return out
+
+
+def foot_sets(rig: Rig, cap=600):
+    """Per side: (bones, weights [N, bones], rest points [N, 3]) of the skin the foot and toes
+    carry, skinned as the mesh is (dominant bone alone when no weights are given)."""
+    out = {}
+    for s in SIDES:
+        own = {b for b in rig.order if re.fullmatch(rf"{s}(Foot|ToeBase|Toe_End\d*)", b)}
+        idx = [i for i, o in enumerate(rig.owners) if o in own]
+        if len(idx) > cap:
+            idx = [idx[k] for k in np.linspace(0, len(idx) - 1, cap).astype(int)]
+        if not idx:
+            out[s] = None
+            continue
+        ws = [rig.weights[i] if rig.weights else {rig.owners[i]: 1.0} for i in idx]
+        bones = sorted({b for w in ws for b in w})
+        W = np.array([[w.get(b, 0.0) for b in bones] for w in ws])
+        W /= W.sum(1, keepdims=True)
+        out[s] = (bones, W, rig.points[idx], [np.linalg.inv(rig.rest[b]) for b in bones])
+    return out
+
+
+def _foot_world(pose, fs):
+    bones, W, V, inv = fs
+    P = np.zeros_like(V)
+    for k, b in enumerate(bones):
+        M = pose[b] @ inv[k]
+        P += W[:, k:k + 1] * (V @ M[:3, :3].T + M[:3, 3])
+    return P
+
+
+def _runs(mask, cyclic):
+    """[(start, end)] inclusive runs of True; a run through the seam of a cycle is one run."""
+    n = len(mask)
+    if mask.all():
+        return [(0, n - 1)]
+    out, t = [], 0
+    while t < n:
+        if mask[t]:
+            s = t
+            while t + 1 < n and mask[t + 1]:
+                t += 1
+            out.append((s, t))
+        t += 1
+    if cyclic and len(out) > 1 and out[0][0] == 0 and out[-1][1] == n - 1:
+        s, _ = out.pop()
+        out[0] = (s, out[0][1] + n)          # end past n: indices are taken modulo n
+    return out
+
+
+def _clean(mask, cyclic, gap=2, shortest=2):
+    """Fill gaps of up to `gap` frames, drop contacts shorter than `shortest`."""
+    m = mask.copy()
+    n = len(m)
+    for s, e in _runs(~m, cyclic):
+        if e - s + 1 <= gap and (cyclic or (s > 0 and e < n - 1)):
+            for t in range(s, e + 1):
+                m[t % n] = True
+    for s, e in _runs(m, cyclic):
+        if e - s + 1 < shortest and e - s + 1 < n:
+            for t in range(s, e + 1):
+                m[t % n] = False
+    return m
+
+
+def two_bone(H, K0, A0, A, L1, L2):
+    """Knee and ankle for a leg hip H -> knee -> ankle reaching for A, bending in the plane
+    the knee bent in (K0, A0 as posed). Returns (knee, ankle reached)."""
+    d_vec = A - H
+    d = float(np.linalg.norm(d_vec))
+    u = d_vec / max(d, 1e-9)
+    d = min(max(d, abs(L1 - L2) + 1e-6), REACH * (L1 + L2))
+    p = (K0 - H) - ((K0 - H) @ u) * u
+    if np.linalg.norm(p) < 1e-6:
+        p = (A0 - H) - ((A0 - H) @ u) * u
+    if np.linalg.norm(p) < 1e-6:
+        p = np.cross(u, [1.0, 0, 0])
+    p /= np.linalg.norm(p)
+    a = (L1 * L1 - L2 * L2 + d * d) / (2 * d)
+    h = np.sqrt(max(L1 * L1 - a * a, 0.0))
+    return H + a * u + h * p, H + d * u
+
+
+def _solve_leg(wr, pose, s, A_move, L):
+    """Two-bone solve putting side `s`'s ankle at its posed place + A_move. Returns the gap left."""
+    H, K0, A0 = (pose[s + x][:3, 3] for x in ("UpLeg", "Leg", "Foot"))
+    A = A0 + A_move
+    K, Ar = two_bone(H, K0, A0, A, *L)
+    wr[s + "UpLeg"] = rotation_between(K0 - H, K - H) @ wr[s + "UpLeg"]
+    wr[s + "Leg"] = rotation_between(A0 - K0, Ar - K) @ wr[s + "Leg"]
+    return float(np.linalg.norm(A - Ar))
+
+
+def _smooth_gaps(delta, cyclic):
+    """Fill the frames between contacts (NaN rows): from one correction to the next, eased;
+    at a clip's open ends, eased to nothing over EDGE_EASE frames."""
+    n = len(delta)
+    known = ~np.isnan(delta[:, 0])
+    if not known.any():
+        delta[:] = 0.0
+        return delta
+    for a, b in _runs(~known, cyclic):
+        ids = [t % n for t in range(a, b + 1)]
+        before, after = (a - 1) % n, (b + 1) % n
+        for k, t in enumerate(ids):
+            if not cyclic and a == 0:
+                w = max(0.0, 1 - (len(ids) - k) / EDGE_EASE)
+                delta[t] = delta[after] * (3 * w * w - 2 * w ** 3)
+            elif not cyclic and b == n - 1:
+                w = max(0.0, 1 - (k + 1) / EDGE_EASE)
+                delta[t] = delta[before] * (3 * w * w - 2 * w ** 3)
+            else:
+                u = (k + 1) / (len(ids) + 1)
+                u = 3 * u * u - 2 * u ** 3
+                delta[t] = (1 - u) * delta[before] + u * delta[after]
+    return delta
+
+
+def lock_feet(rig: Rig, frames, fps, contacts, cyclic=False, tread=None, iterations=3) -> dict:
+    """Pin each foot to the floor while it stands (`contacts`, from `soma_contacts`), in place.
+
+    A standing foot's lowest skin points (within 3 mm) stay where they were on the frame
+    before, so it rolls heel to toe without sliding, the lowest point on the floor; a foot in
+    the air clears the floor by LIFT x H. `tread`: on an in-place cycle, the speed (horizontal,
+    m/s) a standing foot moves back at; None for a clip that travels. Where a leg cannot reach,
+    the hips are lowered just enough, eased over the frames around."""
+    up = rig.up
+    pts_all = rig.points @ up
+    floor = float(pts_all.min())
+    lift = LIFT * FOOT_SKATE_H * float(pts_all.max() - floor) / 1.7
+    sets = foot_sets(rig)
+    dt = 1.0 / fps
+    n = len(frames)
+    L = {s: (float(np.linalg.norm(rig.heads[s + "Leg"] - rig.heads[s + "UpLeg"])),
+             float(np.linalg.norm(rig.heads[s + "Foot"] - rig.heads[s + "Leg"]))) for s in SIDES}
+    tv = np.zeros(3) if tread is None else np.asarray(tread, float)
+    tv = tv - (tv @ up) * up
+    contact = {s: _clean(np.asarray(contacts[s], bool), cyclic) for s in SIDES}
+    pose_of = lambda w: [posed(rig.rest, rig.parents, rig.order, wr, root)[0] for wr, root in w]
+    report = {}
+    drop = np.zeros(n)
+    raw = [({b: r.copy() for b, r in wr.items()}, root.copy()) for wr, root in frames]
+    for it in range(iterations):
+        work = [({b: r.copy() for b, r in wr.items()}, root - drop[t] * up) for t, (wr, root) in enumerate(raw)]
+        poses = pose_of(work)
+        short = np.zeros(n)
+        for s in SIDES:
+            if sets[s] is None:
+                continue
+            c = contact[s]
+            P = [_foot_world(p, sets[s]) for p in poses]
+            delta = np.full((n, 3), np.nan)
+            runs = _runs(c, cyclic)
+            for a, b in runs:
+                ids = [t % n for t in range(a, b + 1)]
+                d = np.zeros((len(ids), 3))
+                for k in range(1, len(ids)):
+                    t0, t1 = ids[k - 1], ids[k]
+                    zz = P[t0] @ up
+                    roll = zz <= zz.min() + ROLL_SET_MM / 1000
+                    move = (P[t1][roll] - P[t0][roll]).mean(0)
+                    d[k] = d[k - 1] - (move - (move @ up) * up) + tv * dt
+                d -= d.mean(0)
+                for k, t in enumerate(ids):
+                    delta[t] = d[k] + (floor + FLOOR_MARGIN - float((P[t] @ up).min())) * up
+            _smooth_gaps(delta, cyclic)
+            for t in range(n):
+                low = float((P[t] @ up).min()) + float(delta[t] @ up)
+                want = floor + FLOOR_MARGIN + (0.0 if c[t] else lift)
+                if low < want:
+                    delta[t] += (want - low) * up
+                gap = _solve_leg(work[t][0], poses[t], s, delta[t], L[s])
+                if c[t]:
+                    short[t] = max(short[t], gap)
+            report[s] = dict(contact_frames=int(c.sum()), contacts=len(runs),
+                             largest_shift_mm=round(1000 * float(np.abs(delta).max()), 1))
+        # the solve changed the shin's turn too, which moves the skin it shares with the foot:
+        # read the true lowest points again and settle them on the floor, or above it
+        poses = pose_of(work)
+        for s in SIDES:
+            if sets[s] is None:
+                continue
+            for t in range(n):
+                low = float((_foot_world(poses[t], sets[s]) @ up).min())
+                want = floor + FLOOR_MARGIN + (0.0 if contact[s][t] else lift)
+                dz = want - low if contact[s][t] else max(0.0, want - low)
+                if abs(dz) > 1e-5:
+                    _solve_leg(work[t][0], poses[t], s, dz * up, L[s])
+        if short.max() <= 0.001 or it == iterations - 1:
+            break
+        need = np.zeros(n)
+        for t in range(n):
+            for k in range(-3, 4):
+                j = (t + k) % n if cyclic else min(max(t + k, 0), n - 1)
+                need[t] = max(need[t], short[j])
+        drop = drop + np.convolve(np.pad(need, 3, mode="wrap" if cyclic else "edge"), np.ones(7) / 7, "valid")
+    for t, (wr, root) in enumerate(work):
+        frames[t] = (wr, root)
+    report["hips_lowered_mm"] = round(1000 * float(drop.max()), 1)
+    report["unreached_mm"] = round(1000 * float(short.max()), 1)
+    return report

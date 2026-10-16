@@ -11,6 +11,8 @@ Blender stage, on a 28-bone synthetic humanoid named like tools/autorig.py's out
 kiln child's joints, a skin of tubes and box feet, 100% to one bone each):
 - the GLB holds exactly the clips asked, named as asked;
 - the provenance names the motions' licence for every clip;
+- feet: the walk's standing feet slide < 50 mm/s and no skin goes 5 mm under the floor, where
+  the same clip with --no-fix feet slides and sinks (the regression direction);
 - a rig missing a leg bone is refused, naming it.
 """
 import json
@@ -191,6 +193,16 @@ def main():
         check("the provenance names the motions' licence and source for every clip",
               "NVIDIA Open Model License" in prov["source"]["motion_licence"] and len(prov["clips"]) == 2
               and all(c["sha256"] == presets.sha256(presets.MOTIONS / f"{c['preset']}.npz") for c in prov["clips"]))
+        meas = json.loads((tmp / "SK_Test_rigged_animated.measures.json").read_text())
+        nofix = subprocess.run([sys.executable, str(HERE / "presets.py"), "animate", "--asset", str(rig), "--motion", "walk",
+                                "--no-fix", "feet", "--out", str(tmp / "nofix")], capture_output=True, text=True, env=env)
+        raw = json.loads((tmp / "nofix" / "SK_Test_rigged_animated.measures.json").read_text())["walk"] \
+            if nofix.returncode == 0 else None
+        w = meas["walk"]
+        check(f"feet planted: walk slides {w['foot_slide']['mm_s']} mm/s, {w['floor']['below_mm']} mm under the floor "
+              f"(without the fix: {raw and raw['foot_slide']['mm_s']} mm/s, {raw and raw['floor']['below_mm']} mm)",
+              raw and w["foot_slide"]["mm_s"] < 50 and w["floor"]["below_mm"] < 5
+              and (raw["foot_slide"]["mm_s"] > 50 or raw["floor"]["below_mm"] > 5))
     bad_run = subprocess.run([sys.executable, str(HERE / "presets.py"), "animate", "--asset", str(bad),
                               "--motion", "walk", "--out", str(tmp)], capture_output=True, text=True, env=env)
     check("a rig without LeftFoot is refused, naming it", bad_run.returncode != 0 and "LeftFoot" in bad_run.stdout + bad_run.stderr,
