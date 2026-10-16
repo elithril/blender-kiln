@@ -237,7 +237,8 @@ async function fetchAssets() {
   state.batches = data.batches || {};
   state.work = data.work || null;
   if (!Object.keys(seen).length) seen = store.get(`kiln-studio:seen:${data.root}`, {});
-  $('#project').textContent = data.root;
+  // The folder's name, the whole path on hover: the end of a long path is what tells projects apart.
+  $('#project').textContent = data.name;
   $('#project').title = data.root;
   $('#logo').title = `Kiln Studio · ${data.root}`;
   document.title = `${data.name} · Kiln Studio`;
