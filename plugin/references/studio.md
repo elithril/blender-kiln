@@ -7,7 +7,8 @@ same view of the new version beside the note's own screenshot, so every note end
 with a before and an after.
 
 `<skill>/studio/studio.py` — Python standard library only, nothing to install. The
-page loads three.js 0.186.1 from jsDelivr, so the browser needs a network connection.
+page loads three.js 0.186.1 from jsDelivr (and its two fonts from Google Fonts, which fall
+back to the system's), so the browser needs a network connection.
 
 ---
 
@@ -233,24 +234,44 @@ first folder holding `.kiln-studio/`); pass `--root PROJECT` from elsewhere.
 
 ## 7. What the user sees
 
-- **Left:** every model with a thumbnail, grouped by category (the folder by default;
-  editable), filterable by text, tags and note state; a "new" badge when a model
-  changed since they last looked.
+The two side panels resize the view, and fold into 60 px rails (`[` the list, `]` the
+notes, `\` both); the view fits the model again once they have moved. On a narrow
+screen they lie over the view, one at a time, and the rails stay.
+
+- **Left:** a search, a **View** menu (group by Folders or State, Normal or Compact rows,
+  which models to show, sort), one row of tags, and four counters that filter the list:
+  **To check** (notes you addressed), **Open**, **Claude works**, **Building**. While a
+  command works on models (§ 5), a line under them: "Kiln · optimize · 1 of 3 · table".
+  Every model has a thumbnail, its note counts, a "new" badge when it changed since the
+  user last looked, and its work dot. Grouped by Folders, rows never move: a change
+  updates the row in place, with a flash. Grouped by State (Claude works, Building, To
+  check, Open notes, Nothing to do), rows move to their group, but not while the pointer
+  is over the list: "2 changes · re-sort" waits for a click or for the pointer to leave.
+  Folded, the rail shows the thumbnails with their counts and dots.
 - **Centre:** orbit, pan, zoom; shading Lit / Unlit / Clay / Normals / UV checker /
   Faces (back faces red: flipped normals and holes); wireframe, grid with the front
-  marked, bounds with sizes in metres, bones; under the model's name, an eye that hides
-  the note pins (there once the model has one), and on hover hides the fixed ones or those
-  behind the model; preset views; animation clips with a
-  scrubber; **Compare**: the previous version or another stage side by side, one camera
-  for both, size and triangle change shown.
-- **Right:** Notes (pin or whole-model, statuses, threads, before/after shots — the
-  close-ups on the card, the view with its close-up in the corner when enlarged,
-  "Looks right" / "Not yet"), Checks (§ 3: each finding, how to fix it, Ask Claude), Details (stages, stats, textures, organise,
-  previous version, side files and the log), History (every version seen with its render,
-  size and triangle change, the build's phases, and every note and reply).
+  marked, bounds with sizes in metres, bones; under the model's name, its stages, and an
+  eye that hides the note pins (there once the model has one), and on hover hides the
+  fixed ones or those behind the model. Pins stick to the surface: on a skinned mesh to
+  the bone under them, so they follow the animation; "behind the model" is a ray from the
+  camera against the mesh as posed. Preset views; animation clips with a scrubber;
+  **Compare** with the previous version or another stage: a divider dragged across one
+  view (one camera, the other version left of it) or side by side, with the triangle,
+  file size and height change read from both files.
+- **Right:** Notes (the composer at the top; pin or whole-model notes, statuses, threads,
+  each with its picture and the pin's close-up in the corner, then the after beside it;
+  **View** opens both large with a before/after slider and the close-ups; "Looks right" /
+  "Not yet"), Checks (§ 3: each finding, how to fix it, Ask Claude), Details (stages,
+  stats, textures, organise, previous version, side files and the log), History (one
+  feed, newest first: every version seen with its render, size and triangle change, the
+  build's phases, the checks, every note and reply). Folded, the rail shows each tab with
+  its count, and N / M.
 - **While kiln builds:** a "building" mark in the list, and the phases above the model.
 - **While a command works on models** (§ 5): a dot on each — waiting, breathing, green —
   and its progress above the list; a toast as it moves from one model to the next.
+- **Keys:** `/` find, `↑ ↓` previous and next model, `1`–`6` views, `F` frame, `S` / `⇧S`
+  shading, `W G B K` wire, grid, size, bones, `P` pins, `C` / `⇧C` compare and its layout,
+  `N` pin a note, `M` whole-model note, `Space` play, `?` the list.
 
 Only one previous copy of a model is ever kept. The record of what a model looked like
 at each step is the pictures on each note and the version renders — WebP, 10 to 20

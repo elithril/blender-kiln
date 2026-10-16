@@ -17,9 +17,9 @@ export const toBlender = (v) => [v.x, -v.z, v.y];
 const r4 = (a) => a.map((x) => +x.toFixed(4));
 
 export const BACKGROUNDS = {
-  dark: ['#2a2420', '#0f0c0a'],
-  mid: ['#5b5550', '#34302c'],
-  light: ['#e9e4dd', '#bdb6ad'],
+  dark: ['#1B2130', '#0B0D11'],
+  mid: ['#4A5262', '#262B36'],
+  light: ['#EEF1F5', '#B8BFCB'],
 };
 
 // ── loading ──────────────────────────────────────────────────────────────────
@@ -55,11 +55,11 @@ function checkerTexture() {
   const n = 8;
   for (let y = 0; y < n; y++) {
     for (let x = 0; x < n; x++) {
-      g.fillStyle = (x + y) % 2 ? '#e9e1d6' : '#d67e2c';
+      g.fillStyle = (x + y) % 2 ? '#E6EBF2' : '#2BA7AD';
       g.fillRect((x * 256) / n, (y * 256) / n, 256 / n, 256 / n);
     }
   }
-  g.fillStyle = '#140d07';
+  g.fillStyle = '#0B0D11';
   g.font = 'bold 22px ui-monospace, monospace';
   g.fillText('F', 10, 30); // a glyph shows flipped and rotated islands
   const t = new THREE.CanvasTexture(c);
@@ -71,16 +71,16 @@ function checkerTexture() {
 
 function facesMaterial() {
   // Front faces clay, back faces red: flipped normals and holes in one look.
-  const m = new THREE.MeshStandardMaterial({ color: 0xbdb6ac, roughness: 0.85, side: THREE.DoubleSide });
+  const m = new THREE.MeshStandardMaterial({ color: 0xbfc4cc, roughness: 0.85, side: THREE.DoubleSide });
   m.onBeforeCompile = (s) => {
     s.fragmentShader = s.fragmentShader.replace('#include <dithering_fragment>',
-      '#include <dithering_fragment>\n if (!gl_FrontFacing) gl_FragColor = vec4(0.86, 0.16, 0.12, 1.0);');
+      '#include <dithering_fragment>\n if (!gl_FrontFacing) gl_FragColor = vec4(0.9, 0.17, 0.15, 1.0);');
   };
   return m;
 }
 
 const SHARED = {
-  clay: () => new THREE.MeshStandardMaterial({ color: 0xbdb6ac, roughness: 0.85, metalness: 0 }),
+  clay: () => new THREE.MeshStandardMaterial({ color: 0xbfc4cc, roughness: 0.85, metalness: 0 }),
   normals: () => new THREE.MeshNormalMaterial(),
   uv: () => new THREE.MeshBasicMaterial({ map: checkerTexture() }),
   faces: facesMaterial,
@@ -118,6 +118,23 @@ function disposeTree(root) {
 
 // ── a loaded model, for one side of the view ─────────────────────────────────
 
+// Skinned meshes: their bounds as posed now, widened so an animation that reaches
+// further is not culled at the edge of the view.
+function prepareRoot(root) {
+  root.updateMatrixWorld(true);
+  root.traverse((o) => {
+    if (o.isSkinnedMesh) {
+      o.skeleton.update();
+      o.computeBoundingBox();
+      o.computeBoundingSphere();
+      o.boundingSphere.radius *= 1.6;
+    }
+  });
+}
+
+const ease = (k) => 1 - Math.pow(1 - k, 3);
+function isInside(node, root) { for (let o = node; o; o = o.parent) if (o === root) return true; return false; }
+
 class Slot {
   constructor(scene) {
     this.scene = scene;
@@ -131,6 +148,8 @@ class Slot {
     this.parser = null;
     this.box = new THREE.Box3();
     this.skeleton = null;
+    this.proxies = new Map();
+    this.proxyAt = -1;
   }
   clear() {
     if (this.model) {
@@ -138,13 +157,16 @@ class Slot {
       disposeTree(this.model);
     }
     if (this.skeleton) { this.scene.remove(this.skeleton); this.skeleton = null; }
+    for (const p of this.proxies.values()) p.geometry.dispose();
     this.model = null; this.meshes = []; this.mixer = null; this.clips = []; this.action = null; this.parser = null;
+    this.proxies = new Map(); this.proxyAt = -1;
   }
   set(loaded) {
     this.clear();
     this.model = loaded.root;
     this.parser = loaded.parser;
     this.group.add(this.model);
+    prepareRoot(this.model);
     this.model.traverse((o) => {
       if (o.isMesh) { o.userData.orig = o.material; this.meshes.push(o); }
     });
@@ -153,7 +175,34 @@ class Slot {
     this.model.updateMatrixWorld(true);
     this.box.setFromObject(this.model);
     if (this.box.isEmpty()) this.box.set(new THREE.Vector3(-0.5, 0, -0.5), new THREE.Vector3(0.5, 1, 0.5));
+    // A skinned mesh is ray-cast through a static copy of its current pose: picking and
+    // the "behind the model" test then see the mesh where it is drawn, not at rest.
+    for (const m of this.meshes) {
+      if (!m.isSkinnedMesh) continue;
+      const g = new THREE.BufferGeometry();
+      g.setIndex(m.geometry.index);
+      g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(m.geometry.attributes.position.count * 3), 3));
+      const p = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }));
+      p.matrixAutoUpdate = false;
+      p.userData.src = m;
+      this.proxies.set(m, p);
+    }
   }
+  refreshProxies() {
+    const v = new THREE.Vector3();
+    for (const [m, p] of this.proxies) {
+      m.skeleton.update();
+      const arr = p.geometry.attributes.position.array, n = m.geometry.attributes.position.count;
+      for (let i = 0; i < n; i++) { m.getVertexPosition(i, v); arr[i * 3] = v.x; arr[i * 3 + 1] = v.y; arr[i * 3 + 2] = v.z; }
+      p.geometry.attributes.position.needsUpdate = true;
+      p.geometry.computeBoundingSphere();
+      p.geometry.boundingBox = null;
+      p.matrixWorld.copy(m.matrixWorld);
+    }
+    this.proxyAt = performance.now();
+  }
+  // What a ray hits: visible meshes, the skinned ones as posed.
+  targets() { return this.meshes.filter((m) => m.visible).map((m) => this.proxies.get(m) || m); }
   stats() {
     let tris = 0, verts = 0;
     const mats = new Map(), texs = new Map();
@@ -200,6 +249,7 @@ export class Viewer {
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.12;
     this.controls.addEventListener('change', () => this.onChange?.());
+    this.controls.addEventListener('start', () => { this.tween = null; });
 
     this.a = new Slot(this.makeScene());
     this.b = new Slot(this.makeScene());
@@ -209,14 +259,18 @@ export class Viewer {
     this.b.scene.add(this.helpersB);
 
     this.opts = { shade: 'lit', wire: false, grid: true, bounds: false, skeleton: false, bg: 'dark' };
-    this.compare = false;
+    // null, 'split' (one view, a divider: the other version left of it) or 'side'.
+    this.compare = null;
+    this.split = 0.5;
     this.shared = {};
-    this.wireMat = new THREE.MeshBasicMaterial({ color: 0x140d07, wireframe: true, transparent: true, opacity: 0.35 });
+    this.wireMat = new THREE.MeshBasicMaterial({ color: 0x0b0d11, wireframe: true, transparent: true, opacity: 0.3 });
     this.raycaster = new THREE.Raycaster();
     this.timer = new THREE.Timer();
     this.playing = true;
     this.speed = 1;
     this.size = { w: 1, h: 1 };
+    this.frames = 0;
+    this.fmtLen = fmtM;
     new ResizeObserver(() => this.resize()).observe(canvas.parentElement);
     this.resize();
     this.renderer.setAnimationLoop((t) => this.tick(t));
@@ -225,9 +279,9 @@ export class Viewer {
   makeScene() {
     const s = new THREE.Scene();
     s.environment = this.env;
-    const key = new THREE.DirectionalLight(0xfff1e0, 1.1);
+    const key = new THREE.DirectionalLight(0xfff4ea, 1.15);
     key.position.set(3, 6, 4);
-    s.add(key, new THREE.HemisphereLight(0xf4ede4, 0x2a2420, 0.35));
+    s.add(key, new THREE.HemisphereLight(0xeef2f8, 0x1a1f2a, 0.4));
     return s;
   }
 
@@ -240,14 +294,14 @@ export class Viewer {
   }
 
   updateAspect() {
-    const w = this.compare ? this.size.w / 2 : this.size.w;
+    const w = this.compare === 'side' ? this.size.w / 2 : this.size.w;
     this.camera.aspect = w / this.size.h;
     this.camera.updateProjectionMatrix();
   }
 
-  // The region of the canvas the current model is drawn in: the right half in compare.
+  // The region of the canvas the current model is drawn in: the right half side by side.
   viewRect() {
-    return this.compare
+    return this.compare === 'side'
       ? { x: this.size.w / 2, y: 0, w: this.size.w / 2, h: this.size.h }
       : { x: 0, y: 0, w: this.size.w, h: this.size.h };
   }
@@ -257,10 +311,12 @@ export class Viewer {
     const seq = (this.seqA = (this.seqA || 0) + 1);
     const loaded = await loadModel(this.loaders, url, ext);
     if (seq !== this.seqA) { disposeTree(loaded.root); throw new Superseded(); }
+    const keepTime = keepCamera ? this.a.action?.time : null;
     this.a.set(loaded);
     this.afterLoad(this.a);
+    if (keepTime != null && this.a.action) this.a.action.time = keepTime;
     this.rebuildHelpers();
-    if (!keepCamera) this.frame();
+    if (!keepCamera) this.frame(null, { animate: false });
     return this.a.stats();
   }
 
@@ -275,11 +331,13 @@ export class Viewer {
     return this.b.stats();
   }
 
-  setCompare(on) {
-    this.compare = on;
-    if (!on) this.b.clear();
+  setCompare(mode) {
+    const was = this.compare;
+    this.compare = mode || null;
+    if (!mode) this.b.clear();
     this.updateAspect();
-    if (this.a.model) this.frame(); // half the width: refit, same direction
+    // Side by side halves the width: refit, same direction.
+    if (this.a.model && (was === 'side') !== (mode === 'side')) this.frame();
     this.rebuildHelpers();
     this.onChange?.();
   }
@@ -287,8 +345,9 @@ export class Viewer {
   afterLoad(slot) {
     this.applyShading(slot);
     if (slot.clips.length) {
-      const name = this.clipName && slot.clips.find((c) => c.name === this.clipName) ? this.clipName : slot.clips[0].name;
-      this.playClip(name, slot);
+      const want = (this.clipName || '').toLowerCase();
+      const c = slot.clips.find((x) => x.name.toLowerCase() === want) || slot.clips[0];
+      this.playClip(c.name, slot);
     }
   }
 
@@ -296,7 +355,7 @@ export class Viewer {
   set(opt, value) {
     this.opts[opt] = value;
     if (opt === 'shade') { this.applyShading(this.a); this.applyShading(this.b); }
-    if (opt === 'grid' || opt === 'bounds' || opt === 'skeleton') this.rebuildHelpers();
+    if (['grid', 'bounds', 'skeleton', 'bg'].includes(opt)) this.rebuildHelpers();
     this.onChange?.();
   }
 
@@ -312,11 +371,13 @@ export class Viewer {
 
   // helpers: grid with the front marked, bounds with sizes, skeleton
   rebuildHelpers() {
+    this.frontAt = null;
     for (const [g, slot] of [[this.helpers, this.a], [this.helpersB, this.b]]) {
-      for (const c of [...g.children]) { g.remove(c); c.geometry?.dispose(); c.material?.dispose?.(); }
+      for (const c of [...g.children]) { g.remove(c); c.traverse?.((x) => { x.geometry?.dispose(); x.material?.dispose?.(); }); }
       if (slot.skeleton) { slot.scene.remove(slot.skeleton); slot.skeleton = null; }
       if (!slot.model) continue;
-      const box = slot.box;
+      // One grid for both sides: the current model's, so the two stand on the same floor.
+      const box = this.a.model ? this.a.box : slot.box;
       const size = box.getSize(new THREE.Vector3());
       const span = Math.max(size.x, size.z, size.y * 0.5, 0.01);
       if (this.opts.grid) {
@@ -324,20 +385,20 @@ export class Viewer {
         const cell = span < 1.5 ? 0.1 : 1;
         const half = Math.max(Math.ceil((span * 1.2) / cell) * cell, cell * 5);
         const light = this.opts.bg === 'light';
-        const grid = new THREE.GridHelper(half * 2, Math.round((half * 2) / cell), light ? 0x8a8279 : 0x6d655e, light ? 0xb3aca3 : 0x3a332e);
+        const grid = new THREE.GridHelper(half * 2, Math.round((half * 2) / cell), light ? 0x7f8796 : 0x3d4658, light ? 0xa9b0bd : 0x232a38);
         grid.material.transparent = true;
-        grid.material.opacity = 0.55;
-        grid.position.y = 0;
+        grid.material.opacity = 0.7;
         g.add(grid);
         // Front: +Z here, Blender's -Y. An arrow on the ground, just past the model.
-        const front = new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1),
-          new THREE.Vector3(0, 0.001, Math.max(box.max.z, 0) + span * 0.08), span * 0.25, 0xffb547, span * 0.08, span * 0.05);
-        g.add(front);
+        const tip = Math.max(box.max.z, 0) + span * 0.08;
+        g.add(new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0.001, tip), span * 0.25, 0xffb547, span * 0.08, span * 0.05));
+        this.frontAt = [0, 0.001, tip + span * 0.36];
       }
-      if (this.opts.bounds) g.add(new THREE.Box3Helper(box.clone(), 0x2bb5d6));
+      if (this.opts.bounds) g.add(new THREE.Box3Helper(slot.box.clone(), 0x5ce1e6));
       if (this.opts.skeleton && slot.meshes.some((m) => m.isSkinnedMesh)) {
         slot.skeleton = new THREE.SkeletonHelper(slot.model);
         slot.skeleton.material.depthTest = false;
+        slot.skeleton.material.transparent = true;
         slot.scene.add(slot.skeleton);
       }
     }
@@ -350,14 +411,14 @@ export class Viewer {
     const s = b.getSize(new THREE.Vector3());
     const mid = b.getCenter(new THREE.Vector3());
     return [
-      { text: `X ${fmtM(s.x)}`, p: new THREE.Vector3(mid.x, b.min.y, b.max.z) },
-      { text: `Y ${fmtM(s.z)}`, p: new THREE.Vector3(b.max.x, b.min.y, mid.z) },
-      { text: `Z ${fmtM(s.y)}`, p: new THREE.Vector3(b.max.x, mid.y, b.max.z) },
+      { text: `X ${this.fmtLen(s.x)}`, p: new THREE.Vector3(mid.x, b.min.y, b.max.z) },
+      { text: `Y ${this.fmtLen(s.z)}`, p: new THREE.Vector3(b.max.x, b.min.y, mid.z) },
+      { text: `Z ${this.fmtLen(s.y)}`, p: new THREE.Vector3(b.max.x, mid.y, b.max.z) },
     ].map((l) => ({ ...l, ...this.toScreen(l.p) }));
   }
 
   // camera
-  frame(dir) {
+  frameTarget(dir) {
     const box = this.a.model ? this.a.box : new THREE.Box3(new THREE.Vector3(-1, 0, -1), new THREE.Vector3(1, 1, 1));
     const sphere = box.getBoundingSphere(new THREE.Sphere());
     const d = (dir || this.camera.position.clone().sub(this.controls.target)).clone().normalize();
@@ -365,18 +426,28 @@ export class Viewer {
     const fov = THREE.MathUtils.degToRad(this.camera.fov);
     const fit = Math.min(fov, 2 * Math.atan(Math.tan(fov / 2) * this.camera.aspect));
     const dist = (sphere.radius / Math.sin(fit / 2)) * 1.08;
-    this.controls.target.copy(sphere.center);
-    this.camera.position.copy(sphere.center).addScaledVector(d, dist);
-    this.camera.near = Math.max(dist / 1000, 0.001);
-    this.camera.far = dist * 100;
-    this.camera.updateProjectionMatrix();
-    this.controls.update();
+    return { target: sphere.center.clone(), position: sphere.center.clone().addScaledVector(d, dist), dist };
   }
 
-  // Frame the model from a direction given as [x, y, z] (three.js axes).
-  lookFrom(dir) {
-    this.frame(new THREE.Vector3(...dir));
+  // Fit the model, from `dir` (three.js axes) or from where the camera is; eased unless
+  // `animate` is false.
+  frame(dir = null, { animate = true } = {}) {
+    const t = this.frameTarget(dir);
+    this.camera.near = Math.max(t.dist / 1000, 0.001);
+    this.camera.far = t.dist * 100;
+    this.camera.updateProjectionMatrix();
+    if (!animate) {
+      this.tween = null;
+      this.controls.target.copy(t.target);
+      this.camera.position.copy(t.position);
+      this.controls.update();
+      this.onChange?.();
+      return;
+    }
+    this.tween = { p0: this.camera.position.clone(), t0: this.controls.target.clone(), p1: t.position, t1: t.target, start: performance.now(), dur: 420 };
   }
+
+  lookFrom(dir) { this.frame(new THREE.Vector3(...dir)); }
 
   view(name) {
     const dirs = {
@@ -394,14 +465,21 @@ export class Viewer {
     };
   }
 
-  setCamera(c) {
-    this.camera.position.fromArray(c.position);
-    this.controls.target.fromArray(c.target);
-    const dist = this.camera.position.distanceTo(this.controls.target);
+  setCamera(c, animate = true) {
+    const p1 = new THREE.Vector3().fromArray(c.position), t1 = new THREE.Vector3().fromArray(c.target);
+    const dist = p1.distanceTo(t1);
     this.camera.near = Math.max(dist / 1000, 0.001);
     this.camera.far = dist * 100;
     this.camera.updateProjectionMatrix();
-    this.controls.update();
+    if (!animate) {
+      this.tween = null;
+      this.camera.position.copy(p1);
+      this.controls.target.copy(t1);
+      this.controls.update();
+      this.onChange?.();
+      return;
+    }
+    this.tween = { p0: this.camera.position.clone(), t0: this.controls.target.clone(), p1, t1, start: performance.now(), dur: 520 };
   }
 
   // animation
@@ -414,42 +492,80 @@ export class Viewer {
   }
   syncClip() {
     if (this.b.mixer && this.clipName) {
-      const c = this.b.clips.find((x) => x.name === this.clipName);
+      const c = this.b.clips.find((x) => x.name.toLowerCase() === this.clipName.toLowerCase());
       if (c) { this.b.mixer.stopAllAction(); this.b.action = this.b.mixer.clipAction(c).play(); this.b.action.time = this.a.action?.time || 0; }
     }
   }
   seek(t) {
     for (const s of [this.a, this.b]) if (s.action) { s.action.time = t; s.mixer.update(0); }
+    this.a.proxyAt = -1;
     this.onChange?.();
   }
   get clipTime() { return this.a.action?.time || 0; }
   get clipDuration() { return this.a.action?.getClip().duration || 0; }
 
-  // picking: the current model only, in its own half of the view
+  // The posed copies of skinned meshes, refreshed if older than maxAge ms (0: now).
+  ensureProxies(maxAge = 0) {
+    const a = this.a;
+    if (a.proxies.size && (a.proxyAt < 0 || performance.now() - a.proxyAt > maxAge)) {
+      a.model.updateMatrixWorld(true);
+      a.refreshProxies();
+    }
+  }
+
+  // picking: the current model only, in its own part of the view
   pick(clientX, clientY) {
     if (!this.a.model) return null;
     const rect = this.canvas.getBoundingClientRect();
     const v = this.viewRect();
     const x = clientX - rect.left - v.x, y = clientY - rect.top - v.y;
     if (x < 0 || y < 0 || x > v.w || y > v.h) return null;
+    if (this.compare === 'split' && x < this.split * v.w) return null;
+    this.ensureProxies(0);
     this.raycaster.setFromCamera(new THREE.Vector2((x / v.w) * 2 - 1, -(y / v.h) * 2 + 1), this.camera);
-    const hits = this.raycaster.intersectObjects(this.a.meshes.filter((m) => m.visible), false);
-    const hit = hits[0];
+    const hit = this.raycaster.intersectObjects(this.a.targets(), false)[0];
     if (!hit) return null;
+    const src = hit.object.userData.src || hit.object;
     const n = hit.face ? hit.face.normal.clone().transformDirection(hit.object.matrixWorld).normalize() : new THREE.Vector3(0, 1, 0);
     if (n.dot(this.raycaster.ray.direction) > 0) n.negate();
-    let o = hit.object, object = null;
+    let o = src, object = null;
     while (o && !object) { if (o.userData.name) object = o.userData.name; o = o.parent; }
-    const assoc = this.a.parser?.associations.get(hit.object);
-    const meshName = assoc && assoc.meshes !== undefined ? this.a.parser.json.meshes[assoc.meshes]?.name : hit.object.name;
-    const mat = Array.isArray(hit.object.userData.orig)
-      ? hit.object.userData.orig[hit.face?.materialIndex || 0] : hit.object.userData.orig;
+    const assoc = this.a.parser?.associations.get(src);
+    const meshName = assoc && assoc.meshes !== undefined ? this.a.parser.json.meshes[assoc.meshes]?.name : src.name;
+    const mat = Array.isArray(src.userData.orig) ? src.userData.orig[hit.face?.materialIndex || 0] : src.userData.orig;
+    // What the pin sticks to: on a skinned mesh, the bone that moves the hit vertex most;
+    // otherwise the mesh. Only by a name that is unique in the model, so it is found again.
+    let node = src;
+    if (src.isSkinnedMesh && hit.face) {
+      const si = src.geometry.attributes.skinIndex, sw = src.geometry.attributes.skinWeight;
+      let best = 0, bi = -1;
+      for (let k = 0; k < 4; k++) { const w = sw.getComponent(hit.face.a, k); if (w > best) { best = w; bi = si.getComponent(hit.face.a, k); } }
+      if (bi >= 0 && src.skeleton.bones[bi]) node = src.skeleton.bones[bi];
+    }
+    let named = 0;
+    if (node.name) this.a.model.traverse((x) => { if (x.name === node.name) named++; });
+    const anchor = named === 1 ? { node: node.name, local: r4(node.worldToLocal(hit.point.clone()).toArray()) } : {};
     return {
       point: r4(hit.point.toArray()), normal: r4(n.toArray()),
       point_blender: r4(toBlender(hit.point)), normal_blender: r4(toBlender(n)),
-      object: object || hit.object.name || '', mesh: meshName || '', material: mat?.name || '',
-      face: hit.faceIndex ?? null, region: this.region(hit.point),
+      object: object || src.name || '', mesh: meshName || '', material: mat?.name || '',
+      bone: node.isBone && named === 1 ? node.name : null,
+      face: hit.faceIndex ?? null, region: this.region(hit.point), ...anchor,
     };
+  }
+
+  // Where a note's pin is now: on its bone or mesh as it moves, else the saved point.
+  anchorWorld(anchor, slot = this.a) {
+    if (!anchor || !slot.model) return null;
+    if (anchor.node && anchor.local) {
+      let node = anchor._obj;
+      if (!node || !isInside(node, slot.model)) {
+        node = slot.model.getObjectByName(anchor.node) || null;
+        Object.defineProperty(anchor, '_obj', { value: node, writable: true, enumerable: false, configurable: true });
+      }
+      if (node) return node.localToWorld(new THREE.Vector3().fromArray(anchor.local));
+    }
+    return anchor.point ? new THREE.Vector3().fromArray(anchor.point) : null;
   }
 
   // A rough place on the model in words, in Blender's frame: "top, front (-Y), +X side".
@@ -466,47 +582,70 @@ export class Viewer {
   // Screen position of a world point inside the canvas, with whether it faces us.
   toScreen(p) {
     const v = this.viewRect();
-    const q = new THREE.Vector3().fromArray(Array.isArray(p) ? p : p.toArray()).project(this.camera);
+    const q = (p.isVector3 ? p.clone() : new THREE.Vector3().fromArray(p)).project(this.camera);
     return { x: v.x + ((q.x + 1) / 2) * v.w, y: ((1 - q.y) / 2) * v.h, behind: q.z > 1, inView: Math.abs(q.x) <= 1.02 && Math.abs(q.y) <= 1.02 };
   }
 
-  // Whether a pinned point is hidden behind the model from where the camera is.
+  // Whether a point is hidden behind the model from where the camera is: a ray against
+  // the model as drawn (skinned meshes posed; call ensureProxies first).
   occluded(point) {
-    const p = new THREE.Vector3().fromArray(point);
+    const p = point.isVector3 ? point : new THREE.Vector3().fromArray(point);
     const dir = p.clone().sub(this.camera.position);
     const dist = dir.length();
     this.raycaster.set(this.camera.position, dir.normalize());
-    const hit = this.raycaster.intersectObjects(this.a.meshes, false)[0];
-    return !!hit && hit.distance < dist - Math.max(dist * 0.01, 0.002);
+    const hit = this.raycaster.intersectObjects(this.a.targets(), false)[0];
+    return !!hit && hit.distance < dist - Math.max(dist * 0.012, 0.002);
   }
 
   // drawing
   tick(t) {
     this.timer.update(t);
     const dt = Math.min(this.timer.getDelta(), 0.1);
+    if (this.tween) {
+      const k = Math.min(1, (performance.now() - this.tween.start) / this.tween.dur), e = ease(k);
+      this.camera.position.lerpVectors(this.tween.p0, this.tween.p1, e);
+      this.controls.target.lerpVectors(this.tween.t0, this.tween.t1, e);
+      if (k >= 1) this.tween = null;
+      this.onChange?.();
+    }
     this.controls.update();
     if (this.playing) {
       for (const s of [this.a, this.b]) s.mixer?.update(dt * this.speed);
       if (this.a.mixer) this.onAnimate?.();
     }
     this.draw();
+    this.frames++;
     this.onFrame?.();
   }
 
-  draw() {
+  // solo: the current model alone over the whole view (a note's picture while comparing).
+  draw({ solo = false } = {}) {
     const r = this.renderer, { w, h } = this.size;
-    r.setScissorTest(this.compare);
     r.autoClear = false;
+    r.setScissorTest(false);
+    r.setViewport(0, 0, w, h);
     r.clear();
-    const passes = this.compare ? [[this.b.scene, 0], [this.a.scene, w / 2]] : [[this.a.scene, 0]];
-    for (const [scene, x] of passes) {
-      const vw = this.compare ? w / 2 : w;
-      r.setViewport(x, 0, vw, h);
-      r.setScissor(x, 0, vw, h);
+    const mode = solo ? (this.compare === 'side' ? 'side-solo' : null) : this.compare;
+    // [scene, viewport x, scissor x, viewport w, scissor w]
+    const passes = [];
+    if (mode === 'split') {
+      const sx = Math.round(w * this.split);
+      passes.push([this.b.scene, 0, 0, w, sx], [this.a.scene, 0, sx, w, w - sx]);
+    } else if (mode === 'side') {
+      passes.push([this.b.scene, 0, 0, w / 2, w / 2], [this.a.scene, w / 2, w / 2, w / 2, w / 2]);
+    } else if (mode === 'side-solo') {
+      passes.push([this.a.scene, w / 2, w / 2, w / 2, w / 2]);
+    } else {
+      passes.push([this.a.scene, 0, 0, w, w]);
+    }
+    for (const [scene, vx, sx, vw, sw] of passes) {
+      r.setScissorTest(true);
+      r.setViewport(vx, 0, vw, h);
+      r.setScissor(sx, 0, sw, h);
       r.render(scene, this.camera);
       if (this.opts.wire) {
         scene.overrideMaterial = this.wireMat;
-        this.wireMat.color.set(this.opts.bg === 'light' || this.opts.shade !== 'lit' ? 0x140d07 : 0xf4ede4);
+        this.wireMat.color.set(this.opts.bg === 'light' || this.opts.shade === 'clay' || this.opts.shade === 'uv' ? 0x0b0d11 : 0xe6ebf2);
         r.render(scene, this.camera);
         scene.overrideMaterial = null;
       }
@@ -519,10 +658,11 @@ export class Viewer {
   // close-up rendered nearer along the user's line of sight to it, the spot marked
   // without being covered. `view` is what an "after" render needs to frame both again.
   screenshot({ pin = null } = {}) {
-    this.draw();
+    this.draw({ solo: true });
     const src = this.renderer.domElement;
     const v = this.viewRect(), k = src.width / this.size.w;
-    const crop = this.a.model ? modelCrop(this.a.box, this.camera, pin) : [0, 0, 1, 1];
+    // Cropped to the model, widened to the note card's 4:3 inside the view.
+    const crop = this.a.model ? widenCrop(modelCrop(this.a.box, this.camera, pin), v.w, v.h, 4 / 3) : [0, 0, 1, 1];
     const full = document.createElement('canvas');
     full.width = Math.round(v.w * k); full.height = Math.round(v.h * k);
     const g = full.getContext('2d');
@@ -560,8 +700,8 @@ export class Viewer {
       paintBackground(gs, side, side, this.opts.bg);
       gs.drawImage(src, 0, src.height - side, side, side, 0, 0, side, side);
       out.detail = finishShot(sq, { max: DETAIL_MAX, mark: [0.5, 0.5], quality: 0.82 });
-      this.draw();
     }
+    this.draw();
     return out;
   }
 
@@ -599,8 +739,8 @@ function drawMark(g, x, y, r) {
     }
     g.stroke();
   };
-  ticks(Math.max(4, r / 5) + 3, 'rgba(20,13,7,0.85)');
-  ticks(Math.max(4, r / 5), '#ff5a14');
+  ticks(Math.max(4, r / 5) + 3, 'rgba(11,13,17,0.85)');
+  ticks(Math.max(4, r / 5), '#FFB547');
 }
 
 // Crop (fractions of the view) and scale a picture, mark the spot, and encode it:
@@ -638,6 +778,20 @@ function modelCrop(box, camera, pin) {
   const c = [x0 - m, y0 - m, x1 + m, y1 + m].map((v) => Math.min(1, Math.max(0, v)));
   // Next to nothing to cut: keep the whole view.
   return (c[2] - c[0]) * (c[3] - c[1]) > 0.8 ? [0, 0, 1, 1] : c.map((v) => +v.toFixed(4));
+}
+
+// A crop (fractions of a w × h view) widened to `aspect`, centred, kept inside the view.
+function widenCrop(c, w, h, aspect) {
+  let [x0, y0, x1, y1] = [c[0] * w, c[1] * h, c[2] * w, c[3] * h];
+  const cw = x1 - x0, ch = y1 - y0;
+  if (cw / ch < aspect) {
+    const nw = Math.min(w, ch * aspect);
+    x0 = Math.max(0, Math.min(w - nw, x0 - (nw - cw) / 2)); x1 = x0 + nw;
+  } else {
+    const nh = Math.min(h, cw / aspect);
+    y0 = Math.max(0, Math.min(h - nh, y0 - (nh - ch) / 2)); y1 = y0 + nh;
+  }
+  return [x0 / w, y0 / h, x1 / w, y1 / h].map((x) => +Math.min(1, Math.max(0, x)).toFixed(4));
 }
 
 // Nearer the pin along the line the user looked at it: what they saw past stays clear.
@@ -723,10 +877,10 @@ export class Offscreen {
   paint(loaded, w, h, camera, bg) {
     const scene = new THREE.Scene();
     scene.environment = this.env;
-    const key = new THREE.DirectionalLight(0xfff1e0, 1.1);
+    const key = new THREE.DirectionalLight(0xfff4ea, 1.15);
     key.position.set(3, 6, 4);
-    scene.add(key, new THREE.HemisphereLight(0xf4ede4, 0x2a2420, 0.35), loaded.root);
-    loaded.root.updateMatrixWorld(true);
+    scene.add(key, new THREE.HemisphereLight(0xeef2f8, 0x1a1f2a, 0.4), loaded.root);
+    prepareRoot(loaded.root);
     const cam = new THREE.PerspectiveCamera(camera?.fov || 35, w / h, 0.001, 5000);
     if (camera) {
       cam.position.fromArray(camera.position);

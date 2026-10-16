@@ -4,7 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kiln Studio</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3c3 6 9 8 9 16a9 9 0 0 1-18 0c0-5 3-7 4-11 1 3 3 4 3 4s-1-5 2-9z' fill='%23d67e2c'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3c3 6 9 8 9 16a9 9 0 0 1-18 0c0-5 3-7 4-11 1 3 3 4 3 4s-1-5 2-9z' fill='%235CE1E6'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Sora:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="/static/style.css">
 <script type="importmap">
 { "imports": {
@@ -14,182 +17,206 @@
 </script>
 </head>
 <body>
-<aside id="browser" aria-label="Models">
-  <header class="brand">
-    <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3c3 6 9 8 9 16a9 9 0 0 1-18 0c0-5 3-7 4-11 1 3 3 4 3 4s-1-5 2-9z"/></svg>
-    <div>
-      <h1>Kiln Studio</h1>
-      <p id="project" title=""></p>
+
+<aside id="left" class="panel left" aria-label="Models" data-i18n-attr="aria-label">
+  <div class="full">
+    <header class="lhead">
+      <div class="row1">
+        <span class="logo" id="logo" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M16 3c3 6 9 8 9 16a9 9 0 0 1-18 0c0-5 3-7 4-11 1 3 3 4 3 4s-1-5 2-9z"/></svg></span>
+        <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+          <input id="search" type="search" placeholder="Find a model" autocomplete="off" spellcheck="false" aria-label="Find a model (/)" data-i18n-attr="placeholder,aria-label"><kbd>/</kbd></label>
+        <button id="view-btn" class="btn sm" aria-haspopup="true" aria-expanded="false" aria-controls="viewpop" title="Group, density, filter, sort" data-i18n data-i18n-attr="title">View</button>
+        <button class="btn icon sm" data-toggle="left" aria-label="Collapse the model list ([)" title="Collapse ( [ )" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+      </div>
+      <div id="tagbar" class="tagbar" role="group" aria-label="Filter by tag" data-i18n-attr="aria-label"></div>
+      <div id="strip" class="strip" role="group" aria-label="What needs you" data-i18n-attr="aria-label">
+        <button class="pill check" data-pill="addressed" aria-pressed="false" title="Notes Claude addressed: look and mark each one" data-i18n-attr="title"><b>0</b><span data-i18n>To check</span></button>
+        <button class="pill open" data-pill="open" aria-pressed="false" title="Open notes waiting for Claude" data-i18n-attr="title"><b>0</b><span data-i18n>Open</span></button>
+        <button class="pill works" data-pill="working" aria-pressed="false" title="Models in kiln's current run" data-i18n-attr="title"><b>0</b><span data-i18n>Claude works</span></button>
+        <button class="pill building" data-pill="building" aria-pressed="false" title="Models kiln is building now" data-i18n-attr="title"><b>0</b><span data-i18n>Building</span></button>
+      </div>
+      <div id="workline" class="workline" hidden aria-live="polite"></div>
+    </header>
+    <div id="resort" hidden><button id="resort-btn"></button></div>
+    <nav id="list" aria-label="Model list" data-i18n-attr="aria-label"></nav>
+    <footer class="lfoot">
+      <span id="project" class="dim mono" title=""></span>
+    </footer>
+    <div id="viewpop" class="popover" hidden role="group" aria-label="List view" data-i18n-attr="aria-label">
+      <span class="lab" data-i18n>Group by</span>
+      <div class="seg small" id="pg-group"><button data-v="folders" class="on" data-i18n>Folders</button><button data-v="state" data-i18n>State</button></div>
+      <span class="lab" data-i18n>Density</span>
+      <div class="seg small" id="pg-density"><button data-v="normal" class="on" data-i18n>Normal</button><button data-v="compact" data-i18n>Compact</button></div>
+      <label for="filter" data-i18n>Show</label>
+      <select id="filter">
+        <option value="all" data-i18n>All models</option>
+        <option value="open" data-i18n>Open notes</option>
+        <option value="addressed" data-i18n>Awaiting my check</option>
+        <option value="notes" data-i18n>Any notes</option>
+        <option value="clean" data-i18n>No notes</option>
+        <option value="working" hidden data-i18n>In Claude's run</option>
+        <option value="building" hidden data-i18n>Building</option>
+      </select>
+      <label for="sort" data-i18n>Sort</label>
+      <select id="sort">
+        <option value="name" data-i18n>By name</option>
+        <option value="updated" data-i18n>Recently changed</option>
+        <option value="tris" data-i18n>Heaviest</option>
+      </select>
     </div>
-  </header>
-  <div class="find">
-    <input id="search" type="search" placeholder="Find a model" autocomplete="off" spellcheck="false" aria-label="Find a model (/)">
-    <kbd>/</kbd>
   </div>
-  <div class="filters">
-    <select id="filter" aria-label="Show">
-      <option value="all">All models</option>
-      <option value="open">Open notes</option>
-      <option value="addressed">Awaiting my check</option>
-      <option value="notes">Any notes</option>
-      <option value="clean">No notes</option>
-    </select>
-    <select id="sort" aria-label="Sort">
-      <option value="name">By name</option>
-      <option value="updated">Recently changed</option>
-      <option value="tris">Heaviest</option>
-    </select>
+  <div class="rail" aria-label="Models (collapsed)" data-i18n-attr="aria-label">
+    <button class="rbtn" data-toggle="left" aria-label="Expand the model list ([)" title="Expand ( [ )" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+    <div class="rsep"></div>
+    <div id="lrail"></div>
   </div>
-  <div id="tagbar" class="tagbar"></div>
-  <div id="totals"></div>
-  <div id="work" hidden aria-live="polite"></div>
-  <nav id="list"></nav>
 </aside>
 
-<main id="stage">
-  <canvas id="view"></canvas>
-  <div id="overlay" aria-hidden="true"></div>
+<main id="stage" data-bg="dark" aria-label="3D view" data-i18n-attr="aria-label">
+  <canvas id="view" aria-label="The model. Drag to orbit, scroll to zoom, right-drag to pan." data-i18n-attr="aria-label"></canvas>
+  <div id="labels"></div>
   <div id="pins"></div>
+  <div id="split" hidden role="slider" aria-label="Compare divider" data-i18n-attr="aria-label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" tabindex="0"><div class="knob">⟷</div></div>
+  <div id="sidediv" hidden></div>
+  <span id="lab-prev" class="cmplab" hidden></span>
+  <span id="lab-cur" class="cmplab" hidden></span>
 
-  <div id="titlebar" hidden>
-    <div class="title-col">
+  <div class="topbar" id="topbar" hidden>
+    <div class="titlecol">
       <div class="title">
-        <h2 id="asset-name"></h2>
-        <div id="variants" class="chips" role="tablist" aria-label="Variant"></div>
-      </div>
-      <div id="pins-ctl" hidden>
-        <button id="t-pins" class="on" title="Hide pins (P)" aria-label="Hide pins" aria-pressed="true">
-          <svg class="eye" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
-          <svg class="eye-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 5.1A9.8 9.8 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-2.4 3.3M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18"/></svg>
-        </button>
-        <div class="pins-menu" role="group" aria-label="Which pins">
-          <button id="t-pins-open" aria-pressed="false" title="Hide the blue pins Claude has already fixed (and grey closed ones), keep the ones still to do"><i class="sw"></i>Hide fixed pins<i class="mini-pin" aria-hidden="true"></i></button>
-          <button id="t-pins-front" aria-pressed="false" title="Pins on the far side of the model are shown faded; this hides them instead"><i class="sw"></i>Hide pins behind the model</button>
+        <h2 id="asset-name">…</h2>
+        <div id="stages" class="seg small stages" role="radiogroup" aria-label="Stage" data-i18n-attr="aria-label"></div>
+        <div class="pinsctl" id="pinsctl" hidden>
+          <button id="t-pins" class="eye on" aria-pressed="true" aria-label="Hide pins (P)" title="Pins (P)">
+            <svg class="on-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 5.1A9.8 9.8 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-2.4 3.3M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18"/></svg>
+          </button>
+          <div class="pinsmenu"><div class="box" role="group" aria-label="Which pins" data-i18n-attr="aria-label">
+            <button id="pm-all" aria-pressed="false"><i class="sw"></i><span data-i18n>Hide all pins</span> <kbd style="margin-left:auto">P</kbd></button>
+            <button id="pm-fixed" aria-pressed="false" title="Hide the pins Claude already addressed, and closed ones" data-i18n-attr="title"><i class="sw"></i><span data-i18n>Hide fixed pins</span></button>
+            <button id="pm-behind" aria-pressed="false" title="Pins on the far side are faded; this hides them (raycast against the model)" data-i18n-attr="title"><i class="sw"></i><span data-i18n>Hide pins behind the model</span></button>
+          </div></div>
         </div>
       </div>
+      <div id="stats" class="stats" aria-live="polite"></div>
     </div>
-    <div id="asset-stats" class="stats"></div>
   </div>
 
   <div id="buildbar" hidden aria-live="polite">
-    <span class="state"></span>
-    <ol class="phases" aria-label="Build phases"></ol>
-    <span class="step"></span>
+    <span class="st"><i class="bmark"></i><span data-i18n>Building</span></span>
+    <ol id="phases" aria-label="Build phases" data-i18n-attr="aria-label"></ol>
+    <span class="step" id="bstep"></span>
   </div>
 
-  <div id="compare-labels" hidden>
-    <span id="cmp-left"></span>
-    <span id="cmp-right"></span>
+  <div id="cmpbar" hidden>
+    <div class="seg small" id="cmp-mode" role="radiogroup" aria-label="Compare layout" data-i18n-attr="aria-label"><button data-m="split" class="on" data-i18n>Split</button><button data-m="side" data-i18n>Side by side</button></div>
+    <select id="cmp-select" aria-label="Compare with" data-i18n-attr="aria-label"></select>
+    <span class="delta" id="cmp-delta"></span>
+    <button class="btn icon sm ghost" id="cmp-close" aria-label="Stop comparing (C)" title="Stop comparing (C)" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </div>
 
-  <div id="toolbar" hidden>
-    <div class="group seg" role="radiogroup" aria-label="Shading">
-      <button data-shade="lit" class="on" title="Lit: materials under a studio light ( [ / ] cycle )">Lit</button>
-      <button data-shade="unlit" title="Unlit: base colour and textures only">Unlit</button>
-      <button data-shade="clay" title="Clay: form only">Clay</button>
-      <button data-shade="normals" title="Normals">Normals</button>
-      <button data-shade="uv" title="UV checker: stretching, seams, flipped islands">UV</button>
-      <button data-shade="faces" title="Back faces in red: flipped normals and holes">Faces</button>
+  <nav id="views" aria-label="Views" data-i18n-attr="aria-label" hidden>
+    <button data-view="front" title="Front, from Blender −Y (1)" data-i18n data-i18n-attr="title">Front</button>
+    <button data-view="back" title="Back (2)" data-i18n data-i18n-attr="title">Back</button>
+    <button data-view="left" title="Left, from −X (3)" data-i18n data-i18n-attr="title">Left</button>
+    <button data-view="right" title="Right, from +X (4)" data-i18n data-i18n-attr="title">Right</button>
+    <button data-view="top" title="Top (5)" data-i18n data-i18n-attr="title">Top</button>
+    <button data-view="iso" title="Three-quarter (6)" data-i18n-attr="title">¾</button>
+    <div class="vsep"></div>
+    <button id="t-frame" title="Frame the model (F)" data-i18n data-i18n-attr="title">Frame</button>
+  </nav>
+
+  <div class="bottom" id="bottom" hidden>
+    <div id="animbar" class="bar" hidden>
+      <button id="a-play" class="btn icon" aria-label="Pause (Space)" title="Play / pause (Space)" data-i18n-attr="title"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
+      <select id="a-clip" aria-label="Clip" data-i18n-attr="aria-label"></select>
+      <input id="a-time" type="range" min="0" max="1" step="0.001" value="0" aria-label="Time in the clip" data-i18n-attr="aria-label">
+      <span id="a-read">0.00 / 0.00 s</span>
+      <select id="a-speed" aria-label="Speed" data-i18n-attr="aria-label"><option value="0.25">¼×</option><option value="0.5">½×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
     </div>
-    <div class="group">
-      <button data-opt="wire" title="Wireframe (W)">Wire</button>
-      <button data-opt="grid" class="on" title="Ground grid, front arrow (G)">Grid</button>
-      <button data-opt="bounds" title="Bounds with sizes (B)">Size</button>
-      <button data-opt="skeleton" id="t-skel" title="Skeleton (K)" hidden>Bones</button>
-      <button id="t-bg" title="Background: dark, mid, light">Bg</button>
-    </div>
-    <div class="group">
-      <button id="t-compare" title="Compare side by side (C)">Compare</button>
-    </div>
-  </div>
-
-  <div id="views" class="rail" hidden aria-label="Views">
-    <button data-view="front" title="Front, from Blender -Y (1)">Front</button>
-    <button data-view="back" title="Back (2)">Back</button>
-    <button data-view="left" title="Left, from -X (3)">Left</button>
-    <button data-view="right" title="Right, from +X (4)">Right</button>
-    <button data-view="top" title="Top (5)">Top</button>
-    <button data-view="iso" title="Three-quarter (6)">¾</button>
-    <button id="t-frame" title="Frame the model (F)">Frame</button>
-  </div>
-
-  <div id="animbar" hidden>
-    <button id="a-play" title="Play / pause (Space)" aria-label="Play or pause">❚❚</button>
-    <select id="a-clip" aria-label="Clip"></select>
-    <input id="a-time" type="range" min="0" max="1" step="0.001" value="0" aria-label="Time">
-    <span id="a-readout">0.00 s</span>
-    <select id="a-speed" aria-label="Speed">
-      <option value="0.25">¼×</option><option value="0.5">½×</option><option value="1" selected>1×</option><option value="2">2×</option>
-    </select>
-  </div>
-
-  <div id="empty">
-    <div>
-      <p class="big">No model picked</p>
-      <p>Choose one on the left. Models re-exported by Claude show up here on their own,
-        and a model kiln is building opens here as it is built.</p>
+    <div id="toolbar" class="bar" role="toolbar" aria-label="View options" data-i18n-attr="aria-label">
+      <div class="seg" role="radiogroup" aria-label="Shading" data-i18n-attr="aria-label">
+        <button data-shade="lit" class="on" title="Lit: materials under a studio light (S cycles)" data-i18n data-i18n-attr="title">Lit</button>
+        <button data-shade="unlit" title="Unlit: base colour and textures only" data-i18n data-i18n-attr="title">Unlit</button>
+        <button data-shade="clay" title="Clay: form only" data-i18n data-i18n-attr="title">Clay</button>
+        <button data-shade="normals" title="Normals" data-i18n data-i18n-attr="title">Normals</button>
+        <button data-shade="uv" title="UV checker: stretching, seams, flipped islands" data-i18n-attr="title">UV</button>
+        <button data-shade="faces" title="Back faces in red: flipped normals and holes" data-i18n data-i18n-attr="title">Faces</button>
+      </div>
+      <span class="vsep"></span>
+      <button class="btn" data-opt="wire" title="Wireframe (W)" aria-pressed="false" data-i18n data-i18n-attr="title">Wire</button>
+      <button class="btn on" data-opt="grid" title="Ground grid, front arrow (G)" aria-pressed="true" data-i18n data-i18n-attr="title">Grid</button>
+      <button class="btn" data-opt="bounds" title="Bounds with sizes (B)" aria-pressed="false" data-i18n data-i18n-attr="title">Size</button>
+      <button class="btn" data-opt="skeleton" id="t-skel" title="Skeleton (K)" aria-pressed="false" hidden data-i18n data-i18n-attr="title">Bones</button>
+      <button class="btn" id="t-bg" title="Background: dark, mid, light" data-i18n-attr="title">Bg</button>
+      <span class="vsep"></span>
+      <button class="btn" id="t-compare" title="Compare with the previous version (C)" aria-pressed="false" data-i18n data-i18n-attr="title">Compare</button>
+      <button class="btn icon" id="t-keys" aria-label="Keyboard shortcuts (?)" title="Keys (?)" data-i18n-attr="aria-label,title">?</button>
     </div>
   </div>
-  <div id="loading" hidden><span></span>Loading model…</div>
+
+  <div id="empty"></div>
+  <div id="loading" hidden><div class="box"><span class="spin"></span><span id="loading-t"></span></div></div>
   <div id="hint" hidden></div>
   <div id="hover" hidden></div>
-  <div id="toast" role="status" aria-live="polite" hidden></div>
+  <div id="toast" role="status" aria-live="polite"></div>
 </main>
 
-<aside id="side" aria-label="Notes and details" hidden>
-  <div class="tabs" role="tablist">
-    <button role="tab" data-tab="notes" class="on">Notes <span id="n-count"></span></button>
-    <button role="tab" data-tab="checks">Checks <span id="c-count"></span></button>
-    <button role="tab" data-tab="details">Details</button>
-    <button role="tab" data-tab="history">History</button>
+<aside id="right" class="panel right" aria-label="Notes and details" data-i18n-attr="aria-label">
+  <div class="full">
+    <div class="tabs" role="tablist" aria-label="Panels" data-i18n-attr="aria-label">
+      <button role="tab" id="tb-notes" data-tab="notes" aria-selected="true" aria-controls="tab-notes"><span data-i18n>Notes</span> <span class="tc" id="tc-notes"></span></button>
+      <button role="tab" id="tb-checks" data-tab="checks" aria-selected="false" aria-controls="tab-checks"><span data-i18n>Checks</span> <span class="tc" id="tc-checks"></span></button>
+      <button role="tab" id="tb-details" data-tab="details" aria-selected="false" aria-controls="tab-details" data-i18n>Details</button>
+      <button role="tab" id="tb-history" data-tab="history" aria-selected="false" aria-controls="tab-history" data-i18n>History</button>
+      <button class="btn icon sm ghost collapse" data-toggle="right" aria-label="Collapse the notes panel (])" title="Collapse ( ] )" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+    </div>
+    <section id="tab-notes" class="tab" role="tabpanel" aria-labelledby="tb-notes">
+      <div class="notes-head">
+        <button id="t-pin" class="btn accent sm" title="Then click the model (N)" data-i18n-attr="title"><span data-i18n>Pin a note</span> <kbd>N</kbd></button>
+        <button id="t-general" class="btn sm" title="A note about the whole model (M)" data-i18n-attr="title"><span data-i18n>Whole model</span> <kbd>M</kbd></button>
+        <div class="seg small" id="nf" role="radiogroup" aria-label="Which notes" data-i18n-attr="aria-label"><button data-nf="active" class="on" data-i18n>Active</button><button data-nf="all" data-i18n>All</button></div>
+      </div>
+      <div id="composer" hidden>
+        <div class="where" id="composer-where"></div>
+        <textarea id="composer-text" rows="3" placeholder="What should change?" aria-label="Note text" data-i18n-attr="placeholder,aria-label"></textarea>
+        <div class="row"><button id="composer-save" class="btn accent sm"><span data-i18n>Save note</span> <kbd>⌘↵</kbd></button><button id="composer-cancel" class="btn sm" data-i18n>Cancel</button><span class="dim" data-i18n>Esc cancels</span></div>
+      </div>
+      <div id="note-list"></div>
+      <footer id="handoff"></footer>
+    </section>
+    <section id="tab-checks" class="tab" role="tabpanel" aria-labelledby="tb-checks" hidden></section>
+    <section id="tab-details" class="tab" role="tabpanel" aria-labelledby="tb-details" hidden></section>
+    <section id="tab-history" class="tab" role="tabpanel" aria-labelledby="tb-history" hidden></section>
   </div>
-
-  <section id="tab-notes" class="tab">
-    <div id="composer" hidden>
-      <div id="composer-where"></div>
-      <textarea id="composer-text" rows="4" placeholder="What should change?"></textarea>
-      <div class="row">
-        <button id="composer-save" class="accent">Save note <kbd>⌘↵</kbd></button>
-        <button id="composer-cancel">Cancel</button>
-      </div>
-    </div>
-    <div class="notes-head">
-      <button id="t-pin" class="accent" title="Then click the model (N)">Pin a note <kbd>N</kbd></button>
-      <button id="t-general" title="A note about the whole model (M)">Whole model <kbd>M</kbd></button>
-      <div class="seg small" role="radiogroup" aria-label="Which notes">
-        <button data-nf="active" class="on">Active</button>
-        <button data-nf="all">All</button>
-      </div>
-    </div>
-    <div id="note-list"></div>
-    <footer id="handoff"></footer>
-  </section>
-
-  <section id="tab-checks" class="tab" hidden></section>
-  <section id="tab-details" class="tab" hidden></section>
-  <section id="tab-history" class="tab" hidden></section>
+  <div class="rail" aria-label="Notes (collapsed)" data-i18n-attr="aria-label">
+    <button class="rbtn" data-toggle="right" aria-label="Expand the notes panel (])" title="Expand ( ] )" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+    <div class="rsep"></div>
+    <button class="rbtn" data-rtab="notes" aria-label="Notes" title="Notes" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M5 4h14v12H9l-4 4z"/></svg><span class="cnt" id="rc-notes" hidden></span></button>
+    <button class="rbtn" data-rtab="checks" aria-label="Checks" title="Checks" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg><span class="cnt" id="rc-checks" hidden></span></button>
+    <button class="rbtn" data-rtab="details" aria-label="Details" title="Details" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 11v5M12 8v.5"/></svg></button>
+    <button class="rbtn" data-rtab="history" aria-label="History" title="History" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button>
+    <div class="rsep"></div>
+    <button class="rbtn" id="r-pin" aria-label="Pin a note (N)" title="Pin a note (N)" data-i18n-attr="aria-label,title"><span class="letter">N</span></button>
+    <button class="rbtn" id="r-general" aria-label="Note on the whole model (M)" title="Whole model (M)" data-i18n-attr="aria-label,title"><span class="letter">M</span></button>
+  </div>
 </aside>
 
-<dialog id="lightbox"><figure></figure><div class="lb-extra"></div><form method="dialog"><button aria-label="Close">Close</button></form></dialog>
-<dialog id="textbox"><h3></h3><pre></pre><form method="dialog"><button>Close</button></form></dialog>
-<dialog id="confirm"><p></p><form method="dialog"><button value="cancel">Cancel</button><button value="ok" class="accent">OK</button></form></dialog>
-<dialog id="keys">
-  <h3>Keys</h3>
-  <dl>
-    <dt>/</dt><dd>Find a model</dd>
-    <dt>J K, ↑ ↓</dt><dd>Next, previous model</dd>
-    <dt>1–6</dt><dd>Front, back, left, right, top, three-quarter</dd>
-    <dt>F</dt><dd>Frame the model</dd>
-    <dt>[ ]</dt><dd>Previous, next shading</dd>
-    <dt>W G B K P</dt><dd>Wire, grid, size, bones, pins</dd>
-    <dt>C</dt><dd>Compare side by side</dd>
-    <dt>N</dt><dd>Pin a note, then click the model</dd>
-    <dt>M</dt><dd>Note on the whole model</dd>
-    <dt>Space</dt><dd>Play, pause the animation</dd>
-    <dt>Esc</dt><dd>Cancel</dd>
-  </dl>
-  <form method="dialog"><button>Close</button></form>
+<dialog id="viewer2" aria-label="Note pictures" data-i18n-attr="aria-label">
+  <div class="vh"><span class="status" id="v2-status"></span><span class="text" id="v2-text"></span>
+    <button class="btn sm" id="v2-look" title="Turn the 3D view to where the note was made from" data-i18n data-i18n-attr="title">Look from here</button>
+    <form method="dialog" style="margin:0"><button class="btn sm" data-i18n>Close</button></form></div>
+  <div class="ba" id="v2-ba"><img class="before" alt=""><img class="after" alt=""><div class="bar2" role="slider" tabindex="0" aria-label="Before / after divider" data-i18n-attr="aria-label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"></div><span class="lab l"></span><span class="lab r"></span></div>
+  <div class="closeups" id="v2-close"></div>
 </dialog>
+<dialog id="lightbox"><figure></figure><div class="lb-extra"></div><form method="dialog"><button class="btn sm" data-i18n>Close</button></form></dialog>
+<dialog id="textbox"><h3></h3><pre></pre><form method="dialog"><button class="btn sm" data-i18n>Close</button></form></dialog>
+<dialog id="keys" aria-label="Keyboard shortcuts" data-i18n-attr="aria-label">
+  <h3 data-i18n>Keys</h3>
+  <dl id="keys-list"></dl>
+  <form method="dialog"><button class="btn" data-i18n>Close</button></form>
+</dialog>
+<dialog id="confirm"><p></p><form method="dialog"><button class="btn" value="cancel" data-i18n>Cancel</button><button class="btn accent" value="ok">OK</button></form></dialog>
 
 <script type="module" src="/static/app.js"></script>
 </body>

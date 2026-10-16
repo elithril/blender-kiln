@@ -6,6 +6,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — Kiln Studio v1: the approved design
+
+- The page is the prototype approved for v1 (`kiln-3.0/studio-prototype`), on the real
+  project: side panels that resize the view and fold into 60 px rails (`[` `]` `\`), the
+  view fitted again after they move; on a narrow screen they lie over the view. The list
+  header holds in 90 px (measured, 1440 × 900): search, a View menu (Folders or State,
+  Normal or Compact), one row of tags, four counters that filter (To check, Open, Claude
+  works, Building), and the work line while a run shows. In Folders mode rows stay put and
+  flash when they change; in State mode they move (FLIP), deferred while the pointer is
+  over the list ("2 changes · re-sort").
+- **Compare** is a divider across one view (one camera) or side by side, with the change
+  in triangles, file size and height read from both files (cat, final against original:
+  +1.63 MB, +508%).
+- **Pins stick to the surface.** A pin on a skinned mesh is kept on the bone under it
+  (`anchor.node`, `anchor.local`, beside `point`) and follows the animation; on any other
+  mesh, on the mesh. Picking and "behind the model" ray-cast the mesh as posed (a posed
+  copy of each skinned mesh, refreshed a few times a second while it plays).
+- History is one feed, newest first; a note's **View** opens the before and after large
+  with a slider and both close-ups. Note pictures are widened to the card's 4:3.
+- Keys follow the prototype: `[` `]` fold the panels, so shading moves to `S` / `⇧S`;
+  `↑` `↓` change model (`J` / `K` are gone: `K` is the bones).
+
 ### Changed — Kiln Studio: note pictures, a third of the size and sharper on the spot
 
 - A pinned note keeps two pictures instead of one: the view, cropped to the model and
