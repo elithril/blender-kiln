@@ -177,7 +177,8 @@ nothing and the user gets no response.
     on a Rigify human gives 2.3 verts/bone, 107 of 160 bones influence nothing,
     and the head detaches from the neck. Count after the rule 10 weld: a low-poly
     cat arrives with 1,856 vertices, is 466 welded, and weighted unwelded it tears
-    12.5 cm open at the first pose. See PHASE 5c.
+    12.5 cm open at the first pose. `tools/autorig.py` prints both for its own rig.
+    See PHASE 5c.
 ```
 
 ---
@@ -734,7 +735,26 @@ verts  = len(mesh.data.vertices)    # after the rule 10 weld
 budget = verts / 20          # deform bones this mesh can actually carry
 ```
 
-Then pick from what Rigify ships — bone counts measured on Blender 5.0.1:
+**Route by character first** — measured on one bent pose, `references/characters.md` §
+Learned auto-rig (skin through skin, mm², lower is better):
+
+- **A humanoid, or any mesh kiln did not build** (imported, generated) → `tools/autorig.py
+  rig` (SkinTokens) when `tools/autorig.py status` exits 0. It crossed 2,985 mm² against
+  Rigify's 3,926 on a kiln-built child, 20,917 against 50,680 on a generated humanoid with a
+  hand fused to its hip. A generated quadruped: rig it both ways, keep the better — on the
+  one measured (a proxy) kiln's rig won, 3,244 against 4,793.
+- **A quadruped kiln built** → the hand-built rig in the table below: SkinTokens bent kiln's
+  cat better (2,393 against 2,698) but walked it worse (527 mm² mean against 359).
+- **Not installed** → say so with those numbers, offer `/kiln setup` (asked first, 5.6 GB),
+  and rig from the table below meanwhile — worse on both humanoids measured.
+
+`autorig.py` fails naming the bone when a limb comes back short (a hand fused to the hip):
+separate the limb in the mesh, or `--allow-missing` it if the user accepts a rig
+`quadruped.py` will refuse. Lid shells get their bones; ears need `--ears`. Its rig still
+goes through every check below — its report carries rule 26's ratio and the dead bones — and
+through the bent pose, because it is not repeatable: another run on the child gave 2,193.
+
+Then, on the kiln route, pick from what Rigify ships — bone counts measured on Blender 5.0.1:
 
 | Mesh vertices | Choose | Deform bones | Verts/bone |
 |---:|---|---:|---:|
