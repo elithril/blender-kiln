@@ -100,6 +100,7 @@ generated-assets/
     ├── wooden-chair_textured.glb
     ├── wooden-chair_optimized.glb
     ├── wooden-chair_final.glb
+    ├── wooden-chair_preview.glb     (a copy of _original.glb: opens in macOS Quick Look)
     ├── wooden-chair.blend
     └── wooden-chair_log.md
 ```

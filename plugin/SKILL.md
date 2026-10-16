@@ -810,6 +810,13 @@ geometry, and `_original.glb` survives, so it is not a destruction under rule 6.
 Report before/after sizes, and say that Draco needs a decoder on the client.
 Simplify, decimate and LOD stay interactive in every mode.
 
+**Hand over an uncompressed preview too: `{name}_preview.glb`, a copy of `_original.glb`**
+(no Draco, no WebP). The Mac's Finder preview (Quick Look) opened neither a Draco nor a
+WebP `_final.glb` on the October 2026 sessions — seen by the user, every time — so a user
+who double-clicks the deliverable sees nothing. Say in the hand-over which file is for the
+site and which one opens on a Mac. Check it: `extensionsUsed` in the preview's JSON names
+neither `KHR_draco_mesh_compression` nor `EXT_texture_webp`.
+
 Why: the quality bench measured auto mode stopping here on 3 of 6 briefs, leaving
 a 16 MB `_final.glb` for a 724-triangle chair. **`_final.glb` is written only after
 this phase** — before it, the export is `_original.glb`, scripted assets included.
