@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Kiln Studio: a welcome for an empty project
+
+- An empty project opens on what to do first, and on what Studio can see of the setup:
+  Blender (found at PATH, `$BLENDER` or the usual folders, with its version), the Blender
+  MCP connection (always "unknown": Studio says whether Claude Code is set up for one and
+  whether the add-on answers on port 9876, and that only Claude can say it is connected),
+  and SkinTokens (`tools/autorig.py status --quick`, "unknown" in a kiln without it).
+  `GET /api/status`.
+- **See an example** copies kiln's own gallery barrel (2,202 triangles, 112 kB, MIT, built
+  by `examples/gallery/build.py`) into `kiln-example/barrel/` and opens it. 55 tests.
+
 ### Added — Kiln Studio in French, numbers in the reader's format
 
 - Every word on the page goes through one dictionary: English, and French

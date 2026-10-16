@@ -19,6 +19,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
 import checks
+import setup_status
 import studiolib as sl
 
 VERSION = "1.0.0"
@@ -277,6 +278,9 @@ def make_handler(studio: Studio, port_ref: list[int]):
                     # The project's settings, shared with Claude (references/studio.md § 9).
                     return self._json({"settings": project.settings(), "defaults": sl.CONFIG_DEFAULTS,
                                        "targets": list(sl.TARGETS), "file": f"{sl.DATA_DIR}/config.json"})
+                if parts[:2] == ["api", "status"]:
+                    # The welcome screen's setup line: Blender, the MCP add-on, SkinTokens.
+                    return self._json(setup_status.install_status(project.root))
                 if parts[:2] == ["api", "events"]:
                     return self._events()
                 if parts[:2] == ["api", "assets"]:
@@ -322,6 +326,10 @@ def make_handler(studio: Studio, port_ref: list[int]):
                     ids = body.get("assets")
                     run = sl.check_work(project, [str(i) for i in ids] if isinstance(ids, list) else None)
                     return self._json({"work": sl.work_view(run)})
+                if method == "POST" and parts == ["api", "example"]:
+                    aid = sl.add_example(project)
+                    studio.refresh()
+                    return self._json({"id": aid})
                 if method == "PUT" and parts == ["api", "config"]:
                     settings = sl.save_config(project, body)
                     studio.refresh()   # exclude: the list changes now, not at the next tick

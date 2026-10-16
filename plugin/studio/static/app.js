@@ -661,13 +661,70 @@ function renderAll() {
 // The middle when no model is open: what to do next.
 function renderEmpty() {
   const none = !state.id;
+  document.body.classList.toggle('no-model', none);
   $('#empty').hidden = !none;
   $('#topbar').hidden = $('#views').hidden = $('#bottom').hidden = none;
   if (!none) return;
-  $('#empty').innerHTML = state.assets.length
-    ? `<div><p class="big">${esc(t('No model picked'))}</p><p>${esc(t('Choose one on the left. Models re-exported by Claude show up here on their own, and a model kiln is building opens here as it is built.'))}</p></div>`
-    : `<div><p class="big">${esc(t('No models in this folder yet'))}</p><p>${esc(t('Export a .glb, .gltf, .fbx or .obj anywhere under it and it appears here.'))}</p></div>`;
+  if (state.assets.length) {
+    $('#empty').innerHTML = `<div><p class="big">${esc(t('No model picked'))}</p><p>${esc(t('Choose one on the left. Models re-exported by Claude show up here on their own, and a model kiln is building opens here as it is built.'))}</p></div>`;
+    return;
+  }
+  renderWelcome();
 }
+
+// ── welcome: an empty project ────────────────────────────────────────────────
+// What to do first (welcomeCards: Create, Import, See an example), and what Studio can
+// see of the setup. "unknown" where it cannot see: Claude's /kiln setup is the full scan.
+
+const welcomeCards = [];
+let setup = null;
+function renderWelcome() {
+  const el = $('#empty');
+  const cards = welcomeCards.map((c) => `<button class="wcard" data-w="${c.key}">${c.icon}<b>${esc(t(c.title))}</b><span>${esc(t(c.text))}</span></button>`).join('');
+  el.innerHTML = `<div class="welcome">
+    <div class="wlogo" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M16 3c3 6 9 8 9 16a9 9 0 0 1-18 0c0-5 3-7 4-11 1 3 3 4 3 4s-1-5 2-9z"/></svg></div>
+    <p class="big">${esc(t('Nothing here yet'))}</p>
+    <p>${esc(t('Studio shows every .glb, .gltf, .fbx and .obj under {root}. To start:', { root: state.name || state.root }))}</p>
+    <div class="wcards">${cards}</div>
+    <h4>${esc(t('Your setup'))}${setup?.kiln ? ` <span class="dim">· kiln ${esc(setup.kiln)}</span>` : ''}</h4>
+    <ul class="setup">${setup ? setup.rows.map(setupRow).join('') : `<li class="dim">${esc(t('Looking…'))}</li>`}</ul>
+    <p class="dim small">${t('The full check, and help installing what is missing: {cmd} in Claude Code.', { cmd: '<code>/kiln setup</code>' })}</p>
+  </div>`;
+  $$('.wcard', el).forEach((b) => (b.onclick = () => welcomeCards.find((c) => c.key === b.dataset.w).run()));
+  if (!setup) api('/api/status').then((s) => { setup = s; if (!state.assets.length && !state.id) renderWelcome(); }).catch(() => {});
+}
+function setupRow(r) {
+  const d = r.data || {};
+  const mark = { ok: '✓', missing: '✕', unknown: '?' }[r.state];
+  const word = { ok: t('found'), missing: t('not found'), unknown: t('unknown') }[r.state];
+  let name = r.key, detail = r.detail;
+  if (r.key === 'blender') {
+    name = 'Blender';
+    detail = r.state === 'ok' ? `${d.version || 'Blender'} · ${d.path}` : t('Kiln needs Blender 4.4 or later (blender.org); or set $BLENDER to where it is.');
+  } else if (r.key === 'mcp') {
+    name = t('Blender MCP connection');
+    detail = [d.configured?.length ? t('set up in Claude Code: {names}', { names: d.configured.join(', ') }) : t('no Blender MCP server in Claude Code\'s settings for this project'),
+      d.listening ? t('the add-on answers on port {p}', { p: d.port }) : t('nothing answers on port {p} (Blender closed, or the add-on off)', { p: d.port }),
+      t('whether Claude is connected, only Claude can say')].join(' · ');
+  } else if (r.key === 'skintokens') {
+    name = t('SkinTokens (learned auto-rig, optional)');
+    detail = d.reason === 'no-tool' ? t('this version of kiln has no auto-rig tool to ask') : r.state === 'ok' ? t('installed') : r.state === 'missing' ? t('not installed') : (d.output || r.detail);
+  }
+  return `<li class="${r.state}"><span class="mk" role="img" aria-label="${esc(word)}">${mark}</span><div><b>${esc(name)}</b> <span class="st">${esc(word)}</span><div class="dim small">${esc(detail)}</div></div></li>`;
+}
+welcomeCards.push({
+  key: 'example', title: N_('See an example'),
+  text: N_("Adds kiln's barrel to this project, in kiln-example/, to try pins, checks and compare on. Delete the folder to remove it."),
+  icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10l2 4v12H5V8z M5 8h14 M9 4v4 M15 4v4"/></svg>',
+  async run() {
+    try {
+      const { id } = await api('/api/example', { method: 'POST', body: {} });
+      await fetchAssets();
+      go(id);
+      toast(t('The example is in {f}: pin a note on it with N.', { f: '<span class="mono">kiln-example/</span>' }), 'ok', 5000);
+    } catch (e) { toast(esc(e.message), 'warn'); }
+  },
+});
 
 function renderTitle() {
   const d = state.detail, v = currentVariant(), s = state.clientStats;

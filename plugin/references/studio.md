@@ -274,6 +274,13 @@ screen they lie over the view, one at a time, and the rails stay.
   feed, newest first: every version seen with its render, size and triangle change, the
   build's phases, the checks, every note and reply). Folded, the rail shows each tab with
   its count, and N / M.
+- **An empty project** opens on a welcome: **See an example** copies kiln's gallery barrel
+  (MIT) into `kiln-example/barrel/` to try the page on, and *Your setup* says what Studio
+  can see: Blender found (PATH, `$BLENDER`, the usual folders) or not; the Blender MCP
+  connection as **unknown**, with whether Claude Code is set up for one and whether the
+  add-on answers on port 9876 (only Claude can say it is connected); SkinTokens through
+  `tools/autorig.py status --quick` when this kiln has it, unknown otherwise. `/kiln setup`
+  is the full scan.
 - **While kiln builds:** a "building" mark in the list, and the phases above the model.
 - **While a command works on models** (§ 5): a dot on each — waiting, breathing, green —
   and its progress above the list; a toast as it moves from one model to the next.

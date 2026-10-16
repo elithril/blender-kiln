@@ -1199,6 +1199,25 @@ def work_view(run: dict | None) -> dict | None:
             "started": run.get("started"), "updated": run.get("updated"), "dots": dots}
 
 
+# ── the example model: "See an example" on Studio's welcome screen ───────────
+
+EXAMPLE_SRC = Path(__file__).resolve().parent / "example"
+EXAMPLE_DIR = "kiln-example"
+
+
+def add_example(project: Project) -> str:
+    """Copy Studio's example model (kiln's gallery barrel, MIT) into the project, in
+    kiln's layout, unless it is there already. Returns its asset id."""
+    src = EXAMPLE_SRC / "barrel"
+    dst = project.root / EXAMPLE_DIR / "barrel"
+    if not (dst / "barrel_final.glb").is_file():
+        dst.mkdir(parents=True, exist_ok=True)
+        for f in src.iterdir():
+            if f.is_file():
+                shutil.copy2(f, dst / f.name)
+    return f"{EXAMPLE_DIR}/barrel"
+
+
 # ── summaries for the page and the CLI ───────────────────────────────────────
 
 

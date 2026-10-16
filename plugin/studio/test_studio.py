@@ -793,6 +793,28 @@ class Api(Base):
         self.assertEqual(code, 403)
         self.assertEqual(self.p.settings()["target"], "desktop")
 
+    def test_setup_status_says_unknown_rather_than_guess(self) -> None:
+        code, st = self.req("GET", "/api/status")
+        self.assertEqual(code, 200)
+        rows = {r["key"]: r for r in st["rows"]}
+        self.assertEqual(set(rows), {"blender", "mcp", "skintokens"})
+        self.assertIn(rows["blender"]["state"], ("ok", "missing"))
+        self.assertEqual(rows["mcp"]["state"], "unknown")   # Studio cannot see Claude's connections
+        self.assertIn("listening", rows["mcp"]["data"])
+        if not (Path(studio.__file__).resolve().parent.parent / "tools" / "autorig.py").exists():
+            self.assertEqual((rows["skintokens"]["state"], rows["skintokens"]["data"]["reason"]), ("unknown", "no-tool"))
+
+    def test_the_example_lands_in_the_project(self) -> None:
+        code, r = self.req("POST", "/api/example", {})
+        self.assertEqual((code, r["id"]), (200, "kiln-example/barrel"))
+        self.assertTrue((self.tmp / "kiln-example" / "barrel" / "barrel_final.glb").is_file())
+        code, data = self.req("GET", "/api/assets")
+        self.assertIn("kiln-example/barrel", [a["id"] for a in data["assets"]])
+        self.assertEqual(self.req("POST", "/api/example", {})[1]["id"], "kiln-example/barrel")   # once only
+        [a] = [x for x in sl.scan(self.p) if x.id == "kiln-example/barrel"]
+        by = {c["key"]: c for c in checks.health(self.p, a, a.primary)}
+        self.assertEqual((by["tris"]["value"], by["tris"]["level"], by["licence"]["level"]), (2202, "ok", "ok"))
+
     def test_files_stay_inside_the_project(self) -> None:
         code, body = self.req("GET", "/files/generated-assets/crate/crate_final.glb")
         self.assertEqual(code, 200)

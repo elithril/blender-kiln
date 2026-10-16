@@ -664,3 +664,30 @@ dialog::backdrop { background: var(--backdrop); backdrop-filter: blur(2px); }
 .swatches button { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line-2); background: var(--sw); padding: 0; display: grid; place-items: center; color: var(--bg); font: 800 12px/1 var(--font); }
 .swatches button[aria-checked="true"] { border-color: var(--text); }
 .swatches button[aria-checked="true"]::after { content: '✓'; }
+
+/* welcome: an empty project */
+#empty .welcome { max-width: 620px; text-align: left; margin: auto; padding: 8px 0; }
+.welcome .wlogo svg { width: 34px; height: 34px; }
+.welcome .wlogo path { fill: var(--accent); }
+.welcome .big { font-size: 20px; margin: 8px 0 6px; }
+.welcome > p, #empty .welcome p { color: var(--text-2); margin: 0 0 16px; max-width: none; }
+#empty .welcome .setup p, #empty .welcome > p.small { margin: 0; }
+body.no-model #right .notes-head, body.no-model #right #handoff { display: none; }
+.wcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 22px; }
+.wcard { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; padding: 14px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--text-2); font-size: 12px; line-height: 1.4; }
+.wcard:hover { border-color: var(--accent); background: var(--panel-3); color: var(--text); }
+.wcard svg { width: 20px; height: 20px; stroke: var(--accent); fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.wcard b { color: var(--text); font-size: 13.5px; }
+.welcome h4 { margin: 0 0 8px; font: 600 10.5px/1.2 var(--mono); text-transform: uppercase; letter-spacing: .07em; color: var(--text-3); }
+.welcome h4 .dim { text-transform: none; letter-spacing: 0; }
+.setup { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.setup li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: start; color: var(--text); font-size: 12.5px; }
+.setup .mk { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font: 800 11px/1 var(--font); color: var(--bg); background: var(--text-3); }
+.setup li.ok .mk { background: var(--ok); }
+.setup li.missing .mk { background: var(--danger); border-radius: 4px; }
+.setup li.unknown .mk { background: transparent; color: var(--text-2); border: 1.5px dashed var(--text-3); }
+.setup .st { font: 600 10px/1 var(--mono); text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); margin-left: 4px; }
+.setup li.ok .st { color: var(--ok); }
+.setup li.missing .st { color: var(--danger); }
+.setup .small { margin-top: 2px; word-break: break-word; }
+.welcome code { font: 500 11.5px var(--mono); color: var(--accent); }
