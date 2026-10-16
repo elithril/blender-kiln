@@ -15,7 +15,8 @@ one measured a height from bound_box and read 104.8 mm for 90.0. This is that sc
 - --mode matcap (grey matcap: the geometry, what the printer sees), colour (the materials,
   the paint plan), or both — an STL has no material, so colour needs the GLB or the .blend
   (STLs render grey, which a fox's session took for a fault); a textured model shows its
-  textures, an untextured one its materials' colours;
+  textures, a vertex-coloured one its vertex colours (its other parts their materials'
+  colours), an untextured one its materials' colours;
 - a rigged glTF's bone display shape (a 2 m sphere the importer adds) is left out of the frame;
 - --views from front, back, left, right, top, under and the four three-quarters q1-q4
   (front -Y); the default pairs two opposite three-quarters, as rule 2 asks, with top and under;
@@ -121,6 +122,30 @@ def closes(a, centre_m):
     return out
 
 
+def base_colour(m):
+    if m is None:
+        return (0.8, 0.8, 0.8, 1.0)
+    bsdf = next((n for n in (m.node_tree.nodes if m.node_tree else []) if n.type == "BSDF_PRINCIPLED"), None)
+    return tuple(bsdf.inputs["Base Color"].default_value) if bsdf else tuple(m.diffuse_color)
+
+
+def vertex_colours(o):
+    """Workbench shows one colour source for every object: the painted ones their vertex colours,
+    the others (eyes, a nose) their material's colour, written as vertex colours."""
+    me = o.data
+    if me.color_attributes:
+        if me.color_attributes.active_color is None:
+            me.color_attributes.active_color = me.color_attributes[0]
+        return
+    ca = me.color_attributes.new("review_colour", "BYTE_COLOR", "CORNER")
+    cols = [base_colour(s.material) for s in o.material_slots] or [base_colour(None)]
+    for poly in me.polygons:
+        c = cols[min(poly.material_index, len(cols) - 1)]
+        for li in poly.loop_indices:
+            ca.data[li].color = c
+    me.color_attributes.active_color = ca
+
+
 def cover(path):
     img = bpy.data.images.load(path)
     px = np.array(img.pixels[:], dtype=np.float32).reshape(-1, 4)[:, :3]
@@ -166,10 +191,15 @@ def main():
     for mode in modes:
         sh = sc.display.shading
         sh.light = "MATCAP" if mode == "matcap" else "STUDIO"
-        # MATERIAL shows a material's flat colour only: a textured body rendered grey, read as a fault
+        # MATERIAL shows a material's flat colour only: a textured body rendered grey, read as a fault,
+        # and so did a body painted with vertex colours (COLOR_0, the cat's fur)
         textured = any(n.type == "TEX_IMAGE" for o in meshes for m in o.data.materials if m and m.node_tree
                        for n in m.node_tree.nodes)
-        sh.color_type = "SINGLE" if mode == "matcap" else ("TEXTURE" if textured else "MATERIAL")
+        painted = not textured and any(o.data.color_attributes for o in meshes)
+        if mode != "matcap" and painted:
+            for o in meshes:
+                vertex_colours(o)
+        sh.color_type = "SINGLE" if mode == "matcap" else ("TEXTURE" if textured else "VERTEX" if painted else "MATERIAL")
         sh.single_color = (0.8, 0.8, 0.8)
         for name, at, s, (az, el) in shots:
             az, el = math.radians(az), math.radians(el)

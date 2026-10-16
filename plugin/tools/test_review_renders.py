@@ -10,6 +10,8 @@
 - a rigged GLB, its bones shown by a 2 m sphere as the glTF importer does: the frame is the
   model's, not the sphere's;
 - a textured GLB in colour: the texture shows (two colours), not the material's flat grey;
+- a vertex-coloured GLB in colour: its vertex colours show, and a part beside it with a plain
+  material keeps that material's colour (the cat's fur rendered grey before);
 - an unknown view, or a missing file: exit 1, no traceback;
 - --close with negative coordinates (a spot left of or in front of the axis) is read as a value,
   not as an option: a session's `--close -25,-14,54,14` stopped argparse before this.
@@ -63,6 +65,24 @@ if kind == "rigged":
     body.vertex_groups.new(name=arm.pose.bones[0].name).add(list(range(8)), 1.0, "REPLACE")
     bpy.data.objects.remove(shape)
     bpy.ops.object.select_all(action="SELECT")
+elif kind == "painted":
+    # vertex colours, red on one half and blue on the other, read by the material (COLOR_0 in glTF);
+    # beside it an eye-like part with a plain green material and no vertex colour
+    me = body.data; ca = me.color_attributes.new("Col", "BYTE_COLOR", "CORNER")
+    for poly in me.polygons:
+        for li in poly.loop_indices:
+            x = me.vertices[me.loops[li].vertex_index].co.x
+            ca.data[li].color = (1, 0, 0, 1) if x < 0 else (0, 0, 1, 1)
+    m = bpy.data.materials.new("Fur"); m.use_nodes = True
+    attr = m.node_tree.nodes.new("ShaderNodeVertexColor"); attr.layer_name = "Col"
+    bsdf = next(n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
+    m.node_tree.links.new(attr.outputs["Color"], bsdf.inputs["Base Color"])
+    body.data.materials.append(m)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.05, location=(0, -0.12, 0.15)); eye = bpy.context.object
+    g = bpy.data.materials.new("Eye"); g.use_nodes = True
+    next(n for n in g.node_tree.nodes if n.type == "BSDF_PRINCIPLED").inputs["Base Color"].default_value = (0, 1, 0, 1)
+    eye.data.materials.append(g)
+    bpy.ops.object.select_all(action="SELECT")
 else:
     img = bpy.data.images.new("T", 8, 8); px = []
     for y in range(8):
@@ -76,7 +96,8 @@ else:
     m.node_tree.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
     body.data.materials.append(m)
     bpy.ops.object.select_all(action="SELECT")
-bpy.ops.export_scene.gltf(filepath=out, export_format="GLB", use_selection=True)
+bpy.ops.export_scene.gltf(filepath=out, export_format="GLB", use_selection=True,
+                          **({"export_vertex_color": "MATERIAL"} if kind == "painted" else {}))
 """
 
 
@@ -94,9 +115,10 @@ def colours(path):
             "px = np.array(im.pixels[:], dtype=np.float32).reshape(-1, 4)[:, :3]; bg = px[0]; "
             "fg = px[np.abs(px - bg).max(axis=1) > 0.05]; "
             "r = ((fg[:, 0] > fg[:, 2] + 0.15).mean() if len(fg) else 0); b = ((fg[:, 2] > fg[:, 0] + 0.15).mean() if len(fg) else 0); "
-            "print('HUES', round(float(r), 3), round(float(b), 3))")
+            "g = ((fg[:, 1] > np.maximum(fg[:, 0], fg[:, 2]) + 0.15).mean() if len(fg) else 0); "
+            "print('HUES', round(float(r), 3), round(float(b), 3), round(float(g), 3))")
     r = subprocess.run([BLENDER, "-b", "--factory-startup", "--python-expr", code], capture_output=True, text=True)
-    line = next((l for l in r.stdout.splitlines() if l.startswith("HUES ")), "HUES 0 0")
+    line = next((l for l in r.stdout.splitlines() if l.startswith("HUES ")), "HUES 0 0 0")
     return tuple(float(x) for x in line.split()[1:])
 
 
@@ -148,6 +170,12 @@ with tempfile.TemporaryDirectory() as d:
     hues = colours(f"{d}/h/textured_colour_front.png") if rc == 0 else (0, 0)
     check("textured GLB in colour: its red and blue texture show, not a flat grey",
           rc == 0 and hues[0] > 0.2 and hues[1] > 0.2, (rc, hues, log[-200:]))
+
+    painted = make_glb(d, "painted")
+    rc, log = run(painted, "--out", f"{d}/p", "--views", "front", "--mode", "colour", "--res", "400")
+    hues = colours(f"{d}/p/painted_colour_front.png") if rc == 0 else (0, 0, 0)
+    check("vertex-coloured GLB in colour: its red and blue vertex colours show, and the green part beside it",
+          rc == 0 and hues[0] > 0.1 and hues[1] > 0.1 and hues[2] > 0.01, (rc, hues, log[-200:]))
 
     rc, log = run(f"{d}/block.stl", "--out", f"{d}/e", "--views", "sideways")
     check("unknown view: exit 1, no traceback", rc == 1 and "unknown view" in log and "Traceback" not in log, (rc, log[-200:]))
