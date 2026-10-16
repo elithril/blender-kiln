@@ -1771,6 +1771,35 @@ $$('#set-target button').forEach((b) => (b.onclick = () => project && project.ta
 $('#set-exclude').onchange = (e) => saveProject({ exclude: e.target.value.split('\n').map((x) => x.trim()).filter(Boolean) }, t('Left out of the list'));
 $('#t-settings').onclick = openSettings;
 
+// ── themes: Dark (the approved design), Light, High contrast; an accent colour ──
+
+// Each accent in each theme: a tone that reads on that theme's background, and the
+// ink that reads on the accent.
+const ACCENTS = {
+  cyan: { name: 'Cyan', dark: ['#5CE1E6', '#062A2C'], light: ['#0A8A90', '#FFFFFF'], contrast: ['#3DF2FF', '#000000'] },
+  blue: { name: 'Blue', dark: ['#6CB6FF', '#06182C'], light: ['#1F6FD1', '#FFFFFF'], contrast: ['#8CCBFF', '#000000'] },
+  pink: { name: 'Pink', dark: ['#FF7AB6', '#2C0618'], light: ['#C2185B', '#FFFFFF'], contrast: ['#FF9ECF', '#000000'] },
+  lime: { name: 'Lime', dark: ['#C3E85A', '#1A2406'], light: ['#4D7C0F', '#FFFFFF'], contrast: ['#D8FF6B', '#000000'] },
+};
+function applyTheme() {
+  const theme = ['light', 'contrast'].includes(prefs.theme) ? prefs.theme : 'dark';
+  const root = document.documentElement;
+  if (theme === 'dark') delete root.dataset.theme; else root.dataset.theme = theme;
+  const [accent, ink] = (ACCENTS[prefs.accent] || ACCENTS.cyan)[theme];
+  root.style.setProperty('--accent', accent);
+  root.style.setProperty('--accent-ink', ink);
+  $('meta[name=theme-color]')?.setAttribute('content', getComputedStyle(root).getPropertyValue('--bg'));
+}
+settingsRows.push({
+  sync() {
+    segSet('#set-theme', ['light', 'contrast'].includes(prefs.theme) ? prefs.theme : 'dark');
+    const theme = ['light', 'contrast'].includes(prefs.theme) ? prefs.theme : 'dark';
+    $('#set-accent').innerHTML = Object.entries(ACCENTS).map(([k, a]) => `<button role="radio" aria-checked="${(prefs.accent || 'cyan') === k}" data-v="${k}" style="--sw:${a[theme][0]}" title="${esc(t(a.name))}" aria-label="${esc(t(a.name))}"></button>`).join('');
+    $$('#set-accent button').forEach((b) => (b.onclick = () => { prefs.accent = b.dataset.v; savePrefs(); applyTheme(); syncPersonal(); }));
+  },
+});
+$$('#set-theme button').forEach((b) => (b.onclick = () => { prefs.theme = b.dataset.v; savePrefs(); applyTheme(); syncPersonal(); }));
+
 // Units or language changed: everything that shows a number or a word again.
 function refreshWords() {
   applyI18n();
@@ -1829,6 +1858,7 @@ function commands() {
   add('Notes', 'Show the active notes only', [], () => { setNoteFilter('active'); renderNotes(); renderPins(); }, () => hasModel() && state.noteFilter !== 'active');
   add('Help', 'Keyboard shortcuts', ['?'], showKeys);
   add('Help', 'Settings', [], openSettings);
+  for (const [th, label] of [['dark', 'Theme: Dark'], ['light', 'Theme: Light'], ['contrast', 'Theme: High contrast']]) add('Help', label, [], () => { prefs.theme = th; savePrefs(); applyTheme(); }, () => (prefs.theme || 'dark') !== th);
   for (const run of paletteExtras) run(add);
   for (const a of state.assets) add('Model', { text: t('Open {name}', { name: a.name }) }, [], () => go(a.id), () => a.id !== state.id);
   return C.filter((c) => { try { return c.when(); } catch { return false; } });
@@ -1896,6 +1926,7 @@ function fromHash() {
 window.addEventListener('hashchange', fromHash);
 
 (async () => {
+  applyTheme();
   setUnits(prefs.units);
   applyI18n();
   initPanels();

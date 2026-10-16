@@ -274,6 +274,9 @@ screen they lie over the view, one at a time, and the rails stay.
 - **While kiln builds:** a "building" mark in the list, and the phases above the model.
 - **While a command works on models** (§ 5): a dot on each — waiting, breathing, green —
   and its progress above the list; a toast as it moves from one model to the next.
+- **States read without colour too:** a work dot is a ring (waiting), a disc with a halo
+  (working) or a tick (done); a check is ✓, i or !; a pin is solid (open), ringed
+  (addressed), hollow (resolved) or dashed (won't fix); counts to check carry a ✓.
 - **Keys:** `/` find, `↑ ↓` previous and next model, `1`–`6` views, `F` frame, `S` / `⇧S`
   shading, `W G B K` wire, grid, size, bones, `P` pins, `C` / `⇧C` compare and its layout,
   `N` pin a note, `M` whole-model note, `Space` play, `?` the list. **⌘K** (Ctrl+K) opens
@@ -309,9 +312,10 @@ Statuses: `open` → `addressed` (you) → `resolved` (the user) or `wontfix`.
 
 The page's **Settings** (the gear under the list, or ⌘K → Settings) has two parts.
 
-**Personal** — this browser only, never in the project: rows Normal or Compact, the shading
-and the view a model opens in, lengths in metres or centimetres, whether fixed pins start
-hidden. Nothing for you to read.
+**Personal** — this browser only, never in the project: the theme (Dark, Light, High
+contrast) and an accent colour, rows Normal or Compact, the shading and the view a model
+opens in, lengths in metres or centimetres, whether fixed pins start hidden. Nothing for
+you to read.
 
 **Project** — `.kiln-studio/config.json`, committed with the notes. Read it at CONFIG
 (`studio.py config`, or the file): its values are the session's defaults, and the user's

@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Kiln Studio: themes, and states that do not rely on colour
+
+- Three themes in Settings: Dark (the approved design), Light and High contrast, and an
+  accent colour (cyan, blue, pink, lime) toned for each theme. Every colour on the page is
+  a custom property; the words over the 3D view follow its background, not the theme.
+- Each state reads by shape or word as well: a work dot is a ring, a disc with a halo or a
+  tick; a check is ✓, i or !; a pin is solid, ringed, hollow or dashed by status; counts to
+  check carry a ✓.
+
 ### Added — Kiln Studio: settings, the user's and the project's
 
 - **Settings** (the gear under the list, or ⌘K), in two parts. *Personal*, kept in this

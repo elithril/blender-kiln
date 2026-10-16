@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Sora:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="/static/style.css">
+<script>try { const p = JSON.parse(localStorage.getItem('kiln-studio:prefs') || '{}'); if (p.theme) document.documentElement.dataset.theme = p.theme; } catch (e) { /* storage blocked: Dark */ }</script>
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
@@ -224,6 +225,10 @@
     <section class="set-sec" aria-labelledby="set-personal">
       <h4 id="set-personal"><span data-i18n>Personal</span> <small data-i18n>this browser only</small></h4>
       <div class="set-grid" id="set-personal-rows">
+        <span class="lab" data-i18n>Theme</span>
+        <div class="seg small" id="set-theme"><button data-v="dark" data-i18n>Dark</button><button data-v="light" data-i18n>Light</button><button data-v="contrast" data-i18n>High contrast</button></div>
+        <span class="lab" data-i18n>Accent</span>
+        <div class="swatches" id="set-accent" role="radiogroup" aria-label="Accent colour" data-i18n-attr="aria-label"></div>
         <span class="lab" data-i18n>Rows in the list</span>
         <div class="seg small" id="set-density"><button data-v="normal" data-i18n>Normal</button><button data-v="compact" data-i18n>Compact</button></div>
         <label class="lab" for="set-shade" data-i18n>A model opens in</label>
