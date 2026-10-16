@@ -20,7 +20,8 @@ obj = bpy.context.active_object
 bpy.ops.object.mode_set(mode='EDIT')
 bpy.ops.mesh.select_all(action='SELECT')
 bpy.ops.uv.smart_project(
-    angle_limit=66.0,      # degrees
+    angle_limit=1.152,     # RADIANS (66°): 66.0 asks for 66 rad, clamped to 90°
+                           # (checked, Blender 5.2.2: default 1.152 rad = 66°, max 90°)
     island_margin=0.02,    # margin between islands
     area_weight=0.0,
     correct_aspect=True,
@@ -28,6 +29,29 @@ bpy.ops.uv.smart_project(
 )
 bpy.ops.object.mode_set(mode='OBJECT')
 ```
+
+### Check the UVs — `tools/uv_check.py`
+
+Run it after any unwrap, before a texture is baked onto the UVs, and on a model you bring.
+No session could say whether its Smart UV Project result was usable:
+
+```bash
+blender -b --factory-startup --python-exit-code 1 --python tools/uv_check.py -- model.glb [--json uv.json]
+```
+
+One line per mesh: the share of the 0-1 tile **used**, **overlap** (texels two faces share —
+fine for a tiled or mirrored material, wrong for a bake), **stretch** (surface whose texel
+density is off the median by more than 2× in area), **collapsed** (faces whose UVs shrank to
+almost nothing: a texture smears there), **flipped** (mirrored islands: a normal map reads
+their slopes reversed). FAIL — exit 1 — on a mesh with an image texture and no UV map, or
+collapsed UVs past 1% of the surface; WARN on overlap past 2%, stretch past 10%, flipped past
+2%, UVs outside 0-1. Measured on the October 2026 animals:
+
+| Model | Result |
+|---|---|
+| Cat, skin (Smart UV Project, 32,000 tris) | ok: used 47.5%, overlap 0%, stretch 0% |
+| Cat, eyes (two UV spheres, one object) | WARN: overlap 100% — both eyes share one set of UVs; stretch 14.6% at the sphere's poles. Fine for their plain materials, wrong for a bake |
+| Corgi, skin (Smart UV Project, 135,972 tris, colours baked per texel) | **FAIL: 7,072 triangles with all three UVs on one point, 1.7% of the surface** — each takes one texel's colour. Its own log said "no overlap by construction"; nobody had looked for this |
 
 ### Texel Density
 Maintain **uniform texel density** across the entire asset.

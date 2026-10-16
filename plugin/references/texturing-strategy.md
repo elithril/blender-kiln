@@ -293,7 +293,7 @@ def bake_channel(obj, channel_type, output_path, resolution=1024):
     # Ensure UVs exist
     if not obj.data.uv_layers:
         bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.uv.smart_project(angle_limit=66, island_margin=0.02)
+        bpy.ops.uv.smart_project(angle_limit=1.152, island_margin=0.02)   # radians: 66°
         bpy.ops.object.mode_set(mode='OBJECT')
     
     # Bake

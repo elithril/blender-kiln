@@ -129,6 +129,7 @@ Kiln is a Claude Code skill that turns you into a 3D asset production studio. By
 - **Rebuild from a photo, measured**: an inventory from enlarged crops, the size and camera settled first, the silhouette and materials measured against the photo, every joint rendered and looked at, the last measure on the shipped GLB ([how](plugin/references/reference-fidelity.md))
 - **Textures from CC0 scans**: Poly Haven texture sets chosen against the photo, tinted to its palette, worn by the form, baked to UVs — procedural only when no scan fits
 - **A 3D template when one exists**: proportions read off a mesh generated from the same photo (TRELLIS.2, run locally) with `plugin/tools/template_profile.py` — measured, never shipped
+- **3D printing, objects and figures**: model for an FDM or resin printer from a brief or a photo — closed, at size, smooth, supports only where the object needs them — and a raw printability verdict with PrusaSlicer as second arbiter ([`plugin/tools/print_check.py`](plugin/tools/print_check.py)). Objects from primitives, stylised figures from metaballs and a voxel remesh; a realistic likeness of a real animal or person is said out of reach — two cats passed every check and were unacceptable to look at ([how](plugin/references/print.md))
 - **Both Blender MCP servers**: ahujasid's `mcp-for-blender` and the Blender Foundation's official Lab MCP, the one behind Claude's Blender connector
 - **Multi-method creation**: scripted modeling (Blender Python, the default), geometry nodes, marketplace sourcing, or optional AI generation (TRELLIS.2 / TRELLIS / TripoSR Spaces, MIT; Hunyuan3D on request only)
 - **Local AI generation, never required**: TRELLIS.2 on Apple Silicon (measured) or Hunyuan3D-2 Mini, for offline work
@@ -248,6 +249,85 @@ goes to it: `unimate.py` recognises the posture and points at `quadruped.py`.
 > (`examples/animation/showcase.sh`, assets and credits alongside), not from an
 > interactive session of the skill.
 
+## 3D printing — simple objects
+
+<p align="center">
+  <img src="docs/images/print-windmill.webp" width="100%" alt="A Dutch windmill kiln modelled for an FDM printer: the coloured preview, and the two STL parts as they print — the body upright, the lattice sails flat beside it" />
+</p>
+
+Say it will be printed, and kiln models **for the printer from the first primitive**: at size, in
+closed solids joined into one volume, smooth where a layer would show a facet, with no
+overhang where nobody looks, and in several parts when one would print in the air — the
+windmill above is a body and its sails, laid flat, each checked on its own. Every STL ends
+with [`tools/print_check.py`](plugin/tools/print_check.py): raw edge counts, held parts, walls,
+overhangs, nothing lost against the original, and PrusaSlicer as a second opinion
+([`references/print.md`](plugin/references/print.md)).
+
+<p align="center">
+  <img src="docs/images/print-teapot.webp" width="100%" alt="A museum photo of an 18th-century drum teapot, and the printable model kiln built from it: body, spout rings, ribbed lid, diamonds and zigzags engraved 0.6 mm deep to paint" />
+</p>
+
+A teapot from three museum photos, decoration engraved for the brush. Measured on sessions
+given the skill and nothing else: a dog house and a lighthouse from a brief, a pumpkin, a
+ghost, the windmill and this teapot — printable, and like what was asked.
+
+**Two cats were not.** The one the ghost holds, then a real cat from its photo — metaball
+ellipsoids, cone ears, exact unions — passed every check and were unacceptable to look at. A
+**stylised** figure is another matter: a v2.2 session made a cartoon dragon, standing, winged
+and dressed, from one flat drawing, in four colour parts, from **metaball families and one
+voxel remesh**. So print mode builds a stylised figure that way, and says at CONFIG that a
+**realistic likeness** of a real animal or person is out of reach of scripted modelling.
+
+### A model you made: flatten it, then check it
+
+<p align="center">
+  <img src="docs/images/print-flatten-prusaslicer.svg" width="100%" alt="What PrusaSlicer lays down for the windmill turned 1 degree with 10 percent of its vertices off: the gallery floor's top layer in 4 heights and one edge of the base on the bed; after flatten.py, one height and the whole base" />
+</p>
+
+A model finished by hand often has faces that should be flat and are not, and sits a degree
+off. The slicer prints it as it is: above, the gallery floor finishes at **4 heights instead of
+one**, and **one edge** of the base holds the print. [`tools/flatten.py`](plugin/tools/flatten.py)
+makes nearly flat faces exactly flat and lays the base on the bed — **629 mm of first layer
+become 3,317** — and touches nothing else: curves, folds, bevels and real slopes stay as they
+are, no vertex moves past the tolerance, the input is never overwritten.
+
+```
+/kiln inspect model.stl     # print mode: print_check's verdict
+/kiln cleanup model.stl     # print mode: flatten.py, then print_check again, before and after shown
+```
+
+### Limits
+
+- **None of these models has been printed yet.** Everything here was checked by PrusaSlicer
+  2.9.6 and by renders, not on a bed.
+- **Stylised figures by metaballs, measured once**: the method comes from one session on one
+  cartoon character. A realistic likeness of a real animal or person from a photo is out of
+  reach: two cats failed, metaballs included.
+- **FDM, checked with PrusaSlicer's default profile.** No resin slicing, no orientation
+  search, no support generation, no build-volume check.
+- **Scaled down in the slicer, a model loses its thin walls.** `print_check` says how far:
+  "do not shrink below 40 %" for the windmill's body, 67 % for the lighthouse. Enlarging is
+  safe.
+- **Parts are glued or pressed, never moving.** A peg goes into a hole with 0.2 mm a side, a
+  usual value that has not been measured here; the windmill's sails do not turn.
+  [`tools/fit_coupon.py`](plugin/tools/fit_coupon.py) writes the test print that measures it
+  on your printer, in about 20 minutes.
+- **Decorative objects, not mechanical parts.** A Blender mesh has no exact circle and no
+  dimension a drawing could call: a bracket or a box whose lid must close belongs in a CAD
+  tool (build123d, CadQuery, OpenSCAD).
+- **No multi-material file.** A colour is either painted, on a zone the geometry gives an
+  edge, or printed as its own part in its own filament.
+- **`flatten.py` does not fill holes.** The slicer closes small ones on its own, and
+  `print_check` says where the rest are.
+- **Scan noise is harder to flatten.** On a model nudged by hand (10 % of its vertices off by
+  0.1-0.25 mm), it brings 52 of the windmill's 74 flat faces back flat to 0.01 mm. On scan-like
+  noise, with every vertex off, it brings back 31.
+- **Self-intersections are counted, not repaired.** A slicer merges them.
+
+The full list is in [`references/print.md`](plugin/references/print.md) § What it does not check.
+The flatten figure comes from `examples/print/flatten_demo.py`, from the G-code alone. The
+teapot photo is the Auckland War Memorial Museum's, CC BY 4.0, via Wikimedia Commons.
+
 ## Commands
 
 | Command | Action |
@@ -345,7 +425,7 @@ plugin/
 ├── .claude-plugin/plugin.json
 ├── SKILL.md
 ├── LICENSE
-├── tools/                        # fidelity_check, template_profile, quadruped, motion_loop, bind_rigid_parts, unimate (+ patch), checks
+├── tools/                        # fidelity_check, print_check, cutout, template_profile, quadruped, motion_loop, bind_rigid_parts, unimate (+ patch), checks
 └── references/
     ├── ai-generation.md
     ├── animation.md
@@ -368,28 +448,35 @@ plugin/
 | File | Content | Lines |
 |---|---|---|
 | `plugin/SKILL.md` | Main pipeline, iron rules, MCP tool surface, commands, setup | ~1,020 |
-| `plugin/references/characters.md` | Rigging patterns, animation-ready skeleton, export gotchas, Blender 5.x | ~750 |
+| `plugin/references/characters.md` | Rigging patterns, animation-ready skeleton, an animated creature (one skin, charm, QuadriFlow first, lid weights, matcap), export gotchas, Blender 5.x | ~865 |
 | `plugin/references/animation.md` | Routes by subject, scripted-animation rules, quadruped cycles, UniMate install / loops / prompts | ~170 |
-| `plugin/tools/quadruped.py` | Procedural quadruped idle + walk, IK-planted, measured before export (legs bent, paws in step, exact loop) | ~200 |
+| `plugin/tools/quadruped.py` | Procedural quadruped idle + walk, IK-planted, measured before export (legs bent, paws in step, exact loop), secondary motion (ears, tail wave, blinks), one GLB with every clip | ~370 |
 | `plugin/tools/motion_loop.py` | Generated clip → seamless loop (pose + direction matched, drift removed); keeps the sample that loops best | ~100 |
 | `plugin/tools/bind_rigid_parts.py` | Folds bone-parented parts (eyes, props) into the skin; reports a quadruped posture for routing | ~60 |
-| `plugin/tools/unimate.py` | Installs UniMate at the tested version, reports newer upstream, runs rigged GLB + prompt → animated GLBs | ~300 |
+| `plugin/tools/unimate.py` | Installs UniMate at the tested version, reports newer upstream, runs rigged GLB + prompt → animated GLBs | ~350 |
 | `plugin/references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~460 |
 | `plugin/references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~360 |
-| `plugin/references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~400 |
-| `plugin/tools/fidelity_check.py` | Renders a model under a studio HDRI and measures shape and material gaps against its reference | ~245 |
+| `plugin/references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~480 |
+| `plugin/tools/fidelity_check.py` | Renders a model under a studio HDRI and measures shape and material gaps against its reference | ~685 |
 | `plugin/tools/template_profile.py` | Reads a turned object's real profile off a 3D template (a generated mesh, a scan), to model from | ~120 |
+| `plugin/references/print.md` | 3D printing, the method by subject (primitives for objects, metaballs for figures): modelling for the printer from the brief (FDM / resin), what the check counts, what it does not, flattening a model you bring | ~500 |
+| `plugin/tools/print_check.py` | 3D printing check, FDM or resin: raw edge counts, held parts, walls, overhangs, loss against the original, PrusaSlicer as second arbiter | ~850 |
+| `plugin/tools/cutout.swift` | Cuts the subject out of a photo with macOS Vision (14+), local and free — the alpha `fidelity_check` needs | ~30 |
+| `plugin/tools/flatten.py` | Makes a model's nearly flat faces exactly flat and lays it on the bed — curves, bevels and slopes untouched, the input never overwritten | ~290 |
+| `plugin/tools/fit_coupon.py` | Writes the test print for a peg in a hole, diamond on its side or round standing up: one hole per clearance, one with a lead-in chamfer, the peg printed the way the model's is | ~235 |
+| `plugin/tools/review_renders.py` | The review renders without a connected Blender: matcap and colour (textures or vertex colours), opposite three-quarters, top and under, framed on the vertices; close-ups along the surface's normal, at the check's thin spots or where asked | ~285 |
+| `plugin/tools/uv_check.py` | UV check: used tile, overlap, stretch, collapsed and flipped faces; FAIL on a texture without UVs or collapsed UVs | ~180 |
 | `plugin/references/validation-checklist.md` | Geometry cleanup (welding that keeps the shading) + material export audit | ~290 |
 | `plugin/references/ai-generation.md` | Backend order (TRELLIS.2 first), licences, Hunyuan3D 2.x (on request), TRELLIS.2 local (measured), concept art (FLUX.1-schnell, nano-banana), free-quota and token rules | ~430 |
 | `plugin/references/export-targets.md` | GLB/FBX/USDZ settings, headless CLI, post-export checklist | ~240 |
 | `plugin/references/cli-tools.md` | gltf-transform, gltfpack, LOD workflow, metrics | ~210 |
-| `plugin/references/uv-materials.md` | UV unwrapping, PBR channel packing | ~150 |
+| `plugin/references/uv-materials.md` | UV unwrapping, the UV check, PBR channel packing | ~180 |
 | `plugin/references/naming-conventions.md` | Blender + GLTF name mapping + file conventions | ~150 |
 | `plugin/references/topology-rules.md` | Poly budgets, quad rules, edge flow | ~90 |
 | `plugin/references/setup-install.md` | Model selection, install commands, post-install validation | ~70 |
 | `plugin/references/sourcing-strategy.md` | PolyHaven (MCP or public API) + Sketchfab search patterns | ~120 |
 
-**Total: ~4,800 lines** of production-tested 3D pipeline knowledge.
+**Total: ~5,500 lines** of production-tested 3D pipeline knowledge.
 
 ## Continuous checks
 
@@ -436,8 +523,28 @@ claims to measure — a model against its own render (IoU 0.998), the same model
 colour as non-metal, silent), metal in hard scattered islands (reported; one soft region,
 silent), metal painted mostly as non-metal (reported), grain measured but never listed as a gap,
 joint close-ups (a rod resting on a sphere rendered; sunk or free,
-not), and `--view` and `--azimuth` on a 2 x 1 x 1 box — **27/27**. Its first run caught the tool framing views by
+not), `--view` and `--azimuth` on a 2 x 1 x 1 box, the face measure, and a photo with no
+transparency (refused) — **34/34**. Its first run caught the tool framing views by
 height only: anything wider than tall was clipped, a box measured 1:1 instead of 2:1.
+`plugin/tools/test_print_check.py` builds the meshes a print can fail on — open, inverted,
+floating, too thin, a cavity, a loss against the original, a carved cup against its closed
+reference, the smallest scale of a 2 mm plate — and checks each verdict, with PrusaSlicer
+when it is there, and an assembly of colour parts — **67/67**.
+`plugin/tools/test_flatten.py` seeds what flattening must and must not touch: a jittered top
+made flat, a cylinder, a sphere, a dome, a wave, a 5° slope, a 0.2 mm step and a 0.2 mm bevel
+left alone, a tilted model laid on the bed — **22/22**; each case after the first was added
+when a real model broke the tool.
+`plugin/tools/test_fit_coupon.py` reads the coupon's holes and peg back from the STLs, not
+from the tool's report — each size to the micron, both parts closed, diamond and round —
+**18/18**.
+`plugin/tools/test_review_renders.py` renders a seeded block and reads the images back: one
+per view and mode, the subject spanning the frame, a close-up aimed at nothing refused, a
+close-up at negative coordinates read as a value, a rigged GLB framed without its bone sphere,
+a texture and vertex colours shown in colour, a close-up behind a taller part seen along its
+normal — **12/12**.
+`plugin/tools/test_uv_check.py` seeds the unwraps the UV check must and must not flag: a clean
+Smart UV Project sphere as .blend and GLB (silent), no UV with and without a texture, stacked,
+collapsed, stretched and mirrored UVs — **9/9**.
 `plugin/tools/test_template_profile.py` reads a seeded turned part back through
 `template_profile.py` — radii, a free rod, a rod pressed against the body — **4/4**.
 

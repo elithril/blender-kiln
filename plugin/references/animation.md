@@ -38,11 +38,17 @@ Each comes from a cycle that looked wrong until it was measured:
 3. **Keep legs bent.** Size the stride and the hip height so no leg passes ~95% of its
    length. The rejected first walk peaked at 101% — legs locked, read as too long; the
    approved one at 93%, with the hips 15% of a leg lower and a stride of 11% of the body.
+   **Lower the hips no further than the legs need**: on a short-legged mascot cat, 15% read
+   as a cat stalking its prey. `quadruped.py` now starts at 5% and lowers the hips only
+   until the legs hold — the cat settled at 8% (legs 95%), as its own session had found.
 4. **Measure a rotation's sign before using it.** Rotate +0.2 rad and watch which way a
    probe moves. A sit and an attack written with the assumed sign tipped the cat nose
    down. The lamp and chest scripts measure every sign first — and were right first time.
-5. **Loop exactly.** A cycle of P frames keys frames 0..P−1; keying P as well repeats a
-   pose and stutters at the seam.
+5. **Loop exactly.** A cycle of P frames has P distinct poses, 0..P−1, and **a closing key
+   at P equal to key 0**: a glTF clip lasts until its last key and three.js wraps there, so
+   keyed 0..P−1 only, the step from the last pose back to the first is skipped — measured
+   on `quadruped.py`'s walk, 32 keys ending at 31/24 s, the seam jumping 0.045 at once. Key
+   P is for the file; Blender's own playback range stops at P−1, or it shows the pose twice.
 6. **Judge motion in motion, and with numbers.** A contact sheet showed a jump as a body
    lying flat; the hip height said it rose 0.32 → 0.61 m. Measure leg extension, foot
    height and seams; then watch the loop.
@@ -68,6 +74,22 @@ shortens the stride or lowers the hips until the legs stay bent (≤ 95%). It re
 **root speed** the planted paws share — what a game must move the character at for the
 feet not to skate (0.106 m/s on the cat, the four paws in exact step). It needs the
 Animation-ready skeleton's names; it says which are missing.
+
+**Secondary motion comes with the bones that carry it** — no session got it unasked, and
+the cat's wrote its own module: the head nods twice per stride, `LeftEar` / `RightEar`
+trail it (they take where the head was 3 frames before, ×2, so they lag and overshoot), the
+`Tail1…n` segments wave each 0.55 rad later than the one before, and the eyelids blink once
+in the walk and three times in the idle, a double among them. The blink needs the lid
+bone's closing axis and angle, **measured on the model** (rule 4): `--blink X:140` closed the
+cat's lids (centred on the eye's axis: −0.39 open → +0.54; −140 reached only +0.08).
+Without it the tool says so and writes no blink. The report gives what it measured on the
+baked pose: on the cat the ears trail the head by 4 frames in the walk, 3 in the idle (0
+before), the tail's tip its root by 10 frames in the idle (0 before), 1 and 3 blinks.
+
+It writes **one GLB with every motion as a named clip**, `{asset}_animated.glb` — a site
+plays Walk and Idle from one file (`--per-clip` also writes `{motion}.glb` each, as it once
+did only). The clips are the motions' names (`idle`, `walk`): rename the actions if the
+brief names them otherwise.
 
 ## UniMate
 

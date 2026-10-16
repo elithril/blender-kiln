@@ -222,6 +222,32 @@ bpy.context.view_layer.objects.active = armature_obj
 bpy.ops.object.parent_set(type='ARMATURE_AUTO')
 ```
 
+**Eyelid bones out of the solve.** Automatic weights hand a lid bone the skin around the
+eye: on the cat, **2,890 of 16,002 skin vertices** went to the two lid bones, and a 140°
+blink dragged the skin up to **125 mm**; on the dog, the whole skull bent when the eye
+blinked. Weight the skin with the lid bones switched off, then give each lid shell 100% to its
+bone — measured on the cat: 0 skin vertices on a lid, 0 unweighted, a blink moves the skin 0 mm.
+
+```python
+def weight_skin_without_lids(skin, armature, lids=("LeftEyelid", "RightEyelid")):
+    """Automatic weights on the skin, lid bones left out; returns skin vertices on a lid (want 0)."""
+    present = [n for n in lids if n in armature.data.bones]
+    for n in present:
+        armature.data.bones[n].use_deform = False
+    bpy.ops.object.select_all(action='DESELECT')
+    skin.select_set(True); armature.select_set(True)
+    bpy.context.view_layer.objects.active = armature
+    bpy.ops.object.parent_set(type='ARMATURE_AUTO')
+    for n in present:
+        armature.data.bones[n].use_deform = True       # the lid shells still need them
+    idx = {skin.vertex_groups[n].index for n in present if n in skin.vertex_groups}
+    return sum(1 for v in skin.data.vertices if any(g.group in idx and g.weight > 0.01 for g in v.groups))
+```
+
+Then each lid shell: one vertex group named after its bone, every vertex at 1.0, and an
+Armature modifier — or `tools/bind_rigid_parts.py` if the lids hang off their bones by
+parenting.
+
 **Post auto-weights cleanup checklist:**
 1. Check for vertices with zero total weight (will stay in place) 
 2. Check for vertices weighted to wrong bones (e.g., leg vertices on spine)
@@ -569,6 +595,8 @@ Place the joints at the bends, and name them the way motion data names them:
 | Hind / leg | `LeftUpLeg` → `LeftLeg` → `LeftFoot` → `LeftToeBase` (and `Right…`) |
 | Fore / arm | `LeftArm` → `LeftForeArm` → `LeftHand` → `LeftFingers` (parented to `Spine1`) |
 | Tail | `Tail1` → `Tail2` → … (parented to `Hips`) |
+| Ears | `LeftEar`, `RightEar` (parented to `Head`) — they trail the head in `tools/quadruped.py` |
+| Eyelids | `LeftEyelid`, `RightEyelid` (parented to `Head`) — § Charm |
 
 Names matter beyond tidiness: motion models condition on them. UniMate's offline
 labeller read 24 of these 26 names directly (`LeftUpLeg` → *Left Thigh*) and guessed
@@ -663,6 +691,130 @@ Two consequences for export, both easy to miss:
 - Rigify names bones `DEF-spine`, `MCH-torso`. Those hyphens are fine — verified
   through both glTF and FBX.
 
+## An animated creature
+
+What the October 2026 sessions settled on cartoon cats, dogs, owls and a corgi built to
+walk. Each rule below was missing from this file and cost a session rounds to find.
+
+### One skin
+
+**The body is ONE skin: one family of overlapping volumes or metaballs, one voxel remesh.**
+Not one family or one mesh per region (body, each leg, the tail): that is the print rule
+(`print.md` § Figures rule 2, where regions must stay apart), and on a skin that bends it
+leaves a groove at every junction — the scripted corgi, built from separate volumes, showed
+one at each limb root in matcap. The cat built as one family of 555 metaballs and one
+voxel remesh at 1.1 mm folded nowhere at the shoulders, hips, nape and tail root in its
+two shipped clips (0 mm² of skin through skin, 0 mm of sharp crease, measured every second
+frame). Every session that had to animate a character converged on this by itself.
+
+Eyes, nose, mouth and eyelids stay **separate objects**, each 100% to one bone (the head,
+or its lid bone) — § Charm.
+
+### Charm: eyes, eyelids, cheeks, pads
+
+No session added these unasked; asked, they were a large gain to the user's eye. Build all
+four on a cartoon creature unless the brief says otherwise:
+
+- **A big head and big eyes with highlights.** The cat: eyes 34 mm on a 0.40 m figure,
+  60% of their depth out of the skin, two emissive highlights each, lit from the same side.
+  The dog: eyes 44 mm visible, head radius raised 106 → 122 mm, body unchanged.
+- **Real eyelids**, one upper lid per eye: a shell over the eye (a spherical cap at 1.085 ×
+  the eye's radius, 1.2 mm thick, on the cat), one bone per lid, `LeftEyelid` /
+  `RightEyelid`, parented to `Head`. **Blink by turning the bone, not by a shape key** —
+  the dog's lids came back intact from its Draco GLB, identical to the plain one, and
+  three.js plays a bone like any other. **Measure the closing sign** (`animation.md` rule
+  4): the cat's first guess turned its lids the wrong way; the dog's closed at +114° about
+  the bone's Y, checked by a grid of rays over the eye (100% covered, both sides). Open,
+  the lid sits high: lids set too low read grumpy (the cat's, opened 124° → 140°).
+- **A blink**: 3 frames closing, 1 held, 4 opening at 24 fps. One in a 64-frame walk;
+  two or three in a 4 s idle, a double among them, reads alive.
+- **Cheeks** sunk into the skull, not stuck on it — the cat's first cheeks read detached;
+  the dog's first ones gave a heavy jaw. A touch of pink on them helps.
+- **Paw pads**: a big pad and four toe pads under each paw, the creature standing on them
+  (it rises 2.2 mm on the dog — put the lowest point back at Z = 0). As bumps of the skin
+  they lost their relief at the cat's retopology and showed only by their pink colour:
+  check them in matcap after any reprojection.
+
+### Retopology: QuadriFlow first, then the weights
+
+A voxel skin is not a deforming mesh. **No session retopologised unasked**; asked, the order
+that paid is: QuadriFlow, then weights checked on fixed poses — and loops built by hand only
+at a joint that still folds after both.
+
+```python
+bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT')
+bpy.ops.mesh.remove_doubles(threshold=1e-5)        # first: see below
+bpy.ops.object.mode_set(mode='OBJECT')
+bpy.ops.object.quadriflow_remesh(mode='FACES', target_faces=16000, use_mesh_symmetry=True, seed=0)
+```
+
+**Merge by distance before QuadriFlow.** On a voxel remesh straight out of the modifier,
+QuadriFlow cancels with "The mesh needs to be manifold and have face normals that point in
+a consistent direction", although bmesh finds no open or non-manifold edge — measured on a
+voxelised sphere, Blender 5.2.2. A merge at 1e-5 m removed 12 coincident vertices and
+QuadriFlow then finished (7,486 → 1,938 quads). Making the normals consistent, or
+triangulating, did not help.
+
+Measured with the same five poses before and after (crease length, cm), on the dog:
+
+| Pose | Voxel skin | QuadriFlow alone | Loops built by hand, same shape |
+|---|---:|---:|---:|
+| Neck turned | 63.8 | 30.9 | 26.5 |
+| Neck down | 54.1 | 22.3 | 10.7 |
+| Armpits | 111.0 | **56.1** | 68.3 |
+| Hips | 102.8 | **43.2** | 49.3 |
+| Tail root | 14.0 | **4.4** | 6.3 |
+
+QuadriFlow alone takes 49-69% off every crease. It never puts a loop at the shoulders or
+the nape (15 tries, 3 densities × 5 seeds) — and the loops built there afterwards won only at
+the neck. On the cat, a fully hand-built cage with a ring at every joint took about ten
+iterations and came out **mixed** against QuadriFlow at the same face count: the elbow −14%
+of skin through skin, the hip −17%, **the knee +69%** (85.5 against 50.5 mm²), the rest
+tied. Both sessions found the weights mattered more than the loops.
+
+**So the weight check comes before any hand-built loop.** Pose the rig at fixed angles
+(shoulder and hip 30°, elbow and knee 75°, neck 30° down, tail 50° aside), measure, per
+joint, the area of skin passing through skin and the length of edges bent past 40°, and
+keep the same poses for every version. Then, in order:
+
+1. the validator (§ Validation Script) and the dead-bone count — clean;
+2. no skin vertex on a lid bone (§ 6. Weight Painting);
+3. a joint that folds: smooth its weights inside its zone (the dog: 15 passes) and measure
+   again. Weights drawn by hand ring by ring (the dog) or along the bone (the cat) were
+   worse on both meshes, in numbers and on the render;
+4. only a joint that still folds gets loops built by hand — and the same poses decide
+   whether they stay.
+
+**Still open: the elbow.** The cat shipped with its inner elbows pressing through
+themselves when a fore paw lifts — 187 mm² of skin through skin at frames 2 and 18 of its
+walk, automatic weights unretouched; neither its hand-built loops (−14% against QuadriFlow)
+nor weights drawn along the bone fixed it. Nothing here has been measured to fix it yet: say
+so in the hand-over of any walking creature, with the figure measured on it.
+
+A limb's junction ring carries four 5-edge poles whatever is done — the branch needs them
+(the cat's shoulders, hips and tail root): `topology-rules.md`'s "poles away from
+deformation zones" means the rest of the joint.
+
+### Matcap before delivery — mandatory
+
+**An animated creature is not handed over before a matcap review**: the geometry alone, no
+colour, close up. Colour hides a skin's faults; every number above can pass on a skin that
+looks wrong. On the cat it found what the measures had missed — a crushed band and a dimple
+on the nape, an asymmetric crease under the belly, two marks on top of the shoulders — and
+cost four rebuilds; the scripted corgi passed its checks with grooves at every junction of
+its volumes, legs like sausages and eyes stuck on.
+
+```bash
+blender -b --factory-startup --python-exit-code 1 --python tools/review_renders.py -- \
+    SK_Cat_final.glb --out review/matcap --mode matcap --views q1,q3,front,top,under \
+    --close X,Y,Z,SIZE ...       # nape, belly, each shoulder, tail root, ear base, face (mm);
+                                 # seen along the surface's normal, ,AZ,EL to pick the side
+```
+
+Look at the rest pose and at two or three frames of the walk (the elbows and knees bent).
+In the hand-over, name what stays — a soft crease under the jaw, the contact line of a
+separate eye — and say it was left on purpose.
+
 ## Retopology Tools
 
 | Tool | Type | Best for |
@@ -670,6 +822,7 @@ Two consequences for export, both easy to miss:
 | **Quad Remesher** | Blender addon (paid) | Best quality auto-retopo |
 | **InstantMeshes** | Standalone (free) | Fast, open-source |
 | **Blender Remesh** | Built-in | Quick prototyping (voxel remesh) |
+| **QuadriFlow** | Built-in (`quadriflow_remesh`) | A voxel skin → quads, the first step for a creature (§ Retopology: QuadriFlow first) |
 | **OpenSubdiv** | Built-in | Subdivision for low-poly to high-poly |
 
 ---
@@ -681,8 +834,9 @@ Two consequences for export, both easy to miss:
 Phase [5] CLEANUP for characters:
 1. Standard cleanup (merge doubles, normals, transforms)
 2. Verify T-pose if rigging is planned
-3. Retopology if AI mesh (typically too dense for rigging)
+3. Retopology if AI mesh (typically too dense for rigging) or a voxel skin — QuadriFlow, then the weight check (§ Retopology: QuadriFlow first)
 4. `validate_character_rig()` if armature is present
+5. A creature to animate: the matcap review before delivery (§ Matcap before delivery)
 
 ### Character-specific export
 
