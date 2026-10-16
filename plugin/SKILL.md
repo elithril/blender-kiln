@@ -749,6 +749,8 @@ dead = sum(1 for vg in mesh.vertex_groups
 ```
 
 Any dead deform bone means the rig is too dense for the mesh. Go down a tier.
+**Eyelid bones stay out of the automatic weights** — they took 2,890 of the cat's 16,002 skin
+vertices (`references/characters.md` § 6. Weight Painting).
 Then run the validator in `references/characters.md` § Validation Script.
 
 **Posing a generated Rigify rig?** Its limbs ship in IK, so the FK controls do

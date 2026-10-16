@@ -222,6 +222,32 @@ bpy.context.view_layer.objects.active = armature_obj
 bpy.ops.object.parent_set(type='ARMATURE_AUTO')
 ```
 
+**Eyelid bones out of the solve.** Automatic weights hand a lid bone the skin around the
+eye: on the cat, **2,890 of 16,002 skin vertices** went to the two lid bones, and a 140°
+blink dragged the skin up to **125 mm**; on the dog, the whole skull bent when the eye
+blinked. Weight the skin with the lid bones switched off, then give each lid shell 100% to its
+bone — measured on the cat: 0 skin vertices on a lid, 0 unweighted, a blink moves the skin 0 mm.
+
+```python
+def weight_skin_without_lids(skin, armature, lids=("LeftEyelid", "RightEyelid")):
+    """Automatic weights on the skin, lid bones left out; returns skin vertices on a lid (want 0)."""
+    present = [n for n in lids if n in armature.data.bones]
+    for n in present:
+        armature.data.bones[n].use_deform = False
+    bpy.ops.object.select_all(action='DESELECT')
+    skin.select_set(True); armature.select_set(True)
+    bpy.context.view_layer.objects.active = armature
+    bpy.ops.object.parent_set(type='ARMATURE_AUTO')
+    for n in present:
+        armature.data.bones[n].use_deform = True       # the lid shells still need them
+    idx = {skin.vertex_groups[n].index for n in present if n in skin.vertex_groups}
+    return sum(1 for v in skin.data.vertices if any(g.group in idx and g.weight > 0.01 for g in v.groups))
+```
+
+Then each lid shell: one vertex group named after its bone, every vertex at 1.0, and an
+Armature modifier — or `tools/bind_rigid_parts.py` if the lids hang off their bones by
+parenting.
+
 **Post auto-weights cleanup checklist:**
 1. Check for vertices with zero total weight (will stay in place) 
 2. Check for vertices weighted to wrong bones (e.g., leg vertices on spine)
@@ -752,10 +778,11 @@ joint, the area of skin passing through skin and the length of edges bent past 4
 keep the same poses for every version. Then, in order:
 
 1. the validator (§ Validation Script) and the dead-bone count — clean;
-2. a joint that folds: smooth its weights inside its zone (the dog: 15 passes) and measure
+2. no skin vertex on a lid bone (§ 6. Weight Painting);
+3. a joint that folds: smooth its weights inside its zone (the dog: 15 passes) and measure
    again. Weights drawn by hand ring by ring (the dog) or along the bone (the cat) were
    worse on both meshes, in numbers and on the render;
-3. only a joint that still folds gets loops built by hand — and the same poses decide
+4. only a joint that still folds gets loops built by hand — and the same poses decide
    whether they stay.
 
 A limb's junction ring carries four 5-edge poles whatever is done — the branch needs them

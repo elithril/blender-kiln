@@ -279,6 +279,43 @@ try:
 except Exception as e:
     fail("weld", f"the weld or pose-test code in the docs does not run: {e}")
 
+# ── 5b2. Automatic weights leave the eyelid bones out of the skin.
+# On the cat they handed 2,890 skin vertices to the two lid bones and a blink dragged the
+# skin 125 mm; on the dog the skull bent when the eye blinked. Run the documented function
+# on a synthetic head, and plain automatic weights for the other direction.
+def _lid_head():
+    reset()
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=0.1)
+    skin = bpy.context.object
+    ad = bpy.data.armatures.new("head"); arm = bpy.data.objects.new("head", ad)
+    bpy.context.scene.collection.objects.link(arm)
+    bpy.context.view_layer.objects.active = arm; bpy.ops.object.mode_set(mode='EDIT')
+    h = ad.edit_bones.new("Head"); h.head, h.tail = (0, 0, -0.1), (0, 0, 0.1)
+    for n, x in (("LeftEyelid", 0.035), ("RightEyelid", -0.035)):
+        b = ad.edit_bones.new(n); b.head, b.tail = (x, -0.07, 0.03), (x, -0.11, 0.03); b.parent = h
+    bpy.ops.object.mode_set(mode='OBJECT')
+    return skin, arm
+
+
+try:
+    skin, arm = _lid_head()
+    bpy.ops.object.select_all(action='DESELECT'); skin.select_set(True); arm.select_set(True)
+    bpy.context.view_layer.objects.active = arm; bpy.ops.object.parent_set(type='ARMATURE_AUTO')
+    idx = {g.index for g in skin.vertex_groups if "Eyelid" in g.name}
+    plain = sum(1 for v in skin.data.vertices if any(g.group in idx and g.weight > 0.01 for g in v.groups))
+    _doc_code("characters.md", "**Eyelid bones out of the solve.**", "Then each lid shell")
+    skin, arm = _lid_head()
+    left = weight_skin_without_lids(skin, arm)
+    if plain == 0:
+        fail("lids", "plain automatic weights gave the lid bones no skin: the case no longer shows the fault")
+    elif left:
+        fail("lids", f"the documented weighting leaves {left} skin vertices on a lid bone")
+    else:
+        ok(f"lids: automatic weights put {plain} of {len(skin.data.vertices)} head vertices on the lid bones; "
+           "the documented weighting, 0")
+except Exception as e:
+    fail("lids", f"the eyelid weighting in characters.md does not run: {e}")
+
 # ── 5c. The quadruped walk stays measured: legs bent, paws in step, loop exact.
 # tools/quadruped.py replaced text-to-motion for four-legged locomotion; its first
 # cycle locked the legs at 101% of their length and moved the hips forward instead of
