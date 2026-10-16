@@ -1,0 +1,18 @@
+blender-kiln
+Copyright (c) blender-kiln contributors. MIT licence (see LICENSE).
+
+Third-party work in this plugin
+-------------------------------
+
+- tools/skintokens.patch carries the edits of scripts/patch_skintokens_portable.py from
+  image-to-3dlab (AssetFurnace), Copyright 2026 Bingeljell and image-to-3dlab
+  contributors, https://github.com/Bingeljell/image-to-3dlab, licensed under the Apache
+  License, Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0). Changed here:
+  written out as one git diff against the pinned SkinTokens commit.
+
+Third-party software kiln installs but does not ship
+----------------------------------------------------
+
+- SkinTokens / TokenRig (VAST-AI-Research), code and checkpoints MIT, cloned and
+  downloaded by `tools/autorig.py setup` after the user agrees. Its language model is
+  configured from Qwen3-0.6B (Apache-2.0); only the config and tokenizer are downloaded.

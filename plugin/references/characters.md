@@ -548,6 +548,7 @@ def validate_character_rig(armature_obj):
 | **Rigify** | Blender addon (built-in) | All types | Configurable meta-rig, production-ready. Free and offline — see below. |
 | **AccuRIG** (Reallusion) | Desktop app (free) | Detailed humanoids | Better results than Mixamo on hands/fingers. |
 | **Auto-Rig Pro** | Blender addon (paid ~$40) | Production | Smart retopo + rig + game-ready export. |
+| **SkinTokens** (VAST-AI) | Learned, local (MIT) | Humanoids; meshes kiln did not build | Skeleton + weights from the mesh alone. `tools/autorig.py` — § Learned auto-rig. |
 
 ### Match the rig's density to the mesh's
 
@@ -690,6 +691,80 @@ Two consequences for export, both easy to miss:
   the bench's villager), which is exactly where this happens.
 - Rigify names bones `DEF-spine`, `MCH-torso`. Those hyphens are fine — verified
   through both glTF and FBX.
+
+### Learned auto-rig: SkinTokens
+
+[SkinTokens](https://github.com/VAST-AI-Research/SkinTokens) (MIT, code and checkpoints)
+predicts a skeleton and its skin weights from the mesh alone. `tools/autorig.py` runs it and
+hands back this file's skeleton (§ Animation-ready skeleton), cleaned and checked.
+
+**Measured** on one bent pose per character, 2026-10-16: the area of skin triangles that cross
+another triangle once posed, minus those already crossing at rest, in mm² — lower is better.
+Biped pose: thigh 60° forward, knee 75°, arm 45° forward, elbow 75°, `Spine1` 20°, neck 30°;
+quadruped pose: the one in § Retopology (shoulder and hip 30°, elbow and knee 75°, neck 30°
+down, tail 50° aside). Same mesh, same pose, only the rig changes.
+
+| Character | kiln's rig | SkinTokens |
+|---|---:|---:|
+| Chibi child built by kiln (15,344 vertices) | 3,926 — Rigify basic human¹ | **2,985** |
+| Hunyuan3D-2 demo humanoid, generated, a hand fused to the hip | 50,680 — Rigify basic human¹ | **20,917** — the fused arm 15,491 → 1,507 |
+| Cat built by kiln, bent | 2,698 — its own skeleton, automatic weights | **2,393** |
+| Same cat, `tools/quadruped.py` walk, mean of 32 frames | **359** | 527 (worst frame 970 against 615) |
+| Same cat's raw voxel skin, decimated like a generated mesh, bent | **3,244** | 4,793 (walk 846 against 581) |
+
+¹ PHASE 5c's tier: the full Rigify human left dead deform bones, so one tier down, as 5c says.
+
+**So, PHASE 5c:** a humanoid, or any mesh kiln did not build → `tools/autorig.py`; a
+quadruped kiln built → its own hand-built rig. The generated cat is the one measured case
+against it (a proxy, not a generator's output): rig a generated quadruped both ways and keep
+the better on the bent pose.
+
+```bash
+python3 tools/autorig.py status       # exit 0 ready, 2 not installed, 3 damaged / not the tested version
+python3 tools/autorig.py rig --asset SK_Child.glb --out rig/      # → rig/SK_Child_rigged.glb + .blend
+```
+
+What it does to SkinTokens' output, each step from the raw rigs above:
+
+- **Names** — raw bones are `bone_0…`, and the tree changes from mesh to mesh: connector
+  bones between joints (the kiln cat's legs hang off two of them), a clavicle or not, three
+  finger bones or one. The tool finds the limbs as the subtrees off the centre line, pairs
+  them left/right, takes as legs the pair attached nearest the root, and names the rest from
+  the joints' positions. The four raw rigs above come out as they were named by hand (the
+  kiln cat's two leg connectors aside, which the hand map had flattened), and the bent-pose
+  numbers through the tool are the table's to the tenth of a mm².
+- **Fails loud** where a bone `tools/quadruped.py` needs is missing. The Hunyuan humanoid's
+  right arm came back as clavicle, arm, forearm — no hand where it is fused to the hip:
+  `RightHand: the right arm chain is ['RightShoulder', 'RightArm', 'RightForeArm']`.
+  Separate the limb in the mesh, or accept it with `--allow-missing RightHand` (the 20,917
+  above is that rig). A model facing +Y is refused, not mirrored.
+- **Cleans** — at most 4 influences, normalised, a bone's islands under 2% of its vertices
+  away from its region dropped (5-12 islands a rig here, no change to the table), an unweighted
+  vertex given its neighbour's. **Weights under 0.01 are kept**: dropping them put 99 mm² more
+  skin through skin on the child's leg.
+- **Adds the face**: SkinTokens has no ears or eyelids. Separate lid shells (named `…Eyelid…`
+  or `…Lid…`, or `--lids`) get `LeftEyelid` / `RightEyelid` at their sphere's centre, under
+  `Head`, each shell 100% to its bone and the skin on none of them (§ 6. Weight Painting).
+  `--ears X,Y,Z,X,Y,Z` (left base and tip, mm, mirrored) adds `LeftEar` / `RightEar`: head
+  vertices past the ear's base take the ear bone, fully from a fifth of its length. Bone heat
+  was tried there and spread each ear over half the head (1,795 of 2,017 vertices outside it,
+  on seeded cones).
+- **Checks** what the validator checks, rule 26's vertices per bone, dead bones, and the skin
+  on the lids, in one `autorig: {...}` line; it exits 1 on unweighted vertices or > 4 influences.
+
+**Cost**: ~5.6 GB on disk (2.0 of it uv's download cache), 35-54 s and ~7 GB of memory per
+mesh on an Apple M-series through kiln's patch (MPS, `tools/skintokens.patch`, from
+image-to-3dlab, Apache-2.0 — `plugin/NOTICE`). Install with `/kiln setup`, asked first.
+
+**Limits — what this does not show:**
+
+- One pose, one kiln-built humanoid, one generated humanoid: a direction, not a law. No humanoid
+  walk was measured, so the walk advantage on humans is not known.
+- **It is not repeatable**: SkinTokens samples, and seeding does not fix it on MPS. Two runs on
+  the child gave the same 28 bones with joints up to 8 mm apart; another run measured 2,193 mm²
+  against the table's 2,985 (Rigify: 3,926). Look at the bent pose on every rig it makes.
+- The lids and ears are checked on seeded shells and cones, not on a real character's.
+- Linux and NVIDIA: the patch keeps upstream's CUDA path, but no run was made there.
 
 ## An animated creature
 
