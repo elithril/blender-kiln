@@ -6,6 +6,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — ready-made humanoid moves (3.0)
+
+- **`tools/presets.py`**: `list` the 22 motions (43 clips: 21 in two takes, a woman's walk),
+  `animate --asset X_rigged.glb --motion walk,run,jump,dance [--loop] [--speed] [--take A|B]`
+  on a rig with kiln's names — one GLB with a clip per motion named as asked, a measures JSON,
+  a provenance record. The clips are image-to-3dlab's (AssetFurnace, Apache-2.0) presets made
+  with NVIDIA Kimodo (NVIDIA Open Model License, commercial use allowed), shipped in
+  `tools/motions/` (2.1 MB); `tools/retarget.py` adapts its retarget; both in `plugin/NOTICE`.
+- **Corrected before keying**, each measured on the kiln child and the Hunyuan3D humanoid
+  (`references/animation.md` § Humanoid presets): bones by name (Hunyuan's handless arm: arm
+  through body 4,285 → 1,548 mm² on the walk); feet planted (walk slide 293 → 2.9 mm/s and
+  568 → 9.5, under the floor 22.9 → 0 and 38.2 → 0.7 mm); arms out of the hips and belly, the
+  swing capped at 25° (child walk 2,638 → 377 mm²); `--loop` closed in-place cycles (walk seam
+  6.22 → 0.73× a step, 6.42 → 1.10). The Hunyuan humanoid stays above 500 mm² of arm through
+  body on walk, jump and dance: its fused hand and its shoulder's skin; said, not hidden.
+- **PHASE 5d routes** a kiln-named humanoid and a move in the list to `presets.py`; another
+  move, a non-human biped or wings to UniMate, non-commercial; quadrupeds unchanged.
+- **`tools/motion_measure.py`**: the comparison's measure, for any route. **`tools/test_presets.py`**,
+  13 checks on a seeded humanoid (names, licences, feet, arms, loop), on every push without
+  Blender and in the Blender workflow.
+
 ### Fixed — looped clips keep the hips' height, and carry one clip (3.0)
 
 - **`tools/motion_loop.py`** removed the root's drift and blended its height on the bone's

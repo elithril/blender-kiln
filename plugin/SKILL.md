@@ -799,7 +799,13 @@ Only when the user asks for motion. Route by **subject** — table and measureme
   tail and blinks included — `--blink` takes the lid's measured closing turn).
   Other quadruped moves → the asset's clips or hand keys. **Never UniMate**: measured
   unusable on four quadrupeds; `unimate.py` refuses one unless `--force`.
-- **Biped or winged, from a sentence** → UniMate:
+- **Humanoid with kiln's names** (rigged by `tools/autorig.py`) **and a move in
+  `python3 tools/presets.py list`** (walk, run, jump, dance, idle, wave, punch, kick, sit…) →
+  `tools/presets.py animate --asset X_rigged.glb --motion walk,run --loop`: NVIDIA Kimodo clips,
+  commercial use allowed, feet planted, arms kept out of the body, cycles closed; one GLB, a
+  clip per motion. Report its measures line per clip, and say where a target is missed.
+- **Biped or winged, from a sentence** — a move not in the presets, a non-human biped, wings →
+  UniMate:
   `python3 tools/unimate.py status` first (exit 2 = not installed, 10 = newer upstream).
   Not installed: ask first — 3.2 GB — then `setup`. The weights are **non-commercial
   (CC BY-NC 4.0)**: say so. Prompts start "An object", one motion, "in place" rather
@@ -1012,14 +1018,19 @@ Animate a rigged asset (standalone PHASE 5d): `/kiln animate SK_Cat.glb walk, id
    - quadruped, idle or walk → `tools/quadruped.py --motions idle,walk`, then report the
      root speed it prints: the game moves the character at that speed;
    - quadruped, any other move → its own clips or hand keys; **not UniMate**;
-   - biped or winged → UniMate: `tools/unimate.py status` first (not installed: ask — 3.2
+   - humanoid with kiln's names, a move `tools/presets.py list` has → `tools/presets.py animate
+     --motion … --loop` (commercial use allowed); report each clip's measured line and the root
+     speed of each loop;
+   - any other biped (a move not in the presets, a non-human biped) or winged → UniMate:
+     `tools/unimate.py status` first (not installed: ask — 3.2
      GB; newer upstream: offer `setup --update`), say the weights are **non-commercial**,
      write each move as "An object … in place.", run `animate --loop --reps 4`, and stop
      at the label review it prints (step 1 of its Run it section);
    - articulated object → key the rigid parts, following § Rules for scripted animation.
 5. **Show every kept clip before calling it done** (rule 2): render it or play it in the
-   viewport, and say which route made it and, for UniMate, which sample was kept.
-6. **Export** (PHASE 7): one GLB with every action (`quadruped.py` writes it), or one per clip
+   viewport, and say which route made it and, for UniMate, which sample was kept; for the
+   presets, which take, and their licence (NVIDIA Open Model License).
+6. **Export** (PHASE 7): one GLB with every action (`quadruped.py` and `presets.py` write it), or one per clip
    if asked (`--per-clip`).
 
 ### /kiln optimize
@@ -1206,7 +1217,7 @@ Axis conversion at export is automatic.
 | Export settings per format | `references/export-targets.md` |
 | CLI tools (gltf-transform, gltfpack) | `references/cli-tools.md` |
 | Characters, rigging (phase 2) | `references/characters.md` |
-| Animation: routes, UniMate install and prompts | `references/animation.md` |
+| Animation: routes, humanoid presets, UniMate install and prompts | `references/animation.md` |
 | Batch mode (wizard, runner, manifest) | `references/batch-mode.md` |
 | 3D printing: modelling from the brief, check, repair | `references/print.md` |
 | Photo's markings projected onto the model (optional, after the last review) | `references/photo-projection.md` |

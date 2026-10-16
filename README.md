@@ -233,6 +233,7 @@ measurement):
 
 | Subject | Route | Shown above |
 |---|---|---|
+| Humanoid with kiln's names, a ready-made move (walk, run, jump, dance… 22) | `tools/presets.py` — NVIDIA Kimodo clips from image-to-3dlab, feet planted, arms kept out of the body, cycles closed | — |
 | Biped or winged, from a sentence | [UniMate](https://github.com/Friedrich-M/UniMate) text-to-motion, looped by `tools/motion_loop.py` | the villager, the dragon |
 | Four-legged, idle and walk | `tools/quadruped.py` — a scripted, measured cycle | the cat |
 | Articulated object | rigid parts keyed by script, every rotation's sign measured first | the lamp, the chest (planks, iron, Poly Haven CC0 scans) |
@@ -425,7 +426,7 @@ plugin/
 ├── .claude-plugin/plugin.json
 ├── SKILL.md
 ├── LICENSE
-├── tools/                        # fidelity_check, print_check, cutout, template_profile, quadruped, motion_loop, bind_rigid_parts, unimate (+ patch), checks
+├── tools/                        # fidelity_check, print_check, cutout, template_profile, quadruped, presets (+ motions/), retarget, motion_measure, motion_loop, bind_rigid_parts, unimate (+ patch), checks
 └── references/
     ├── ai-generation.md
     ├── animation.md
@@ -449,8 +450,11 @@ plugin/
 |---|---|---|
 | `plugin/SKILL.md` | Main pipeline, iron rules, MCP tool surface, commands, setup | ~1,020 |
 | `plugin/references/characters.md` | Rigging patterns, animation-ready skeleton, an animated creature (one skin, charm, QuadriFlow first, lid weights, matcap), export gotchas, Blender 5.x | ~865 |
-| `plugin/references/animation.md` | Routes by subject, scripted-animation rules, quadruped cycles, UniMate install / loops / prompts | ~170 |
+| `plugin/references/animation.md` | Routes by subject, scripted-animation rules, quadruped cycles, humanoid presets (measured against UniMate), UniMate install / loops / prompts | ~270 |
 | `plugin/tools/quadruped.py` | Procedural quadruped idle + walk, IK-planted, measured before export (legs bent, paws in step, exact loop), secondary motion (ears, tail wave, blinks), one GLB with every clip | ~370 |
+| `plugin/tools/presets.py` | Ready-made humanoid moves (22 motions, 43 Kimodo clips in `tools/motions/`) on a kiln-named rig: one GLB a clip per motion, measures, provenance | ~270 |
+| `plugin/tools/retarget.py` | The retarget behind it (adapted from image-to-3dlab, Apache-2.0): bones by name, feet planted, arms out of hips and belly, loops | ~850 |
+| `plugin/tools/motion_measure.py` | Measures an animated humanoid GLB: foot slide, floor, skin through skin, arm through body, loop seam | ~230 |
 | `plugin/tools/motion_loop.py` | Generated clip → seamless loop (pose + direction matched, drift removed in world axes, one clip with a closing key); keeps the sample that loops best | ~120 |
 | `plugin/tools/bind_rigid_parts.py` | Folds bone-parented parts (eyes, props) into the skin; reports a quadruped posture for routing | ~60 |
 | `plugin/tools/unimate.py` | Installs UniMate at the tested version, reports newer upstream, runs rigged GLB + prompt → animated GLBs | ~350 |

@@ -758,8 +758,9 @@ image-to-3dlab, Apache-2.0 — `plugin/NOTICE`). Install with `/kiln setup`, ask
 
 **Limits — what this does not show:**
 
-- One pose, one kiln-built humanoid, one generated humanoid: a direction, not a law. No humanoid
-  walk was measured, so the walk advantage on humans is not known.
+- One pose, one kiln-built humanoid, one generated humanoid: a direction, not a law. Their walks
+  were measured since, through `tools/presets.py` (`references/animation.md` § Humanoid
+  presets), but against other motion routes on the same rigs, not against a Rigify rig.
 - **It is not repeatable**: SkinTokens samples, and seeding does not fix it on MPS. Two runs on
   the child gave the same 28 bones with joints up to 8 mm apart; another run measured 2,193 mm²
   against the table's 2,985 (Rigify: 3,926). Look at the bent pose on every rig it makes.
