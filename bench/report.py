@@ -85,11 +85,118 @@ def table(label, res):
     print(f"\n{len(res)} brief(s), cost ≈ ${round(total, 2)} equivalent API.\n")
 
 
+def _main_glb(s):
+    """The GLB the brief is judged on: the rigged one when there is one, else the largest."""
+    ms = [m for m in s.get("measures", []) if "measure_error" not in m]
+    if not ms:
+        return None
+    return max(ms, key=lambda m: (bool(m.get("rigs")), len(m.get("clips", [])), m.get("tris", 0)))
+
+
+def extras(bid, s):
+    """The fields the newer briefs record, one short string each — '' when not applicable."""
+    b = BRIEFS.get(bid, {"expect": {}})
+    e, sig, m = {}, s.get("signals") or {}, _main_glb(s)
+    exp = b.get("expect", {})
+    if exp.get("rig") or (m and m.get("rigs")):
+        e["route"] = sig.get("rig_route") or "—"
+        if sig.get("quadruped_tool"):
+            e["route"] += " + quadruped.py"
+        if m and m.get("rigs"):
+            r = m["rigs"][0]
+            bent = r.get("bent") or {}
+            e["skin"] = (f"{m.get('skinned_mesh_objects')} skinned"
+                         + (" (one skin)" if m.get("single_skin") else ""))
+            e["bent"] = (f"inter {bent.get('inter_mm2')} / fold {bent.get('fold_mm2')} mm² "
+                         f"({bent.get('inter_pct')} / {bent.get('fold_pct')} %)" if bent.get("status") == "ok"
+                         else bent.get("status", "—"))
+            e["rig"] = (f"{r['deform_bones']} deform, {r['deform_bones_without_influence']} dead, "
+                        f"{r['unweighted_verts']} unweighted, p99 {r['stretch_p99']}, "
+                        f"{r.get('finger_bones', 0)} finger bones")
+        elif exp.get("rig"):
+            e["rig"] = "no rig"
+    if exp.get("clips") or (m and m.get("clips")):
+        cl = (m or {}).get("clips", [])
+        e["clips"] = ", ".join(f"{c['name']} {c['duration_s']}s"
+                               + ("" if c["loop_closes"] else " OPEN" if c["loop_closes"] is False else " ?")
+                               for c in cl) or "none"
+        if exp.get("one_glb"):
+            want = set(exp.get("clips", []))
+            have = {c["name"].lower() for c in cl}
+            e["one_glb"] = "yes" if all(any(w in h for h in have) for w in want) else "no"
+        e["blink"] = "yes" if (m or {}).get("blink") else "no"
+        q = (s.get("artifacts") or {}).get("quadruped-report.json") or {}
+        for rep in q.values():
+            if isinstance(rep, dict):
+                lags = [f"{k}: ear {v.get('ear_lag_frames')} / tail {v.get('tail_tip_lag_frames')} fr"
+                        for k, v in rep.items() if isinstance(v, dict)]
+                e["lag"] = "; ".join(lags)
+    if bid.startswith("owl") or exp.get("single_skin"):
+        e["matcap"] = "yes" if sig.get("matcap_check") else "no"
+    if b.get("inputs"):
+        before = (s.get("input_measures") or [{}])[0]
+        if m:
+            e["before_after"] = (f"{before.get('tris')} → {m.get('tris')} tris, "
+                                 f"{round((before.get('bytes') or 0) / 1e6, 2)} → {round(m.get('bytes', 0) / 1e6, 2)} MB, "
+                                 f"non-manifold {before.get('non_manifold_edges')} → {m.get('non_manifold_edges')}, "
+                                 f"boundary {before.get('boundary_edges')} → {m.get('boundary_edges')}")
+    if "projection" in exp or bid.startswith("ref-"):
+        pj = sig.get("projection") or {}
+        ss = (s.get("artifacts") or {}).get("projection_ssim")
+        e["projection"] = (("proposed" if pj.get("proposed") else "not proposed")
+                           + (", ran" if pj.get("ran") else "")
+                           + (f", SSIM {ss['before']} → {ss['after']}" if ss else "")
+                           + (", ended on a question" if sig.get("ended_on_question") else ""))
+    if b.get("print"):
+        pc = s.get("print_check") or {}
+        if not pc:
+            e["print"] = "no STL/3MF shipped"
+        else:
+            parts = len(pc.get("files", {}))
+            asm = (pc.get("assembly") or {}).get("assembly") or {}
+            e["print"] = (f"{pc.get('verdict')}"
+                          + (f" (with supports: {pc.get('verdict_with_supports')})" if pc.get("needs_supports") else "")
+                          + f", {parts} file(s)"
+                          + (f", overlap {asm.get('overlap_mm3')} mm³" if asm else "")
+                          + f"; session's own: {(sig.get('print_check') or {}).get('verdicts') or 'none'}")
+    return e
+
+
+def signals_table(label, res):
+    rows = [(bid, extras(bid, s)) for bid, s in res.items()]
+    rows = [(bid, e) for bid, e in rows if e]
+    if not rows:
+        return
+    print(f"#### {label} — recorded fields\n")
+    print("| Brief | Field | Value |\n|---|---|---|")
+    for bid, e in rows:
+        for k, v in e.items():
+            print(f"| {bid} | {k} | {v} |")
+    print()
+
+
+def compare(la, a, lb, b):
+    print(f"### {la} → {lb}\n")
+    print(f"| Brief | Field | {la} | {lb} |\n|---|---|---|---|")
+    for bid in sorted(set(a) | set(b)):
+        ea = extras(bid, a[bid]) if bid in a else {}
+        eb = extras(bid, b[bid]) if bid in b else {}
+        ma, mb = (_main_glb(a[bid]) if bid in a else None), (_main_glb(b[bid]) if bid in b else None)
+        ea["tris"] = ma.get("tris") if ma else "—"
+        eb["tris"] = mb.get("tris") if mb else "—"
+        for k in dict.fromkeys(list(ea) + list(eb)):
+            print(f"| {bid} | {k} | {ea.get(k, '—')} | {eb.get(k, '—')} |")
+    print()
+
+
 a = load(sys.argv[1])
 table(sys.argv[1], a)
+signals_table(sys.argv[1], a)
 if len(sys.argv) > 2:
     b = load(sys.argv[2])
     table(sys.argv[2], b)
+    signals_table(sys.argv[2], b)
+    compare(sys.argv[1], a, sys.argv[2], b)
     missing = sorted(set(a) - set(b))
     if missing:
         print(f"Not run under {sys.argv[2]}: {', '.join(missing)}\n")
