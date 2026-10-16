@@ -13,8 +13,13 @@
     "tags": [
       "blender",
       "blender-mcp",
-      "3d",
+      "claude-code",
       "3d-assets",
+      "image-to-3d",
+      "text-to-3d",
+      "photo-to-3d",
+      "game-assets",
+      "procedural-modeling",
       "gltf",
       "glb",
       "usdz",
@@ -22,11 +27,11 @@
       "texturing",
       "pbr",
       "rigging",
+      "animation",
+      "text-to-motion",
       "optimization",
       "hunyuan3d",
-      "threejs",
-      "animation",
-      "text-to-motion"
+      "threejs"
     ]
   },
   "plugins": [
