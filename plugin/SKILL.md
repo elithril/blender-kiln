@@ -331,6 +331,9 @@ Device       {cuda / mps / cpu / unknown until a backend is installed}
 ── Tools ───────────────────────────────────
 gradio_client   {✅ / ❌}  │ gltf-transform  {✅ / ⚠️ optional}
 gltfpack        {✅ / ⚠️}  │ nano-banana     {✅ / ❌}
+
+── Rigging ─────────────────────────────────
+Auto-rig     {✅ SkinTokens, tested version / ⚠️ damaged or untested version / — not installed (optional)}
 ```
 
 **Detection commands — every field above, with the command that fills it:**
@@ -347,6 +350,7 @@ gltfpack        {✅ / ⚠️}  │ nano-banana     {✅ / ❌}
 | gradio_client | `python3 -c "import gradio_client"` | Check inside the venv if one was created, not the system Python |
 | gltf-transform, gltfpack | `command -v <name>` | — |
 | nano-banana | **No shell command exists.** It is an MCP server — check whether its tools are in reach | Never report ❌ from a shell probe |
+| Auto-rig | `python3 tools/autorig.py status --quick` | Exit 0 ready, 2 not installed, 3 damaged or not the tested version. `--quick` skips hashing the 1.6 GB of checkpoints; `rig` hashes them before loading (they are pickles) |
 
 ### Installing Python packages — read this before proposing pip
 
@@ -384,6 +388,14 @@ checked first, `references/ai-generation.md`):
 >    call. MCP-native Rodin and Tripo are paid (rule 5).
 
 **If user chooses Local:** Load `references/setup-install.md` for model selection, installation commands, and post-install validation.
+
+**Auto-rig (SkinTokens) — offer it when a character is to be rigged, and only then.** Say
+what it costs and why before asking: ~5.6 GB on disk (2.0 of it uv's download cache), MIT
+code and checkpoints, on a Mac through kiln's patch (MPS; from image-to-3dlab, Apache-2.0),
+35-54 s and ~7 GB of memory per mesh. It rigs humanoids and meshes kiln did not build better
+than Rigify on the bent pose (PHASE 5c). On a yes: `python3 tools/autorig.py setup --yes` —
+the tested commit, the pinned packages (`tools/skintokens-requirements.txt`), the checkpoints'
+hashes checked. Without `--yes` it installs nothing. Never install it unasked.
 
 ---
 
