@@ -785,6 +785,12 @@ keep the same poses for every version. Then, in order:
 4. only a joint that still folds gets loops built by hand — and the same poses decide
    whether they stay.
 
+**Still open: the elbow.** The cat shipped with its inner elbows pressing through
+themselves when a fore paw lifts — 187 mm² of skin through skin at frames 2 and 18 of its
+walk, automatic weights unretouched; neither its hand-built loops (−14% against QuadriFlow)
+nor weights drawn along the bone fixed it. Nothing here has been measured to fix it yet: say
+so in the hand-over of any walking creature, with the figure measured on it.
+
 A limb's junction ring carries four 5-edge poles whatever is done — the branch needs them
 (the cat's shoulders, hips and tail root): `topology-rules.md`'s "poles away from
 deformation zones" means the rest of the joint.
