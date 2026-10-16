@@ -321,13 +321,38 @@ def _synthetic_quadruped(path):
     bpy.ops.object.select_all(action='SELECT'); bpy.ops.export_scene.gltf(filepath=path, use_selection=True)
 
 
+def _glb_clip_end(path):
+    """The first clip's last key time, and how far its last key is from its first (q ~ -q)."""
+    import struct
+    b = open(path, "rb").read(); n = struct.unpack("<I", b[12:16])[0]; j = json.loads(b[20:20 + n]); data = b[28 + n:]
+    def acc(i):
+        a = j["accessors"][i]; k = {"SCALAR": 1, "VEC3": 3, "VEC4": 4}[a["type"]]
+        s = j["bufferViews"][a["bufferView"]].get("byteOffset", 0) + a.get("byteOffset", 0)
+        f = struct.unpack_from(f"<{a['count'] * k}f", data, s)
+        return [f[i * k:(i + 1) * k] for i in range(a["count"])]
+    last = seam = 0.0
+    for s in j["animations"][0]["samplers"]:
+        t_, o = acc(s["input"]), acc(s["output"])
+        if len(t_) > 2:
+            d = max(abs(x - y) for x, y in zip(o[-1], o[0]))
+            if len(o[0]) == 4:
+                d = min(d, max(abs(x + y) for x, y in zip(o[-1], o[0])))
+            last, seam = max(last, t_[-1][0]), max(seam, d)
+    return last, seam
+
+
 try:
     from mathutils import Vector
     sys.path.insert(0, str(ROOT / "tools"))
     import quadruped as Q
     _synthetic_quadruped("/tmp/_quad.glb")
     sc, arm, m = Q.make("/tmp/_quad.glb", "/tmp", "walk", 32, Q.walk, 0.11, 0.15)
-    if m["frames"] != 32:
+    bpy.ops.export_scene.gltf(filepath="/tmp/_quad_walk.glb", export_animations=True, export_force_sampling=True)
+    last, seam = _glb_clip_end("/tmp/_quad_walk.glb")
+    if abs(last - 32 / 24) > 1e-3 or seam > 1e-4:
+        fail("quadruped", f"the walk's GLB ends at {last:.4f} s, not 32/24, its last key {seam:.2g} off the first "
+                          "— three.js skips the step back to frame 0")
+    elif m["frames"] != 32:
         fail("quadruped", f"walk has {m['frames']} frames, not 32 — the seam repeats a frame")
     elif m["extension"] > Q.MAX_EXTENSION:
         fail("quadruped", f"legs straighten to {m['extension']:.0%} of their length (limit {Q.MAX_EXTENSION:.0%})")

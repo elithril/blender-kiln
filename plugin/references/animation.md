@@ -41,8 +41,11 @@ Each comes from a cycle that looked wrong until it was measured:
 4. **Measure a rotation's sign before using it.** Rotate +0.2 rad and watch which way a
    probe moves. A sit and an attack written with the assumed sign tipped the cat nose
    down. The lamp and chest scripts measure every sign first — and were right first time.
-5. **Loop exactly.** A cycle of P frames keys frames 0..P−1; keying P as well repeats a
-   pose and stutters at the seam.
+5. **Loop exactly.** A cycle of P frames has P distinct poses, 0..P−1, and **a closing key
+   at P equal to key 0**: a glTF clip lasts until its last key and three.js wraps there, so
+   keyed 0..P−1 only, the step from the last pose back to the first is skipped — measured
+   on `quadruped.py`'s walk, 32 keys ending at 31/24 s, the seam jumping 0.045 at once. Key
+   P is for the file; Blender's own playback range stops at P−1, or it shows the pose twice.
 6. **Judge motion in motion, and with numbers.** A contact sheet showed a jump as a body
    lying flat; the hip height said it rose 0.32 → 0.61 m. Measure leg extension, foot
    height and seams; then watch the loop.

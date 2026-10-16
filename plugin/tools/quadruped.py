@@ -16,12 +16,15 @@ optional Tail1..n). Each clip is checked before it is written:
   the hips until it holds;
 - planted paws all travel back at one steady speed, reported as the root speed a game
   must move the character at for the feet not to skate;
-- the loop closes: frame P would equal frame 0.
+- the loop closes: the clip keys frames 0..P, frame P equal to frame 0 — a glTF clip
+  lasts until its last key and three.js wraps there, so without key P the step from the
+  last frame back to the first is skipped (measured: 32 keys ending at 31/24 s).
 
 Rules it encodes, each from a mistake actually made: bones are driven in their own
 rest frame (the cat's Hips lies along the body, so "bone Y" was forward, not up), the
 IK pole angle is solved from the rest pose (a guessed -90° turned the elbows forward),
-and the cycle has exactly P frames (P+1 repeated a frame at the seam).
+and the cycle has exactly P distinct frames: key P repeats key 0 for the web player,
+and Blender's own playback range stops at P-1 (playing P and 0 both held a frame).
 """
 import argparse
 import json
@@ -123,12 +126,13 @@ def idle(R, f, n, stride, crouch):
 
 
 def bake(sc, arm, P):
-    sc.frame_start, sc.frame_end = 0, P - 1
+    """Bake 0..P: the cycle functions are periodic, so key P is key 0 — the closing key."""
     bpy.ops.object.select_all(action='DESELECT'); arm.select_set(True); bpy.context.view_layer.objects.active = arm
     bpy.ops.object.mode_set(mode='POSE'); bpy.ops.pose.select_all(action='SELECT')
-    bpy.ops.nla.bake(frame_start=0, frame_end=P - 1, only_selected=True, visual_keying=True,
+    bpy.ops.nla.bake(frame_start=0, frame_end=P, only_selected=True, visual_keying=True,
                      clear_constraints=True, use_current_action=True, bake_types={'POSE'})
     bpy.ops.object.mode_set(mode='OBJECT')
+    sc.frame_start, sc.frame_end = 0, P - 1          # Blender's playback: P distinct frames
     for o in [o for o in sc.objects if o.type == 'EMPTY' and o.name.split("_")[0] in ("IK", "Pole", "Level")]:
         bpy.data.objects.remove(o)
 
@@ -166,7 +170,7 @@ def measure(sc, arm, P):
 
 def make(asset, out, name, P, fn, stride, crouch):
     sc, arm = load(asset); R = setup(sc, arm)
-    for f in range(P):
+    for f in range(P + 1):
         fn(R, f, f / P, stride, crouch)
     bake(sc, arm, P)
     m = measure(sc, arm, P)
