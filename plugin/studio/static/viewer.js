@@ -285,11 +285,19 @@ export class Viewer {
     return s;
   }
 
+  // setSize clears the drawing buffer. The ResizeObserver calls this after layout and
+  // before paint: drawing here, in the same callback, means the cleared buffer is never
+  // shown. Left to the next animation frame, every step of a panel's width transition
+  // composited one blank frame (43 of 118 frames, measured): the model blinked.
   resize() {
     const r = this.canvas.parentElement.getBoundingClientRect();
-    this.size = { w: Math.max(r.width, 1), h: Math.max(r.height, 1) };
-    this.renderer.setSize(this.size.w, this.size.h, false);
+    const w = Math.max(r.width, 1), h = Math.max(r.height, 1);
+    if (w === this.size.w && h === this.size.h) return;
+    this.size = { w, h };
+    this.renderer.setSize(w, h, false);
     this.updateAspect();
+    this.controls.update();
+    this.draw();
     this.onChange?.();
   }
 
