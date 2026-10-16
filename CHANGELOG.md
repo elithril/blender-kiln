@@ -6,6 +6,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — the photo's own markings, projected (optional, 3.0)
+
+- **`tools/photo_project.py`**: after the last fidelity round, puts the reference photo's own
+  pixels on the base-colour textures where the photo sees the model squarely — for text, a
+  logo or precise wear a script copies as a lookalike. The camera is fidelity_check's, fitted
+  to the silhouette (bounded to 10°); under 0.95 IoU it refuses. Confidence per texel after
+  AssetFurnace's Pixel Match (image-to-3dlab, Apache-2.0 — `plugin/NOTICE`), facing ≥ 0.6;
+  the photo brought to the model's exposure by one median gain, never pasted raw; `--exclude`
+  for misplaced parts, `--erase-stencil` against a doubled marking. On the bench ammo box:
+  IoU 0.918 → 0.963, SSIM from the photo's view 0.551 → 0.597, ΔE76 17.46 → 16.84, GLB
+  186.6 → 175.4 kB; with handle and lever excluded and the stencil erased, 0.589 / 17.27 and
+  the double "7.62" gone. Those numbers are partly circular (the photo against itself), so
+  the tool renders two other angles to look at. One object tested.
+- **Offered, never run silently** (rule 6): the scripted-modelling row of PHASE 3 and
+  `references/reference-fidelity.md` § 5 propose it only when the photo carries markings and
+  the shape is final. `references/photo-projection.md` has the method, the table and the limits.
+- **`tools/test_photo_project.py`**, 12 checks in the Blender workflow: a printed letter
+  recovered from a seeded photo (correlation 0.17 → 0.95), the unseen back unchanged, an
+  excluded part kept, a stencil erased in view and kept unseen, a 40 % too long box refused.
+
 ### Added — learned auto-rig (3.0)
 
 - **`tools/autorig.py`**: rigs a character with SkinTokens (VAST-AI, MIT, local) and hands
