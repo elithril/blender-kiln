@@ -32,3 +32,6 @@ jobs:
 
       - name: Check the auto-rig's skeleton mapping and weight cleaning (no SkinTokens, no Blender)
         run: python3 plugin/tools/test_autorig.py
+
+      - name: Check the humanoid presets' catalogue and licence trail (no Blender)
+        run: python3 plugin/tools/test_presets.py

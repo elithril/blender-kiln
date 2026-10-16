@@ -22,6 +22,8 @@ name: blender
 #     see, and refuses a camera that fits under 0.95 IoU
 #   - autorig.py turns a raw SkinTokens output into kiln's named rig, lids and ears included,
 #     and exits 1 on one with an arm missing (no SkinTokens on the runner: a stored raw output)
+#   - presets.py plays the shipped Kimodo clips on a seeded kiln-named humanoid: clips named as
+#     asked, the licence trail written, a rig missing a bone refused
 
 on:
   schedule:
@@ -51,6 +53,12 @@ on:
       - "plugin/tools/test_photo_project.py"
       - "plugin/tools/autorig.py"
       - "plugin/tools/test_autorig.py"
+      - "plugin/tools/presets.py"
+      - "plugin/tools/retarget.py"
+      - "plugin/tools/motion_measure.py"
+      - "plugin/tools/motion_loop.py"
+      - "plugin/tools/test_presets.py"
+      - "plugin/tools/motions/**"
       - "plugin/tools/fixtures/**"
 
 jobs:
@@ -109,3 +117,7 @@ jobs:
       - name: Check the auto-rig against a stored SkinTokens output
         run: |
           BLENDER=blender python3 plugin/tools/test_autorig.py
+
+      - name: Check the humanoid presets on a seeded rig
+        run: |
+          BLENDER=blender python3 plugin/tools/test_presets.py

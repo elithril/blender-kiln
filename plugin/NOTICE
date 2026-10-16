@@ -16,6 +16,19 @@ Third-party work in this plugin
   Apache License, Version 2.0. Changed here: re-written on Blender's mesh and image I/O,
   a camera fitted to the photo's silhouette, an exposure gain instead of the raw pixels,
   part exclusions and a stencil erase.
+- tools/retarget.py adapts scripts/kimodo_retarget.py and scripts/arm_clearance.py of
+  image-to-3dlab (AssetFurnace) v0.4.4, Copyright 2026 Bingeljell and image-to-3dlab
+  contributors, https://github.com/Bingeljell/image-to-3dlab, licensed under the Apache
+  License, Version 2.0 (a copy: tools/motions/LICENSE-image-to-3dlab.txt). Changed here:
+  bones found by kiln's names instead of the tree's shape, time resampling, the frames kept
+  as data for tools/presets.py to correct (feet, arms, loops) before keying.
+- tools/motions/ (43 .npz clips and presets.json) is image_to_3dlab/motions/ of the same
+  project and version, unchanged, same copyright and licence. Its NOTICE reads: "If you fork
+  this project, or build on it and share the result, please keep this NOTICE file and credit
+  image-to-3dlab with a link to the repository above."
+- The motions in tools/motions/ were made with NVIDIA Kimodo (Kimodo-SOMA-RP-v1.1,
+  https://github.com/nv-tlabs/kimodo). Licensed by NVIDIA Corporation under the NVIDIA Open
+  Model License; NVIDIA claims no ownership of its outputs.
 
 Third-party software kiln installs but does not ship
 ----------------------------------------------------
