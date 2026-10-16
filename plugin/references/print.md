@@ -262,6 +262,8 @@ drawing — a stylised subject — rather than a photo.
    resolution 0.05, 0.575 at 0.02) — **alone**. In a row spaced a quarter of their radius their
    fields add: 0.673 for two elements, **0.715 × r** from five on (measured, resolution 0.02).
    Size a tube's elements with 0.715, a lone blob with 0.574, and check on the render.
+   **For print only**: a character that will be animated is one family, one skin — per-region
+   families leave a groove at each limb root once it bends (`characters.md` § One skin).
 3. **Thin parts as closed meshes** — ears, horns, a wing's membrane, a tail's tip — overlapping
    the metaballs by at least one wall, at the minimum thickness of rule 4 once printed (a wing
    membrane at 2.4 mm printed passed the checks; not printed yet).

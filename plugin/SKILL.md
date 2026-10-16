@@ -507,8 +507,9 @@ IF type = complex architecture (cathedral, ornate facade) AND print not set
 
 IF type = character or creature   # decided before the style lines above, which read it otherwise
     → the style decides: cartoon / stylised → scripted, its body ONE skin (overlapping
-      volumes or metaballs, one voxel remesh — `print.md` § Figures), never separate parts
-      glued on; realistic / detailed → recommend AI. Sessions read "cartoon → scripted" and
+      volumes or metaballs, one voxel remesh — `characters.md` § An animated creature;
+      for print, `print.md` § Figures), never separate parts glued on, never one family
+      per region on a skin that bends; realistic / detailed → recommend AI. Sessions read "cartoon → scripted" and
       "character → AI" as a contradiction on every mascot.
     → ASK: "Will this character need rigging/animation?"
       IF yes → force T-pose in concept image prompt
@@ -581,7 +582,8 @@ If nano-banana MCP is available, offer it as an alternative (supports iterative 
 
 - `execute_blender_code` with primitives + modifiers + booleans
 - Each logical part = separate object (legs, seat, back...) — for props. An animated
-  character's body is ONE skin, its eyes, nose and eyelids apart (`characters.md`)
+  character's body is ONE skin, its eyes, nose and eyelids apart (`characters.md` § An
+  animated creature)
 - Materials assigned per object from creation
 - `get_viewport_screenshot` for iterative validation
 

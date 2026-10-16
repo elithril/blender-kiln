@@ -663,6 +663,25 @@ Two consequences for export, both easy to miss:
 - Rigify names bones `DEF-spine`, `MCH-torso`. Those hyphens are fine — verified
   through both glTF and FBX.
 
+## An animated creature
+
+What the October 2026 sessions settled on cartoon cats, dogs, owls and a corgi built to
+walk. Each rule below was missing from this file and cost a session rounds to find.
+
+### One skin
+
+**The body is ONE skin: one family of overlapping volumes or metaballs, one voxel remesh.**
+Not one family or one mesh per region (body, each leg, the tail): that is the print rule
+(`print.md` § Figures rule 2, where regions must stay apart), and on a skin that bends it
+leaves a groove at every junction — the scripted corgi, built from separate volumes, showed
+one at each limb root in matcap. The cat built as one family of 555 metaballs and one
+voxel remesh at 1.1 mm folded nowhere at the shoulders, hips, nape and tail root in its
+two shipped clips (0 mm² of skin through skin, 0 mm of sharp crease, measured every second
+frame). Every session that had to animate a character converged on this by itself.
+
+Eyes, nose, mouth and eyelids stay **separate objects**, each 100% to one bone (the head,
+or its lid bone).
+
 ## Retopology Tools
 
 | Tool | Type | Best for |
