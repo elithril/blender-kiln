@@ -700,6 +700,10 @@ holes it leaves. Rebuild each as a curve with a round bevel along the
 high-poly's centreline; decimate the body only. **After decimating, compare open and
 non-manifold edge counts with before, and look at a close render of every thin part.**
 
+**A creature to animate:** its voxel skin goes through QuadriFlow (merge by distance first),
+then the weights are checked on fixed poses before any loop is built by hand
+(`references/characters.md` § Retopology: QuadriFlow first). No session did it unasked.
+
 **Auto mode:** non-destructive cleanup runs automatically. Decimate remains interactive.
 **Guided mode:** show each step, wait for validation.
 

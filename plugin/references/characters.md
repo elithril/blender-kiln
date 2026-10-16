@@ -708,6 +708,59 @@ four on a cartoon creature unless the brief says otherwise:
   they lost their relief at the cat's retopology and showed only by their pink colour:
   check them in matcap after any reprojection.
 
+### Retopology: QuadriFlow first, then the weights
+
+A voxel skin is not a deforming mesh. **No session retopologised unasked**; asked, the order
+that paid is: QuadriFlow, then weights checked on fixed poses — and loops built by hand only
+at a joint that still folds after both.
+
+```python
+bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT')
+bpy.ops.mesh.remove_doubles(threshold=1e-5)        # first: see below
+bpy.ops.object.mode_set(mode='OBJECT')
+bpy.ops.object.quadriflow_remesh(mode='FACES', target_faces=16000, use_mesh_symmetry=True, seed=0)
+```
+
+**Merge by distance before QuadriFlow.** On a voxel remesh straight out of the modifier,
+QuadriFlow cancels with "The mesh needs to be manifold and have face normals that point in
+a consistent direction", although bmesh finds no open or non-manifold edge — measured on a
+voxelised sphere, Blender 5.2.2. A merge at 1e-5 m removed 12 coincident vertices and
+QuadriFlow then finished (7,486 → 1,938 quads). Making the normals consistent, or
+triangulating, did not help.
+
+Measured with the same five poses before and after (crease length, cm), on the dog:
+
+| Pose | Voxel skin | QuadriFlow alone | Loops built by hand, same shape |
+|---|---:|---:|---:|
+| Neck turned | 63.8 | 30.9 | 26.5 |
+| Neck down | 54.1 | 22.3 | 10.7 |
+| Armpits | 111.0 | **56.1** | 68.3 |
+| Hips | 102.8 | **43.2** | 49.3 |
+| Tail root | 14.0 | **4.4** | 6.3 |
+
+QuadriFlow alone takes 49-69% off every crease. It never puts a loop at the shoulders or
+the nape (15 tries, 3 densities × 5 seeds) — and the loops built there afterwards won only at
+the neck. On the cat, a fully hand-built cage with a ring at every joint took about ten
+iterations and came out **mixed** against QuadriFlow at the same face count: the elbow −14%
+of skin through skin, the hip −17%, **the knee +69%** (85.5 against 50.5 mm²), the rest
+tied. Both sessions found the weights mattered more than the loops.
+
+**So the weight check comes before any hand-built loop.** Pose the rig at fixed angles
+(shoulder and hip 30°, elbow and knee 75°, neck 30° down, tail 50° aside), measure, per
+joint, the area of skin passing through skin and the length of edges bent past 40°, and
+keep the same poses for every version. Then, in order:
+
+1. the validator (§ Validation Script) and the dead-bone count — clean;
+2. a joint that folds: smooth its weights inside its zone (the dog: 15 passes) and measure
+   again. Weights drawn by hand ring by ring (the dog) or along the bone (the cat) were
+   worse on both meshes, in numbers and on the render;
+3. only a joint that still folds gets loops built by hand — and the same poses decide
+   whether they stay.
+
+A limb's junction ring carries four 5-edge poles whatever is done — the branch needs them
+(the cat's shoulders, hips and tail root): `topology-rules.md`'s "poles away from
+deformation zones" means the rest of the joint.
+
 ## Retopology Tools
 
 | Tool | Type | Best for |
@@ -715,6 +768,7 @@ four on a cartoon creature unless the brief says otherwise:
 | **Quad Remesher** | Blender addon (paid) | Best quality auto-retopo |
 | **InstantMeshes** | Standalone (free) | Fast, open-source |
 | **Blender Remesh** | Built-in | Quick prototyping (voxel remesh) |
+| **QuadriFlow** | Built-in (`quadriflow_remesh`) | A voxel skin → quads, the first step for a creature (§ Retopology: QuadriFlow first) |
 | **OpenSubdiv** | Built-in | Subdivision for low-poly to high-poly |
 
 ---
@@ -726,7 +780,7 @@ four on a cartoon creature unless the brief says otherwise:
 Phase [5] CLEANUP for characters:
 1. Standard cleanup (merge doubles, normals, transforms)
 2. Verify T-pose if rigging is planned
-3. Retopology if AI mesh (typically too dense for rigging)
+3. Retopology if AI mesh (typically too dense for rigging) or a voxel skin — QuadriFlow, then the weight check (§ Retopology: QuadriFlow first)
 4. `validate_character_rig()` if armature is present
 
 ### Character-specific export

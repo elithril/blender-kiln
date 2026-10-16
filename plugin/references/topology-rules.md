@@ -11,7 +11,8 @@
 ### Edge Flow
 - Edge loops must follow muscle/joint lines on characters
 - Critical loops: eyes, mouth, shoulders, elbows, knees
-- Poles (vertices with 3 or 5+ edges): keep away from deformation zones
+- Poles (vertices with 3 or 5+ edges): keep away from deformation zones — except the four a
+  limb's junction ring always carries (`characters.md` § Retopology: QuadriFlow first)
 - 5-edge poles preferred over 3-edge poles
 
 ### Mesh Cleanliness
