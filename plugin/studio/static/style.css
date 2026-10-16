@@ -742,3 +742,29 @@ body.no-model #right .notes-head, body.no-model #right #handoff { display: none;
 .tabs .collapse { flex: none; width: 28px; margin-left: auto; padding-left: 0; }
 .tabs .tc:empty { display: none; }
 .tabs [role=tab] { padding-left: 8px; padding-right: 8px; }
+
+/* The bottom bar fits the view: the shading buttons become one list, then the display
+   toggles fold into Options (a row above the bar), then the bar wraps. */
+.tb-group { display: flex; align-items: center; gap: 6px; flex: none; }
+#toolbar > * { flex: none; }
+.tb-select { height: 26px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--bg); color: var(--text); padding: 0 6px; font-size: 12px; }
+#toolbar.tb-wrap { flex-wrap: wrap; justify-content: center; overflow: visible; row-gap: 4px; }
+#tb-more-pop { flex-wrap: wrap; justify-content: center; max-width: 100%; }
+#tb-more-pop .btn { height: 26px; background: transparent; border-color: transparent; }
+#tb-more-pop .btn:hover { background: var(--panel-3); }
+#tb-more-pop .btn.on { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+#tb-more-pop .tb-group { flex-wrap: wrap; justify-content: center; }
+#t-more[aria-expanded="true"] { color: var(--accent); }
+#t-more svg { transition: transform .15s; }
+#t-more[aria-expanded="true"] svg { transform: rotate(180deg); }
+/* Narrow desktops (761–1100 px), both panels open: narrower panels, so the view keeps
+   room for the model and the bar (at 761 px: 221 px instead of 101). */
+@media (min-width: 761px) and (max-width: 1100px) {
+  :root { --lw: 250px; --rw: 336px; }
+  .tabs [role=tab] { padding-left: 6px; padding-right: 6px; font-size: 12px; }
+}
+#toolbar.tb-wrap > * { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+#toolbar.tb-wrap .tb-select { max-width: 100%; }
+#toolbar, #toolbar .tb-group { gap: 4px; }
+#toolbar .btn { padding: 0 8px; }
+#toolbar .seg button { padding: 0 8px; }

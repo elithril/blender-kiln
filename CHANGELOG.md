@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — Kiln Studio v1, after a first try
+
+- No blink when a side panel folds or unfolds: the view is drawn in the same callback as
+  the resize (screencast of six toggles: 43 of 118 frames blank before, 0 of 117 after).
+- The notes panel's fold chevron keeps its own 28 px; tab labels shrink first.
+- Sora and JetBrains Mono ship in `studio/static/fonts/` (78 kB, SIL OFL): the page's only
+  outside requests are three.js from jsDelivr.
+- The Create command is `/kiln …`, like every other command the page shows.
+- `SKILL.md`'s `allowed-tools` names the four kiln-studio MCP tools as Claude Code calls
+  them (`mcp__plugin_blender-kiln_kiln-studio__get_selection`, …), and says when to ask
+  `get_selection`.
+- The bottom bar fits the view: the shading buttons become one list, the display toggles
+  fold into Options, then the bar wraps; between 761 and 1100 px the side panels are 250 and
+  336 px. Measured at six widths, in English and French, in the three themes: 36 of 36 fit.
+
 ### Added — kiln-studio, an MCP server: what the user is looking at
 
 - The plugin declares an MCP server, `kiln-studio` (`plugin/.mcp.json`, `studio/mcp_server.py`,

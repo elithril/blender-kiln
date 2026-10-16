@@ -135,8 +135,9 @@
       <span id="a-read">0.00 / 0.00 s</span>
       <select id="a-speed" aria-label="Speed" data-i18n-attr="aria-label"><option value="0.25">¼×</option><option value="0.5">½×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
     </div>
+    <div id="tb-more-pop" class="bar" hidden role="group" aria-label="View options" data-i18n-attr="aria-label"></div>
     <div id="toolbar" class="bar" role="toolbar" aria-label="View options" data-i18n-attr="aria-label">
-      <div class="seg" role="radiogroup" aria-label="Shading" data-i18n-attr="aria-label">
+      <div class="seg" id="tb-shade" role="radiogroup" aria-label="Shading" data-i18n-attr="aria-label">
         <button data-shade="lit" class="on" title="Lit: materials under a studio light (S cycles)" data-i18n data-i18n-attr="title">Lit</button>
         <button data-shade="unlit" title="Unlit: base colour and textures only" data-i18n data-i18n-attr="title">Unlit</button>
         <button data-shade="clay" title="Clay: form only" data-i18n data-i18n-attr="title">Clay</button>
@@ -144,12 +145,18 @@
         <button data-shade="uv" title="UV checker: stretching, seams, flipped islands" data-i18n-attr="title">UV</button>
         <button data-shade="faces" title="Back faces in red: flipped normals and holes" data-i18n data-i18n-attr="title">Faces</button>
       </div>
+      <select id="tb-shade-select" class="tb-select" hidden aria-label="Shading" data-i18n-attr="aria-label">
+        <option value="lit" data-i18n>Lit</option><option value="unlit" data-i18n>Unlit</option><option value="clay" data-i18n>Clay</option><option value="normals" data-i18n>Normals</option><option value="uv" data-i18n>UV checker</option><option value="faces" data-i18n>Faces</option>
+      </select>
       <span class="vsep"></span>
+      <div class="tb-group" id="tb-toggles">
       <button class="btn" data-opt="wire" title="Wireframe (W)" aria-pressed="false" data-i18n data-i18n-attr="title">Wire</button>
       <button class="btn on" data-opt="grid" title="Ground grid, front arrow (G)" aria-pressed="true" data-i18n data-i18n-attr="title">Grid</button>
       <button class="btn" data-opt="bounds" title="Bounds with sizes (B)" aria-pressed="false" data-i18n data-i18n-attr="title">Size</button>
       <button class="btn" data-opt="skeleton" id="t-skel" title="Skeleton (K)" aria-pressed="false" hidden data-i18n data-i18n-attr="title">Bones</button>
       <button class="btn" id="t-bg" title="Background: dark, mid, light" data-i18n-attr="title">Bg</button>
+      </div>
+      <button class="btn" id="t-more" hidden aria-haspopup="true" aria-expanded="false" aria-controls="tb-more-pop" title="Wire, grid, size, bones, background" data-i18n-attr="title"><span data-i18n>Options</span> <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button>
       <span class="vsep"></span>
       <button class="btn" id="t-compare" title="Compare with the previous version (C)" aria-pressed="false" data-i18n data-i18n-attr="title">Compare</button>
       <button class="btn icon" id="t-palette" aria-label="All commands (⌘K)" title="All commands (⌘K)" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M9 6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3z"/></svg></button>

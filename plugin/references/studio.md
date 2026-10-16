@@ -259,7 +259,8 @@ screen they lie over the view, one at a time, and the rails stay.
   is over the list: "2 changes · re-sort" waits for a click or for the pointer to leave.
   Folded, the rail shows the thumbnails with their counts and dots.
 - **Centre:** orbit, pan, zoom; shading Lit / Unlit / Clay / Normals / UV checker /
-  Faces (back faces red: flipped normals and holes); wireframe, grid with the front
+  Faces (back faces red: flipped normals and holes; a list when the bar is short of room,
+  with the display toggles under **Options**); wireframe, grid with the front
   marked, bounds with sizes in metres, bones; under the model's name, its stages, and an
   eye that hides the note pins (there once the model has one), and on hover hides the
   fixed ones or those behind the model. Pins stick to the surface: on a skinned mesh to

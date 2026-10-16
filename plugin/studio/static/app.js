@@ -132,7 +132,8 @@ viewer.onAnimate = () => {
 function syncToolbar() {
   const o = viewer.opts;
   $$('#toolbar [data-shade]').forEach((b) => { b.classList.toggle('on', b.dataset.shade === o.shade); b.setAttribute('aria-checked', String(b.dataset.shade === o.shade)); });
-  $$('#toolbar [data-opt]').forEach((b) => { b.classList.toggle('on', !!o[b.dataset.opt]); b.setAttribute('aria-pressed', String(!!o[b.dataset.opt])); });
+  $$('[data-opt]').forEach((b) => { b.classList.toggle('on', !!o[b.dataset.opt]); b.setAttribute('aria-pressed', String(!!o[b.dataset.opt])); });
+  $('#tb-shade-select').value = o.shade;
   $('#t-bg').textContent = `${t('Bg')} · ${{ dark: t('Dark'), mid: t('Mid'), light: t('Light') }[o.bg]}`;
   $('#t-compare').classList.toggle('on', !!state.compare);
   $('#t-compare').setAttribute('aria-pressed', String(!!state.compare));
@@ -157,12 +158,50 @@ function setOpt(k, v) {
   syncToolbar();
 }
 $$('#toolbar [data-shade]').forEach((b) => (b.onclick = () => setOpt('shade', b.dataset.shade)));
-$$('#toolbar [data-opt]').forEach((b) => (b.onclick = () => setOpt(b.dataset.opt, !viewer.opts[b.dataset.opt])));
+$$('#tb-toggles [data-opt]').forEach((b) => (b.onclick = () => setOpt(b.dataset.opt, !viewer.opts[b.dataset.opt])));
 $('#t-bg').onclick = () => setOpt('bg', { dark: 'mid', mid: 'light', light: 'dark' }[viewer.opts.bg]);
 $$('#views [data-view]').forEach((b) => (b.onclick = () => viewer.view(b.dataset.view)));
 $('#t-frame').onclick = () => viewer.frame();
 $('#t-keys').onclick = () => showKeys();
 const cycleShade = (d) => setOpt('shade', SHADES[(SHADES.indexOf(viewer.opts.shade) + d + SHADES.length) % SHADES.length]);
+$('#tb-shade-select').onchange = (e) => setOpt('shade', e.target.value);
+
+// The bottom bar fits the view, whatever the language and the panels: first the six
+// shading buttons become one list, then the display toggles fold into Options (a row
+// that opens above the bar), and only then does the bar wrap. Measured, not guessed:
+// each step is taken only while the bar's content is wider than the bar.
+function fitToolbar() {
+  const tb = $('#toolbar'), toggles = $('#tb-toggles'), more = $('#t-more'), pop = $('#tb-more-pop');
+  const wasOpen = !pop.hidden && toggles.parentElement === pop;
+  tb.classList.remove('tb-select-on', 'tb-wrap');
+  $('#tb-shade').hidden = false; $('#tb-shade-select').hidden = true;
+  if (toggles.parentElement !== tb) tb.insertBefore(toggles, more);
+  more.hidden = true; pop.hidden = true; more.setAttribute('aria-expanded', 'false');
+  if ($('#bottom').hidden) return;
+  const fits = () => tb.scrollWidth <= tb.clientWidth + 1;
+  if (fits()) return;
+  tb.classList.add('tb-select-on');
+  $('#tb-shade').hidden = true; $('#tb-shade-select').hidden = false;
+  if (fits()) return;
+  pop.appendChild(toggles);
+  more.hidden = false;
+  if (wasOpen) { pop.hidden = false; more.setAttribute('aria-expanded', 'true'); }
+  if (fits()) return;
+  tb.classList.add('tb-wrap');
+}
+$('#t-more').onclick = (e) => {
+  e.stopPropagation();
+  const pop = $('#tb-more-pop');
+  pop.hidden = !pop.hidden;
+  $('#t-more').setAttribute('aria-expanded', String(!pop.hidden));
+};
+document.addEventListener('click', (e) => {
+  const pop = $('#tb-more-pop');
+  if (!pop.hidden && !pop.contains(e.target) && !e.target.closest('#t-more')) { pop.hidden = true; $('#t-more').setAttribute('aria-expanded', 'false'); }
+});
+let fitRaf = 0;
+const fitSoon = () => { cancelAnimationFrame(fitRaf); fitRaf = requestAnimationFrame(fitToolbar); };
+new ResizeObserver(fitSoon).observe(stage);
 
 // the pins' eye, and its menu
 function togglePins() { state.pinsOn = !state.pinsOn; prefs.pins = state.pinsOn; savePrefs(); syncToolbar(); renderPins(); }
@@ -657,6 +696,7 @@ function renderAll() {
   renderBuild();
   syncToolbar();
   $('#t-skel').hidden = !state.clientStats?.skinned;
+  fitSoon();
   const compareOk = compareTargets().length > 0;
   $('#t-compare').disabled = !compareOk;
   $('#t-compare').title = compareOk ? t('Compare with the previous version (C)') : t('No previous version kept for this model');
@@ -668,6 +708,7 @@ function renderEmpty() {
   document.body.classList.toggle('no-model', none);
   $('#empty').hidden = !none;
   $('#topbar').hidden = $('#views').hidden = $('#bottom').hidden = none;
+  fitSoon();
   if (!none) return;
   if (state.assets.length) {
     $('#empty').innerHTML = `<div><p class="big">${esc(t('No model picked'))}</p><p>${esc(t('Choose one on the left. Models re-exported by Claude show up here on their own, and a model kiln is building opens here as it is built.'))}</p></div>`;
@@ -2048,6 +2089,7 @@ $$('#set-theme button').forEach((b) => (b.onclick = () => { prefs.theme = b.data
 // Units or language changed: everything that shows a number or a word again.
 function refreshWords() {
   applyI18n();
+  fitSoon();
   syncToolbar();
   renderTags(); renderStrip(); renderWork(); renderList(); renderEmpty();
   if (state.detail) { renderAll(); if (state.compare) renderDelta(); setupAnimBar(); }
@@ -2190,5 +2232,7 @@ window.addEventListener('hashchange', fromHash);
   }
   liveEvents();
   fromHash();
+  // The fonts change the bar's width once they load.
+  document.fonts?.ready.then(fitSoon);
   window.__studio = { state, viewer, openAsset, setCompare, startPin, startGeneral, get detail() { return state.detail; } };
 })();
