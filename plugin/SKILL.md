@@ -782,6 +782,10 @@ every rule there is a cycle that looked wrong until it was measured.
 
 Load `references/texturing-strategy.md`. With a reference image, also `references/reference-fidelity.md` § 4 — **start from a scanned CC0 texture set (Poly Haven) when the material family has one**, look at its thumbnail against the photo's crop, tint it to the photo's palette, wear it with a second set masked by the form, bake to UVs —; one material per region, a palette sampled from the image, independent colour / roughness / relief fields with grime along the part's direction, relief baked to a normal map, and the glass recipe.
 
+**Check the UVs before baking onto them, and on any textured model you ship:**
+`tools/uv_check.py MODEL` (`references/uv-materials.md` § Check the UVs) — the corgi's Smart UV
+Project left 1.7% of its surface on collapsed UVs, unseen.
+
 **Skip if:** asset already has textures (marketplace or AI-generated textures) OR scripted with materials assigned.
 
 **Triggered if:** white mesh (AI without texture) or insufficient materials.

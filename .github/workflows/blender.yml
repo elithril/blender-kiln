@@ -41,6 +41,8 @@ on:
       - "plugin/tools/test_fit_coupon.py"
       - "plugin/tools/review_renders.py"
       - "plugin/tools/test_review_renders.py"
+      - "plugin/tools/uv_check.py"
+      - "plugin/tools/test_uv_check.py"
 
 jobs:
   blender:
@@ -86,3 +88,7 @@ jobs:
       - name: Check the headless review renders
         run: |
           BLENDER=blender python3 plugin/tools/test_review_renders.py
+
+      - name: Check the UV check against seeded unwraps
+        run: |
+          BLENDER=blender python3 plugin/tools/test_uv_check.py

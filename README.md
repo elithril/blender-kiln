@@ -465,11 +465,12 @@ plugin/
 | `plugin/tools/flatten.py` | Makes a model's nearly flat faces exactly flat and lays it on the bed — curves, bevels and slopes untouched, the input never overwritten | ~290 |
 | `plugin/tools/fit_coupon.py` | Writes the test print for a peg in a hole, diamond on its side or round standing up: one hole per clearance, one with a lead-in chamfer, the peg printed the way the model's is | ~235 |
 | `plugin/tools/review_renders.py` | The review renders without a connected Blender: matcap and colour (textures or vertex colours), opposite three-quarters, top and under, framed on the vertices; close-ups along the surface's normal, at the check's thin spots or where asked | ~285 |
+| `plugin/tools/uv_check.py` | UV check: used tile, overlap, stretch, collapsed and flipped faces; FAIL on a texture without UVs or collapsed UVs | ~180 |
 | `plugin/references/validation-checklist.md` | Geometry cleanup (welding that keeps the shading) + material export audit | ~290 |
 | `plugin/references/ai-generation.md` | Backend order (TRELLIS.2 first), licences, Hunyuan3D 2.x (on request), TRELLIS.2 local (measured), concept art (FLUX.1-schnell, nano-banana), free-quota and token rules | ~430 |
 | `plugin/references/export-targets.md` | GLB/FBX/USDZ settings, headless CLI, post-export checklist | ~240 |
 | `plugin/references/cli-tools.md` | gltf-transform, gltfpack, LOD workflow, metrics | ~210 |
-| `plugin/references/uv-materials.md` | UV unwrapping, PBR channel packing | ~150 |
+| `plugin/references/uv-materials.md` | UV unwrapping, the UV check, PBR channel packing | ~180 |
 | `plugin/references/naming-conventions.md` | Blender + GLTF name mapping + file conventions | ~150 |
 | `plugin/references/topology-rules.md` | Poly budgets, quad rules, edge flow | ~90 |
 | `plugin/references/setup-install.md` | Model selection, install commands, post-install validation | ~70 |
@@ -539,7 +540,11 @@ from the tool's report — each size to the micron, both parts closed, diamond a
 `plugin/tools/test_review_renders.py` renders a seeded block and reads the images back: one
 per view and mode, the subject spanning the frame, a close-up aimed at nothing refused, a
 close-up at negative coordinates read as a value, a rigged GLB framed without its bone sphere,
-a texture shown in colour — **10/10**.
+a texture and vertex colours shown in colour, a close-up behind a taller part seen along its
+normal — **12/12**.
+`plugin/tools/test_uv_check.py` seeds the unwraps the UV check must and must not flag: a clean
+Smart UV Project sphere as .blend and GLB (silent), no UV with and without a texture, stacked,
+collapsed, stretched and mirrored UVs — **9/9**.
 `plugin/tools/test_template_profile.py` reads a seeded turned part back through
 `template_profile.py` — radii, a free rod, a rod pressed against the body — **4/4**.
 
