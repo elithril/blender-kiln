@@ -38,6 +38,9 @@ Each comes from a cycle that looked wrong until it was measured:
 3. **Keep legs bent.** Size the stride and the hip height so no leg passes ~95% of its
    length. The rejected first walk peaked at 101% — legs locked, read as too long; the
    approved one at 93%, with the hips 15% of a leg lower and a stride of 11% of the body.
+   **Lower the hips no further than the legs need**: on a short-legged mascot cat, 15% read
+   as a cat stalking its prey. `quadruped.py` now starts at 5% and lowers the hips only
+   until the legs hold — the cat settled at 8% (legs 95%), as its own session had found.
 4. **Measure a rotation's sign before using it.** Rotate +0.2 rad and watch which way a
    probe moves. A sit and an attack written with the assumed sign tipped the cat nose
    down. The lamp and chest scripts measure every sign first — and were right first time.

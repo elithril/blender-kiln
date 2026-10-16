@@ -346,12 +346,14 @@ try:
     sys.path.insert(0, str(ROOT / "tools"))
     import quadruped as Q
     _synthetic_quadruped("/tmp/_quad.glb")
-    sc, arm, m = Q.make("/tmp/_quad.glb", "/tmp", "walk", 32, Q.walk, 0.11, 0.15)
+    sc, arm, m, stride, crouch = Q.cycle("/tmp/_quad.glb", "/tmp", "walk", 32, Q.walk)   # the shipped defaults
     bpy.ops.export_scene.gltf(filepath="/tmp/_quad_walk.glb", export_animations=True, export_force_sampling=True)
     last, seam = _glb_clip_end("/tmp/_quad_walk.glb")
     if abs(last - 32 / 24) > 1e-3 or seam > 1e-4:
         fail("quadruped", f"the walk's GLB ends at {last:.4f} s, not 32/24, its last key {seam:.2g} off the first "
                           "— three.js skips the step back to frame 0")
+    elif crouch > 0.10:
+        fail("quadruped", f"the walk lowers the hips {crouch:.0%} of a leg — 15% read as stalking; lower only as the legs need")
     elif m["frames"] != 32:
         fail("quadruped", f"walk has {m['frames']} frames, not 32 — the seam repeats a frame")
     elif m["extension"] > Q.MAX_EXTENSION:
@@ -359,7 +361,7 @@ try:
     elif m["root_speed_m_s"] <= 0 or m["stance_speed_spread"] > 0.10:
         fail("quadruped", f"planted paws are out of step: speed {m['root_speed_m_s']} m/s, spread {m['stance_speed_spread']}")
     else:
-        ok(f"quadruped: walk on a synthetic rig — legs <= {m['extension']:.0%}, paws in step "
+        ok(f"quadruped: walk on a synthetic rig — legs <= {m['extension']:.0%}, hips -{crouch:.0%} of a leg, paws in step "
            f"({m['root_speed_m_s']} m/s, spread {m['stance_speed_spread']}), {m['frames']} frames")
 except Exception as e:
     fail("quadruped", f"tools/quadruped.py does not run on a template-named rig: {e}")

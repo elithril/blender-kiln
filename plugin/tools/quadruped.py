@@ -42,6 +42,10 @@ UPPER = {"LeftLeg": "LeftUpLeg", "RightLeg": "RightUpLeg", "LeftForeArm": "LeftA
 PAWS = ("LeftFoot", "RightFoot", "LeftHand", "RightHand")
 WALK = dict(LH=0.0, LF=0.25, RH=0.5, RF=0.75)          # lateral-sequence walk: one foot every quarter cycle
 MAX_EXTENSION = 0.95   # the cycle a reviewer approved peaked at 0.89 (hind) and 0.93 (fore)
+STRIDE, CROUCH = 0.11, 0.05   # walk start: stride over body, hips lowered by this share of a leg.
+# 0.15 read as a cat stalking its prey on a short-legged mascot; the loop below lowers the
+# hips only as far as the legs need to stay bent.
+IDLE_CROUCH = 0.10
 
 
 def load(path):
@@ -121,7 +125,7 @@ def walk(R, f, n, stride, crouch):
 def idle(R, f, n, stride, crouch):
     w, L = 2 * math.pi * n, R["leg"]
     look = 0.35 * math.sin(w) * min(1.0, abs(math.sin(w)) * 1.5)
-    pose(R, f, {}, up=-0.10 * L + 0.006 * L * math.sin(2 * w), chest=(0.015 * math.sin(2 * w), 0, 0),
+    pose(R, f, {}, up=-IDLE_CROUCH * L + 0.006 * L * math.sin(2 * w), chest=(0.015 * math.sin(2 * w), 0, 0),
          neck=(0, 0, 0.4 * look), head=(0.05 * math.sin(w), 0, 0.6 * look), tail=(0, 0, 0.18 * math.sin(w)))
 
 
@@ -178,23 +182,30 @@ def make(asset, out, name, P, fn, stride, crouch):
     return sc, arm, m
 
 
+def cycle(asset, out, name, P, fn, stride=STRIDE, crouch=CROUCH):
+    """make(), shortening the stride and lowering the hips until the legs stay bent."""
+    for attempt in range(6):
+        sc, arm, m = make(asset, out, name, P, fn, stride, crouch)
+        if m["extension"] <= MAX_EXTENSION or name == "idle":
+            break
+        stride *= 0.85; crouch += 0.03
+    if name == "idle":                        # nothing walks: speed and spread do not apply
+        m.pop("root_speed_m_s"); m.pop("stance_speed_spread"); crouch = IDLE_CROUCH
+    return sc, arm, m, stride, crouch
+
+
 def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     ap = argparse.ArgumentParser(); ap.add_argument("--asset", required=True); ap.add_argument("--out", default="anim")
     ap.add_argument("--motions", default="idle,walk"); ap.add_argument("--period", type=int, default=32)
+    ap.add_argument("--stride", type=float, default=STRIDE, help="walk stride, share of the body length")
+    ap.add_argument("--crouch", type=float, default=CROUCH, help="walk: hips lowered by this share of a leg, to start")
     a = ap.parse_args(argv)
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
     report = {}
     for name in a.motions.split(","):
         fn, P = {"walk": (walk, a.period), "idle": (idle, a.period * 3 // 2)}[name]
-        stride, crouch = 0.11, 0.15
-        for attempt in range(6):                  # shorten the stride / lower the hips until the legs stay bent
-            sc, arm, m = make(a.asset, out, name, P, fn, stride, crouch)
-            if m["extension"] <= MAX_EXTENSION or name == "idle":
-                break
-            stride *= 0.85; crouch += 0.03
-        if name == "idle":                        # nothing walks: speed and spread do not apply
-            m.pop("root_speed_m_s"); m.pop("stance_speed_spread")
+        sc, arm, m, stride, crouch = cycle(a.asset, out, name, P, fn, a.stride, a.crouch)
         m.update(stride=round(stride, 3), crouch=round(crouch, 3), ok=m["extension"] <= MAX_EXTENSION)
         bpy.ops.export_scene.gltf(filepath=str(out / f"{name}.glb"), export_animations=True, export_force_sampling=True)
         report[name] = m
