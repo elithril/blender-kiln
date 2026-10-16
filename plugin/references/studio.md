@@ -358,7 +358,7 @@ request into `.kiln-studio/requests.json` — open, like a note, the photo besid
 `.kiln-studio/requests/` — and gives the user the command to paste:
 
 ```
-/blender-kiln:kiln a sturdy oak barrel, type prop, for the web (glTF), stylized, reference photo .kiln-studio/requests/q_….jpg (Studio request q_…)
+/kiln a sturdy oak barrel, type prop, for the web (glTF), stylized, reference photo .kiln-studio/requests/q_….jpg (Studio request q_…)
 ```
 
 It is a brief like any other: run the pipeline on it, the photo as the reference image.

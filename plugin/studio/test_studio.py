@@ -850,7 +850,7 @@ class Api(Base):
         code, r = self.req("POST", "/api/requests", {"brief": "a low-poly wooden chair", "type": "prop",
                                                       "target": "web", "style": "low-poly", "photo": photo})
         self.assertEqual((code, r["status"]), (200, "open"))
-        self.assertTrue(r["command"].startswith("/blender-kiln:kiln a low-poly wooden chair, type prop, for the web (glTF), low-poly, reference photo .kiln-studio/requests/"))
+        self.assertTrue(r["command"].startswith("/kiln a low-poly wooden chair, type prop, for the web (glTF), low-poly, reference photo .kiln-studio/requests/"))
         self.assertTrue(r["command"].endswith(f"(Studio request {r['id']})"))
         self.assertTrue((self.tmp / r["reference"]).is_file())
         self.assertEqual([x["id"] for x in self.req("GET", "/api/requests")[1]["requests"]], [r["id"]])

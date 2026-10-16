@@ -1231,7 +1231,7 @@ def request_command(r: dict) -> str:
     if r.get("reference"):
         parts.append(f"reference photo {r['reference']}")
     one_line = " ".join(", ".join(parts).split())
-    return f"/blender-kiln:kiln {one_line} (Studio request {r['id']})"
+    return f"/kiln {one_line} (Studio request {r['id']})"
 
 
 def add_request(project: Project, brief: str, *, type_: str | None = None, target: str | None = None,
