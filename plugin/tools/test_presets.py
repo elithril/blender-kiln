@@ -13,6 +13,8 @@ kiln child's joints, a skin of tubes and box feet, 100% to one bone each):
 - the provenance names the motions' licence for every clip;
 - feet: the walk's standing feet slide < 50 mm/s and no skin goes 5 mm under the floor, where
   the same clip with --no-fix feet slides and sinks (the regression direction);
+- --loop: the walk comes back as an in-place cycle, its last key equal to its first, the seam
+  <= 1.2x a frame step, the speed to move it at recorded; the jump, a one-shot, kept whole;
 - arms: the jump's hands and forearms, which hang into the wide hips, cross the body < 500 mm²,
   where upstream's clearance (--no-fix arms: torso, neck and head only) leaves > 500;
 - a rig missing a leg bone is refused, naming it.
@@ -152,6 +154,30 @@ def glb_animations(path):
     return [a.get("name") for a in json.loads(b[20:20 + n]).get("animations", [])]
 
 
+def glb_closing(path, name):
+    """(keys, largest gap between a channel's last key and its first) of one clip (q ~ -q)."""
+    b = Path(path).read_bytes()
+    n = struct.unpack("<I", b[12:16])[0]
+    j, data = json.loads(b[20:20 + n]), b[28 + n:]
+
+    def acc(i):
+        a = j["accessors"][i]
+        k = {"SCALAR": 1, "VEC3": 3, "VEC4": 4}[a["type"]]
+        at = j["bufferViews"][a["bufferView"]].get("byteOffset", 0) + a.get("byteOffset", 0)
+        f = struct.unpack_from(f"<{a['count'] * k}f", data, at)
+        return [f[i * k:(i + 1) * k] for i in range(a["count"])]
+    an = next(a for a in j["animations"] if a.get("name") == name)
+    keys, gap = 0, 0.0
+    for s in an["samplers"]:
+        o = acc(s["output"])
+        keys = max(keys, len(o))
+        d = max(abs(x - y) for x, y in zip(o[-1], o[0]))
+        if len(o[0]) == 4:
+            d = min(d, max(abs(x + y) for x, y in zip(o[-1], o[0])))
+        gap = max(gap, d)
+    return keys, gap
+
+
 def main():
     sys.path.insert(0, str(HERE))
     import presets
@@ -190,7 +216,7 @@ def main():
                        check=True, capture_output=True)
     env = {**os.environ, "BLENDER": blender}
     run = subprocess.run([sys.executable, str(HERE / "presets.py"), "animate", "--asset", str(rig),
-                          "--motion", "walk,jump", "--out", str(tmp)], capture_output=True, text=True, env=env)
+                          "--motion", "walk,jump", "--loop", "--out", str(tmp)], capture_output=True, text=True, env=env)
     out = tmp / "SK_Test_rigged_animated.glb"
     check("presets.py animate runs on a kiln-named rig", run.returncode == 0 and out.exists(), run.stdout[-600:] + run.stderr[-600:])
     if out.exists():
@@ -210,6 +236,13 @@ def main():
               f"(without the fix: {raw and raw['foot_slide']['mm_s']} mm/s, {raw and raw['floor']['below_mm']} mm)",
               raw and w["foot_slide"]["mm_s"] < 50 and w["floor"]["below_mm"] < 5
               and (raw["foot_slide"]["mm_s"] > 50 or raw["floor"]["below_mm"] > 5))
+        keys, gap = glb_closing(out, "walk")
+        jkeys, _ = glb_closing(out, "jump")
+        lp = next(c for c in prov["clips"] if c["clip"] == "walk")
+        check(f"--loop: the walk is a cycle of {keys - 1} frames + a closing key equal to the first (off {gap:.1g}), "
+              f"seam {w['seam_x_step']}x a step, {lp['root_speed_m_s']} m/s in place; the jump kept whole ({jkeys} keys)",
+              gap < 1e-4 and keys - 1 < 75 and w["seam_x_step"] <= 1.2 and w["travel_m"] < 0.01
+              and lp["looped"] and lp["root_speed_m_s"] > 0 and jkeys == 75)
         j, rj = meas["jump"]["skin"]["mean_arm_body_mm2"], raws.get("jump", {}).get("skin", {}).get("mean_arm_body_mm2")
         check(f"arms out of the hips: jump {j} mm² of arm through body (upstream's clearance: {rj} mm²)",
               rj is not None and j < 500 < rj)

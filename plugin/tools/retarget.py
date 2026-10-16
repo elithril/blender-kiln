@@ -732,13 +732,16 @@ def lock_feet(rig: Rig, frames, fps, contacts, cyclic=False, tread=None, iterati
             runs = _runs(c, cyclic)
             for a, b in runs:
                 ids = [t % n for t in range(a, b + 1)]
-                d = np.zeros((len(ids), 3))
-                for k in range(1, len(ids)):
-                    t0, t1 = ids[k - 1], ids[k]
+                whole = cyclic and len(ids) == n        # standing through the whole cycle
+                pairs = list(zip(ids[:-1], ids[1:])) + ([(ids[-1], ids[0])] if whole else [])
+                d = np.zeros((len(ids) + (1 if whole else 0), 3))
+                for k, (t0, t1) in enumerate(pairs, 1):
                     zz = P[t0] @ up
                     roll = zz <= zz.min() + ROLL_SET_MM / 1000
                     move = (P[t1][roll] - P[t0][roll]).mean(0)
-                    d[k] = d[k - 1] - (move - (move @ up) * up) + tv * dt
+                    d[k] = d[k - 1] - (move - (move @ up) * up) + (0 if whole else tv * dt)
+                if whole:                               # it must come back to where it started
+                    d = d[:-1] - np.outer(np.arange(n) / n, d[-1])
                 d -= d.mean(0)
                 for k, t in enumerate(ids):
                     delta[t] = d[k] + (floor + FLOOR_MARGIN - float((P[t] @ up).min())) * up
@@ -778,3 +781,71 @@ def lock_feet(rig: Rig, frames, fps, contacts, cyclic=False, tread=None, iterati
     report["hips_lowered_mm"] = round(1000 * float(drop.max()), 1)
     report["unreached_mm"] = round(1000 * float(short.max()), 1)
     return report
+
+
+# ── loops (kiln) ──────────────────────────────────────────────────────────────────────────
+# A preset is a take, not a cycle: the walk starts from standing and ends mid-stride, and
+# played on repeat it jumped 6.2 frame steps at the seam (child; 6.4 Hunyuan). For a cyclic
+# motion the window whose end matches its start, in pose and in the way through it, is cut
+# out; what is left of the mismatch is spread over the whole window, so frame P is frame 0
+# exactly and is keyed again as the closing key (references/animation.md rule 5); the hips'
+# travel is taken out, leaving an in-place cycle and the speed the game moves it at.
+LOOP_MIN_SECONDS = 0.6
+LOOP_MOVING = 0.7        # a window moving less than 0.7 x the clip's median step is refused
+STILL_SPEED = 0.05       # m/s on a 1.7 m human: an in-place cycle slower than this stands still
+
+
+def rig_height(rig: Rig) -> float:
+    z = rig.points @ rig.up
+    return float(z.max() - z.min())
+
+
+def _rot_dist(wa, wb, bones):
+    """Mean angle (degrees) between two frames' rotations over `bones`."""
+    qa = matrices_to_quaternions(np.array([wa[b] for b in bones]))
+    qb = matrices_to_quaternions(np.array([wb[b] for b in bones]))
+    return float(np.degrees(2 * np.arccos(np.clip(np.abs((qa * qb).sum(1)), 0, 1))).mean())
+
+
+def cut_loop(rig: Rig, frames, contacts, fps, mapping):
+    """(frames of the cycle, its contacts, the in-place tread velocity, info). The cycle has
+    P frames, 0..P-1; the caller keys frame 0 again at P."""
+    bones = [b for b in rig.order if mapping[b] != mapping.get(rig.parents[b] or "", None) or rig.parents[b] is None]
+    n = len(frames)
+    D = np.zeros((n, n))
+    for a in range(n):
+        for b in range(a + 1, n):
+            D[a, b] = D[b, a] = _rot_dist(frames[a][0], frames[b][0], bones)
+    steps = np.array([D[t, t + 1] for t in range(n - 1)])
+    step = float(np.median(steps)) or 1e-6
+    shortest = max(4, int(round(LOOP_MIN_SECONDS * fps)))
+    best = None
+    for i in range(1, n - shortest):
+        for j in range(i + shortest, n):
+            moving = float(steps[i:j].mean())
+            if moving < LOOP_MOVING * step:
+                continue
+            cost = (D[j, i] + D[j - 1, i - 1]) / moving - 0.01 * (j - i)
+            if best is None or cost < best[0]:
+                best = (cost, i, j)
+    if best is None:
+        raise ValueError("no stretch of the clip moves enough to loop")
+    _, i, j = best
+    P = j - i
+    up = rig.up
+    res_rot = {b: log_rot(frames[j][0][b] @ frames[i][0][b].T) for b in rig.order}
+    res_root = frames[j][1] - frames[i][1]
+    travel = res_root - (res_root @ up) * up
+    out = []
+    for k in range(P):
+        wr, root = frames[i + k]
+        u = k / P
+        out.append(({b: exp_rot(-u * res_rot[b]) @ r for b, r in wr.items()}, root - u * res_root))
+    seam_raw = (D[n - 1, 0]) / step
+    speed = float(np.linalg.norm(travel)) / (P / fps)
+    # an idle drifts a few mm a second: that is not a treadmill to walk the feet back on
+    tread = -travel / (P / fps) if speed >= STILL_SPEED * rig_height(rig) / 1.7 else np.zeros(3)
+    info = dict(start=i, frames=P, seconds=round(P / fps, 3), seam_cost=round(best[0], 3),
+                seam_raw_x_step=round(seam_raw, 2), root_speed_m_s=round(float(np.linalg.norm(tread)), 3),
+                residual_deg=round(float(np.degrees(np.mean([np.linalg.norm(v) for v in res_rot.values()]))), 2))
+    return out, {s: np.asarray(c)[i:j] for s, c in contacts.items()}, tread, info

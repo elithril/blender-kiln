@@ -191,9 +191,18 @@ def blender_animate(args) -> int:  # pragma: no cover - needs bpy
         g, joints0, hips, fps = R.load_motion(npz)
         g, hips = R.resample(g, hips, args.speed)
         frames, info = R.retarget(rig, g, joints0, hips, mapping)
-        swings = R.clear_arms(rig, frames, proxy, upper_points=R.UPPER_ARM_POINTS if arms_kiln else ()) if proxy else {}
         contacts = R.soma_contacts(g, joints0, hips, fps, args.speed)
-        feet = R.lock_feet(rig, frames, fps, contacts) if "feet" not in skip else {}
+        looped = args.loop and name in CYCLIC
+        tread, loop = None, None
+        if looped:
+            frames, contacts, tread, loop = R.cut_loop(rig, frames, contacts, fps, mapping)
+        elif args.loop:
+            print(f"presets: {name} is a one-shot, kept whole (not looped)")
+        swings = R.clear_arms(rig, frames, proxy, cyclic=looped,
+                              upper_points=R.UPPER_ARM_POINTS if arms_kiln else ()) if proxy else {}
+        feet = R.lock_feet(rig, frames, fps, contacts, cyclic=looped, tread=tread) if "feet" not in skip else {}
+        if looped:
+            frames = frames + [frames[0]]          # key P = key 0 (animation.md rule 5)
         act = bpy.data.actions.new(name)
         ad.action = act
         for t, basis in enumerate(R.bases(rig, frames)):
@@ -210,9 +219,11 @@ def blender_animate(args) -> int:  # pragma: no cover - needs bpy
             strip.action_slot = act.slots[0]
         ad.action = None
         report[name] = dict(frames=len(frames), seconds=round((len(frames) - 1) / fps, 2),
-                            hip_scale=round(info["hip_scale"], 3), arm_swing=swings, feet=feet)
+                            hip_scale=round(info["hip_scale"], 3), arm_swing=swings, feet=feet,
+                            loop=loop)
         prov.append(dict(clip=name, preset=preset["id"], take=take, prompt=preset["prompt"],
                          made_with=preset["made_with"], seed=preset["seed"], speed=args.speed,
+                         looped=bool(looped), root_speed_m_s=loop and loop["root_speed_m_s"],
                          frames=len(frames), fps=fps, file=f"tools/motions/{npz.name}", sha256=sha256(npz)))
         print(f"presets: {name} {json.dumps(report[name])}")
     for pb in arm.pose.bones:
