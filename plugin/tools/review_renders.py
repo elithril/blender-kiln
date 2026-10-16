@@ -2,7 +2,7 @@
 
     blender -b --factory-startup --python-exit-code 1 --python tools/review_renders.py -- \\
         MODEL [MODEL ...] --out DIR [--views q1,q3,front,back,top,under] [--mode both] \\
-        [--close X,Y,Z,SIZE ...] [--close-from check.json] [--res 1000] [--prefix NAME]
+        [--close X,Y,Z,SIZE[,AZ,EL] ...] [--close-from check.json] [--res 1000] [--prefix NAME]
 
 Every print session of 2026-10-13 had no Blender to talk to and wrote its own render script;
 one measured a height from bound_box and read 104.8 mm for 90.0. This is that script once:
@@ -20,7 +20,11 @@ one measured a height from bound_box and read 104.8 mm for 90.0. This is that sc
 - a rigged glTF's bone display shape (a 2 m sphere the importer adds) is left out of the frame;
 - --views from front, back, left, right, top, under and the four three-quarters q1-q4
   (front -Y); the default pairs two opposite three-quarters, as rule 2 asks, with top and under;
-- --close X,Y,Z,SIZE (mm) renders a close-up there, seen from outside the model's axis;
+- --close X,Y,Z,SIZE (mm) renders a close-up there, seen along the surface's normal at that spot
+  (a nape seen "from outside the axis" was shot from the front, through the head); the line
+  says HIDDEN when the camera still meets another surface first; AZ,EL (degrees, as the
+  views: front -Y) choose the side yourself — a grazing look shows a dent's profile;
+- a rigged model is shown in its rest pose, the pose its vertices are framed on;
   --close-from takes the thin spots `print_check` lists (`thickness.thin_at`, the first 4);
 - each image is read back: a view where the subject covers under 1 % of the frame (an
   unframed or empty render) is an error, exit 1.
@@ -105,6 +109,9 @@ def load(path):
         new.append(o)
     if not new:
         die(f"{path}: no mesh in it")
+    for o in bpy.data.objects:                  # framed on the rest vertices: show the rest pose, not a clip's frame
+        if o.type == "ARMATURE":
+            o.data.pose_position = "REST"
     return new
 
 
@@ -112,13 +119,14 @@ def closes(a, centre_m):
     out = []
     for c in a.close:
         try:
-            x, y, z, s = (float(v) for v in c.split(","))
-        except ValueError:
-            die(f"--close {c}: X,Y,Z,SIZE in mm")
-        out.append((Vector((x, y, z)) / 1000, s / 1000))
+            v = [float(x) for x in c.split(",")]
+            assert len(v) in (4, 6)
+        except (ValueError, AssertionError):
+            die(f"--close {c}: X,Y,Z,SIZE in mm, optionally AZ,EL in degrees")
+        out.append((Vector(v[:3]) / 1000, v[3] / 1000, tuple(v[4:]) or None))
     if a.close_from:
         spots = json.load(open(a.close_from)).get("thickness", {}).get("thin_at", [])
-        out += [(Vector(q["at_mm"]) / 1000, 0.012) for q in spots[:4]]
+        out += [(Vector(q["at_mm"]) / 1000, 0.012, None) for q in spots[:4]]
     return out
 
 
@@ -146,12 +154,45 @@ def vertex_colours(o):
     me.color_attributes.active_color = ca
 
 
+def facing(meshes, V, N, at, s, centre):
+    """A close-up looks at the surface along its normal there: seen "from outside the axis", a
+    spot on the back's midline (a cat's nape) was shot from the front, through the head."""
+    near = np.linalg.norm(V - np.array(at[:]), axis=1) < s / 4
+    if near.sum() >= 20:                      # a dense skin: the mean normal around the spot
+        n = Vector(N[near].mean(axis=0).tolist())
+    else:                                     # a coarse mesh: the normal of the face nearest the spot
+        best = None
+        for o in meshes:
+            inv = o.matrix_world.inverted()
+            hit, loc, nor, _ = o.closest_point_on_mesh(inv @ at)
+            if hit:
+                d = (o.matrix_world @ loc - at).length
+                if best is None or d < best[0]:
+                    best = (d, o.matrix_world.to_3x3() @ nor)
+        n = best[1] if best and best[0] < s else Vector()   # no surface within the frame: nothing to face
+    if n.length < 1e-6:                       # no surface there: from outside the axis, as before
+        out = Vector((at.x - centre.x, at.y - centre.y, 0))
+        n = out if out.length > 1e-9 else Vector((0, -1, 0))
+    n = n.normalized()
+    if abs(n.z) > 0.9999:                     # straight up or down: the camera's up axis needs a tilt
+        n = Vector((0, -0.002, math.copysign(1, n.z))).normalized()
+    return n
+
+
+BACKGROUND = 0.2235      # Workbench's own grey, kept so the images look as they always did
+
+
 def cover(path):
+    """The share of the frame the subject covers, read from the render's alpha — a corner taken
+    as the background called a close-up filled by one flat face empty — then the image is put
+    back on an opaque grey."""
     img = bpy.data.images.load(path)
-    px = np.array(img.pixels[:], dtype=np.float32).reshape(-1, 4)[:, :3]
+    px = np.array(img.pixels[:], dtype=np.float32).reshape(-1, 4)
+    a = px[:, 3:4].copy()
+    px[:, :3] = px[:, :3] * a + BACKGROUND * (1 - a); px[:, 3] = 1.0
+    img.pixels = px.ravel().tolist(); img.filepath_raw = path; img.file_format = "PNG"; img.save()
     bpy.data.images.remove(img)
-    bg = px[0]                                                    # a corner: the background
-    return float((np.abs(px - bg).max(axis=1) > 0.03).mean())
+    return float((a > 0.5).mean())
 
 
 def main():
@@ -160,6 +201,7 @@ def main():
     meshes = [o for m in a.models for o in load(m)]
     bpy.context.view_layer.update()
     V = np.array([tuple(o.matrix_world @ v.co) for o in meshes for v in o.data.vertices])
+    N = np.array([tuple((o.matrix_world.to_3x3() @ v.normal).normalized()) for o in meshes for v in o.data.vertices])
     lo, hi = V.min(axis=0), V.max(axis=0)
     centre = Vector(((lo + hi) / 2).tolist())
     size = float(np.linalg.norm(hi - lo)) * 1.05                 # the diagonal: any view fits
@@ -170,6 +212,8 @@ def main():
     sc.render.engine = "BLENDER_WORKBENCH"
     sc.render.resolution_x = sc.render.resolution_y = a.res
     sc.render.image_settings.file_format = "PNG"
+    sc.render.image_settings.color_mode = "RGBA"
+    sc.render.film_transparent = True             # the alpha says where the subject is (cover)
     sc.display.shading.show_cavity = False
     sc.display.shading.show_object_outline = False
     sc.world = sc.world or bpy.data.worlds.new("World")
@@ -180,11 +224,13 @@ def main():
     sc.collection.objects.link(cam)
     sc.camera = cam
 
-    shots = [(v, None, None, DIRS[v]) for v in a.views.split(",")]
-    for n, (at, s) in enumerate(closes(a, centre), 1):
-        out = Vector((at.x - centre.x, at.y - centre.y, 0))      # from outside the axis, toward the spot
-        az = math.degrees(math.atan2(out.x, -out.y)) if out.length > 1e-9 else 0.0
-        shots.append((f"close{n}", at, s, (az, 20)))
+    def towards(az, el):
+        az, el = math.radians(az), math.radians(el)
+        return Vector((math.sin(az) * math.cos(el), -math.cos(az) * math.cos(el), math.sin(el)))
+
+    shots = [(v, None, None, towards(*DIRS[v])) for v in a.views.split(",")]
+    for n, (at, s, view) in enumerate(closes(a, centre), 1):
+        shots.append((f"close{n}", at, s, towards(*view) if view else facing(meshes, V, N, at, s, centre)))
 
     modes = ["matcap", "colour"] if a.mode == "both" else [a.mode]
     written = []
@@ -201,9 +247,7 @@ def main():
                 vertex_colours(o)
         sh.color_type = "SINGLE" if mode == "matcap" else ("TEXTURE" if textured else "VERTEX" if painted else "MATERIAL")
         sh.single_color = (0.8, 0.8, 0.8)
-        for name, at, s, (az, el) in shots:
-            az, el = math.radians(az), math.radians(el)
-            d = Vector((math.sin(az) * math.cos(el), -math.cos(az) * math.cos(el), math.sin(el)))
+        for name, at, s, d in shots:
             rot = (-d).to_track_quat("-Z", "Y")
             if at is None:                    # a whole view: fit the vertices as this camera sees them
                 R = np.array(rot.to_matrix())
@@ -223,7 +267,12 @@ def main():
             c = cover(path)
             if c < MIN_COVER:
                 die(f"{path}: the subject covers {100 * c:.2f} % of the frame — nothing framed")
-            print(f"RENDER {path} (subject {100 * c:.0f} % of the frame)")
+            hidden = ""
+            if name.startswith("close"):              # what the camera meets first, on its way to the spot
+                hit, loc = sc.ray_cast(bpy.context.evaluated_depsgraph_get(), cam.location, -d)[:2]
+                if hit and (loc - at).length > s / 4 and (cam.location - loc).length < (cam.location - at).length:
+                    hidden = f", HIDDEN: the camera meets the surface {1000 * (loc - at).length:.0f} mm before the spot"
+            print(f"RENDER {path} (subject {100 * c:.0f} % of the frame{hidden})")
             written.append(path)
     print(f"review_renders: {len(written)} image(s) in {os.path.abspath(a.out)}")
 

@@ -12,6 +12,8 @@
 - a textured GLB in colour: the texture shows (two colours), not the material's flat grey;
 - a vertex-coloured GLB in colour: its vertex colours show, and a part beside it with a plain
   material keeps that material's colour (the cat's fur rendered grey before);
+- a close-up on a low part just behind a taller one: seen along the surface's normal, not
+  through the taller part — the side it used to choose is reported HIDDEN;
 - an unknown view, or a missing file: exit 1, no traceback;
 - --close with negative coordinates (a spot left of or in front of the axis) is read as a value,
   not as an option: a session's `--close -25,-14,54,14` stopped argparse before this.
@@ -23,9 +25,12 @@ TOOL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "review_renders.
 QUADS = [(0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)]
 
 
-def block(path, x, y, z):
-    v = [(0, 0, 0), (x, 0, 0), (x, y, 0), (0, y, 0), (0, 0, z), (x, 0, z), (x, y, z), (0, y, z)]
-    tris = [[v[i] for i in t] for a, b, c, d in QUADS for t in ((a, b, c), (a, c, d))]
+def block(path, x, y, z, more=()):
+    """A box from the origin; more: further boxes (x0, y0, z0, x1, y1, z1) in the same file."""
+    tris = []
+    for x0, y0, z0, x1, y1, z1 in ((0, 0, 0, x, y, z),) + tuple(more):
+        v = [(x0, y0, z0), (x1, y0, z0), (x1, y1, z0), (x0, y1, z0), (x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1)]
+        tris += [[v[i] for i in t] for a, b, c, d in QUADS for t in ((a, b, c), (a, c, d))]
     with open(path, "wb") as f:
         f.write(b"test_review_renders".ljust(80, b" ")); f.write(struct.pack("<I", len(tris)))
         for t in tris:
@@ -159,6 +164,15 @@ with tempfile.TemporaryDirectory() as d:
     rc, log = run(f"{d}/block.stl", "--out", f"{d}/n", "--views", "q1", "--mode", "matcap", "--close", "-1,-1,20,12")
     check("close-up at negative coordinates: read as a value, written",
           rc == 0 and os.path.isfile(f"{d}/n/block_matcap_close1.png"), (rc, log[-300:]))
+
+    # a "head" in front (-Y) of a low "body": a spot on the body's top, just behind the head, was
+    # shot from the front through the head (the cat's nape); seen along its normal it is not
+    block(f"{d}/nape.stl", 20, 10, 40, more=((0, 10, 0, 20, 60, 15),))
+    rc, log = run(f"{d}/nape.stl", "--out", f"{d}/k", "--views", "q1", "--mode", "matcap",
+                  "--close", "10,20,15,12", "--close", "10,20,15,12,0,20")
+    lines = [l for l in log.splitlines() if "close" in l and l.startswith("RENDER")]
+    check("close-up behind a taller part: seen along its normal, not hidden; the old side is reported HIDDEN",
+          rc == 0 and len(lines) == 2 and "HIDDEN" not in lines[0] and "HIDDEN" in lines[1], (rc, lines, log[-300:]))
 
     rigged = make_glb(d, "rigged")
     rc, log = run(rigged, "--out", f"{d}/g", "--views", "front", "--mode", "matcap", "--res", "400")

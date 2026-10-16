@@ -774,7 +774,8 @@ its volumes, legs like sausages and eyes stuck on.
 ```bash
 blender -b --factory-startup --python-exit-code 1 --python tools/review_renders.py -- \
     SK_Cat_final.glb --out review/matcap --mode matcap --views q1,q3,front,top,under \
-    --close X,Y,Z,SIZE ...       # nape, belly, each shoulder, tail root, ear base, face (mm)
+    --close X,Y,Z,SIZE ...       # nape, belly, each shoulder, tail root, ear base, face (mm);
+                                 # seen along the surface's normal, ,AZ,EL to pick the side
 ```
 
 Look at the rest pose and at two or three frames of the walk (the elbows and knees bent).
