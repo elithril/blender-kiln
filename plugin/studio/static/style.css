@@ -721,3 +721,12 @@ body.no-model #right .notes-head, body.no-model #right #handoff { display: none;
 #drop b { font-size: 16px; }
 #drop span { color: var(--text-2); font-size: 12.5px; }
 #create .cmd code { white-space: normal; word-break: break-word; line-height: 1.45; text-overflow: clip; }
+
+/* The tabs share what is left; the fold button keeps its own room at the end. */
+.tabs { padding-right: 6px; }
+.tabs [role=tab] { flex: 0 1 auto; min-width: 0; }
+.tabs [role=tab] > span[data-i18n] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.tabs [role=tab] .tc { flex: none; }
+.tabs .collapse { flex: none; width: 28px; margin-left: auto; padding-left: 0; }
+.tabs .tc:empty { display: none; }
+.tabs [role=tab] { padding-left: 8px; padding-right: 8px; }
