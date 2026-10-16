@@ -42,6 +42,8 @@
     <nav id="list" aria-label="Model list" data-i18n-attr="aria-label"></nav>
     <footer class="lfoot">
       <span id="project" class="dim mono" title=""></span>
+      <button class="btn icon sm ghost" id="t-import" aria-label="Import a model" title="Import a model: or drop a file anywhere" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg></button>
+      <button class="btn icon sm ghost" id="t-create" aria-label="Ask Claude for a new model" title="Create: ask Claude for a new model" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
       <button class="btn icon sm ghost" id="t-settings" aria-label="Settings" title="Settings" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
     </footer>
     <div id="viewpop" class="popover" hidden role="group" aria-label="List view" data-i18n-attr="aria-label">
@@ -162,8 +164,10 @@
   <div id="loading" hidden><div class="box"><span class="spin"></span><span id="loading-t"></span></div></div>
   <div id="hint" hidden></div>
   <div id="hover" hidden></div>
+  <div id="drop" hidden><div><b data-i18n>Drop to import</b><span data-i18n>GLB, glTF, FBX or OBJ: saved into imports/ in this project</span></div></div>
   <div id="toast" role="status" aria-live="polite"></div>
 </main>
+<input type="file" id="import-input" multiple hidden accept=".glb,.gltf,.fbx,.obj,.bin,.mtl,.png,.jpg,.jpeg,.webp,.ktx2">
 
 <aside id="right" class="panel right" aria-label="Notes and details" data-i18n-attr="aria-label">
   <div class="full">
@@ -218,6 +222,28 @@
   <h3 data-i18n>Keys</h3>
   <dl id="keys-list"></dl>
   <form method="dialog"><button class="btn" data-i18n>Close</button></form>
+</dialog>
+<dialog id="create" aria-labelledby="cr-title">
+  <header class="set-head"><h3 id="cr-title" data-i18n>Ask Claude for a new model</h3><form method="dialog"><button class="btn sm" data-i18n>Close</button></form></header>
+  <form id="cr-form" class="cr-body">
+    <label class="cr-brief"><span class="lab" data-i18n>Brief</span>
+      <textarea id="cr-brief" rows="3" required placeholder="A low-poly wooden chair with a curved backrest" data-i18n-attr="placeholder"></textarea></label>
+    <div class="cr-grid">
+      <label><span class="lab" data-i18n>Type</span><select id="cr-type"><option value="prop" data-i18n>prop</option><option value="character" data-i18n>character</option><option value="creature" data-i18n>creature</option><option value="vehicle" data-i18n>vehicle</option><option value="environment" data-i18n>environment</option></select></label>
+      <label><span class="lab" data-i18n>Made for</span><select id="cr-target"><option value="web" data-i18n>Web (glTF)</option><option value="desktop" data-i18n>Unity / Unreal (FBX)</option><option value="ar" data-i18n>AR (USDZ)</option><option value="print" data-i18n>3D print</option></select></label>
+      <label><span class="lab" data-i18n>Style</span><select id="cr-style"><option value="" data-i18n>Let Claude choose</option><option value="realistic" data-i18n>realistic</option><option value="stylized" data-i18n>stylized</option><option value="cartoon" data-i18n>cartoon</option><option value="low-poly" data-i18n>low-poly</option></select></label>
+    </div>
+    <div class="cr-photo"><span class="lab" data-i18n>Reference photo</span>
+      <label class="btn sm" for="cr-file"><span data-i18n>Choose a photo</span></label><input type="file" id="cr-file" accept="image/jpeg,image/png,image/webp" hidden>
+      <img id="cr-thumb" alt="" hidden><button type="button" class="btn sm ghost" id="cr-nophoto" hidden data-i18n>Remove</button><span class="dim small" data-i18n>optional · JPEG, PNG or WebP</span></div>
+    <div class="row"><button class="btn accent" id="cr-save" type="submit" data-i18n>Save the request</button><span class="dim small" id="cr-status" aria-live="polite"></span></div>
+  </form>
+  <div id="cr-done" class="cr-body" hidden>
+    <p data-i18n>Saved in .kiln-studio/requests.json, open until Claude has built it. Paste this in Claude Code:</p>
+    <div class="cmd"><code id="cr-cmd"></code><button class="btn sm" id="cr-copy" data-i18n>Copy</button></div>
+    <div class="row"><button class="btn sm" id="cr-another" data-i18n>Ask for another</button></div>
+  </div>
+  <div class="cr-body cr-list" id="cr-list"></div>
 </dialog>
 <dialog id="settings" aria-labelledby="set-title">
   <header class="set-head"><h3 id="set-title" data-i18n>Settings</h3><form method="dialog"><button class="btn sm" data-i18n>Close</button></form></header>

@@ -25,6 +25,7 @@ import studiolib as sl
 VERSION = "1.0.0"
 STATIC = Path(__file__).resolve().parent / "static"
 MAX_BODY = 30 * 1024 * 1024
+MAX_IMPORT = 512 * 1024 * 1024   # a dropped model file
 TYPES = {".glb": "model/gltf-binary", ".gltf": "model/gltf+json", ".webp": "image/webp",
          ".md": "text/plain; charset=utf-8", ".json": "application/json; charset=utf-8", ".obj": "text/plain; charset=utf-8",
          ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
@@ -85,7 +86,7 @@ class Studio:
                         out[f"{d.name}/{name}"] = p.stat().st_mtime
                     except FileNotFoundError:
                         pass
-        for name in ("catalog.json", "work.json"):
+        for name in ("catalog.json", "work.json", "requests.json"):
             p = self.project.data / name
             try:
                 out[name] = p.stat().st_mtime
@@ -134,6 +135,8 @@ class Studio:
             if store.get(k) != self.store_sig.get(k):
                 if k == "catalog.json":
                     listing = True
+                elif k == "requests.json":
+                    self.emit({"type": "requests"})
                 elif k == "work.json":
                     # Which models a kiln command is on: the list's dots.
                     self.emit({"type": "work", "work": sl.work_view(sl.load_work(self.project))})
@@ -281,6 +284,8 @@ def make_handler(studio: Studio, port_ref: list[int]):
                 if parts[:2] == ["api", "status"]:
                     # The welcome screen's setup line: Blender, the MCP add-on, SkinTokens.
                     return self._json(setup_status.install_status(project.root))
+                if parts[:2] == ["api", "requests"]:
+                    return self._json({"requests": sl.load_requests(project)})
                 if parts[:2] == ["api", "events"]:
                     return self._events()
                 if parts[:2] == ["api", "assets"]:
@@ -320,12 +325,28 @@ def make_handler(studio: Studio, port_ref: list[int]):
                 return self._err(403, "cross-origin")
             parts = self._route()
             try:
+                if method == "POST" and parts == ["api", "import"]:
+                    # A model file dropped on the page: the bytes as they are, not JSON.
+                    q = parse_qs(urlparse(self.path).query)
+                    n = int(self.headers.get("Content-Length") or 0)
+                    if n > MAX_IMPORT:
+                        raise ValueError(f"file too large (over {MAX_IMPORT // 2**20} MB)")
+                    if "octet-stream" not in (self.headers.get("Content-Type") or ""):
+                        raise ValueError("expected the file's bytes (application/octet-stream)")
+                    rel = sl.import_file(project, q.get("name", [""])[0], self.rfile.read(n), q.get("folder", [None])[0])
+                    studio.refresh()
+                    return self._json({"path": rel})
                 body = self._body() if method != "DELETE" else {}
                 if method == "POST" and parts == ["api", "work", "check"]:
                     # The user looked at these models (all the finished ones when none named).
                     ids = body.get("assets")
                     run = sl.check_work(project, [str(i) for i in ids] if isinstance(ids, list) else None)
                     return self._json({"work": sl.work_view(run)})
+                if method == "POST" and parts == ["api", "requests"]:
+                    photo = _decode_image(body["photo"]) if body.get("photo") else None
+                    r = sl.add_request(project, body.get("brief", ""), type_=body.get("type") or None,
+                                       target=body.get("target") or None, style=body.get("style") or None, photo=photo)
+                    return self._json(r)
                 if method == "POST" and parts == ["api", "example"]:
                     aid = sl.add_example(project)
                     studio.refresh()

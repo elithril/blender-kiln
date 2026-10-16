@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Kiln Studio: Create and Import
+
+- **Import:** drop a GLB, glTF, FBX or OBJ anywhere on the page, or pick it: it is saved into
+  `imports/` (a glTF or OBJ with its buffer, materials or textures: `imports/<name>/`),
+  never over an existing file, and opens. `POST /api/import`, the file's bytes, 512 MB at most.
+- **Create:** a form (brief, type, target, style, optional reference photo, brought down to
+  2048 px) writes an open request into `.kiln-studio/requests.json` and gives the command to
+  paste: `/blender-kiln:kiln <brief>, type …, for …, <style>, reference photo … (Studio
+  request q_…)`. `studio.py requests` lists them, `studio.py request ID --status done --asset
+  A` closes one. The welcome now offers Create, Import and See an example. 57 tests.
+
 ### Added — Kiln Studio: a welcome for an empty project
 
 - An empty project opens on what to do first, and on what Studio can see of the setup:

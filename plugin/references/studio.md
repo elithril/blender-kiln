@@ -234,6 +234,7 @@ python3 <skill>/studio/studio.py work next                                      
 | `studio.py live <folder> --phase P --text "…"` | Record a build step; alone, show the build; `--end` closes it and removes `_live` |
 | `studio.py work start <asset>... --label L` | Show the user which models a command works on (§ 5); `next`, `begin <asset>`, `done <asset>`, `end`; alone, show the run |
 | `studio.py config [KEY=VALUE ...]` | The project's settings (§ 9): print them, or set `live_view`, `auto_open`, `target`, `exclude` (`--json`) |
+| `studio.py requests` / `request ID --status done --asset A` | The models asked for in the Create form (§ 10): list them, close one once built |
 
 The commands other than `open` find the project from the current folder upwards (the
 first folder holding `.kiln-studio/`); pass `--root PROJECT` from elsewhere.
@@ -328,7 +329,8 @@ opens in, lengths in metres or centimetres, whether fixed pins start hidden. Not
 you to read.
 
 **Project** — `.kiln-studio/config.json`, committed with the notes. Read it at CONFIG
-(`studio.py config`, or the file): its values are the session's defaults, and the user's
+(`studio.py config`, or the file): a key **set in the file** is the session's default
+(`studio.py config` marks the others `(default)`: they change nothing), and the user's
 answer in the session wins.
 
 | Key | Values (default) | What it sets |
@@ -340,3 +342,29 @@ answer in the session wins.
 
 Studio refuses an unknown key or a bad value from the page, and keeps any other key the
 file has as it is.
+
+---
+
+## 10. Create and Import — models the user brings or asks for
+
+**Import.** A `.glb .gltf .fbx .obj` dropped anywhere on the page, or picked with the
+import button, is saved into `imports/` (a glTF or OBJ dropped with its `.bin`, `.mtl` or
+textures: `imports/<its name>/`), never over a file already there (`chair-2.glb`), and opens.
+It is an ordinary model from then on: notes, checks, `/kiln studio`.
+
+**Create.** The form (brief, type, target, style, an optional reference photo) writes a
+request into `.kiln-studio/requests.json` — open, like a note, the photo beside it in
+`.kiln-studio/requests/` — and gives the user the command to paste:
+
+```
+/blender-kiln:kiln a sturdy oak barrel, type prop, for the web (glTF), stylized, reference photo .kiln-studio/requests/q_….jpg (Studio request q_…)
+```
+
+It is a brief like any other: run the pipeline on it, the photo as the reference image.
+When the model is exported, close the request:
+
+```bash
+python3 <skill>/studio/studio.py request q_… --status done --asset <the asset>
+```
+
+`studio.py requests` lists the open ones (`--all`, `--json`).

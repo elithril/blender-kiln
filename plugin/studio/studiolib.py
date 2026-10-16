@@ -1199,6 +1199,124 @@ def work_view(run: dict | None) -> dict | None:
             "started": run.get("started"), "updated": run.get("updated"), "dots": dots}
 
 
+# ── requests: a model asked for in Studio's Create form ──────────────────────
+# Like a note, but for a model that does not exist yet: open until Claude has built it.
+
+REQUEST_ID_RE = re.compile(r"^q_[a-z0-9]{6,16}$")
+REQUEST_TYPES = ("prop", "character", "creature", "vehicle", "environment")
+REQUEST_TARGETS = ("web", "desktop", "ar", "print")
+REQUEST_STYLES = ("realistic", "stylized", "cartoon", "low-poly")
+TARGET_WORDS = {"web": "for the web (glTF)", "desktop": "for Unity/Unreal (FBX)", "ar": "for AR (USDZ)",
+                "print": "for 3D printing"}
+
+
+def requests_path(project: Project) -> Path:
+    return project.data / "requests.json"
+
+
+def load_requests(project: Project) -> list[dict]:
+    return read_json(requests_path(project), {"requests": []}).get("requests", [])
+
+
+def request_command(r: dict) -> str:
+    """What the user pastes in Claude Code: the brief first (the skill reads anything that
+    is not a command as a brief), then what the form said, then the request's id."""
+    parts = [r["brief"].strip().rstrip(".")]
+    if r.get("type"):
+        parts.append(f"type {r['type']}")
+    if r.get("target"):
+        parts.append(TARGET_WORDS[r["target"]])
+    if r.get("style"):
+        parts.append(r["style"])
+    if r.get("reference"):
+        parts.append(f"reference photo {r['reference']}")
+    one_line = " ".join(", ".join(parts).split())
+    return f"/blender-kiln:kiln {one_line} (Studio request {r['id']})"
+
+
+def add_request(project: Project, brief: str, *, type_: str | None = None, target: str | None = None,
+                style: str | None = None, photo: bytes | None = None) -> dict:
+    brief = " ".join(str(brief or "").split())
+    if not brief:
+        raise ValueError("a request needs a brief")
+    if len(brief) > 4000:
+        raise ValueError("the brief is too long (4,000 characters at most)")
+    for name, v, allowed in (("type", type_, REQUEST_TYPES), ("target", target, REQUEST_TARGETS), ("style", style, REQUEST_STYLES)):
+        if v and v not in allowed:
+            raise ValueError(f"{name} must be one of {', '.join(allowed)}")
+    project.ensure()
+    rid = new_id("q")
+    r = {"id": rid, "kind": "create", "brief": brief, "type": type_ or None, "target": target or None,
+         "style": style or None, "reference": None, "status": "open", "by": "user", "created": now(),
+         "thread": []}
+    if photo:
+        d = project.data / "requests"
+        d.mkdir(parents=True, exist_ok=True)
+        p = d / (rid + image_ext(photo))
+        p.write_bytes(photo)
+        r["reference"] = project.rel(p)
+    r["command"] = request_command(r)
+    with Lock(project):
+        items = load_requests(project)
+        items.append(r)
+        write_json(requests_path(project), {"requests": items})
+    return r
+
+
+def close_request(project: Project, rid: str, *, status: str = "done", asset: str | None = None,
+                  text: str = "") -> dict:
+    if status not in ("open", "done", "wontfix"):
+        raise ValueError("status must be open, done or wontfix")
+    with Lock(project):
+        items = load_requests(project)
+        for r in items:
+            if r["id"] == rid:
+                r["status"] = status
+                if asset:
+                    r["asset"] = asset
+                r.setdefault("thread", []).append({"by": "claude", "at": now(), "status": status, "text": text.strip()})
+                write_json(requests_path(project), {"requests": items})
+                return r
+    raise KeyError(f"no request {rid}")
+
+
+# ── import: model files dropped on the page ──────────────────────────────────
+
+IMPORT_DIR = "imports"
+COMPANION_EXTS = (".bin", ".mtl", ".png", ".jpg", ".jpeg", ".webp", ".ktx2")
+SAFE_NAME_RE = re.compile(r"^[^/\\\x00-\x1f:*?\"<>|]{1,200}$")
+
+
+def import_file(project: Project, name: str, data: bytes, folder: str | None = None) -> str:
+    """Save a dropped file under imports/ (or imports/<folder>/ for a glTF or OBJ and the
+    files it needs), never over an existing one. Returns its project path."""
+    name = Path(str(name)).name
+    if not SAFE_NAME_RE.match(name) or name.startswith("."):
+        raise ValueError(f"not a file name Studio saves: {name!r}")
+    ext = Path(name).suffix.lower()
+    if ext not in MODEL_EXTS and not (folder and ext in COMPANION_EXTS):
+        raise ValueError(f"{name}: Studio imports {', '.join(MODEL_EXTS)} (and, beside a glTF or OBJ, its {', '.join(COMPANION_EXTS)})")
+    base = project.root / IMPORT_DIR
+    if folder:
+        folder = Path(str(folder)).name
+        if not re.match(r"^[\w.-]{1,80}$", folder) or folder.startswith("."):
+            raise ValueError(f"not a folder name Studio makes: {folder!r}")
+        base = base / folder
+    base.mkdir(parents=True, exist_ok=True)
+    dst = base / name
+    # Never replace a file: chair.glb, chair-2.glb, … (companions keep their name: the
+    # glTF or OBJ refers to them by it, and their folder is new).
+    if dst.exists() and not (folder and ext in COMPANION_EXTS):
+        stem, n = dst.stem, 2
+        while (base / f"{stem}-{n}{dst.suffix}").exists():
+            n += 1
+        dst = base / f"{stem}-{n}{dst.suffix}"
+    tmp = dst.with_name(f".{dst.name}.tmp")
+    tmp.write_bytes(data)
+    os.replace(tmp, dst)
+    return project.rel(dst)
+
+
 # ── the example model: "See an example" on Studio's welcome screen ───────────
 
 EXAMPLE_SRC = Path(__file__).resolve().parent / "example"

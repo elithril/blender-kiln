@@ -12,6 +12,7 @@
     studio.py live FOLDER [--phase P] [--text "what it did"] | live FOLDER --end [--keep-file]
     studio.py work start ASSET... [--label L] | next | begin ASSET | done ASSET | end [--text T]
     studio.py config [KEY=VALUE ...] [--json]
+    studio.py requests [--all] | request ID --status done|wontfix|open [--asset A] [--text T]
 
 PROJECT is any folder (default: the current one). Studio finds every .glb .gltf
 .fbx .obj under it, groups kiln's _original/_final stages into one asset, and keeps
@@ -44,7 +45,7 @@ import studiolib as sl  # noqa: E402
 
 DEFAULT_PORT = 4840
 COMMANDS = ("open", "serve", "stop", "status", "list", "notes", "show", "history",
-            "reply", "log", "snapshot", "revert", "meta", "checks", "live", "work", "config")
+            "reply", "log", "snapshot", "revert", "meta", "checks", "live", "work", "config", "requests", "request")
 
 
 # ── the server's lifecycle ───────────────────────────────────────────────────
@@ -553,6 +554,33 @@ def cmd_config(args) -> None:
         print(f"{k:10s} {shown}" + ("" if k in explicit else "   (default)"))
 
 
+def cmd_requests(args) -> None:
+    """The models asked for in Studio's Create form, open ones first."""
+    project = find_project(args.root)
+    rows = [r for r in sl.load_requests(project) if args.all or r["status"] == "open"]
+    if args.json:
+        print(json.dumps(rows, indent=2))
+        return
+    if not rows:
+        print("No open request." if not args.all else "No request yet.")
+        return
+    for r in rows:
+        print(f"{r['id']}  {r['status']:7s}  {r['created'][:16]}  {r['brief'][:70]}")
+        for k in ("type", "target", "style", "reference", "asset"):
+            if r.get(k):
+                print(f"    {k}: {r[k]}")
+
+
+def cmd_request(args) -> None:
+    project = find_project(args.root)
+    asset = _asset(project, args.asset).id if args.asset else None
+    try:
+        r = sl.close_request(project, args.id, status=args.status, asset=asset, text=args.text or "")
+    except (KeyError, ValueError) as e:
+        raise SystemExit(str(e).strip("'\""))
+    print(f"{r['id']}: {r['status']}" + (f", {r['asset']}" if r.get("asset") else ""))
+
+
 def main(argv: list[str] | None = None) -> None:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv or (argv[0] not in COMMANDS and argv[0] not in ("-h", "--help")):
@@ -621,6 +649,14 @@ def main(argv: list[str] | None = None) -> None:
     cf = p("config", cmd_config, "the project's settings: print them, or set KEY=VALUE (live_view, auto_open, target, exclude)")
     cf.add_argument("set", nargs="*", metavar="KEY=VALUE", help="exclude takes a comma-separated list")
     cf.add_argument("--json", action="store_true")
+    rq = p("requests", cmd_requests, "the models asked for in Studio's Create form (open ones; --all)")
+    rq.add_argument("--all", action="store_true")
+    rq.add_argument("--json", action="store_true")
+    rc = p("request", cmd_request, "close a request once its model is built (--status done --asset A)")
+    rc.add_argument("id")
+    rc.add_argument("--status", choices=("done", "wontfix", "open"), default="done")
+    rc.add_argument("--asset", help="the asset built for it")
+    rc.add_argument("--text", help="what was made, in a few words")
     args = ap.parse_args(argv)
     try:
         args.fn(args)

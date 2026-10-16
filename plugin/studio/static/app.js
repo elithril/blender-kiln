@@ -57,6 +57,8 @@ const state = {
   loadSeq: 0,
 };
 let seen = {};
+// Commands other parts add to the ⌘K palette: fn(add).
+const paletteExtras = [];
 
 // ── api ──────────────────────────────────────────────────────────────────────
 
@@ -684,7 +686,7 @@ function renderWelcome() {
   el.innerHTML = `<div class="welcome">
     <div class="wlogo" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M16 3c3 6 9 8 9 16a9 9 0 0 1-18 0c0-5 3-7 4-11 1 3 3 4 3 4s-1-5 2-9z"/></svg></div>
     <p class="big">${esc(t('Nothing here yet'))}</p>
-    <p>${esc(t('Studio shows every .glb, .gltf, .fbx and .obj under {root}. To start:', { root: state.name || state.root }))}</p>
+    <p>${esc(t('Studio shows every .glb, .gltf, .fbx and .obj under {root}. Start one of three ways:', { root: state.name || state.root }))}</p>
     <div class="wcards">${cards}</div>
     <h4>${esc(t('Your setup'))}${setup?.kiln ? ` <span class="dim">· kiln ${esc(setup.kiln)}</span>` : ''}</h4>
     <ul class="setup">${setup ? setup.rows.map(setupRow).join('') : `<li class="dim">${esc(t('Looking…'))}</li>`}</ul>
@@ -1784,6 +1786,130 @@ document.addEventListener('keydown', (e) => {
   if (fn) { e.preventDefault(); fn(); }
 });
 
+// ── create: ask Claude for a model that does not exist yet ───────────────────
+// The form writes a request into .kiln-studio/requests.json (open, like a note) and
+// gives the command to paste in Claude Code; the skill closes it once the model is built.
+
+let crPhoto = null;
+async function openCreate() {
+  document.querySelector('dialog[open]')?.close();
+  $('#cr-form').hidden = false;
+  $('#cr-done').hidden = true;
+  $('#cr-status').textContent = '';
+  try { const pt = (await api('/api/config')).settings.target; if ($(`#cr-target option[value="${pt}"]`)) $('#cr-target').value = pt; } catch { /* web */ }
+  renderRequests();
+  $('#create').showModal();
+  $('#cr-brief').focus();
+}
+async function renderRequests() {
+  let items = [];
+  try { items = (await api('/api/requests')).requests.filter((r) => r.status === 'open').reverse(); } catch { /* none to show */ }
+  $('#cr-list').innerHTML = items.length ? `<h4>${esc(tp(items.length, '{n} request waiting for Claude', '{n} requests waiting for Claude'))}</h4>${items.slice(0, 5).map((r) => `<div class="rq"><span>${esc(r.brief)} <span class="dim small">· ${esc(ago(r.created))}</span></span><div class="cmd"><code>${esc(r.command)}</code><button class="btn sm" data-copy="${esc(r.command)}">${esc(t('Copy'))}</button></div></div>`).join('')}` : '';
+  $$('#cr-list [data-copy]').forEach((b) => (b.onclick = () => copy(b.dataset.copy)));
+}
+// A photo larger than 2048 px is brought down to it: enough for Claude to read, lighter to keep.
+function readPhoto(file) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, 2048 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(img.src);
+      res(c.toDataURL('image/jpeg', 0.9));
+    };
+    img.onerror = () => rej(new Error(t('not an image this browser can read')));
+    img.src = URL.createObjectURL(file);
+  });
+}
+$('#cr-file').onchange = async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  try {
+    crPhoto = await readPhoto(f);
+    $('#cr-thumb').src = crPhoto; $('#cr-thumb').hidden = $('#cr-nophoto').hidden = false;
+  } catch (err) { $('#cr-status').textContent = err.message; }
+};
+$('#cr-nophoto').onclick = () => { crPhoto = null; $('#cr-file').value = ''; $('#cr-thumb').hidden = $('#cr-nophoto').hidden = true; };
+$('#cr-form').onsubmit = async (e) => {
+  e.preventDefault();
+  const brief = $('#cr-brief').value.trim();
+  if (!brief) { $('#cr-brief').focus(); return; }
+  $('#cr-save').disabled = true;
+  $('#cr-status').textContent = t('Saving…');
+  try {
+    const r = await api('/api/requests', { method: 'POST', body: { brief, type: $('#cr-type').value, target: $('#cr-target').value, style: $('#cr-style').value, photo: crPhoto } });
+    $('#cr-cmd').textContent = r.command;
+    $('#cr-copy').onclick = () => copy(r.command);
+    $('#cr-form').hidden = true;
+    $('#cr-done').hidden = false;
+    $('#cr-brief').value = ''; $('#cr-nophoto').click();
+    renderRequests();
+  } catch (err) { $('#cr-status').textContent = t('Not saved: {e}', { e: err.message }); }
+  finally { $('#cr-save').disabled = false; }
+};
+$('#cr-another').onclick = () => { $('#cr-form').hidden = false; $('#cr-done').hidden = true; $('#cr-status').textContent = ''; $('#cr-brief').focus(); };
+$('#t-create').onclick = openCreate;
+
+// ── import: drop model files on the page, or pick them ───────────────────────
+// Saved into imports/ (a glTF or OBJ with the files it needs: imports/<its name>/),
+// never over a file already there; the first one opens.
+
+const MODEL_EXT = ['.glb', '.gltf', '.fbx', '.obj'];
+const extOf = (n) => n.slice(n.lastIndexOf('.')).toLowerCase();
+async function importFiles(files) {
+  files = [...files];
+  const models = files.filter((f) => MODEL_EXT.includes(extOf(f.name)));
+  if (!models.length) { toast(t('Nothing to import: drop a .glb, .gltf, .fbx or .obj file'), 'warn'); return; }
+  const lead = models.find((f) => ['.gltf', '.obj'].includes(extOf(f.name)));
+  const others = files.filter((f) => !models.includes(f));
+  // A glTF or OBJ with its .bin, .mtl or textures: one folder for all of them.
+  const folder = lead && others.length ? lead.name.slice(0, lead.name.lastIndexOf('.')).replace(/[^\w.-]+/g, '-').slice(0, 60) || 'import' : null;
+  const send = folder ? files : models;
+  const saved = [];
+  toast(tp(send.length, 'Importing {n} file…', 'Importing {n} files…'));
+  for (const f of send) {
+    try {
+      const q = new URLSearchParams({ name: f.name, ...(folder ? { folder } : {}) });
+      const res = await fetch(`/api/import?${q}`, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: f });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      saved.push(data.path);
+    } catch (e) { toast(t('Could not import {f}: {e}', { f: esc(f.name), e: esc(e.message) }), 'warn', 8000); return; }
+  }
+  await fetchAssets();
+  const first = saved.find((x) => MODEL_EXT.includes(extOf(x)));
+  const a = state.assets.find((x) => x.variants.some((v) => v.file === first));
+  toast(tp(saved.length, '{n} file imported into {f}', '{n} files imported into {f}', { f: `<span class="mono">${esc(first.slice(0, first.lastIndexOf('/') + 1))}</span>` }), 'ok', 5000);
+  if (a) go(a.id);
+  if (others.length && !folder) toast(t('Left out: {f} (only beside a .gltf or .obj)', { f: esc(others.map((f) => f.name).join(', ')) }), 'warn', 6000);
+}
+$('#t-import').onclick = () => $('#import-input').click();
+$('#import-input').onchange = (e) => { if (e.target.files.length) importFiles(e.target.files); e.target.value = ''; };
+{
+  let depth = 0;
+  const hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
+  addEventListener('dragenter', (e) => { if (!hasFiles(e)) return; depth++; $('#drop').hidden = false; e.preventDefault(); });
+  addEventListener('dragover', (e) => { if (hasFiles(e)) e.preventDefault(); });
+  addEventListener('dragleave', () => { depth = Math.max(0, depth - 1); if (!depth) $('#drop').hidden = true; });
+  addEventListener('drop', (e) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault(); depth = 0; $('#drop').hidden = true;
+    importFiles(e.dataTransfer.files);
+  });
+}
+welcomeCards.unshift(
+  { key: 'create', title: N_('Create'), text: N_('Describe the model, add a photo if you have one: Studio gives you the command for Claude.'),
+    icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>', run: () => openCreate() },
+  { key: 'import', title: N_('Import'), text: N_('A GLB, glTF, FBX or OBJ you already have: drop it anywhere on this page, or pick it.'),
+    icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>', run: () => $('#import-input').click() },
+);
+paletteExtras.push((add) => {
+  add('Help', 'Ask Claude for a new model', [], openCreate);
+  add('Help', 'Import a model file', [], () => $('#import-input').click());
+});
+
 // ── settings: personal (this browser) and the project's (shared with Claude) ──
 
 const settingsRows = []; // further personal rows (theme, language) register here
@@ -1941,7 +2067,6 @@ function commands() {
   for (const a of state.assets) add('Model', { text: t('Open {name}', { name: a.name }) }, [], () => go(a.id), () => a.id !== state.id);
   return C.filter((c) => { try { return c.when(); } catch { return false; } });
 }
-const paletteExtras = [];
 
 let palItems = [], palSel = 0;
 const labelOf = (c) => c.label.text || t(c.label);

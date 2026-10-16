@@ -815,6 +815,55 @@ class Api(Base):
         by = {c["key"]: c for c in checks.health(self.p, a, a.primary)}
         self.assertEqual((by["tris"]["value"], by["tris"]["level"], by["licence"]["level"]), (2202, "ok", "ok"))
 
+    def raw(self, path: str, data: bytes, headers=None) -> tuple[int, dict]:
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        h = {"Host": f"127.0.0.1:{self.port}", "Content-Type": "application/octet-stream"}
+        h.update(headers or {})
+        c.request("POST", path, body=data, headers=h)
+        r = c.getresponse()
+        out = (r.status, json.loads(r.read() or b"{}"))
+        c.close()
+        return out
+
+    def test_import_saves_into_imports_never_over_a_file(self) -> None:
+        model = self.f.read_bytes()
+        code, r = self.raw("/api/import?name=chair.glb", model)
+        self.assertEqual((code, r["path"]), (200, "imports/chair.glb"))
+        code, r = self.raw("/api/import?name=chair.glb", model)
+        self.assertEqual(r["path"], "imports/chair-2.glb")
+        ids = [a["id"] for a in self.req("GET", "/api/assets")[1]["assets"]]
+        self.assertIn("imports/chair", ids)
+        self.assertIn("imports/chair-2", ids)
+        # a glTF and its buffer, together in a folder of their own
+        self.assertEqual(self.raw("/api/import?name=scene.gltf&folder=scene", b"{}")[1]["path"], "imports/scene/scene.gltf")
+        self.assertEqual(self.raw("/api/import?name=scene.bin&folder=scene", b"\0")[1]["path"], "imports/scene/scene.bin")
+        self.assertEqual(self.raw("/api/import?name=tool.exe", b"MZ")[0], 400)
+        self.assertEqual(self.raw("/api/import?name=scene.bin", b"\0")[0], 400)   # a buffer alone is not a model
+        self.assertEqual(self.raw("/api/import?name=x.glb&folder=..", model)[0], 400)
+        self.assertEqual(self.raw("/api/import?name=x.glb", model, {"Content-Type": "application/json"})[0], 400)
+        self.assertEqual(self.raw("/api/import?name=x.glb", model, {"Origin": "http://evil.example"})[0], 403)
+        self.assertFalse((self.tmp / "x.glb").exists() or (self.tmp / "imports" / "x.glb").exists())
+
+    def test_a_request_for_a_new_model(self) -> None:
+        photo = "data:image/jpeg;base64," + base64.b64encode(JPEG).decode()
+        code, r = self.req("POST", "/api/requests", {"brief": "a low-poly wooden chair", "type": "prop",
+                                                      "target": "web", "style": "low-poly", "photo": photo})
+        self.assertEqual((code, r["status"]), (200, "open"))
+        self.assertTrue(r["command"].startswith("/blender-kiln:kiln a low-poly wooden chair, type prop, for the web (glTF), low-poly, reference photo .kiln-studio/requests/"))
+        self.assertTrue(r["command"].endswith(f"(Studio request {r['id']})"))
+        self.assertTrue((self.tmp / r["reference"]).is_file())
+        self.assertEqual([x["id"] for x in self.req("GET", "/api/requests")[1]["requests"]], [r["id"]])
+        self.assertEqual(self.req("POST", "/api/requests", {"brief": "  "})[0], 400)
+        self.assertEqual(self.req("POST", "/api/requests", {"brief": "x", "type": "spaceship"})[0], 400)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            studio.main(["requests", "--root", str(self.tmp)])
+            studio.main(["request", r["id"], "--status", "done", "--asset", "crate", "--root", str(self.tmp)])
+            studio.main(["requests", "--root", str(self.tmp)])
+        lines = out.getvalue().splitlines()
+        self.assertIn("a low-poly wooden chair", lines[0])
+        self.assertEqual(lines[-2:], [f"{r['id']}: done, generated-assets/crate", "No open request."])
+
     def test_files_stay_inside_the_project(self) -> None:
         code, body = self.req("GET", "/files/generated-assets/crate/crate_final.glb")
         self.assertEqual(code, 200)

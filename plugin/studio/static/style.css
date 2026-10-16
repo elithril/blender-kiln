@@ -691,3 +691,33 @@ body.no-model #right .notes-head, body.no-model #right #handoff { display: none;
 .setup li.missing .st { color: var(--danger); }
 .setup .small { margin-top: 2px; word-break: break-word; }
 .welcome code { font: 500 11.5px var(--mono); color: var(--accent); }
+
+/* create: a request for a new model */
+#create { width: min(600px, calc(100vw - 24px)); padding: 0; }
+#create .set-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+#create .set-head h3 { margin: 0; font-size: 15px; }
+#create .set-head form { margin: 0; }
+.cr-body { padding: 14px 18px; display: flex; flex-direction: column; gap: 12px; }
+.cr-body + .cr-body { border-top: 1px solid var(--line); }
+.cr-body .lab { display: block; color: var(--text-3); font-size: 11.5px; margin-bottom: 5px; }
+.cr-body textarea, .cr-body select { width: 100%; border-radius: 7px; border: 1px solid var(--line-2); background: var(--bg); padding: 8px 10px; font-size: 13px; color: var(--text); }
+.cr-body select { height: 32px; padding: 0 8px; }
+.cr-body textarea:focus, .cr-body select:focus { outline: none; border-color: var(--accent); }
+.cr-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.cr-photo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cr-photo .lab { width: 100%; margin: 0; }
+.cr-photo img { width: 54px; height: 54px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line-2); }
+.cr-body .row { display: flex; align-items: center; gap: 10px; }
+.cr-body p { margin: 0; color: var(--text-2); font-size: 12.5px; }
+.cr-list:empty { display: none; }
+.cr-list h4 { margin: 0; font: 600 10.5px/1.2 var(--mono); text-transform: uppercase; letter-spacing: .07em; color: var(--text-3); }
+.cr-list .rq { display: flex; flex-direction: column; gap: 4px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 12.5px; }
+.cr-list .rq:first-of-type { border-top: 0; }
+.cr-list .rq .cmd { margin: 0; }
+@media (max-width: 560px) { .cr-grid { grid-template-columns: 1fr; } }
+/* import: drop a file anywhere */
+#drop { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 78%, transparent); border: 3px dashed var(--accent); pointer-events: none; }
+#drop > div { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 28px; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line-2); box-shadow: var(--shadow); text-align: center; }
+#drop b { font-size: 16px; }
+#drop span { color: var(--text-2); font-size: 12.5px; }
+#create .cmd code { white-space: normal; word-break: break-word; line-height: 1.45; text-overflow: clip; }
