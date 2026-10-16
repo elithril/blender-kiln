@@ -569,6 +569,7 @@ Place the joints at the bends, and name them the way motion data names them:
 | Hind / leg | `LeftUpLeg` → `LeftLeg` → `LeftFoot` → `LeftToeBase` (and `Right…`) |
 | Fore / arm | `LeftArm` → `LeftForeArm` → `LeftHand` → `LeftFingers` (parented to `Spine1`) |
 | Tail | `Tail1` → `Tail2` → … (parented to `Hips`) |
+| Ears | `LeftEar`, `RightEar` (parented to `Head`) — they trail the head in `tools/quadruped.py` |
 | Eyelids | `LeftEyelid`, `RightEyelid` (parented to `Head`) — § Charm |
 
 Names matter beyond tidiness: motion models condition on them. UniMate's offline

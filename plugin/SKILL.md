@@ -761,7 +761,8 @@ Only when the user asks for motion. Route by **subject** — table and measureme
 `references/animation.md`:
 
 - **Ships its own clips** → keep them.
-- **Four-legged, idle or walk** → `tools/quadruped.py` (scripted, measured, exact loop).
+- **Four-legged, idle or walk** → `tools/quadruped.py` (scripted, measured, exact loop, ears,
+  tail and blinks included — `--blink` takes the lid's measured closing turn).
   Other quadruped moves → the asset's clips or hand keys. **Never UniMate**: measured
   unusable on four quadrupeds; `unimate.py` refuses one unless `--force`.
 - **Biped or winged, from a sentence** → UniMate:

@@ -283,7 +283,8 @@ except Exception as e:
 # tools/quadruped.py replaced text-to-motion for four-legged locomotion; its first
 # cycle locked the legs at 101% of their length and moved the hips forward instead of
 # up. Run it on a synthetic quadruped built here, so no asset is downloaded.
-def _synthetic_quadruped(path):
+def _synthetic_quadruped(path, extras=False):
+    """extras: ears, a three-bone tail and eyelids, for the secondary motion."""
     reset()
     def seg(a, b, r):
         d = b - a
@@ -304,6 +305,13 @@ def _synthetic_quadruped(path):
         add(f"{s}Arm", V(x, -0.18, 0.36), V(x, -0.20, 0.20), "Spine1")
         add(f"{s}ForeArm", V(x, -0.20, 0.20), V(x, -0.19, 0.07), f"{s}Arm")
         add(f"{s}Hand", V(x, -0.19, 0.07), V(x, -0.21, 0.01), f"{s}ForeArm", 0.025)
+    if extras:
+        for s, x in (("Left", 0.03), ("Right", -0.03)):
+            add(f"{s}Ear", V(x, -0.32, 0.58), V(x * 1.3, -0.31, 0.66), "Head", 0.012)
+            add(f"{s}Eyelid", V(x, -0.36, 0.56), V(x, -0.40, 0.56), "Head", 0.01)
+        add("Tail1", V(0, 0.25, 0.40), V(0, 0.33, 0.43), "Hips", 0.02)
+        add("Tail2", V(0, 0.33, 0.43), V(0, 0.41, 0.47), "Tail1", 0.018)
+        add("Tail3", V(0, 0.41, 0.47), V(0, 0.49, 0.52), "Tail2", 0.015)
     ad = bpy.data.armatures.new("quad"); arm = bpy.data.objects.new("quad", ad); bpy.context.scene.collection.objects.link(arm)
     bpy.context.view_layer.objects.active = arm; bpy.ops.object.mode_set(mode='EDIT')
     for n, a, b, p in bones:
@@ -391,6 +399,19 @@ try:
         ok(f"quadruped: one GLB, clips {moving} (largest key range)")
 except Exception as e:
     fail("quadruped", f"one GLB with every clip: {e}")
+
+# Secondary motion: the ears trail the head, the tail's tip trails its root, the lids blink.
+# No session got them from quadruped.py; the cat's wrote them itself.
+try:
+    _synthetic_quadruped("/tmp/_quad_x.glb", extras=True)
+    sc, arm, mx, _, _ = Q.cycle("/tmp/_quad_x.glb", "/tmp", "idle", 48, Q.idle, blink=("X", 90))
+    if mx.get("ear_lag_frames", 0) < 2 or mx.get("tail_tip_lag_frames", 0) < 2 or mx.get("blinks") != 3:
+        fail("quadruped", f"secondary motion missing: {mx}")
+    else:
+        ok(f"quadruped: idle ears trail the head by {mx['ear_lag_frames']} frames, tail tip its root by "
+           f"{mx['tail_tip_lag_frames']}, {mx['blinks']} blinks")
+except Exception as e:
+    fail("quadruped", f"secondary motion: {e}")
 
 # ── 5d. Bone-parented parts survive skin-only pipelines; generated clips loop.
 # A Quaternius dragon's eyes hung off a bone by parenting: UniMate kept the skin and left

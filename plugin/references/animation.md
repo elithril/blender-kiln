@@ -75,6 +75,17 @@ shortens the stride or lowers the hips until the legs stay bent (≤ 95%). It re
 feet not to skate (0.106 m/s on the cat, the four paws in exact step). It needs the
 Animation-ready skeleton's names; it says which are missing.
 
+**Secondary motion comes with the bones that carry it** — no session got it unasked, and
+the cat's wrote its own module: the head nods twice per stride, `LeftEar` / `RightEar`
+trail it (they take where the head was 3 frames before, ×2, so they lag and overshoot), the
+`Tail1…n` segments wave each 0.55 rad later than the one before, and the eyelids blink once
+in the walk and three times in the idle, a double among them. The blink needs the lid
+bone's closing axis and angle, **measured on the model** (rule 4): `--blink X:140` closed the
+cat's lids (centred on the eye's axis: −0.39 open → +0.54; −140 reached only +0.08).
+Without it the tool says so and writes no blink. The report gives what it measured on the
+baked pose: on the cat the ears trail the head by 4 frames in the walk, 3 in the idle (0
+before), the tail's tip its root by 10 frames in the idle (0 before), 1 and 3 blinks.
+
 It writes **one GLB with every motion as a named clip**, `{asset}_animated.glb` — a site
 plays Walk and Idle from one file (`--per-clip` also writes `{motion}.glb` each, as it once
 did only). The clips are the motions' names (`idle`, `walk`): rename the actions if the

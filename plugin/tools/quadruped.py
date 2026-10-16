@@ -1,7 +1,8 @@
 """Procedural idle and walk cycles for a rigged quadruped, measured before export.
 
     blender --background --factory-startup --python-exit-code 1 --python quadruped.py -- \\
-        --asset SK_Cat.glb --out ./anim [--motions idle,walk] [--period 32] [--per-clip]
+        --asset SK_Cat.glb --out ./anim [--motions idle,walk] [--period 32] [--per-clip] \\
+        [--blink X:140]
 
 Writes ONE GLB with every motion as a named clip, {asset}_animated.glb (--per-clip: one
 GLB per motion as well, {motion}.glb).
@@ -12,7 +13,13 @@ references/animation.md. A scripted cycle is deterministic and loops exactly.
 
 The rig must follow references/characters.md § Animation-ready skeleton
 (Hips, Spine1, Neck, Head, {Left,Right}{UpLeg,Leg,Foot}, {Left,Right}{Arm,ForeArm,Hand},
-optional Tail1..n). Each clip is checked before it is written:
+optional Tail1..n, LeftEar/RightEar, LeftEyelid/RightEyelid). Secondary motion comes with
+the bones that carry it: the head nods, the ears trail it (where it was 3 frames before,
+overshooting), the tail waves root to tip (0.55 rad later per segment), the lids blink —
+once in the walk, three times in the idle, a double among them — when --blink gives the
+lid bone's closing axis and angle, measured on the model (no session's sign was right
+first). Each lag is measured back off the baked pose and reported. Each clip is checked
+before it is written:
 
 - legs never straighter than 95% of their length (a locked leg reads as too long:
   the rejected first cat cycle peaked at 101%, the approved one at 93%) — the tool shortens the stride and lowers
@@ -36,7 +43,7 @@ import sys
 from pathlib import Path
 
 import bpy
-from mathutils import Vector
+from mathutils import Quaternion, Vector
 
 REQUIRED = ["Hips", "Spine1", "Neck", "Head"] + [f"{s}{p}" for s in ("Left", "Right")
                                                   for p in ("UpLeg", "Leg", "Foot", "Arm", "ForeArm", "Hand")]
@@ -49,6 +56,11 @@ STRIDE, CROUCH = 0.11, 0.05   # walk start: stride over body, hips lowered by th
 # 0.15 read as a cat stalking its prey on a short-legged mascot; the loop below lowers the
 # hips only as far as the legs need to stay bent.
 IDLE_CROUCH = 0.10
+# Secondary motion, when the rig has the bones (characters.md § Animation-ready skeleton):
+EAR_LAG, EAR_FOLLOW = 3, 2.0   # ears: where the head was 3 frames ago, overshooting x2 — a lag
+TAIL_LAG = 0.55                # tail: each segment 0.55 rad later than the one before (the cat's)
+BLINK = (0.35, 0.8, 1.0, 1.0, 0.75, 0.45, 0.2, 0.05)   # 3 frames closing, 1 held, 4 opening
+BLINKS = {"walk": (0.6,), "idle": (0.25, 0.62, 0.80)}   # where in the cycle; idle's last two: a double
 
 
 def load(path):
@@ -93,11 +105,19 @@ def setup(sc, arm):
         level.matrix_world = M @ B[paw].matrix_local
         PB[paw].constraints.new('COPY_ROTATION').target = level
     to_hips = (M.to_3x3() @ B["Hips"].matrix_local.to_3x3()).inverted()   # world offset -> Hips rest frame
-    tails = sorted((b for b in B if b.name.startswith("Tail")), key=lambda b: b.name)
-    return dict(PB=PB, fwd=fwd, body=body, leg=leg, feet=feet, to_hips=to_hips, tails=[t.name for t in tails])
+    tails = sorted((b for b in B if b.name.startswith("Tail") and b.name[4:].isdigit()), key=lambda b: int(b.name[4:]))
+    # an ear follows the head's own rotation axes, expressed in the ear's rest frame (rule 1)
+    hx, hz = (B["Head"].matrix_local.to_3x3() @ Vector(a) for a in ((1, 0, 0), (0, 0, 1)))
+    ears = {e: tuple(B[e].matrix_local.to_3x3().inverted() @ a for a in (hx, hz))
+            for e in ("LeftEar", "RightEar") if e in B}
+    lids = [n for n in ("LeftEyelid", "RightEyelid") if n in B]
+    return dict(PB=PB, fwd=fwd, body=body, leg=leg, feet=feet, to_hips=to_hips, tails=[t.name for t in tails],
+                ears=ears, lids=lids)
 
 
-def pose(R, f, feet, up=0.0, hips=(0, 0, 0), chest=(0, 0, 0), neck=(0, 0, 0), head=(0, 0, 0), tail=(0, 0, 0)):
+def pose(R, f, feet, up=0.0, hips=(0, 0, 0), chest=(0, 0, 0), neck=(0, 0, 0), head=(0, 0, 0), tail=(0, 0, 0),
+         ears=(0.0, 0.0), blink=0.0):
+    """tail: one rotation for every segment, or a list, one per segment."""
     PB, fwd = R["PB"], R["fwd"]
     for k, (tgt, rest) in R["feet"].items():
         d, h = feet.get(k, (0.0, 0.0))
@@ -106,8 +126,32 @@ def pose(R, f, feet, up=0.0, hips=(0, 0, 0), chest=(0, 0, 0), neck=(0, 0, 0), he
     for name, rot in (("Hips", hips), ("Spine1", chest), ("Neck", neck), ("Head", head)):
         PB[name].rotation_euler = rot; PB[name].keyframe_insert("rotation_euler", frame=f)
     for i, t in enumerate(R["tails"]):
-        PB[t].rotation_euler = tail; PB[t].keyframe_insert("rotation_euler", frame=f)
+        PB[t].rotation_euler = tail[i] if isinstance(tail, list) else tail
+        PB[t].keyframe_insert("rotation_euler", frame=f)
+    for e, (ax, az) in R["ears"].items():
+        PB[e].rotation_euler = (Quaternion(ax, ears[0]) @ Quaternion(az, ears[1])).to_euler('XYZ')
+        PB[e].keyframe_insert("rotation_euler", frame=f)
+    if R.get("blink"):
+        axis, deg = R["blink"]
+        for lid in R["lids"]:
+            rot = [0.0, 0.0, 0.0]; rot["XYZ".index(axis)] = math.radians(deg) * blink
+            PB[lid].rotation_euler = rot; PB[lid].keyframe_insert("rotation_euler", frame=f)
     PB["Hips"].keyframe_insert("location", frame=f)
+
+
+def secondary(R, f, n, head_at, name):
+    """Ears lagging the head, a tail wave from root to tip, blinks — all periodic, so the loop holds."""
+    P = R["P"]
+    h0, h1 = head_at(n), head_at(n - EAR_LAG / P)
+    ears = (EAR_FOLLOW * (h1[0] - h0[0]), EAR_FOLLOW * (h1[2] - h0[2]))
+    k = f % P
+    blink = max([BLINK[k - round(at * P)] for at in BLINKS[name] if 0 <= k - round(at * P) < len(BLINK)] + [0.0])
+    return ears, blink
+
+
+def tail_wave(R, amp, w, phase):
+    N = max(len(R["tails"]), 1)
+    return [(0, 0, amp * (1 + 0.25 * i) / (1 + 0.125 * (N - 1)) * math.sin(w - phase - TAIL_LAG * i)) for i in range(N)]
 
 
 def walk(R, f, n, stride, crouch):
@@ -120,16 +164,28 @@ def walk(R, f, n, stride, crouch):
         else:                                                     # swing: an arc forward
             u = (t - 0.60) / 0.40
             feet[k] = ((-0.5 + u) * stride * R["body"], 0.06 * R["body"] * math.sin(math.pi * u))
+    ears, blink = secondary(R, f, n, walk_head, "walk")
     pose(R, f, feet, up=-crouch * L + 0.015 * L * math.sin(2 * w),
          hips=(0, 0.04 * math.sin(w), 0.03 * math.sin(w)), chest=(0, -0.03 * math.sin(w), -0.04 * math.sin(w)),
-         head=(0.05 * math.sin(2 * w + 1), 0, 0.03 * math.sin(w)), tail=(0, 0, 0.12 * math.sin(w - 1)))
+         head=walk_head(n), tail=tail_wave(R, 0.12, w, 1), ears=ears, blink=blink)
+
+
+def walk_head(n):
+    w = 2 * math.pi * n
+    return (0.05 * math.sin(2 * w + 1), 0, 0.03 * math.sin(w))     # a nod on each fore footfall
+
+
+def idle_head(n):
+    w = 2 * math.pi * n
+    return (0.05 * math.sin(w), 0, 0.6 * 0.35 * math.sin(w) * min(1.0, abs(math.sin(w)) * 1.5))
 
 
 def idle(R, f, n, stride, crouch):
     w, L = 2 * math.pi * n, R["leg"]
     look = 0.35 * math.sin(w) * min(1.0, abs(math.sin(w)) * 1.5)
+    ears, blink = secondary(R, f, n, idle_head, "idle")
     pose(R, f, {}, up=-IDLE_CROUCH * L + 0.006 * L * math.sin(2 * w), chest=(0.015 * math.sin(2 * w), 0, 0),
-         neck=(0, 0, 0.4 * look), head=(0.05 * math.sin(w), 0, 0.6 * look), tail=(0, 0, 0.18 * math.sin(w)))
+         neck=(0, 0, 0.4 * look), head=idle_head(n), tail=tail_wave(R, 0.18, w, 0), ears=ears, blink=blink)
 
 
 def bake(sc, arm, P):
@@ -175,20 +231,63 @@ def measure(sc, arm, P):
     return dict(extension=round(ext, 3), root_speed_m_s=round(mean, 3), stance_speed_spread=round(spread, 2), frames=P)
 
 
-def make(asset, out, name, P, fn, stride, crouch):
-    sc, arm = load(asset); R = setup(sc, arm)
+def _lag(a, b, within):
+    """Frames by which periodic signal b trails a (circular cross-correlation), |lag| < within."""
+    P = len(a); ma, mb = sum(a) / P, sum(b) / P
+    score = {k: sum((a[f] - ma) * (b[(f + k) % P] - mb) for f in range(P)) for k in range(-within + 1, within)}
+    return max(score, key=score.get)
+
+
+def measure_secondary(sc, arm, P, R, name):
+    """Ear lag behind the head, tail tip lag behind its root, blinks — read off the baked pose."""
+    M3, fwd = arm.matrix_world.to_3x3(), R["fwd"]
+    up = Vector((0, 0, 1)); side = fwd.cross(up)
+    def angle(bone, axis):
+        """How far the bone has turned about a world axis: its direction's component along the
+        perpendicular to its rest direction — linear in that turn, blind to turns about others."""
+        rest = (M3 @ arm.data.bones[bone].matrix_local.to_3x3() @ Vector((0, 1, 0))).normalized()
+        y = M3 @ arm.pose.bones[bone].matrix.to_3x3() @ Vector((0, 1, 0))
+        return math.asin(max(-1.0, min(1.0, y.normalized().dot(axis.cross(rest).normalized()))))
+    sig = {}
+    for f in range(P):
+        sc.frame_set(f)
+        sig.setdefault("head", []).append(angle("Head", side))
+        for e in R["ears"]:
+            sig.setdefault(e, []).append(angle(e, side))
+        if len(R["tails"]) > 1:              # how far aside each end swings, from the hips
+            hips = arm.matrix_world @ arm.pose.bones["Hips"].head
+            for key, bone in (("root", R["tails"][0]), ("tip", R["tails"][-1])):
+                sig.setdefault(key, []).append((arm.matrix_world @ arm.pose.bones[bone].tail - hips).dot(side))
+        if R.get("blink") and R["lids"]:     # how far the lid bone has turned, against the closing angle
+            turn = arm.pose.bones[R["lids"][0]].matrix_basis.to_quaternion().angle
+            sig.setdefault("shut", []).append(turn >= 0.9 * math.radians(abs(R["blink"][1])))
+    out = {}
+    if R["ears"]:
+        # within a quarter cycle: the walk nods twice per cycle, a wider search finds the next nod
+        out["ear_lag_frames"] = min(_lag(sig["head"], sig[e], P // 4) for e in R["ears"])
+    if "tip" in sig:
+        out["tail_tip_lag_frames"] = _lag(sig["root"], sig["tip"], P // 2)
+    shut = sig.get("shut", [])
+    out["blinks"] = sum(1 for f in range(len(shut)) if shut[f] and not shut[f - 1])
+    return out
+
+
+def make(asset, out, name, P, fn, stride, crouch, blink=None):
+    """blink: (axis, degrees) that turn a lid bone shut — the model's, measured (animation.md rule 4)."""
+    sc, arm = load(asset); R = setup(sc, arm); R["P"], R["blink"] = P, blink
     for f in range(P + 1):
         fn(R, f, f / P, stride, crouch)
     bake(sc, arm, P)
     m = measure(sc, arm, P)
+    m.update(measure_secondary(sc, arm, P, R, name))
     arm.animation_data.action.name = name
     return sc, arm, m
 
 
-def cycle(asset, out, name, P, fn, stride=STRIDE, crouch=CROUCH):
+def cycle(asset, out, name, P, fn, stride=STRIDE, crouch=CROUCH, blink=None):
     """make(), shortening the stride and lowering the hips until the legs stay bent."""
     for attempt in range(6):
-        sc, arm, m = make(asset, out, name, P, fn, stride, crouch)
+        sc, arm, m = make(asset, out, name, P, fn, stride, crouch, blink)
         if m["extension"] <= MAX_EXTENSION or name == "idle":
             break
         stride *= 0.85; crouch += 0.03
@@ -225,6 +324,10 @@ def export_all(asset, saved, path):
     return [t.name for t in ad.nla_tracks]
 
 
+def R_lids(arm):
+    return [n for n in ("LeftEyelid", "RightEyelid") if n in arm.data.bones]
+
+
 def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     ap = argparse.ArgumentParser(); ap.add_argument("--asset", required=True); ap.add_argument("--out", default="anim")
@@ -232,12 +335,22 @@ def main():
     ap.add_argument("--stride", type=float, default=STRIDE, help="walk stride, share of the body length")
     ap.add_argument("--crouch", type=float, default=CROUCH, help="walk: hips lowered by this share of a leg, to start")
     ap.add_argument("--per-clip", action="store_true", help="also one GLB per motion")
+    ap.add_argument("--blink", help="AXIS:DEG that turn LeftEyelid/RightEyelid shut, measured on the model, e.g. Y:114")
     a = ap.parse_args(argv)
+    blink = None
+    if a.blink:
+        axis, deg = a.blink.split(":")
+        if axis not in ("X", "Y", "Z"):
+            sys.exit(f"quadruped: --blink {a.blink}: AXIS is X, Y or Z")
+        blink = (axis, float(deg))
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
     report, saved = {}, []
     for name in a.motions.split(","):
         fn, P = {"walk": (walk, a.period), "idle": (idle, a.period * 3 // 2)}[name]
-        sc, arm, m, stride, crouch = cycle(a.asset, out, name, P, fn, a.stride, a.crouch)
+        sc, arm, m, stride, crouch = cycle(a.asset, out, name, P, fn, a.stride, a.crouch, blink)
+        if R_lids(arm) and not blink:
+            print("quadruped: eyelid bones found, no --blink: give the axis and angle that close them, "
+                  "measured on the model (animation.md rule 4) — no blink written")
         m.update(stride=round(stride, 3), crouch=round(crouch, 3), ok=m["extension"] <= MAX_EXTENSION)
         if a.per_clip:
             bpy.ops.export_scene.gltf(filepath=str(out / f"{name}.glb"), export_animations=True, export_force_sampling=True)
