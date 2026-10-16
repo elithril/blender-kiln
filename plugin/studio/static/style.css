@@ -25,10 +25,14 @@
   --line-3: #3A4459;
   --text: #E6EBF2;
   --text-2: #A3ADBE;
-  --text-3: #6E788B;
+  --text-3: #808A9D;  /* the prototype's #6E788B read 4.0:1 on the panels */
   --accent: #5CE1E6;
   --accent-ink: #062A2C;
   --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
+  /* "To check" (a note Claude addressed): the accent, unless a theme gives it its own colour. */
+  --check: var(--accent);
+  --check-ink: var(--accent-ink);
+  --check-soft: color-mix(in srgb, var(--check) 14%, transparent);
   --warn: #FFB547;
   --warn-ink: #1a1206;
   --warn-soft: color-mix(in srgb, var(--warn) 15%, transparent);
@@ -71,12 +75,12 @@
   --text: #121620;
   --text-2: #3C4555;
   --text-3: #5F6878;
-  --accent: #0A8A90;
+  --accent: #08737A;
   --accent-ink: #FFFFFF;
-  --warn: #B45F00;
+  --warn: #994F00;
   --warn-ink: #FFFFFF;
-  --ok: #17803D;
-  --new: #6D4FD6;
+  --ok: #136B32;
+  --new: #5F40C8;
   --new-ink: #FFFFFF;
   --danger: #C62828;
   --muted: #8A93A3;
@@ -121,6 +125,131 @@
   --scrim: #000000;
   --backdrop: rgba(0, 0, 0, 0.85);
 }
+:root[data-theme="forge"] {
+  /* Forge (design board CockpitForge): warm charcoal, ember orange; to check in steel blue. */
+  color-scheme: dark;
+  --bg: #0E0907;
+  --panel: #1A110D;
+  --panel-2: #231712;
+  --panel-3: #2E1F18;
+  --line: #34241C;
+  --line-2: #4A3428;
+  --line-3: #6A4C3C;
+  --text: #F4EAE2;
+  --text-2: #D8C2B2;
+  --text-3: #B49C8C;
+  --accent: #FF8A3D;
+  --accent-ink: #1A0E08;
+  --check: #7FC8FF;
+  --check-ink: #06202F;
+  --warn: #FFC857;
+  --warn-ink: #241500;
+  --ok: #9FD77A;
+  --new: #E7A6FF;
+  --new-ink: #2A0B33;
+  --danger: #FF6B5B;
+  --muted: #9A8577;
+  --pin-ink: #1A0E08;
+  --label: #FFB070;
+  --glass: #1C120E;
+  --scrim: #120B08;
+  --backdrop: rgba(14, 9, 7, 0.75);
+  --stage-dark: radial-gradient(ellipse at 50% 70%, #3A1E10 0%, #170D09 55%, #0E0907 85%);
+  --stage-mid: radial-gradient(ellipse at 50% 42%, #5A4438 0%, #2E211A 80%);
+}
+:root[data-theme="neon"] {
+  /* Neon (CockpitNeon): deep violet, cyan; open in magenta. */
+  color-scheme: dark;
+  --bg: #0B0618;
+  --panel: #120A26;
+  --panel-2: #1A1033;
+  --panel-3: #241745;
+  --line: #2A1E4C;
+  --line-2: #3A2C63;
+  --line-3: #5B4A8C;
+  --text: #EDE7FF;
+  --text-2: #C9BEF0;
+  --text-3: #A99BD1;
+  --accent: #3EF2FF;
+  --accent-ink: #071318;
+  --warn: #FF4FD8;
+  --warn-ink: #2A0420;
+  --ok: #7CFFB2;
+  --new: #FFD36E;
+  --new-ink: #2B1D00;
+  --danger: #FF6B8B;
+  --muted: #8C7FB8;
+  --pin-ink: #0B0618;
+  --label: #9CF7FF;
+  --glass: #100822;
+  --scrim: #0B0618;
+  --backdrop: rgba(11, 6, 24, 0.78);
+  --stage-dark: radial-gradient(ellipse at 50% 42%, #2A1E4C 0%, #0B0618 75%);
+  --stage-mid: radial-gradient(ellipse at 50% 42%, #4A3C78 0%, #221745 80%);
+}
+:root[data-theme="studio"] {
+  /* Studio (CockpitClair): soft light, a red-orange accent; to check in blue. */
+  color-scheme: light;
+  --bg: #F6F7F9;
+  --panel: #FFFFFF;
+  --panel-2: #F2F3F6;
+  --panel-3: #E3E6EB;
+  --line: #E3E6EB;
+  --line-2: #D5D9E0;
+  --line-3: #B8BEC8;
+  --text: #1D2027;
+  --text-2: #4A505C;
+  --text-3: #5F6571;
+  --accent: #C2401A;
+  --accent-ink: #FFFFFF;
+  --check: #1F4FB8;
+  --check-ink: #FFFFFF;
+  --warn: #9E3315;
+  --warn-ink: #FFFFFF;
+  --ok: #146B31;
+  --new: #5F40C8;
+  --new-ink: #FFFFFF;
+  --danger: #B42318;
+  --muted: #8A909B;
+  --pin-ink: #FFFFFF;
+  --draft: #1D2027;
+  --label: #1F4FB8;
+  --glass: #FFFFFF;
+  --scrim: #FFFFFF;
+  --tint: #000;
+  --backdrop: rgba(29, 32, 39, 0.35);
+  --stage-dark: radial-gradient(ellipse at 50% 42%, #343842 0%, #1D2027 80%);
+  --stage-light: radial-gradient(ellipse at 50% 42%, #FFFFFF 0%, #E6E9EE 85%);
+}
+:root[data-theme="minimal"] {
+  /* Minimal (CockpitMinimal): greys, one accent (the one picked in Settings); states by
+     shape and word first: open white, to check the accent, done grey. */
+  color-scheme: dark;
+  --bg: #0A0A0A;
+  --panel: #111111;
+  --panel-2: #171717;
+  --panel-3: #222222;
+  --line: #262626;
+  --line-2: #333333;
+  --line-3: #555555;
+  --text: #EDEDED;
+  --text-2: #BBBBBB;
+  --text-3: #8F8F8F;
+  --warn: #EDEDED;
+  --warn-ink: #0A0A0A;
+  --ok: #9A9A9A;
+  --new: #CFCFCF;
+  --new-ink: #0A0A0A;
+  --danger: #EDEDED;
+  --muted: #6B6B6B;
+  --pin-ink: #0A0A0A;
+  --label: #EDEDED;
+  --glass: #111111;
+  --scrim: #0A0A0A;
+  --backdrop: rgba(0, 0, 0, 0.8);
+  --stage-dark: radial-gradient(ellipse at 50% 42%, #1E1E1E 0%, #0A0A0A 75%);
+  --stage-mid: radial-gradient(ellipse at 50% 42%, #4A4A4A 0%, #262626 80%);
+}
 :root[data-theme="contrast"] :focus-visible { outline-width: 3px; }
 :root[data-theme="contrast"] .btn, :root[data-theme="contrast"] .seg, :root[data-theme="contrast"] .pill { border-width: 1.5px; }
 * { box-sizing: border-box; }
@@ -161,7 +290,7 @@ kbd { font: 500 10px/1 var(--mono); padding: 2px 5px; border-radius: 4px; border
 /* status vocabulary */
 .status { display: inline-flex; align-items: center; height: 18px; padding: 0 7px; border-radius: 9px; font: 600 10px/1 var(--mono); text-transform: uppercase; letter-spacing: .04em; }
 .status.open { color: var(--warn); background: var(--warn-soft); }
-.status.addressed { color: var(--accent); background: var(--accent-soft); }
+.status.addressed { color: var(--check); background: var(--check-soft); }
 .status.resolved { color: var(--ok); background: var(--ok-soft); }
 .status.wontfix { color: var(--text-3); background: color-mix(in srgb, var(--tint) 6%, transparent); }
 .status.sample { color: var(--new); background: var(--new-soft); }
@@ -188,7 +317,7 @@ kbd { font: 500 10px/1 var(--mono); padding: 2px 5px; border-radius: 4px; border
 .rail .rsep { width: 28px; height: 1px; background: var(--line-2); margin: 4px 0; flex: none; }
 .rail .cnt { position: absolute; top: -3px; right: -4px; min-width: 16px; height: 16px; border-radius: 8px; padding: 0 4px; font: 600 10px/16px var(--mono); text-align: center; background: var(--panel); }
 .cnt.open { color: var(--warn-ink); background: var(--warn); }
-.cnt.addressed { color: var(--accent-ink); background: var(--accent); }
+.cnt.addressed { color: var(--check-ink); background: var(--check); }
 .cnt.warn { color: var(--warn-ink); background: var(--warn); }
 .cnt.plain { color: var(--text-2); background: var(--panel-3); }
 .rail .letter { font: 600 12px/1 var(--mono); }
@@ -219,13 +348,13 @@ kbd { font: 500 10px/1 var(--mono); padding: 2px 5px; border-radius: 4px; border
 .pill { height: 34px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel-2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 0 2px; color: var(--text-3); font-size: 9.5px; line-height: 1; white-space: nowrap; overflow: hidden; transition: border-color .15s, background .15s; }
 .pill b { font: 600 12.5px/1 var(--mono); color: var(--text-2); }
 .pill:hover { border-color: var(--line-2); color: var(--text-2); }
-.pill.block .check b { color: var(--accent); }
+.pill.check b { color: var(--check); }
 .pill.open b { color: var(--warn); }
 .pill.works b { color: var(--accent); }
 .pill.building b { color: var(--new); }
 .pill.zero b { color: var(--text-3); }
 .pill.on { border-color: currentColor; background: var(--panel-3); color: var(--text); }
-.pill.check.on { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+.pill.check.on { border-color: color-mix(in srgb, var(--check) 55%, transparent); }
 .pill.open.on { border-color: color-mix(in srgb, var(--warn) 55%, transparent); }
 .pill.works.on { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
 .pill.building.on { border-color: color-mix(in srgb, var(--new) 55%, transparent); }
@@ -276,7 +405,7 @@ kbd { font: 500 10px/1 var(--mono); padding: 2px 5px; border-radius: 4px; border
 .item .badges { display: flex; align-items: center; gap: 4px; flex: none; }
 .badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; font: 600 10px/18px var(--mono); text-align: center; }
 .badge.open { background: var(--warn-soft); color: var(--warn); }
-.badge.addressed { background: var(--accent-soft); color: var(--accent); }
+.badge.addressed { background: var(--check-soft); color: var(--check); }
 .badge.addressed::before, .cnt.addressed::before { content: '✓'; margin-right: 1px; font-weight: 800; }
 .badge.new { background: var(--new-soft); color: var(--new); text-transform: uppercase; letter-spacing: .04em; }
 .item .wslot { width: 9px; display: none; }
@@ -309,7 +438,7 @@ kbd { font: 500 10px/1 var(--mono); padding: 2px 5px; border-radius: 4px; border
 .pin span { transform: rotate(45deg); font: 700 11px/1 var(--mono); color: var(--pin-ink); }
 .pin.open { background: var(--warn); }
 /* By shape as well: open solid, addressed solid with a ring inside, resolved hollow, won't fix dashed. */
-.pin.addressed { background: var(--accent); box-shadow: inset 0 0 0 2px var(--pin-ink), inset 0 0 0 4px var(--accent), 0 3px 10px color-mix(in srgb, var(--shade) 45%, transparent); }
+.pin.addressed { background: var(--check); box-shadow: inset 0 0 0 2px var(--pin-ink), inset 0 0 0 4px var(--check), 0 3px 10px color-mix(in srgb, var(--shade) 45%, transparent); }
 .pin.resolved { background: var(--panel); border-color: var(--ok); }
 .pin.resolved span { color: var(--ok); }
 .pin.wontfix { background: var(--panel); border: 2px dashed var(--muted); }
@@ -431,7 +560,7 @@ kbd { font: 500 10px/1 var(--mono); padding: 2px 5px; border-radius: 4px; border
 .note .num.whole { border-radius: 5px; transform: none; background: var(--panel-3) !important; border: 1px solid var(--line-2); }
 .note .num.whole span { transform: none; color: var(--text-2); }
 .note .num.open { background: var(--warn); }
-.note .num.addressed { background: var(--accent); box-shadow: inset 0 0 0 1.5px var(--pin-ink), inset 0 0 0 3px var(--accent); }
+.note .num.addressed { background: var(--check); box-shadow: inset 0 0 0 1.5px var(--pin-ink), inset 0 0 0 3px var(--check); }
 .note .num.resolved { background: var(--panel); border: 1.5px solid var(--ok); }
 .note .num.resolved span { color: var(--ok); }
 .note .num.wontfix { background: var(--panel); border: 1.5px dashed var(--muted); }
@@ -768,3 +897,19 @@ body.no-model #right .notes-head, body.no-model #right #handoff { display: none;
 #toolbar, #toolbar .tb-group { gap: 4px; }
 #toolbar .btn { padding: 0 8px; }
 #toolbar .seg button { padding: 0 8px; }
+
+/* Forge: a few embers drift up behind the model. CSS only (transform and opacity, on the
+   compositor: no cost to the 3D view's frames), behind the canvas, never in a note's
+   picture; none with reduced motion. */
+#embers { position: absolute; inset: 0; overflow: hidden; pointer-events: none; display: none; }
+:root[data-theme="forge"] #embers { display: block; }
+#embers i { position: absolute; bottom: -8px; width: 3px; height: 3px; border-radius: 50%; background: #FFB45C; box-shadow: 0 0 6px 2px rgba(255, 140, 50, .6); opacity: 0; will-change: transform, opacity; animation: ember-rise linear infinite; }
+@keyframes ember-rise { 0% { transform: translate(0, 0) scale(1); opacity: 0; } 12% { opacity: .9; } 100% { transform: translate(var(--dx), -85vh) scale(.3); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { #embers { display: none !important; } }
+
+.themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 6px; }
+.theme-card { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--bg); color: var(--text-2); font-size: 12px; text-align: left; }
+.theme-card:hover { color: var(--text); border-color: var(--line-3); }
+.theme-card[aria-checked="true"] { color: var(--text); border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.theme-card .sw3 { display: flex; gap: 3px; }
+.theme-card .sw3 i { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(128, 128, 128, .5); }

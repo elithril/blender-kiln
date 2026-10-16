@@ -326,7 +326,8 @@ Statuses: `open` → `addressed` (you) → `resolved` (the user) or `wontfix`.
 The page's **Settings** (the gear under the list, or ⌘K → Settings) has two parts.
 
 **Personal** — this browser only, never in the project: the language (English or French;
-the browser's by default), the theme (Dark, Light, High contrast) and an accent colour, rows Normal or Compact, the shading and the view a model
+the browser's by default), the theme (Dark, Light, High contrast, Forge, Neon, Studio, Minimal) and an accent colour
+(Forge, Neon and Studio have their own), rows Normal or Compact, the shading and the view a model
 opens in, lengths in metres or centimetres, whether fixed pins start hidden. Nothing for
 you to read.
 

@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Kiln Studio: four more themes
+
+- Forge (warm charcoal, ember orange, a few embers drifting behind the model: CSS on the
+  compositor, none with reduced motion), Neon (deep violet, cyan, magenta), Studio (soft
+  light) and Minimal (greys and the accent picked in Settings), from the design boards.
+  "To check" has its own colour token, so it stays apart from the accent where a theme
+  wants it to. Every text pair in all seven themes reads at 4.5:1 or more (measured in the
+  browser; Dark's muted grey and Light's accent and chips were darkened to get there).
+
 ### Fixed — Kiln Studio v1, after a first try
 
 - No blink when a side panel folds or unfolds: the view is drawn in the same callback as

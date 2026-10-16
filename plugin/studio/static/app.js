@@ -2049,42 +2049,64 @@ $('#t-settings').onclick = openSettings;
 // Each accent in each theme: a tone that reads on that theme's background, and the
 // ink that reads on the accent.
 const ACCENTS = {
-  cyan: { name: N_('Cyan'), dark: ['#5CE1E6', '#062A2C'], light: ['#0A8A90', '#FFFFFF'], contrast: ['#3DF2FF', '#000000'] },
-  blue: { name: N_('Blue'), dark: ['#6CB6FF', '#06182C'], light: ['#1F6FD1', '#FFFFFF'], contrast: ['#8CCBFF', '#000000'] },
+  cyan: { name: N_('Cyan'), dark: ['#5CE1E6', '#062A2C'], light: ['#08737A', '#FFFFFF'], contrast: ['#3DF2FF', '#000000'] },
+  blue: { name: N_('Blue'), dark: ['#6CB6FF', '#06182C'], light: ['#1A5FB4', '#FFFFFF'], contrast: ['#8CCBFF', '#000000'] },
   pink: { name: N_('Pink'), dark: ['#FF7AB6', '#2C0618'], light: ['#C2185B', '#FFFFFF'], contrast: ['#FF9ECF', '#000000'] },
-  lime: { name: N_('Lime'), dark: ['#C3E85A', '#1A2406'], light: ['#4D7C0F', '#FFFFFF'], contrast: ['#D8FF6B', '#000000'] },
+  lime: { name: N_('Lime'), dark: ['#C3E85A', '#1A2406'], light: ['#40690C', '#FFFFFF'], contrast: ['#D8FF6B', '#000000'] },
 };
+// The themes: the three of the approved design, and four from the design boards
+// (CockpitForge, CockpitNeon, CockpitClair, CockpitMinimal). Forge, Neon and Studio have
+// their own accent; the others take the one picked in Settings.
+const THEMES = [
+  { key: 'dark', name: N_('Dark'), swatch: ['#0B0D11', '#5CE1E6', '#FFB547'] },
+  { key: 'light', name: N_('Light'), swatch: ['#F4F6F9', '#08737A', '#994F00'] },
+  { key: 'contrast', name: N_('High contrast'), swatch: ['#000000', '#3DF2FF', '#FFD23D'] },
+  { key: 'forge', name: N_('Forge'), swatch: ['#0E0907', '#FF8A3D', '#7FC8FF'], own: true },
+  { key: 'neon', name: N_('Neon'), swatch: ['#0B0618', '#3EF2FF', '#FF4FD8'], own: true },
+  { key: 'studio', name: N_('Studio'), swatch: ['#F6F7F9', '#C2401A', '#1F4FB8'], own: true },
+  { key: 'minimal', name: N_('Minimal'), swatch: ['#0A0A0A', '#EDEDED', '#8F8F8F'] },
+];
+const themeOf = () => THEMES.find((x) => x.key === prefs.theme) || THEMES[0];
+// The accent tones per theme family: Minimal and Forge read like Dark, Studio like Light.
+const ACCENT_TONE = { dark: 'dark', light: 'light', contrast: 'contrast', minimal: 'dark' };
 function applyTheme() {
-  const theme = ['light', 'contrast'].includes(prefs.theme) ? prefs.theme : 'dark';
-  const root = document.documentElement;
-  if (theme === 'dark') delete root.dataset.theme; else root.dataset.theme = theme;
-  const [accent, ink] = (ACCENTS[prefs.accent] || ACCENTS.cyan)[theme];
-  root.style.setProperty('--accent', accent);
-  root.style.setProperty('--accent-ink', ink);
-  $('meta[name=theme-color]')?.setAttribute('content', getComputedStyle(root).getPropertyValue('--bg'));
+  const th = themeOf(), root = document.documentElement;
+  if (th.key === 'dark') delete root.dataset.theme; else root.dataset.theme = th.key;
+  if (th.own) {
+    root.style.removeProperty('--accent'); root.style.removeProperty('--accent-ink');
+  } else {
+    const [accent, ink] = (ACCENTS[prefs.accent] || ACCENTS.cyan)[ACCENT_TONE[th.key]];
+    root.style.setProperty('--accent', accent);
+    root.style.setProperty('--accent-ink', ink);
+  }
+  if (th.key === 'forge') lightEmbers();
+  // A light theme on the dark stage reads badly: until the user picks a background
+  // (Bg), the stage follows the theme.
+  if (prefs.bg === undefined) {
+    const bg = ['light', 'studio'].includes(th.key) ? 'light' : 'dark';
+    if (viewer.opts.bg !== bg) { viewer.set('bg', bg); stage.dataset.bg = bg; syncToolbar(); }
+  }
+}
+// Forge's embers: made once, then pure CSS animation.
+let embersLit = false;
+function lightEmbers() {
+  if (embersLit) return;
+  embersLit = true;
+  $('#embers').innerHTML = Array.from({ length: 18 }, (_, i) => {
+    const r = (k) => ((Math.sin(i * 12.9898 + k * 78.233) * 43758.5453) % 1 + 1) % 1;
+    return `<i style="left:${(r(1) * 100).toFixed(1)}%;--dx:${((r(2) - 0.5) * 120).toFixed(0)}px;animation-duration:${(9 + r(3) * 9).toFixed(1)}s;animation-delay:-${(r(4) * 18).toFixed(1)}s;transform:scale(${(0.6 + r(5)).toFixed(2)})"></i>`;
+  }).join('');
 }
 settingsRows.push({
   sync() {
-    segSet('#set-theme', ['light', 'contrast'].includes(prefs.theme) ? prefs.theme : 'dark');
-    const theme = ['light', 'contrast'].includes(prefs.theme) ? prefs.theme : 'dark';
-    $('#set-accent').innerHTML = Object.entries(ACCENTS).map(([k, a]) => `<button role="radio" aria-checked="${(prefs.accent || 'cyan') === k}" data-v="${k}" style="--sw:${a[theme][0]}" title="${esc(t(a.name))}" aria-label="${esc(t(a.name))}"></button>`).join('');
+    const th = themeOf();
+    $('#set-theme').innerHTML = THEMES.map((x) => `<button role="radio" aria-checked="${x.key === th.key}" data-v="${x.key}" class="theme-card"><span class="sw3">${x.swatch.map((c) => `<i style="background:${c}"></i>`).join('')}</span>${esc(t(x.name))}</button>`).join('');
+    $$('#set-theme button').forEach((b) => (b.onclick = () => { prefs.theme = b.dataset.v; savePrefs(); applyTheme(); syncPersonal(); }));
+    $('#set-accent').innerHTML = th.own ? `<span class="dim small">${esc(t('This theme has its own accent.'))}</span>`
+      : Object.entries(ACCENTS).map(([k, a]) => `<button role="radio" aria-checked="${(prefs.accent || 'cyan') === k}" data-v="${k}" style="--sw:${a[ACCENT_TONE[th.key]][0]}" title="${esc(t(a.name))}" aria-label="${esc(t(a.name))}"></button>`).join('');
     $$('#set-accent button').forEach((b) => (b.onclick = () => { prefs.accent = b.dataset.v; savePrefs(); applyTheme(); syncPersonal(); }));
   },
 });
-settingsRows.push({
-  sync() {
-    $('#set-lang').innerHTML = Object.entries(LANGS).map(([k, name]) => `<button data-v="${k}" class="${getLang() === k ? 'on' : ''}" lang="${k}">${esc(name)}</button>`).join('');
-    $$('#set-lang button').forEach((b) => (b.onclick = () => switchLanguage(b.dataset.v)));
-  },
-});
-async function switchLanguage(code) {
-  try { await loadLanguage(code); } catch (e) { toast(t('Could not load the language: {e}', { e: esc(e.message) }), 'warn'); return; }
-  prefs.lang = code; savePrefs();
-  setLang(code);
-  refreshWords();
-  syncPersonal();
-}
-$$('#set-theme button').forEach((b) => (b.onclick = () => { prefs.theme = b.dataset.v; savePrefs(); applyTheme(); syncPersonal(); }));
 
 // Units or language changed: everything that shows a number or a word again.
 function refreshWords() {
@@ -2145,7 +2167,7 @@ function commands() {
   add('Notes', 'Show the active notes only', [], () => { setNoteFilter('active'); renderNotes(); renderPins(); }, () => hasModel() && state.noteFilter !== 'active');
   add('Help', 'Keyboard shortcuts', ['?'], showKeys);
   add('Help', 'Settings', [], openSettings);
-  for (const [th, label] of [['dark', N_('Theme: Dark')], ['light', N_('Theme: Light')], ['contrast', N_('Theme: High contrast')]]) add('Help', label, [], () => { prefs.theme = th; savePrefs(); applyTheme(); }, () => (prefs.theme || 'dark') !== th);
+  for (const [th, label] of [['dark', N_('Theme: Dark')], ['light', N_('Theme: Light')], ['contrast', N_('Theme: High contrast')], ['forge', N_('Theme: Forge')], ['neon', N_('Theme: Neon')], ['studio', N_('Theme: Studio')], ['minimal', N_('Theme: Minimal')]]) add('Help', label, [], () => { prefs.theme = th; savePrefs(); applyTheme(); }, () => themeOf().key !== th);
   for (const run of paletteExtras) run(add);
   for (const a of state.assets) add('Model', { text: t('Open {name}', { name: a.name }) }, [], () => go(a.id), () => a.id !== state.id);
   return C.filter((c) => { try { return c.when(); } catch { return false; } });

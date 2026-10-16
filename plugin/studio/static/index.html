@@ -74,6 +74,7 @@
 </aside>
 
 <main id="stage" data-bg="dark" aria-label="3D view" data-i18n-attr="aria-label">
+  <div id="embers" aria-hidden="true"></div>
   <canvas id="view" aria-label="The model. Drag to orbit, scroll to zoom, right-drag to pan." data-i18n-attr="aria-label"></canvas>
   <div id="labels"></div>
   <div id="pins"></div>
@@ -258,7 +259,7 @@
         <span class="lab" data-i18n>Language</span>
         <div class="seg small" id="set-lang"></div>
         <span class="lab" data-i18n>Theme</span>
-        <div class="seg small" id="set-theme"><button data-v="dark" data-i18n>Dark</button><button data-v="light" data-i18n>Light</button><button data-v="contrast" data-i18n>High contrast</button></div>
+        <div class="themes" id="set-theme" role="radiogroup" aria-label="Theme" data-i18n-attr="aria-label"></div>
         <span class="lab" data-i18n>Accent</span>
         <div class="swatches" id="set-accent" role="radiogroup" aria-label="Accent colour" data-i18n-attr="aria-label"></div>
         <span class="lab" data-i18n>Rows in the list</span>
