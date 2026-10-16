@@ -583,7 +583,7 @@ A user-provided image (or generated concept art) is useful for ALL creation meth
 | Method | How the image is used |
 |---|---|
 | **AI generation** | Passed directly as generation input (image → 3D) |
-| **Scripted modeling** | **Load `references/reference-fidelity.md`** — inventory the details, measure the silhouette from the pixels (or, given a generated mesh of the photo, its profile with `tools/template_profile.py` — never ship that mesh), check every part is attached — and LOOK at every joint the review renders (`review/joints/`): a part that joins another enters it, section unchanged (a foot only if the photo shows one) — sample materials from the image (one material per physical material; patina stays metal), review twice against it |
+| **Scripted modeling** | **Load `references/reference-fidelity.md`** — inventory the details, measure the silhouette from the pixels (or, given a generated mesh of the photo, its profile with `tools/template_profile.py` — never ship that mesh), check every part is attached — and LOOK at every joint the review renders (`review/joints/`): a part that joins another enters it, section unchanged (a foot only if the photo shows one) — sample materials from the image (one material per physical material; patina stays metal), review twice against it — then, only when the photo carries text, a logo or precise wear and the shape is final, **propose** projecting the photo's markings (`tools/photo_project.py`, refused under 0.95 fitted IoU; show two other angles; never silently, rule 6 — `references/photo-projection.md`) |
 | **Geometry Nodes** | Analyze image to inform node parameters — spacing, density, pattern, scale |
 | **Marketplace** | Analyze image to refine search keywords and evaluate result similarity |
 
@@ -1158,6 +1158,7 @@ Each asset produces `{name}_log.md`:
 - Export: {format}, {final_size}, {final_faces}
 - Rounds (reference image): v{n}: silhouette {iou}, face {iou} (f {f}, offset {mm}); changed
   {one thing}; kept / undone
+- Photo projection (if the user said yes): fitted IoU {iou}, SSIM {before} → {after}, excluded {parts}
 - Print check, one line per printed part: {part}: {PASS/FAIL}, {dimensions} mm, {parts} part(s),
   supports {yes/no — from the slice, not from the overhang %}, smallest scale {N} %, warnings {…}
 
@@ -1208,3 +1209,4 @@ Axis conversion at export is automatic.
 | Animation: routes, UniMate install and prompts | `references/animation.md` |
 | Batch mode (wizard, runner, manifest) | `references/batch-mode.md` |
 | 3D printing: modelling from the brief, check, repair | `references/print.md` |
+| Photo's markings projected onto the model (optional, after the last review) | `references/photo-projection.md` |

@@ -6,7 +6,7 @@
         [--min-iou 0.95] [--facing 0.6] [--samples 64]
 
 An OPTIONAL step after the last fidelity_check round, for markings a script copies badly —
-text, a logo, precise wear (reference-fidelity.md § 7, references/photo-projection.md):
+text, a logo, precise wear (reference-fidelity.md § 5, references/photo-projection.md):
 
 - the camera: fidelity_check's own (--view, --azimuth, --elevation: orthographic, scaled to
   the photo's height), then fitted to the photo's silhouette — azimuth, elevation, roll and

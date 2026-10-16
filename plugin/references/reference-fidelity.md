@@ -459,6 +459,13 @@ Read it with its limits:
   silhouettes and colours, not whether a detail is still there.
 - **Correct half-way.** A gap is a direction, not a dose. Move halfway, measure, finish.
 
+**After the last round, optionally: the photo's own markings.** When the photo carries text,
+a logo or precise wear the script copied as a lookalike, and the shape is final, propose
+`tools/photo_project.py` to the user — never run it silently (rule 6). It fits the photo's
+camera from this one and refuses under 0.95 IoU; it repaints only what the photo faces.
+Show its two other angles (`other_angles.png`) with the before/after: from the photo's view
+its numbers are partly circular. Method, options and measures: `photo-projection.md`.
+
 ## 6. General rules
 
 - **Measure the thickness of thin parts from the pixels too**, not only the body. Tubes,
