@@ -865,6 +865,21 @@ class Api(Base):
         self.assertIn("a low-poly wooden chair", lines[0])
         self.assertEqual(lines[-2:], [f"{r['id']}: done, generated-assets/crate", "No open request."])
 
+    def test_fonts_are_local_and_jsdelivr_is_the_only_outside_host(self) -> None:
+        hosts = set()
+        for f in ("index.html", "style.css", "app.js", "viewer.js", "i18n.js"):
+            hosts |= set(re.findall(r"https?://([\w.-]+)", (STATIC / f).read_text()))
+        self.assertEqual(hosts - {"cdn.jsdelivr.net", "127.0.0.1", "www.w3.org", "blender.org"}, set())
+        for font in ("sora-latin", "sora-latin-ext", "jetbrains-mono-latin", "jetbrains-mono-latin-ext"):
+            self.assertIn(f"url(fonts/{font}.woff2)", (STATIC / "style.css").read_text())
+            c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            c.request("GET", f"/static/fonts/{font}.woff2", headers={"Host": f"127.0.0.1:{self.port}"})
+            r = c.getresponse()
+            self.assertEqual((r.status, r.getheader("Content-Type"), r.read(4)), (200, "font/woff2", b"wOF2"))
+            c.close()
+        for lic in ("OFL-Sora.txt", "OFL-JetBrainsMono.txt"):
+            self.assertIn("SIL Open Font License", (STATIC / "fonts" / lic).read_text())
+
     def test_files_stay_inside_the_project(self) -> None:
         code, body = self.req("GET", "/files/generated-assets/crate/crate_final.glb")
         self.assertEqual(code, 200)

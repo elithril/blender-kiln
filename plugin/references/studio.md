@@ -6,9 +6,9 @@ and reply. The page reloads the model the moment the file changes, and renders t
 same view of the new version beside the note's own screenshot, so every note ends up
 with a before and an after.
 
-`<skill>/studio/studio.py` — Python standard library only, nothing to install. The
-page loads three.js 0.186.1 from jsDelivr (and its two fonts from Google Fonts, which fall
-back to the system's), so the browser needs a network connection.
+`<skill>/studio/studio.py` — Python standard library only, nothing to install. Its two
+fonts ship with it (`static/fonts/`, SIL OFL), but three.js 0.186.1 is still fetched from
+jsDelivr: the page's one outside request, so the browser needs a network connection.
 
 ---
 
