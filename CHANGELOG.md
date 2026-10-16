@@ -6,6 +6,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — learned auto-rig (3.0)
+
+- **`tools/autorig.py`**: rigs a character with SkinTokens (VAST-AI, MIT, local) and hands
+  back kiln's skeleton — Mixamo names, weights cleaned (≤ 4 influences, normalised, specks
+  dropped), lid and ear bones added, the validator's checks run. On one bent pose it crossed
+  2,985 mm² of skin through skin against Rigify's 3,926 on a kiln-built child, and 20,917
+  against 50,680 on a generated humanoid with a hand fused to its hip. It fails naming the
+  bone when a limb comes back short (that humanoid's right hand), and refuses a model facing
+  +Y. `references/characters.md` § Learned auto-rig has the table, the method and the limits:
+  one pose, two humanoids, no humanoid walk, and runs that differ (2,193 on another run).
+- **PHASE 5c routes first**: a humanoid or a mesh kiln did not build → the learned rig when
+  installed; a quadruped kiln built → its own rig (SkinTokens walked kiln's cat worse, 527 mm²
+  mean against 359). A generated quadruped is rigged both ways.
+- **`/kiln setup`** detects it and offers it, asked first: ~5.6 GB, MIT, Apple Silicon through
+  kiln's patch (from image-to-3dlab, Apache-2.0 — `plugin/NOTICE`), 35-54 s and ~7 GB of
+  memory per mesh. Pinned commit, packages and checkpoint hashes.
+- **`tools/test_autorig.py`**, 31 checks without SkinTokens: the four measured raw skeletons
+  named as by hand, the fused hand and seeded breaks failing by name, cleaning, lids and ears;
+  on every push (no Blender) and in the Blender workflow.
+
 ## [2.3.0] — 2026-10-12
 
 kiln now models for a **3D printer** — simple objects only. Measured on sessions given the
