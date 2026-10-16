@@ -569,6 +569,7 @@ Place the joints at the bends, and name them the way motion data names them:
 | Hind / leg | `LeftUpLeg` → `LeftLeg` → `LeftFoot` → `LeftToeBase` (and `Right…`) |
 | Fore / arm | `LeftArm` → `LeftForeArm` → `LeftHand` → `LeftFingers` (parented to `Spine1`) |
 | Tail | `Tail1` → `Tail2` → … (parented to `Hips`) |
+| Eyelids | `LeftEyelid`, `RightEyelid` (parented to `Head`) — § Charm |
 
 Names matter beyond tidiness: motion models condition on them. UniMate's offline
 labeller read 24 of these 26 names directly (`LeftUpLeg` → *Left Thigh*) and guessed
@@ -680,7 +681,32 @@ two shipped clips (0 mm² of skin through skin, 0 mm of sharp crease, measured e
 frame). Every session that had to animate a character converged on this by itself.
 
 Eyes, nose, mouth and eyelids stay **separate objects**, each 100% to one bone (the head,
-or its lid bone).
+or its lid bone) — § Charm.
+
+### Charm: eyes, eyelids, cheeks, pads
+
+No session added these unasked; asked, they were a large gain to the user's eye. Build all
+four on a cartoon creature unless the brief says otherwise:
+
+- **A big head and big eyes with highlights.** The cat: eyes 34 mm on a 0.40 m figure,
+  60% of their depth out of the skin, two emissive highlights each, lit from the same side.
+  The dog: eyes 44 mm visible, head radius raised 106 → 122 mm, body unchanged.
+- **Real eyelids**, one upper lid per eye: a shell over the eye (a spherical cap at 1.085 ×
+  the eye's radius, 1.2 mm thick, on the cat), one bone per lid, `LeftEyelid` /
+  `RightEyelid`, parented to `Head`. **Blink by turning the bone, not by a shape key** —
+  the dog's lids came back intact from its Draco GLB, identical to the plain one, and
+  three.js plays a bone like any other. **Measure the closing sign** (`animation.md` rule
+  4): the cat's first guess turned its lids the wrong way; the dog's closed at +114° about
+  the bone's Y, checked by a grid of rays over the eye (100% covered, both sides). Open,
+  the lid sits high: lids set too low read grumpy (the cat's, opened 124° → 140°).
+- **A blink**: 3 frames closing, 1 held, 4 opening at 24 fps. One in a 64-frame walk;
+  two or three in a 4 s idle, a double among them, reads alive.
+- **Cheeks** sunk into the skull, not stuck on it — the cat's first cheeks read detached;
+  the dog's first ones gave a heavy jaw. A touch of pink on them helps.
+- **Paw pads**: a big pad and four toe pads under each paw, the creature standing on them
+  (it rises 2.2 mm on the dog — put the lowest point back at Z = 0). As bumps of the skin
+  they lost their relief at the cat's retopology and showed only by their pink colour:
+  check them in matcap after any reprojection.
 
 ## Retopology Tools
 
