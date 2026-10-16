@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Kiln Studio in French, numbers in the reader's format
+
+- Every word on the page goes through one dictionary: English, and French
+  (`static/i18n/fr.json`); Settings picks the language, the browser's by default. Numbers,
+  sizes and lengths follow it: `44 784 tris · 1,95 Mo · 0,40 m` in French. Note text and
+  Claude's replies are left as written.
+- `checks.py` now builds each finding from a code and its parameters (`MESSAGES`), so the
+  page writes the sentence in the user's language while `studio.py checks` keeps its
+  English, rendered from the same codes (unchanged on the seven test-project models and on
+  31 synthetic findings, but the dimensions line, now `0.21 m × 0.21 m × 0.43 m`).
+- `test_studio.py` fails when a string reaches the page without its French, or a check
+  code without its translation: 53 tests.
+
 ### Added — Kiln Studio: themes, and states that do not rely on colour
 
 - Three themes in Settings: Dark (the approved design), Light and High contrast, and an

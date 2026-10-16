@@ -98,7 +98,10 @@ Each check is written for the user: what was found and why it matters, then **Ho
 fix** — the command to run, such as `/kiln optimize <name>` (copied on click), or "ask
 Claude" — and an **Ask Claude** button that opens a note on the model with the request
 written out, for the user to read and save; `/kiln studio` then picks it up like any note.
-`studio.py checks` prints the same fix under each line. The wording leaves out kiln's
+`studio.py checks` prints the same fix under each line. In `--json` each finding also
+carries `msg`, `fix_msg` and `ask_msg`: lists of `[code, params]` from `checks.py`'s
+`MESSAGES`, which the page renders in the user's language; `text`, `fix` and `ask` are the
+same in English. The wording leaves out kiln's
 rules, but they still hold when you act on one: a reduction is a proposal the user sees
 before it is kept (rules 4 and 6), and OPTIMIZE runs resize, WebP and Draco as separate
 steps (rule 20).
@@ -312,8 +315,8 @@ Statuses: `open` → `addressed` (you) → `resolved` (the user) or `wontfix`.
 
 The page's **Settings** (the gear under the list, or ⌘K → Settings) has two parts.
 
-**Personal** — this browser only, never in the project: the theme (Dark, Light, High
-contrast) and an accent colour, rows Normal or Compact, the shading and the view a model
+**Personal** — this browser only, never in the project: the language (English or French;
+the browser's by default), the theme (Dark, Light, High contrast) and an accent colour, rows Normal or Compact, the shading and the view a model
 opens in, lengths in metres or centimetres, whether fixed pins start hidden. Nothing for
 you to read.
 

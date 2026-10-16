@@ -9,7 +9,7 @@
 // with a divider (one camera) or side by side, pins stick to the surface and follow
 // the animation, and History is one chronological feed.
 import { Viewer, Offscreen, Superseded } from './viewer.js';
-import { t, tp, applyI18n, setUnits, getUnits, fmtN, fmtK, fmtB, fmtD, fmtLen, fmtPct, ago, stamp } from './i18n.js';
+import { t, tp, N_, applyI18n, setUnits, getUnits, setLang, getLang, loadLanguage, setCheckMessages, renderMsg, LANGS, fmtN, fmtK, fmtB, fmtD, fmtLen, fmtPct, ago, stamp } from './i18n.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -25,6 +25,10 @@ const SHADES = ['lit', 'unlit', 'clay', 'normals', 'uv', 'faces'];
 const statusLabel = (s) => ({ open: t('open'), addressed: t('addressed'), resolved: t('resolved'), wontfix: t("won't fix") }[s] || s);
 // kiln's phases (studiolib.PHASES); rig and animate show only when a build reports them.
 const PHASES = ['config', 'brief', 'source', 'import', 'cleanup', 'texture', 'rig', 'animate', 'optimize', 'export'];
+// Words shown through t() from a variable: listed so the extractor finds them.
+N_('config'); N_('brief'); N_('source'); N_('import'); N_('cleanup'); N_('texture'); N_('rig'); N_('animate'); N_('optimize'); N_('export'); N_('step');
+N_('front'); N_('back'); N_('left'); N_('right'); N_('top'); N_('type'); N_('tier'); N_('target'); N_('style');
+N_('done'); N_('pending'); N_('failed'); N_('running'); N_('skipped');
 const OPTIONAL_PHASES = new Set(['rig', 'animate']);
 const fmtTok = (r) => (!r ? '–' : r[0] === r[1] ? t('~{a} tokens', { a: fmtK(r[0]) }) : t('~{a}–{b} tokens', { a: fmtK(r[0]), b: fmtK(r[1]) }));
 
@@ -292,11 +296,11 @@ function visibleAssets() {
 }
 
 const SECTIONS = [
-  ['works', 'Claude works', (a) => ['active', 'queued'].includes(dotOf(a))],
-  ['building', 'Building', (a) => isBuilding(a)],
-  ['check', 'To check', (a) => counts(a).addressed > 0 || dotOf(a) === 'done'],
-  ['open', 'Open notes', (a) => counts(a).open > 0],
-  ['clear', 'Nothing to do', () => true],
+  ['works', N_('Claude works'), (a) => ['active', 'queued'].includes(dotOf(a))],
+  ['building', N_('Building'), (a) => isBuilding(a)],
+  ['check', N_('To check'), (a) => counts(a).addressed > 0 || dotOf(a) === 'done'],
+  ['open', N_('Open notes'), (a) => counts(a).open > 0],
+  ['clear', N_('Nothing to do'), () => true],
 ];
 function groupsOf(items) {
   const groups = new Map();
@@ -1069,10 +1073,10 @@ function replyHtml(r) {
 
 function actionsHtml(n) {
   const b = (act, label, cls = '') => `<button class="btn sm ${cls}" data-act="${act}">${esc(t(label))}</button>`;
-  const view = n.shot ? b('view', 'View', 'ghost') : '';
-  if (n.status === 'open') return b('reply', 'Reply') + b('wontfix', "Won't fix") + b('edit', 'Edit', 'ghost') + b('delete', 'Delete', 'ghost') + view;
-  if (n.status === 'addressed') return b('resolve', 'Looks right', 'accent') + b('reopen', 'Not yet…') + b('reply', 'Reply', 'ghost') + view;
-  return b('reopen', 'Reopen…') + b('delete', 'Delete', 'ghost') + view;
+  const view = n.shot ? b('view', N_('View'), 'ghost') : '';
+  if (n.status === 'open') return b('reply', N_('Reply')) + b('wontfix', N_("Won't fix")) + b('edit', N_('Edit'), 'ghost') + b('delete', N_('Delete'), 'ghost') + view;
+  if (n.status === 'addressed') return b('resolve', N_('Looks right'), 'accent') + b('reopen', N_('Not yet…')) + b('reply', N_('Reply'), 'ghost') + view;
+  return b('reopen', N_('Reopen…')) + b('delete', N_('Delete'), 'ghost') + view;
 }
 
 function noteEl(n) {
@@ -1247,8 +1251,12 @@ const cmdsIn = (s) => [...String(s || '').matchAll(/`([^`]+)`/g)].map((m) => m[1
 const codeIn = (s) => esc(s).replace(/`([^`]+)`/g, (_, c) => `<code class="icmd" data-copy="${c}" title="${esc(t('Copy, then run it in Claude Code'))}">${c}</code>`);
 
 function checkRow(r) {
+  // The words come from the finding's codes, in the page's language; the English text
+  // the server rendered is the fallback.
+  const text = renderMsg(r.msg) || r.text, fixT = renderMsg(r.fix_msg) || r.fix, askT = renderMsg(r.ask_msg) || r.ask;
+  r = { ...r, text, fix: fixT, ask: askT, label: t(r.label) };
   let more = '';
-  if (r.entries?.length) more = `<ul class="sub">${r.entries.map((e) => `<li class="${e.level}">${esc(e.label || e.kind)}: ${esc(e.text)}</li>`).join('')}</ul>`;
+  if (r.entries?.length) more = `<ul class="sub">${r.entries.map((e) => `<li class="${e.level}">${esc(t(e.label || e.kind))}: ${esc(e.text)}</li>`).join('')}</ul>`;
   if (r.images?.length) more = `<ul class="sub">${r.images.map((i) => `<li>${esc(i.slots.join(', ') || i.name)} · ${i.w ? `${i.w}×${i.h}` : esc(t('size unknown'))} ${esc((i.format || '').toUpperCase())}</li>`).join('')}</ul>`;
   const cmds = cmdsIn(r.fix);
   const fix = r.level !== 'ok' && (r.fix || r.ask)
@@ -1662,21 +1670,21 @@ const selectionHooks = [];
 // ── keys ─────────────────────────────────────────────────────────────────────
 
 const KEYS = [
-  ['/', 'Find a model'],
-  ['↑ ↓', 'Previous, next model'],
-  ['[  ]  \\', 'Collapse or expand the left panel, the right panel, both'],
-  ['1 – 6', 'Front, back, left, right, top, three-quarter'],
-  ['F', 'Frame the model'],
-  ['S · ⇧S', 'Next, previous shading'],
-  ['W G B K', 'Wire, grid, size, bones'],
-  ['P', 'Show or hide the pins'],
-  ['C · ⇧C', 'Compare with the previous version · switch split / side by side'],
-  ['N', 'Pin a note, then click the model'],
-  ['M', 'Note on the whole model'],
-  ['⌘↵ · Esc', 'Save the note · cancel'],
-  ['Space', 'Play, pause the animation'],
-  ['⌘K', 'Every command, by name'],
-  ['?', 'This list'],
+  ['/', N_('Find a model')],
+  ['↑ ↓', N_('Previous, next model')],
+  ['[  ]  \\', N_('Collapse or expand the left panel, the right panel, both')],
+  ['1 – 6', N_('Front, back, left, right, top, three-quarter')],
+  ['F', N_('Frame the model')],
+  ['S · ⇧S', N_('Next, previous shading')],
+  ['W G B K', N_('Wire, grid, size, bones')],
+  ['P', N_('Show or hide the pins')],
+  ['C · ⇧C', N_('Compare with the previous version · switch split / side by side')],
+  ['N', N_('Pin a note, then click the model')],
+  ['M', N_('Note on the whole model')],
+  ['⌘↵ · Esc', N_('Save the note · cancel')],
+  ['Space', N_('Play, pause the animation')],
+  ['⌘K', N_('Every command, by name')],
+  ['?', N_('This list')],
 ];
 function showKeys() {
   $('#keys-list').innerHTML = KEYS.map(([k, what]) => `<dt>${esc(k)}</dt><dd>${esc(t(what))}</dd>`).join('');
@@ -1776,10 +1784,10 @@ $('#t-settings').onclick = openSettings;
 // Each accent in each theme: a tone that reads on that theme's background, and the
 // ink that reads on the accent.
 const ACCENTS = {
-  cyan: { name: 'Cyan', dark: ['#5CE1E6', '#062A2C'], light: ['#0A8A90', '#FFFFFF'], contrast: ['#3DF2FF', '#000000'] },
-  blue: { name: 'Blue', dark: ['#6CB6FF', '#06182C'], light: ['#1F6FD1', '#FFFFFF'], contrast: ['#8CCBFF', '#000000'] },
-  pink: { name: 'Pink', dark: ['#FF7AB6', '#2C0618'], light: ['#C2185B', '#FFFFFF'], contrast: ['#FF9ECF', '#000000'] },
-  lime: { name: 'Lime', dark: ['#C3E85A', '#1A2406'], light: ['#4D7C0F', '#FFFFFF'], contrast: ['#D8FF6B', '#000000'] },
+  cyan: { name: N_('Cyan'), dark: ['#5CE1E6', '#062A2C'], light: ['#0A8A90', '#FFFFFF'], contrast: ['#3DF2FF', '#000000'] },
+  blue: { name: N_('Blue'), dark: ['#6CB6FF', '#06182C'], light: ['#1F6FD1', '#FFFFFF'], contrast: ['#8CCBFF', '#000000'] },
+  pink: { name: N_('Pink'), dark: ['#FF7AB6', '#2C0618'], light: ['#C2185B', '#FFFFFF'], contrast: ['#FF9ECF', '#000000'] },
+  lime: { name: N_('Lime'), dark: ['#C3E85A', '#1A2406'], light: ['#4D7C0F', '#FFFFFF'], contrast: ['#D8FF6B', '#000000'] },
 };
 function applyTheme() {
   const theme = ['light', 'contrast'].includes(prefs.theme) ? prefs.theme : 'dark';
@@ -1798,6 +1806,19 @@ settingsRows.push({
     $$('#set-accent button').forEach((b) => (b.onclick = () => { prefs.accent = b.dataset.v; savePrefs(); applyTheme(); syncPersonal(); }));
   },
 });
+settingsRows.push({
+  sync() {
+    $('#set-lang').innerHTML = Object.entries(LANGS).map(([k, name]) => `<button data-v="${k}" class="${getLang() === k ? 'on' : ''}" lang="${k}">${esc(name)}</button>`).join('');
+    $$('#set-lang button').forEach((b) => (b.onclick = () => switchLanguage(b.dataset.v)));
+  },
+});
+async function switchLanguage(code) {
+  try { await loadLanguage(code); } catch (e) { toast(t('Could not load the language: {e}', { e: esc(e.message) }), 'warn'); return; }
+  prefs.lang = code; savePrefs();
+  setLang(code);
+  refreshWords();
+  syncPersonal();
+}
 $$('#set-theme button').forEach((b) => (b.onclick = () => { prefs.theme = b.dataset.v; savePrefs(); applyTheme(); syncPersonal(); }));
 
 // Units or language changed: everything that shows a number or a word again.
@@ -1825,17 +1846,17 @@ function commands() {
   add('List', 'Group by state', [], () => { state.group = prefs.group = 'state'; savePrefs(); syncGroup(); flipRender(); }, () => state.group !== 'state');
   add('List', 'Compact rows', [], () => { state.density = prefs.density = 'compact'; savePrefs(); syncDensity(); renderList(); }, () => state.density !== 'compact');
   add('List', 'Normal rows', [], () => { state.density = prefs.density = 'normal'; savePrefs(); syncDensity(); renderList(); }, () => state.density !== 'normal');
-  for (const [k, label] of [['addressed', 'Show the notes to check'], ['open', 'Show the open notes'], ['working', "Show the models in Claude's run"], ['building', 'Show the models being built']]) {
+  for (const [k, label] of [['addressed', N_('Show the notes to check')], ['open', N_('Show the open notes')], ['working', N_("Show the models in Claude's run")], ['building', N_('Show the models being built')]]) {
     add('List', label, [], () => { state.pill = k; renderStrip(); renderList(); if (!isOpen(left)) setPanel(left, true); });
   }
   add('List', 'Show every model', [], () => { state.pill = null; state.tags.clear(); $('#search').value = ''; $('#filter').value = 'all'; renderTags(); renderStrip(); renderList(); }, () => state.pill || state.tags.size || $('#search').value || $('#filter').value !== 'all');
   add('Panels', 'Fold or unfold the model list', ['['], keyActions['[']);
   add('Panels', 'Fold or unfold the notes panel', [']'], keyActions[']']);
   add('Panels', 'Fold or unfold both panels', ['\\'], keyActions['\\']);
-  for (const [tab, label] of [['notes', 'Notes'], ['checks', 'Checks'], ['details', 'Details'], ['history', 'History']]) add('Panels', `Open the ${label} tab`, [], () => ensureRight(tab), hasModel); // the four strings are in the dictionary
-  for (const [k, v, label] of [['1', 'front', 'Front view'], ['2', 'back', 'Back view'], ['3', 'left', 'Left view'], ['4', 'right', 'Right view'], ['5', 'top', 'Top view'], ['6', 'iso', 'Three-quarter view']]) add('View', label, [k], () => viewer.view(v), hasModel);
+  for (const [tab, label] of [['notes', N_('Open the Notes tab')], ['checks', N_('Open the Checks tab')], ['details', N_('Open the Details tab')], ['history', N_('Open the History tab')]]) add('Panels', label, [], () => ensureRight(tab), hasModel);
+  for (const [k, v, label] of [['1', 'front', N_('Front view')], ['2', 'back', N_('Back view')], ['3', 'left', N_('Left view')], ['4', 'right', N_('Right view')], ['5', 'top', N_('Top view')], ['6', 'iso', N_('Three-quarter view')]]) add('View', label, [k], () => viewer.view(v), hasModel);
   add('View', 'Frame the model', ['F'], () => viewer.frame(), hasModel);
-  for (const [m, label] of [['lit', 'Lit'], ['unlit', 'Unlit'], ['clay', 'Clay'], ['normals', 'Normals'], ['uv', 'UV checker'], ['faces', 'Faces: back faces in red']]) add('Shading', `Shading: ${label}`, [], () => setOpt('shade', m), () => hasModel() && viewer.opts.shade !== m);
+  for (const [m, label] of [['lit', N_('Shading: Lit')], ['unlit', N_('Shading: Unlit')], ['clay', N_('Shading: Clay')], ['normals', N_('Shading: Normals')], ['uv', N_('Shading: UV checker')], ['faces', N_('Shading: Faces, back faces in red')]]) add('Shading', label, [], () => setOpt('shade', m), () => hasModel() && viewer.opts.shade !== m);
   add('Shading', 'Next shading', ['S'], () => cycleShade(1), hasModel);
   add('Shading', 'Previous shading', ['⇧S'], () => cycleShade(-1), hasModel);
   add('View', 'Wireframe on or off', ['W'], () => setOpt('wire', !viewer.opts.wire), hasModel);
@@ -1858,7 +1879,7 @@ function commands() {
   add('Notes', 'Show the active notes only', [], () => { setNoteFilter('active'); renderNotes(); renderPins(); }, () => hasModel() && state.noteFilter !== 'active');
   add('Help', 'Keyboard shortcuts', ['?'], showKeys);
   add('Help', 'Settings', [], openSettings);
-  for (const [th, label] of [['dark', 'Theme: Dark'], ['light', 'Theme: Light'], ['contrast', 'Theme: High contrast']]) add('Help', label, [], () => { prefs.theme = th; savePrefs(); applyTheme(); }, () => (prefs.theme || 'dark') !== th);
+  for (const [th, label] of [['dark', N_('Theme: Dark')], ['light', N_('Theme: Light')], ['contrast', N_('Theme: High contrast')]]) add('Help', label, [], () => { prefs.theme = th; savePrefs(); applyTheme(); }, () => (prefs.theme || 'dark') !== th);
   for (const run of paletteExtras) run(add);
   for (const a of state.assets) add('Model', { text: t('Open {name}', { name: a.name }) }, [], () => go(a.id), () => a.id !== state.id);
   return C.filter((c) => { try { return c.when(); } catch { return false; } });
@@ -1928,6 +1949,10 @@ window.addEventListener('hashchange', fromHash);
 (async () => {
   applyTheme();
   setUnits(prefs.units);
+  // The language: the one chosen, else the browser's when Studio speaks it.
+  const want = prefs.lang || ((navigator.language || '').toLowerCase().startsWith('fr') ? 'fr' : 'en');
+  try { await loadLanguage(want); setLang(want); } catch { setLang('en'); }
+  try { setCheckMessages((await api('/api/messages')).messages); } catch { /* the server's English text stands in */ }
   applyI18n();
   initPanels();
   setTab(prefs.tab || 'notes');

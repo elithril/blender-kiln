@@ -25,7 +25,7 @@ VERSION = "1.0.0"
 STATIC = Path(__file__).resolve().parent / "static"
 MAX_BODY = 30 * 1024 * 1024
 TYPES = {".glb": "model/gltf-binary", ".gltf": "model/gltf+json", ".webp": "image/webp",
-         ".md": "text/plain; charset=utf-8", ".obj": "text/plain; charset=utf-8",
+         ".md": "text/plain; charset=utf-8", ".json": "application/json; charset=utf-8", ".obj": "text/plain; charset=utf-8",
          ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
          ".html": "text/html; charset=utf-8", ".yaml": "text/plain; charset=utf-8",
          ".yml": "text/plain; charset=utf-8", ".py": "text/plain; charset=utf-8"}
@@ -252,11 +252,16 @@ def make_handler(studio: Studio, port_ref: list[int]):
             try:
                 if parts in ([""], ["index.html"]):
                     return self._file(STATIC / "index.html")
-                if parts[0] == "static" and len(parts) == 2:
-                    p = (STATIC / parts[1]).resolve()
-                    if p.parent != STATIC:
+                if parts[0] == "static" and 2 <= len(parts) <= 3:
+                    # static/app.js, static/i18n/fr.json: nothing outside static/.
+                    p = (STATIC / "/".join(parts[1:])).resolve()
+                    if STATIC not in p.parents:
                         return self._err(403, "forbidden")
                     return self._file(p)
+                if parts[:2] == ["api", "messages"]:
+                    # The checks' words, in English: the page renders a finding's codes with
+                    # them, or with static/i18n/<lang>.json.
+                    return self._json({"messages": checks.MESSAGES})
                 if parts[0] == "files":
                     p = project.inside("/".join(parts[1:]))
                     # ?h=<hash>: the page asks for one version. If the file changed since,

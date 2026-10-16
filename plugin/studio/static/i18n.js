@@ -4,11 +4,23 @@
 // Note text and Claude's replies are the user's and Claude's own words: never translated.
 
 const DICTS = { en: {} };
+const CHECKS = { en: {} };   // checks.py MESSAGES, per language
 let lang = 'en';
 let units = 'm';
 
-export const LANGS = { en: 'English' };
-export function addLanguage(code, name, dict) { DICTS[code] = dict; LANGS[code] = name; }
+export const LANGS = { en: 'English', fr: 'Français' };
+// A language's words: static/i18n/<code>.json, { "ui": {English: …}, "checks": {code: …} }.
+export async function loadLanguage(code) {
+  if (code === 'en' || DICTS[code]) return;
+  const r = await fetch(`/static/i18n/${code}.json`);
+  if (!r.ok) throw new Error(`${code}: ${r.status}`);
+  const d = await r.json();
+  DICTS[code] = d.ui || {};
+  CHECKS[code] = d.checks || {};
+}
+export function setCheckMessages(en) { CHECKS.en = en || {}; }
+// A marker for words the page translates later: the extractor (test_studio.py) finds them.
+export const N_ = (s) => s;
 export const getLang = () => lang;
 export function setLang(code) { lang = DICTS[code] ? code : 'en'; document.documentElement.lang = lang; }
 export function setUnits(u) { units = u === 'cm' ? 'cm' : 'm'; }
@@ -77,4 +89,39 @@ export function ago(iso) {
   if (s < 86400 * 14) return t('{n} d ago', { n: Math.round(s / 86400) });
   return new Date(iso).toLocaleDateString(locale());
 }
+// A check finding ([[code, params], …], checks.py) in the language: the same codes,
+// the same placeholders, numbers and lengths formatted here.
+export function renderMsg(msg) {
+  if (!Array.isArray(msg) || !msg.length) return null;
+  return msg.map(([code, params]) => one(code, params || {})).join(' ');
+}
+function one(code, params) {
+  let tm = (CHECKS[lang] && CHECKS[lang][code]) || CHECKS.en[code];
+  if (tm == null) return code;
+  if (Array.isArray(tm)) {
+    const pr = (plural[lang] ||= new Intl.PluralRules(locale()));
+    tm = pr.select(params.n ?? 2) === 'one' ? tm[0] : tm[1];
+  }
+  return tm.replace(/\{(\w+)(?::(\w+))?\}/g, (m, k, f) => (k in params ? fmtParam(params[k], f) : m));
+}
+function fmtParam(v, f) {
+  if (Array.isArray(v) && v.length === 2 && typeof v[0] === 'string' && v[1] && typeof v[1] === 'object' && !Array.isArray(v[1])) return one(v[0], v[1]);
+  switch (f) {
+    case 'n': return fmtN(v);
+    case 'k': return fmtK(v);
+    case 'px': return `${fmtN(v)}${lang === 'fr' ? '\u202fpx' : 'px'}`;
+    case 'd2': return fmtD(v, 2);
+    case 'm2': return units === 'cm' ? fmtLen(v) : `${fmtD(v, 2)} m`;
+    case 'm3': return units === 'cm' ? fmtLen(v) : `${fmtD(v, 3)} m`;
+    case 'sm3': return `${v > 0 ? '+' : v < 0 ? '−' : '±'}${units === 'cm' ? fmtLen(Math.abs(v)) : `${fmtD(Math.abs(v), 3)} m`}`;
+    case 'mm1': return `${fmtD(v * 1000, 1)} mm`;
+    case 'm0': return `${fmtD(v, 0)} m`;
+    case 'pct': return fmtPct(v);
+    case 'spct': return fmtPct(v, true);
+    case 'w': return t(v);
+    case 'or': return v.map((x) => t(x)).join(t(' or '));
+    default: return String(v);
+  }
+}
+
 export const stamp = (iso) => new Date(iso).toLocaleString(locale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });

@@ -14,6 +14,7 @@ import http.client
 import io
 import json
 import os
+import re
 import shutil
 import struct
 import sys
@@ -520,6 +521,16 @@ class Checks(Base):
         orig = {r["key"]: r for r in c["health"]["original"]}
         self.assertEqual((orig["textures"]["level"], orig["compression"]["level"]), ("info", "info"))
 
+    def test_findings_carry_their_codes(self) -> None:
+        a = self._asset(tris=4000, image=png(2048, 2048), lift=0.2)
+        for rows in checks.asset_checks(self.p, a)["health"].values():
+            for r in rows:
+                self.assertTrue(r["msg"] and all(c in checks.MESSAGES for c, _ in r["msg"]), r["key"])
+                self.assertEqual(checks.render(r["msg"]), r["text"])
+                self.assertEqual(checks.render(r["fix_msg"]), r["fix"])
+                self.assertEqual(checks.render(r["ask_msg"]), r["ask"])
+        json.dumps(checks.asset_checks(self.p, a))   # the codes and params travel as JSON
+
     def test_an_optimized_final_passes(self) -> None:
         a = self._asset(tris=1000, image=png(1024, 1024)[:0] + b"RIFF\0\0\0\0WEBPVP8X" + b"\0" * 8
                         + (1023).to_bytes(3, "little") + (1023).to_bytes(3, "little"), mime="image/webp",
@@ -645,6 +656,91 @@ class Settings(Base):
         [a] = sl.scan(self.p)
         logged = {r["key"]: r for r in checks.health(self.p, a, a.primary)}
         self.assertEqual(logged["compression"]["level"], "warn")
+
+
+STATIC = Path(__file__).resolve().parent / "static"
+
+
+def ui_strings() -> set[str]:
+    """Every string the page passes through t(), tp() or N_(), every palette label, and
+    every [data-i18n] text and [data-i18n-attr] attribute of index.html: the English
+    keys static/i18n/<lang>.json must translate."""
+    from html.parser import HTMLParser
+    q = r"""(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")"""
+
+    def un(a, b):
+        return (a if a is not None else b).replace("\\'", "'").replace('\\"', '"').replace("\\\\", "\\")
+    keys: set[str] = set()
+    for f in ("app.js", "i18n.js"):
+        src = (STATIC / f).read_text()
+        keys |= {un(m.group(1), m.group(2)) for m in re.finditer(r"\b(?:t|N_)\(\s*" + q, src)}
+        for m in re.finditer(r"\btp\([^'\"]*?,\s*" + q + r"\s*,\s*" + q, src):
+            keys |= {un(m.group(1), m.group(2)), un(m.group(3), m.group(4))}
+        for m in re.finditer(r"\badd\(\s*'([^']+)'\s*,\s*" + q, src):
+            keys |= {m.group(1), un(m.group(2), m.group(3))}
+
+    class H(HTMLParser):
+        def __init__(self) -> None:
+            super().__init__()
+            self.stack: list = []
+
+        def handle_starttag(self, tag, attrs):
+            a = dict(attrs)
+            for at in (a.get("data-i18n-attr") or "").split(","):
+                if at and a.get(at):
+                    keys.add(a[at])
+            self.stack.append(("data-i18n" in a, []))
+
+        def handle_startendtag(self, tag, attrs):
+            self.handle_starttag(tag, attrs)
+            self.stack.pop()
+
+        def handle_endtag(self, tag):
+            if self.stack:
+                on, buf = self.stack.pop()
+                if on and "".join(buf).strip():
+                    keys.add("".join(buf))
+                if self.stack:
+                    self.stack[-1][1].extend(buf)
+
+        def handle_data(self, d):
+            if self.stack:
+                self.stack[-1][1].append(d)
+    H().feed((STATIC / "index.html").read_text())
+    return keys
+
+
+def holes(s) -> list[str]:
+    return sorted(re.findall(r"\{(\w+)", " ".join(s) if isinstance(s, list) else s))
+
+
+class Language(unittest.TestCase):
+    """French is complete: a string added in English without its French fails here."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.fr = json.loads((STATIC / "i18n" / "fr.json").read_text())
+
+    def test_every_page_string_has_its_french(self) -> None:
+        keys = ui_strings()
+        self.assertGreater(len(keys), 400)   # the extractor still finds the page's strings
+        self.assertEqual(sorted(keys - set(self.fr["ui"])), [])
+        for en, fr in self.fr["ui"].items():
+            self.assertEqual(holes(en), holes(fr), en)
+
+    def test_every_check_code_has_its_french(self) -> None:
+        self.assertEqual(sorted(set(checks.MESSAGES) ^ set(self.fr["checks"])), [])
+        for code, en in checks.MESSAGES.items():
+            fr = self.fr["checks"][code]
+            self.assertEqual(isinstance(en, list), isinstance(fr, list), code)
+            self.assertEqual(holes(en), holes(fr), code)
+
+    def test_the_words_a_finding_carries_are_translated(self) -> None:
+        words = {*checks.WORDS, *checks.LABELS, *checks.LICENCE_KIND.values(), *checks.CATEGORY_LABEL.values(),
+                 *checks.TIERS, *checks.EXPECTED_HEIGHT}
+        self.assertEqual(sorted(words - set(self.fr["ui"])), [])
+        src = Path(checks.__file__).read_text()
+        self.assertEqual(sorted(set(re.findall(r'_check\("\w+", "([^"]+)"', src)) - set(checks.LABELS)), [])
 
 
 class Api(Base):
