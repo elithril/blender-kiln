@@ -41,6 +41,7 @@
     <nav id="list" aria-label="Model list" data-i18n-attr="aria-label"></nav>
     <footer class="lfoot">
       <span id="project" class="dim mono" title=""></span>
+      <button class="btn icon sm ghost" id="t-settings" aria-label="Settings" title="Settings" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
     </footer>
     <div id="viewpop" class="popover" hidden role="group" aria-label="List view" data-i18n-attr="aria-label">
       <span class="lab" data-i18n>Group by</span>
@@ -216,6 +217,42 @@
   <h3 data-i18n>Keys</h3>
   <dl id="keys-list"></dl>
   <form method="dialog"><button class="btn" data-i18n>Close</button></form>
+</dialog>
+<dialog id="settings" aria-labelledby="set-title">
+  <header class="set-head"><h3 id="set-title" data-i18n>Settings</h3><form method="dialog"><button class="btn sm" data-i18n>Close</button></form></header>
+  <div class="set-body">
+    <section class="set-sec" aria-labelledby="set-personal">
+      <h4 id="set-personal"><span data-i18n>Personal</span> <small data-i18n>this browser only</small></h4>
+      <div class="set-grid" id="set-personal-rows">
+        <span class="lab" data-i18n>Rows in the list</span>
+        <div class="seg small" id="set-density"><button data-v="normal" data-i18n>Normal</button><button data-v="compact" data-i18n>Compact</button></div>
+        <label class="lab" for="set-shade" data-i18n>A model opens in</label>
+        <select id="set-shade"><option value="" data-i18n>The last shading used</option><option value="lit" data-i18n>Lit</option><option value="unlit" data-i18n>Unlit</option><option value="clay" data-i18n>Clay</option><option value="normals" data-i18n>Normals</option><option value="uv" data-i18n>UV checker</option><option value="faces" data-i18n>Faces</option></select>
+        <label class="lab" for="set-view" data-i18n>Seen from</label>
+        <select id="set-view"><option value="iso" data-i18n>Three-quarter</option><option value="front" data-i18n>Front</option><option value="back" data-i18n>Back</option><option value="left" data-i18n>Left</option><option value="right" data-i18n>Right</option><option value="top" data-i18n>Top</option></select>
+        <span class="lab" data-i18n>Lengths in</span>
+        <div class="seg small" id="set-units"><button data-v="m" data-i18n>metres</button><button data-v="cm" data-i18n>centimetres</button></div>
+        <span class="lab" data-i18n>Fixed pins</span>
+        <button class="switch" id="set-hidefixed" role="switch" aria-checked="false"><i class="sw"></i><span data-i18n>Hidden by default</span></button>
+      </div>
+    </section>
+    <section class="set-sec project" aria-labelledby="set-project">
+      <h4 id="set-project"><span data-i18n>Project</span> <small><span data-i18n>shared with Claude, in</span> <code>.kiln-studio/config.json</code></small></h4>
+      <div class="set-grid">
+        <span class="lab" data-i18n>Live view</span>
+        <button class="switch" id="set-live" role="switch" aria-checked="true"><i class="sw"></i><span data-i18n>Claude shows a model here while it builds it</span></button>
+        <span class="lab" data-i18n>Opening Studio</span>
+        <button class="switch" id="set-autoopen" role="switch" aria-checked="true"><i class="sw"></i><span data-i18n>Opens the browser on its own</span></button>
+        <span class="lab" data-i18n>Made for</span>
+        <div><div class="seg small" id="set-target"><button data-v="web" data-i18n>Web</button><button data-v="desktop" data-i18n>Unity / Unreal</button><button data-v="print" data-i18n>3D print</button></div>
+          <p class="dim small" data-i18n>Sets the limits the checks use, when a model's production log names no target.</p></div>
+        <label class="lab" for="set-exclude" data-i18n>Left out of the list</label>
+        <div><textarea id="set-exclude" rows="3" spellcheck="false" placeholder="site/public/*" aria-describedby="set-exclude-help"></textarea>
+          <p class="dim small" id="set-exclude-help" data-i18n>One folder or file pattern per line, from the project folder.</p></div>
+      </div>
+      <p class="set-status dim small" id="set-status" aria-live="polite"></p>
+    </section>
+  </div>
 </dialog>
 <dialog id="palette" aria-label="Commands" data-i18n-attr="aria-label">
   <div class="pal-in"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="pal-q" type="text" placeholder="Type a command or a model" autocomplete="off" spellcheck="false" aria-label="Filter commands" aria-controls="pal-list" data-i18n-attr="placeholder,aria-label"><kbd>Esc</kbd></div>

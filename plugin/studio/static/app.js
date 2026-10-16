@@ -9,7 +9,7 @@
 // with a divider (one camera) or side by side, pins stick to the surface and follow
 // the animation, and History is one chronological feed.
 import { Viewer, Offscreen, Superseded } from './viewer.js';
-import { t, tp, applyI18n, fmtN, fmtK, fmtB, fmtD, fmtLen, fmtPct, ago, stamp } from './i18n.js';
+import { t, tp, applyI18n, setUnits, getUnits, fmtN, fmtK, fmtB, fmtD, fmtLen, fmtPct, ago, stamp } from './i18n.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -617,7 +617,11 @@ async function loadVariant(label, { keepCamera = true } = {}) {
     if (seq !== state.loadSeq) return;
     state.clientStats = stats;
     state.occl.clear();
-    if (!keepCamera) viewer.frame(VIEW_DIRS[prefs.view || 'iso'], { animate: false });
+    if (!keepCamera) {
+      viewer.frame(VIEW_DIRS[prefs.view || 'iso'], { animate: false });
+      // Settings → "A model opens in": that shading, whatever was used last.
+      if (prefs.defaultShade && viewer.opts.shade !== prefs.defaultShade) { viewer.set('shade', prefs.defaultShade); syncToolbar(); }
+    }
     if (state.compare) await loadCompareTarget();
   } catch (e) {
     if (e instanceof Superseded) return;
@@ -1715,6 +1719,67 @@ document.addEventListener('keydown', (e) => {
   if (fn) { e.preventDefault(); fn(); }
 });
 
+// ── settings: personal (this browser) and the project's (shared with Claude) ──
+
+const settingsRows = []; // further personal rows (theme, language) register here
+let project = null;
+async function openSettings() {
+  document.querySelector('dialog[open]')?.close();
+  syncPersonal();
+  $('#set-status').textContent = '';
+  $('#settings').showModal();
+  try {
+    project = (await api('/api/config')).settings;
+    syncProject();
+  } catch (e) { $('#set-status').textContent = t('Could not read the project settings: {e}', { e: e.message }); }
+}
+function segSet(id, value) { $$(`${id} button`).forEach((b) => b.classList.toggle('on', b.dataset.v === value)); }
+function switchSet(id, on) { $(id).setAttribute('aria-checked', String(!!on)); }
+function syncPersonal() {
+  segSet('#set-density', state.density);
+  $('#set-shade').value = prefs.defaultShade || '';
+  $('#set-view').value = prefs.view || 'iso';
+  segSet('#set-units', getUnits());
+  switchSet('#set-hidefixed', state.hideFixed);
+  for (const r of settingsRows) r.sync?.();
+}
+function syncProject() {
+  if (!project) return;
+  switchSet('#set-live', project.live_view);
+  switchSet('#set-autoopen', project.auto_open);
+  segSet('#set-target', project.target);
+  if (document.activeElement !== $('#set-exclude')) $('#set-exclude').value = project.exclude.join('\n');
+}
+async function saveProject(updates, what) {
+  $('#set-status').textContent = t('Saving…');
+  try {
+    project = (await api('/api/config', { method: 'PUT', body: updates })).settings;
+    syncProject();
+    $('#set-status').textContent = t('Saved in .kiln-studio/config.json: {what}', { what });
+    if ('target' in updates && state.id) await fetchDetail();
+    if ('exclude' in updates) await fetchAssets();
+  } catch (e) { $('#set-status').textContent = t('Not saved: {e}', { e: e.message }); syncProject(); }
+}
+$$('#set-density button').forEach((b) => (b.onclick = () => { state.density = prefs.density = b.dataset.v; savePrefs(); syncDensity(); syncPersonal(); renderList(); }));
+$('#set-shade').onchange = (e) => { prefs.defaultShade = e.target.value; savePrefs(); };
+$('#set-view').onchange = (e) => { prefs.view = e.target.value; savePrefs(); };
+$$('#set-units button').forEach((b) => (b.onclick = () => { prefs.units = b.dataset.v; savePrefs(); setUnits(b.dataset.v); syncPersonal(); refreshWords(); }));
+$('#set-hidefixed').onclick = () => { setPinFilter('hideFixed', !state.hideFixed); syncPersonal(); };
+$('#set-live').onclick = () => project && saveProject({ live_view: !project.live_view }, t('Live view'));
+$('#set-autoopen').onclick = () => project && saveProject({ auto_open: !project.auto_open }, t('Opening Studio'));
+$$('#set-target button').forEach((b) => (b.onclick = () => project && project.target !== b.dataset.v && saveProject({ target: b.dataset.v }, t('Made for'))));
+$('#set-exclude').onchange = (e) => saveProject({ exclude: e.target.value.split('\n').map((x) => x.trim()).filter(Boolean) }, t('Left out of the list'));
+$('#t-settings').onclick = openSettings;
+
+// Units or language changed: everything that shows a number or a word again.
+function refreshWords() {
+  applyI18n();
+  syncToolbar();
+  renderTags(); renderStrip(); renderWork(); renderList(); renderEmpty();
+  if (state.detail) { renderAll(); if (state.compare) renderDelta(); setupAnimBar(); }
+  placeLabels();
+}
+
 // ── command palette (⌘K): every action, with its key ────────────────────────
 // Each command: its group, its words, the key that does the same, and whether it
 // applies now (`when`). Typing filters on every word; Enter runs the one picked.
@@ -1763,6 +1828,7 @@ function commands() {
   add('Notes', 'Show all notes, closed ones too', [], () => { setNoteFilter('all'); renderNotes(); renderPins(); ensureRight('notes'); }, () => hasModel() && state.noteFilter !== 'all');
   add('Notes', 'Show the active notes only', [], () => { setNoteFilter('active'); renderNotes(); renderPins(); }, () => hasModel() && state.noteFilter !== 'active');
   add('Help', 'Keyboard shortcuts', ['?'], showKeys);
+  add('Help', 'Settings', [], openSettings);
   for (const run of paletteExtras) run(add);
   for (const a of state.assets) add('Model', { text: t('Open {name}', { name: a.name }) }, [], () => go(a.id), () => a.id !== state.id);
   return C.filter((c) => { try { return c.when(); } catch { return false; } });
@@ -1830,6 +1896,7 @@ function fromHash() {
 window.addEventListener('hashchange', fromHash);
 
 (async () => {
+  setUnits(prefs.units);
   applyI18n();
   initPanels();
   setTab(prefs.tab || 'notes');

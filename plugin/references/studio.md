@@ -24,8 +24,9 @@ python3 <skill>/studio/studio.py [PROJECT] [--asset ID] [--no-open]
 - It prints the URL and returns. A Studio already serving that folder is reused (its
   URL is printed, nothing restarts); otherwise one starts in the background, logging to
   `.kiln-studio/cache/server.log`. `studio.py stop` stops it, `studio.py status` reports it.
-- It opens the browser unless `--no-open`. Honour CONFIG's **Auto-open links**: when it
-  is false, pass `--no-open` and give the user the printed URL.
+- It opens the browser unless `--no-open`, or the project's `auto_open` is false (§ 9).
+  Honour CONFIG's **Auto-open links**: when it is false, pass `--no-open` and give the user
+  the printed URL.
 - `--asset generated-assets/wooden-chair` opens on that model.
 
 **When to start it:** in an interactive session, once the brief is confirmed, so the user
@@ -40,7 +41,7 @@ What it finds: every `.glb .gltf .fbx .obj` under the folder, skipping hidden fo
 `<name>/<name>_{original,clean,textured,optimized,final,live}.glb` is **one** asset whose
 stages are switchable variants, with its `.blend`, `_log.md` and images listed beside
 it; the folder above (the output or batch folder) is its default category. Excluding
-more: `.kiln-studio/config.json` → `{"exclude": ["site/public/*"]}`.
+more: the project's `exclude` (§ 9), e.g. `["site/public/*"]`.
 
 ---
 
@@ -70,6 +71,7 @@ blender_live.snapshot("<project root>", "generated-assets/wooden-chair", "cleanu
   (`--keep-file` keeps it). History keeps every live version's size, triangles and render.
 
 Off in batch runs: nobody watches them, and the wizard's token estimate does not count it.
+Off too when the project's `live_view` is false (§ 9): then start Studio at EXPORT only.
 
 ---
 
@@ -87,7 +89,9 @@ read the production log and the model file:
 | Draco or meshopt geometry, WebP or KTX2 textures | `extensionsUsed`, image formats | WARN on `_final` for a web target; a note for Unity/Unreal/PC, whose engine packs the file itself; other stages are not shipped |
 | Licences | the log's Licenses section | note for CC-BY (credit), WARN for non-commercial |
 
-With no log, the tier is assumed balanced and the type a prop, and the check says so.
+With no log, the tier is assumed balanced and the type a prop, and the check says so. The
+target is the log's, else the project's `target` (§ 9), else the web, assumed and said.
+For `print` the checks set no triangle budget, and textures and compression are notes.
 Report the WARN lines with the export summary; none of them is a target to tune to.
 
 Each check is written for the user: what was found and why it matters, then **How to
@@ -226,6 +230,7 @@ python3 <skill>/studio/studio.py work next                                      
 | `studio.py checks <asset>` | Tier, size, ground, textures, compression, licences, fidelity, batch estimate (`--json`) |
 | `studio.py live <folder> --phase P --text "…"` | Record a build step; alone, show the build; `--end` closes it and removes `_live` |
 | `studio.py work start <asset>... --label L` | Show the user which models a command works on (§ 5); `next`, `begin <asset>`, `done <asset>`, `end`; alone, show the run |
+| `studio.py config [KEY=VALUE ...]` | The project's settings (§ 9): print them, or set `live_view`, `auto_open`, `target`, `exclude` (`--json`) |
 
 The commands other than `open` find the project from the current folder upwards (the
 first folder holding `.kiln-studio/`); pass `--root PROJECT` from elsewhere.
@@ -283,6 +288,7 @@ kilobytes each (JPEG where the browser cannot write WebP), not a copy of the mod
 ```
 PROJECT/.kiln-studio/
 ├── .gitignore                    baseline/, cache/, server.json
+├── config.json                   the project's settings (§ 9)
 ├── catalog.json                  category and tags per asset
 ├── work.json                     the models a command is working through (§ 5)
 ├── assets/<id with / as ~>/
@@ -296,3 +302,27 @@ PROJECT/.kiln-studio/
 
 Notes store points in both frames: `point` (glTF, Y up, front +Z) and `point_blender`.
 Statuses: `open` → `addressed` (you) → `resolved` (the user) or `wontfix`.
+
+---
+
+## 9. Settings — the project's, and the user's
+
+The page's **Settings** (the gear under the list, or ⌘K → Settings) has two parts.
+
+**Personal** — this browser only, never in the project: rows Normal or Compact, the shading
+and the view a model opens in, lengths in metres or centimetres, whether fixed pins start
+hidden. Nothing for you to read.
+
+**Project** — `.kiln-studio/config.json`, committed with the notes. Read it at CONFIG
+(`studio.py config`, or the file): its values are the session's defaults, and the user's
+answer in the session wins.
+
+| Key | Values (default) | What it sets |
+|---|---|---|
+| `live_view` | `true` / `false` (`true`) | CONFIG's **Live view**: false, do not export after each phase; start Studio at EXPORT |
+| `auto_open` | `true` / `false` (`true`) | CONFIG's **Auto-open links**; `studio.py open` does not open the browser when false |
+| `target` | `"web"`, `"desktop"` (Unity/Unreal), `"print"` (`"web"`) | CONFIG's **Target** when the brief names none; the checks' limits for a model whose log gives no target |
+| `exclude` | glob patterns from the project folder (`[]`) | folders and files Studio leaves out of the list |
+
+Studio refuses an unknown key or a bad value from the page, and keeps any other key the
+file has as it is.

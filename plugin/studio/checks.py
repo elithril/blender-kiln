@@ -115,6 +115,24 @@ def texture_cap(target: str) -> int:
     return CAP_DESKTOP if any(k in t for k in ("fbx", "unity", "unreal", "console", "pc", "desktop")) else CAP_WEB
 
 
+def is_print(target: str) -> bool:
+    return "print" in (target or "").lower()
+
+
+# The project's target (.kiln-studio/config.json, Studio's settings), as the log would word it.
+TARGET_NAMES = {"web": "web", "desktop": "Unity/Unreal", "print": "3D print"}
+
+
+def effective_config(project: sl.Project, log: dict) -> dict:
+    """The production log's Config, with the project's target when the log gives none."""
+    cfg = dict(log["config"])
+    explicit = project.config().get("target")
+    if not cfg.get("target") and explicit in sl.TARGETS:
+        cfg["target"] = TARGET_NAMES[explicit]
+        cfg["target_from"] = "project"
+    return cfg
+
+
 # ── image sizes, read from the headers ───────────────────────────────────────
 
 
@@ -244,6 +262,11 @@ def shipped(asset: sl.Asset, v: sl.Variant) -> bool:
 
 
 def _tris_check(tris: int, cfg: dict, name: str) -> dict:
+    if is_print(cfg.get("target", "")):
+        # A slicer takes the mesh as it is: no download, no draw calls.
+        return _check("tris", "Triangles", "ok",
+                      f"{tris:,} triangle{'' if tris == 1 else 's'}. Printing has no triangle budget: "
+                      f"the slicer takes the mesh as it is.", value=tris)
     tier = (cfg.get("tier") or "").lower().split()[0] if cfg.get("tier") else ""
     assumed = []
     if tier not in TIERS:
@@ -329,7 +352,8 @@ def _scale_checks(st: dict, cfg: dict, name: str, kiln: bool) -> list[dict]:
     cx = (bb["min"][0] + bb["max"][0]) / 2
     cy = -(bb["min"][2] + bb["max"][2]) / 2   # Blender Y is glTF -Z
     off_c = max(abs(cx) / max(x, 1e-6), abs(cy) / max(y, 1e-6))
-    lvl = "warn" if kiln else "info"
+    # A slicer lays the model on its bed: where the origin is matters less there.
+    lvl = "warn" if kiln and not is_print(cfg.get("target", "")) else "info"
     ground = ("Move the model so its base sits on the ground (Z = 0), with the origin at the centre "
               "of the base.")
     if abs(zmin) > tol:
@@ -351,6 +375,8 @@ def _scale_checks(st: dict, cfg: dict, name: str, kiln: bool) -> list[dict]:
 
 def _target_name(cfg: dict) -> str:
     t = cfg.get("target")
+    if t and cfg.get("target_from") == "project":
+        return f"{t} (the project's target)"
     return t if t else "the web (assumed: no production log gives a target)"
 
 
@@ -364,6 +390,10 @@ def _texture_checks(ims: list[dict], cfg: dict, is_shipped: bool, label: str, na
     biggest = max((max(i["w"], i["h"]) for i in known), default=0)
     n = f"{len(ims)} image{'' if len(ims) == 1 else 's'}"
     out = []
+    if is_print(cfg.get("target", "")):
+        return [_check("textures", "Textures", "info",
+                       f"{n}, the largest {biggest}px. Printers ignore textures unless they print in colour.",
+                       images=ims)]
     if not is_shipped:
         out.append(_check("textures", "Textures", "info",
                           f"{n}, the largest {biggest}px. Sizes are checked on the final file; this is the "
@@ -388,6 +418,10 @@ def _compression_checks(st: dict, ims: list[dict], cfg: dict, is_shipped: bool, 
     fmts = {i["format"] for i in ims if i["format"]}
     light = fmts and fmts <= {"webp", "ktx2", "avif"}
     extra = {"draco": draco, "meshopt": meshopt, "formats": sorted(fmts)}
+    if is_print(cfg.get("target", "")):
+        return [_check("compression", "Compression", "info",
+                       "Compression does not matter for printing: export the mesh as STL, OBJ or 3MF for the slicer.",
+                       **extra)]
     if not is_shipped:
         return [_check("compression", "Compression", "info",
                        f"Not compressed, on purpose: only the final file is. This is the {label} stage.", **extra)]
@@ -463,11 +497,11 @@ def health(project: sl.Project, asset: sl.Asset, v: sl.Variant, log: dict | None
     except OSError:
         log_m = 0
     v.hash = v.hash or sl.file_hash(v.path)
-    key = (asset.id, v.rel, v.hash, log_m)
+    key = (asset.id, v.rel, v.hash, log_m, project.config().get("target"))
     if key in _health_cache:
         return _health_cache[key]
     log = log if log is not None else parse_log(logp)
-    cfg = log["config"]
+    cfg = effective_config(project, log)
     is_shipped = shipped(asset, v)
     out: list[dict] = []
     st = sl.variant_stats(v)
@@ -681,4 +715,4 @@ def asset_checks(project: sl.Project, asset: sl.Asset) -> dict:
     if asset.kiln and asset.folder not in (".", ""):
         batch = batch_estimate(project, str(Path(asset.folder).parent), asset.name)
     return {"health": per_variant, "shipped": ship.label if ship else None,
-            "config": log["config"], "fidelity": fidelity_runs(project, asset), "batch": batch}
+            "config": effective_config(project, log), "fidelity": fidelity_runs(project, asset), "batch": batch}

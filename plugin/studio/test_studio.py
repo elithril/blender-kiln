@@ -587,6 +587,66 @@ class Checks(Base):
         self.assertEqual(checks.fmt_range(est["range"]), "~150K–255K tokens")
 
 
+class Settings(Base):
+    def test_defaults_validation_and_unknown_keys_kept(self) -> None:
+        self.assertEqual(self.p.settings(), sl.CONFIG_DEFAULTS)
+        self.p.ensure()
+        (self.p.data / "config.json").write_text(json.dumps({"exclude": ["site/*"], "theirs": 1, "target": "moon"}))
+        self.assertEqual(self.p.settings()["exclude"], ["site/*"])
+        self.assertEqual(self.p.settings()["target"], "web")   # a bad value reads as the default
+        out = sl.save_config(self.p, {"target": "print", "live_view": False})
+        self.assertEqual((out["target"], out["live_view"], out["auto_open"]), ("print", False, True))
+        on_disk = json.loads((self.p.data / "config.json").read_text())
+        self.assertEqual(on_disk["theirs"], 1)   # a key Studio does not know is left alone
+        for bad in ({"target": "unity"}, {"live_view": "no"}, {"exclude": "a/*"}, {"colour": "red"}):
+            with self.assertRaises(ValueError, msg=bad):
+                sl.save_config(self.p, bad)
+
+    def test_cli(self) -> None:
+        def run(*a: str) -> str:
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                studio.main([*a, "--root", str(self.tmp)])
+            return out.getvalue()
+        self.assertIn("(default)", run("config"))
+        run("config", "target=print", "live_view=off", "exclude=site/*, docs/*")
+        st = json.loads(run("config", "--json"))
+        self.assertEqual((st["target"], st["live_view"], st["exclude"]), ("print", False, ["site/*", "docs/*"]))
+        with self.assertRaises(SystemExit):
+            run("config", "target=moon")
+        with self.assertRaises(SystemExit):
+            run("config", "auto_open=maybe")
+
+    def test_exclude_applies_to_the_scan(self) -> None:
+        glb(self.tmp / "site" / "public" / "hero.glb")
+        glb(self.tmp / "props" / "chair.glb")
+        self.assertEqual(len(sl.scan(self.p)), 2)
+        sl.save_config(self.p, {"exclude": ["site/*", "  "]})
+        self.assertEqual([a.id for a in sl.scan(self.p)], ["props/chair"])
+        self.assertEqual(self.p.settings()["exclude"], ["site/*"])
+
+    def test_the_project_target_sets_the_thresholds(self) -> None:
+        d = self.tmp / "generated-assets" / "crate"
+        glb(d / "crate_final.glb", tris=40000, image=png(2048, 2048))
+        [a] = sl.scan(self.p)
+        web = {r["key"]: r for r in checks.health(self.p, a, a.primary)}
+        self.assertEqual((web["tris"]["level"], web["textures"]["level"], web["compression"]["level"]), ("warn", "warn", "warn"))
+        self.assertIn("assumed", web["textures"]["text"])
+        sl.save_config(self.p, {"target": "desktop"})
+        desk = {r["key"]: r for r in checks.health(self.p, a, a.primary)}
+        self.assertEqual((desk["textures"]["level"], desk["compression"]["level"]), ("ok", "info"))
+        self.assertIn("the project's target", desk["textures"]["text"])
+        sl.save_config(self.p, {"target": "print"})
+        pr = {r["key"]: r for r in checks.health(self.p, a, a.primary)}
+        self.assertEqual((pr["tris"]["level"], pr["textures"]["level"], pr["compression"]["level"]), ("ok", "info", "info"))
+        self.assertEqual(checks.asset_checks(self.p, a)["config"]["target"], "3D print")
+        # The production log's own target wins over the project's.
+        (d / "crate_log.md").write_text(LOG)
+        [a] = sl.scan(self.p)
+        logged = {r["key"]: r for r in checks.health(self.p, a, a.primary)}
+        self.assertEqual(logged["compression"]["level"], "warn")
+
+
 class Api(Base):
     def setUp(self) -> None:
         super().setUp()
@@ -625,6 +685,17 @@ class Api(Base):
         code, d = self.req("GET", "/api/asset/generated-assets%2Fcrate")
         self.assertEqual(code, 200)
         self.assertEqual(d["variants"][0]["stats"]["tris"], 1)
+
+    def test_settings_api(self) -> None:
+        code, data = self.req("GET", "/api/config")
+        self.assertEqual((code, data["settings"]["target"], data["file"]), (200, "web", ".kiln-studio/config.json"))
+        code, data = self.req("PUT", "/api/config", {"target": "desktop", "auto_open": False})
+        self.assertEqual((code, data["settings"]["target"], data["settings"]["auto_open"]), (200, "desktop", False))
+        code, data = self.req("PUT", "/api/config", {"target": "mars"})
+        self.assertEqual(code, 400)
+        code, _ = self.req("PUT", "/api/config", {"target": "web"}, headers={"Origin": "http://evil.example"})
+        self.assertEqual(code, 403)
+        self.assertEqual(self.p.settings()["target"], "desktop")
 
     def test_files_stay_inside_the_project(self) -> None:
         code, body = self.req("GET", "/files/generated-assets/crate/crate_final.glb")

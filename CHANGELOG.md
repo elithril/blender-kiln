@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Kiln Studio: settings, the user's and the project's
+
+- **Settings** (the gear under the list, or ⌘K), in two parts. *Personal*, kept in this
+  browser only: rows Normal or Compact, the shading and the view a model opens in,
+  lengths in metres or centimetres, fixed pins hidden or not. *Project*, in
+  `.kiln-studio/config.json`, shared with Claude: `live_view`, `auto_open`, `target`
+  (`web`, `desktop` for Unity/Unreal, `print`) and `exclude`. The skill reads them as
+  CONFIG's defaults (`references/studio.md` § 9); `studio.py open` leaves the browser
+  closed when `auto_open` is false; `studio.py config [KEY=VALUE ...]` prints or sets them.
+- The project's `target` sets the checks' limits for a model whose production log names
+  none: `desktop` raises the texture cap to 2048 and drops the compression warning,
+  `print` sets no triangle budget and makes textures and compression notes. A log's own
+  target still wins. Unknown keys and bad values are refused; keys Studio does not know
+  are kept. `test_studio.py`: 49 tests.
+
 ### Added — Kiln Studio: every command by name (⌘K)
 
 - ⌘K (Ctrl+K), from anywhere on the page, even while typing: the commands that apply now,

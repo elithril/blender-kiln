@@ -126,9 +126,14 @@ class Project:
     def config(self) -> dict:
         p = self.data / "config.json"
         try:
-            return json.loads(p.read_text()) if p.exists() else {}
+            data = json.loads(p.read_text()) if p.exists() else {}
         except (OSError, json.JSONDecodeError):
             return {}
+        return data if isinstance(data, dict) else {}
+
+    def settings(self) -> dict:
+        """The project's settings (CONFIG_KEYS) with their defaults filled in."""
+        return {**CONFIG_DEFAULTS, **clean_config(self.config())}
 
     # scanning
     def scan(self) -> list["Asset"]:
@@ -197,6 +202,50 @@ class Asset:
         return next((f for f in self.files if f.endswith(".blend")), None)
 
 
+# ── project settings: .kiln-studio/config.json ───────────────────────────────
+# Shared with Claude: the skill reads live_view, auto_open and target as CONFIG's
+# defaults (references/studio.md § 9), the server reads exclude and target.
+
+TARGETS = ("web", "desktop", "print")
+CONFIG_DEFAULTS = {"live_view": True, "auto_open": True, "exclude": [], "target": "web"}
+
+
+def clean_config(data: dict) -> dict:
+    """The known keys, of the right type; anything else is left out (but kept on disk)."""
+    out: dict = {}
+    for k in ("live_view", "auto_open"):
+        if isinstance(data.get(k), bool):
+            out[k] = data[k]
+    ex = data.get("exclude")
+    if isinstance(ex, list):
+        out["exclude"] = [str(x).strip() for x in ex if str(x).strip()][:200]
+    if data.get("target") in TARGETS:
+        out["target"] = data["target"]
+    return out
+
+
+def save_config(project: "Project", updates: dict) -> dict:
+    """Change some settings. Unknown keys and bad values are refused; keys the file has
+    that Studio does not know are kept as they are."""
+    for k, v in updates.items():
+        if k not in CONFIG_DEFAULTS:
+            raise ValueError(f"unknown setting {k!r} (known: {', '.join(CONFIG_DEFAULTS)})")
+        if k in ("live_view", "auto_open") and not isinstance(v, bool):
+            raise ValueError(f"{k} must be true or false")
+        if k == "exclude" and not (isinstance(v, list) and all(isinstance(x, str) for x in v)):
+            raise ValueError("exclude must be a list of glob patterns")
+        if k == "target" and v not in TARGETS:
+            raise ValueError(f"target must be one of {', '.join(TARGETS)}")
+    project.ensure()
+    with Lock(project):
+        data = project.config()
+        data.update(updates)
+        if "exclude" in updates:
+            data["exclude"] = clean_config(data)["exclude"]
+        write_json(project.data / "config.json", data)
+    return project.settings()
+
+
 def _within(project: Project, p: Path) -> bool:
     try:
         r = p.resolve()
@@ -226,7 +275,7 @@ def file_hash(p: Path) -> str:
 
 
 def scan(project: Project) -> list[Asset]:
-    exclude = list(project.config().get("exclude", []))
+    exclude = project.settings()["exclude"]
     by_dir: dict[Path, list[os.DirEntry]] = {}
     for dirpath, dirnames, filenames in os.walk(project.root):
         d = Path(dirpath)

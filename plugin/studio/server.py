@@ -268,6 +268,10 @@ def make_handler(studio: Studio, port_ref: list[int]):
                 if parts[:2] == ["api", "hello"]:
                     return self._json({"app": "kiln-studio", "version": VERSION,
                                        "root": str(project.root), "pid": os.getpid()})
+                if parts[:2] == ["api", "config"]:
+                    # The project's settings, shared with Claude (references/studio.md § 9).
+                    return self._json({"settings": project.settings(), "defaults": sl.CONFIG_DEFAULTS,
+                                       "targets": list(sl.TARGETS), "file": f"{sl.DATA_DIR}/config.json"})
                 if parts[:2] == ["api", "events"]:
                     return self._events()
                 if parts[:2] == ["api", "assets"]:
@@ -313,6 +317,10 @@ def make_handler(studio: Studio, port_ref: list[int]):
                     ids = body.get("assets")
                     run = sl.check_work(project, [str(i) for i in ids] if isinstance(ids, list) else None)
                     return self._json({"work": sl.work_view(run)})
+                if method == "PUT" and parts == ["api", "config"]:
+                    settings = sl.save_config(project, body)
+                    studio.refresh()   # exclude: the list changes now, not at the next tick
+                    return self._json({"settings": settings})
                 if parts[:2] != ["api", "asset"] or len(parts) < 4:
                     return self._err(404, "not found")
                 a = studio.asset(parts[2])

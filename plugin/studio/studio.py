@@ -11,6 +11,7 @@
     studio.py checks ASSET [--json]
     studio.py live FOLDER [--phase P] [--text "what it did"] | live FOLDER --end [--keep-file]
     studio.py work start ASSET... [--label L] | next | begin ASSET | done ASSET | end [--text T]
+    studio.py config [KEY=VALUE ...] [--json]
 
 PROJECT is any folder (default: the current one). Studio finds every .glb .gltf
 .fbx .obj under it, groups kiln's _original/_final stages into one asset, and keeps
@@ -43,7 +44,7 @@ import studiolib as sl  # noqa: E402
 
 DEFAULT_PORT = 4840
 COMMANDS = ("open", "serve", "stop", "status", "list", "notes", "show", "history",
-            "reply", "log", "snapshot", "revert", "meta", "checks", "live", "work")
+            "reply", "log", "snapshot", "revert", "meta", "checks", "live", "work", "config")
 
 
 # ── the server's lifecycle ───────────────────────────────────────────────────
@@ -92,7 +93,7 @@ def cmd_open(args) -> None:
         project.ensure()
         port = args.port or _free_port(DEFAULT_PORT)
         if args.foreground:
-            return serve(project, port, open_url=None if args.no_open else _url(port, args.asset))
+            return serve(project, port, open_url=None if args.no_open or not project.settings()["auto_open"] else _url(port, args.asset))
         log = project.data / "cache" / "server.log"
         log.parent.mkdir(parents=True, exist_ok=True)
         cmd = [sys.executable, str(HERE / "studio.py"), "serve", str(project.root), "--port", str(port)]
@@ -116,8 +117,10 @@ def cmd_open(args) -> None:
     print(f"Kiln Studio {state}: {url}")
     print(f"  project {project.root}  ·  {n} model{'s' * (n != 1)}  ·  notes in {sl.DATA_DIR}/")
     print("  stop it with: studio.py stop")
-    if not args.no_open:
+    if not args.no_open and project.settings()["auto_open"]:
         webbrowser.open(url)
+    elif not args.no_open:
+        print("  (not opening the browser: the project's auto_open setting is off)")
 
 
 def _url(port: int, asset: str | None) -> str:
@@ -518,6 +521,38 @@ def cmd_meta(args) -> None:
     print(f"{a.id}: category {entry.get('category', a.default_category or '-')!r}, tags {entry.get('tags', [])}")
 
 
+def cmd_config(args) -> None:
+    """The project's settings (.kiln-studio/config.json): print them, or set KEY=VALUE."""
+    project = find_project(args.root)
+    if args.set:
+        updates = {}
+        for item in args.set:
+            k, sep, v = item.partition("=")
+            if not sep:
+                raise SystemExit(f"expected KEY=VALUE, got {item!r}")
+            k = k.strip()
+            if k in ("live_view", "auto_open"):
+                if v.lower() not in ("true", "false", "on", "off", "yes", "no", "1", "0"):
+                    raise SystemExit(f"{k} is true or false")
+                updates[k] = v.lower() in ("true", "on", "yes", "1")
+            elif k == "exclude":
+                updates[k] = [x.strip() for x in v.split(",") if x.strip()]
+            else:
+                updates[k] = v.strip()
+        try:
+            sl.save_config(project, updates)
+        except ValueError as e:
+            raise SystemExit(str(e))
+    st = project.settings()
+    if args.json:
+        print(json.dumps(st, indent=2))
+        return
+    explicit = sl.clean_config(project.config())
+    for k, v in st.items():
+        shown = ", ".join(v) or "-" if isinstance(v, list) else json.dumps(v) if isinstance(v, bool) else v
+        print(f"{k:10s} {shown}" + ("" if k in explicit else "   (default)"))
+
+
 def main(argv: list[str] | None = None) -> None:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv or (argv[0] not in COMMANDS and argv[0] not in ("-h", "--help")):
@@ -583,6 +618,9 @@ def main(argv: list[str] | None = None) -> None:
     wk.add_argument("assets", nargs="*", help="start: the models, in order; begin/done: one model")
     wk.add_argument("--label", help="start: what the run does, in a few words (\"acting on notes\")")
     wk.add_argument("--text", help="next/done/end: what was done, in a few words")
+    cf = p("config", cmd_config, "the project's settings: print them, or set KEY=VALUE (live_view, auto_open, target, exclude)")
+    cf.add_argument("set", nargs="*", metavar="KEY=VALUE", help="exclude takes a comma-separated list")
+    cf.add_argument("--json", action="store_true")
     args = ap.parse_args(argv)
     try:
         args.fn(args)
