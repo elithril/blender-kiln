@@ -122,7 +122,8 @@ the list shows the batch's range on its folder header.
 ## 4. `/kiln studio [asset]` — act on the user's notes
 
 1. **Pick the work.** With an asset argument, that asset (`chair` works when the name
-   is unambiguous). Without one, run `studio.py notes`: one asset listed → take it;
+   is unambiguous). With the kiln-studio MCP tools in reach (§ 11), `get_selection` says
+   which model the user has open and which note they picked: "this one" means that. Without one, run `studio.py notes`: one asset listed → take it;
    several → list them with their counts and ask which, or offer to go in order. **One
    asset per pass** keeps the context small.
 
@@ -368,3 +369,23 @@ python3 <skill>/studio/studio.py request q_… --status done --asset <the asset>
 ```
 
 `studio.py requests` lists the open ones (`--all`, `--json`).
+
+---
+
+## 11. The kiln-studio MCP server — what the user is looking at
+
+The plugin declares a small MCP server, `kiln-studio` (`.mcp.json` at the plugin root →
+`studio/mcp_server.py`, standard library, stdio). It reads what the open Studio page shows
+and the notes; it writes nothing but note replies.
+
+| Tool | Gives / does |
+|---|---|
+| `get_selection` | The model the page shows (asset id), its stage, the camera in Blender's frame, the note picked, compare and shading, and how many seconds ago the page said so |
+| `get_notes` | The notes of an asset (default: the one open), as `studio.py show` gives them, with the pictures' absolute paths to read; no asset and none open: the assets with notes |
+| `reply_to_note` | `studio.py reply`: `status` addressed, open or wontfix — never resolved |
+| `set_camera` | Turns the open page's view: `view` (front, back, left, right, top, iso), a `note`'s own view, or `position_blender` and `target_blender`; with `asset`, opens it first |
+
+It finds the project from `KILN_STUDIO_ROOT`, `CLAUDE_PROJECT_DIR` or the session's folder,
+upwards (each tool takes `root`). Without a running Studio, `get_selection` and `set_camera`
+say so; `get_notes` and `reply_to_note` work from the files alone. Use `set_camera` to show
+the user what you changed, from the note's camera, before asking them to look.

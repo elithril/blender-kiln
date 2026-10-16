@@ -12,6 +12,7 @@ import json
 import mimetypes
 import os
 import queue
+import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -44,6 +45,8 @@ class Studio:
         self.store_sig: dict[str, float] = {}
         self.subs: list[queue.Queue] = []
         self.lock = threading.Lock()
+        # What the open page shows (it reports it): read by the kiln-studio MCP server.
+        self.selection: dict | None = None
         self.refresh(initial=True)
 
     # live events
@@ -177,6 +180,58 @@ def _decode_image(data_url: str) -> bytes:
     raise ValueError("expected a JPEG, WebP or PNG data URL")
 
 
+VIEWS = ("front", "back", "left", "right", "top", "iso")
+
+
+def _vec(v, n=3) -> list[float] | None:
+    if isinstance(v, list) and len(v) == n and all(isinstance(x, (int, float)) and abs(x) < 1e7 for x in v):
+        return [float(x) for x in v]
+    return None
+
+
+def clean_selection(body: dict) -> dict:
+    """What the page reported, kept to known fields of the right shape."""
+    cam = body.get("camera") if isinstance(body.get("camera"), dict) else {}
+    note = body.get("note") if isinstance(body.get("note"), dict) else None
+    out = {
+        "asset": str(body["asset"])[:500] if body.get("asset") else None,
+        "variant": str(body["variant"])[:100] if body.get("variant") else None,
+        "camera": {k: _vec(cam.get(k)) for k in ("position_blender", "target_blender", "position", "target") if _vec(cam.get(k))} or None,
+        "note": {"id": str(note.get("id", ""))[:40], "number": note.get("number") if isinstance(note.get("number"), int) else None}
+                if note and sl.NOTE_ID_RE.match(str(note.get("id", ""))) else None,
+        "compare": str(body["compare"])[:100] if body.get("compare") else None,
+        "shading": str(body["shading"])[:20] if body.get("shading") else None,
+        "at": time.time(),
+    }
+    if out["camera"] is not None and isinstance(cam.get("fov"), (int, float)):
+        out["camera"]["fov"] = float(cam["fov"])
+    return out
+
+
+def clean_camera(body: dict) -> dict:
+    """A camera move for the page: a preset view, a note's own view, or a position and a
+    target in Blender's frame (metres, Z up); with an asset, the page opens it first."""
+    out: dict = {}
+    if body.get("asset"):
+        out["asset"] = str(body["asset"])[:500]
+    if body.get("view"):
+        if body["view"] not in VIEWS:
+            raise ValueError(f"view must be one of {', '.join(VIEWS)}")
+        out["view"] = body["view"]
+    elif body.get("note"):
+        if not sl.NOTE_ID_RE.match(str(body["note"])):
+            raise ValueError("bad note id")
+        out["note"] = str(body["note"])
+    else:
+        pos, tgt = _vec(body.get("position_blender")), _vec(body.get("target_blender"))
+        if not (pos and tgt):
+            raise ValueError("give view, note, or position_blender and target_blender ([x, y, z] in metres)")
+        if pos == tgt:
+            raise ValueError("the camera and its target are the same point")
+        out["position_blender"], out["target_blender"] = pos, tgt
+    return out
+
+
 def make_handler(studio: Studio, port_ref: list[int]):
     project = studio.project
 
@@ -286,6 +341,12 @@ def make_handler(studio: Studio, port_ref: list[int]):
                     return self._json(setup_status.install_status(project.root))
                 if parts[:2] == ["api", "requests"]:
                     return self._json({"requests": sl.load_requests(project)})
+                if parts[:2] == ["api", "selection"]:
+                    with studio.lock:
+                        sel, pages = studio.selection, len(studio.subs)
+                    if sel:
+                        sel = {**sel, "age_s": round(time.time() - sel["at"], 1)}
+                    return self._json({"selection": sel, "pages": pages})
                 if parts[:2] == ["api", "events"]:
                     return self._events()
                 if parts[:2] == ["api", "assets"]:
@@ -347,6 +408,21 @@ def make_handler(studio: Studio, port_ref: list[int]):
                     r = sl.add_request(project, body.get("brief", ""), type_=body.get("type") or None,
                                        target=body.get("target") or None, style=body.get("style") or None, photo=photo)
                     return self._json(r)
+                if method == "POST" and parts == ["api", "selection"]:
+                    # The page says what it shows: the model, its stage, the camera, the note picked.
+                    sel = clean_selection(body)
+                    with studio.lock:
+                        studio.selection = sel
+                    return self._json({"ok": True})
+                if method == "POST" and parts == ["api", "camera"]:
+                    # Turn the open page's view (the kiln-studio MCP server's set_camera).
+                    ev = clean_camera(body)
+                    with studio.lock:
+                        pages = len(studio.subs)
+                    if not pages:
+                        return self._err(409, "no Studio page is open to turn")
+                    studio.emit({"type": "camera", **ev})
+                    return self._json({"pages": pages, **ev})
                 if method == "POST" and parts == ["api", "example"]:
                     aid = sl.add_example(project)
                     studio.refresh()
@@ -448,10 +524,18 @@ def make_handler(studio: Studio, port_ref: list[int]):
     return Handler
 
 
+class Server(ThreadingHTTPServer):
+    def handle_error(self, request, client_address) -> None:
+        # A client that hangs up on a kept-alive connection is not an error worth a traceback.
+        if isinstance(sys.exc_info()[1], (ConnectionResetError, BrokenPipeError)):
+            return
+        super().handle_error(request, client_address)
+
+
 def make_server(project: sl.Project, port: int, interval: float = 1.0) -> tuple[ThreadingHTTPServer, Studio]:
     studio = Studio(project, interval)
     port_ref = [port]
-    srv = ThreadingHTTPServer(("127.0.0.1", port), make_handler(studio, port_ref))
+    srv = Server(("127.0.0.1", port), make_handler(studio, port_ref))
     srv.daemon_threads = True
     port_ref[0] = srv.server_address[1]   # port 0 → the one the OS picked
     threading.Thread(target=studio.watch, daemon=True, name="watch").start()

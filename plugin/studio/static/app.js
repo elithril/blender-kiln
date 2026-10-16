@@ -114,7 +114,7 @@ const off = () => (offscreen ||= new Offscreen());
 // Pins and labels move when the view or the pose does; whether a pin is behind the
 // model is asked again until one pass has run after the last move.
 let pinsDirty = true, occlDirty = true;
-viewer.onChange = () => { pinsDirty = occlDirty = true; };
+viewer.onChange = () => { pinsDirty = occlDirty = true; if (state.detail) reportCamera(); };
 viewer.onFrame = () => {
   const moving = viewer.playing && viewer.a.mixer;
   if (moving) occlDirty = true;
@@ -151,6 +151,7 @@ function syncToolbar() {
 
 function setOpt(k, v) {
   viewer.set(k, v);
+  if (k === 'shade') reportSelection();
   prefs[k] = v; savePrefs();
   if (k === 'bg') stage.dataset.bg = v;
   syncToolbar();
@@ -795,6 +796,7 @@ async function setCompare(mode, target) {
   if (mode && (!was || target)) await loadCompareTarget();
   if (!mode) { state.cmpStats = state.cmpSrc = null; }
   renderPins();
+  reportSelection();
 }
 
 async function loadCompareTarget() {
@@ -1720,11 +1722,49 @@ function liveEvents() {
     onEvent(ev);
   };
 }
-// Further listeners (the MCP bridge, …) hook here.
-const eventHooks = [];
-function onEvent(ev) { for (const h of eventHooks) h(ev); }
-function reportSelection() { for (const h of selectionHooks) h(); }
-const selectionHooks = [];
+// ── what the page shows, for Claude (the kiln-studio MCP server) ─────────────
+// The page tells the server which model, stage, camera and note it shows (get_selection),
+// and takes camera moves from it (set_camera).
+
+let selTimer = 0;
+function reportSelection() {
+  clearTimeout(selTimer);
+  selTimer = setTimeout(() => {
+    const n = state.hl && state.detail?.notes.find((x) => x.id === state.hl);
+    const body = {
+      asset: state.id, variant: state.variant,
+      camera: viewer.a.model ? viewer.cameraState() : null,
+      note: n ? { id: n.id, number: noteNumber(n) } : null,
+      compare: state.compare ? `${state.compare.mode}:${state.compare.target || ''}` : null,
+      shading: viewer.opts.shade,
+    };
+    api('/api/selection', { method: 'POST', body }).catch(() => { /* the server is gone: the events say */ });
+  }, 400);
+}
+// A camera that settles is worth reporting; one moving is not.
+let camSettle = 0;
+const reportCamera = () => { clearTimeout(camSettle); camSettle = setTimeout(reportSelection, 600); };
+
+async function onEvent(ev) {
+  if (ev.type !== 'camera') return;
+  if (ev.asset && ev.asset !== state.id && state.byId.has(ev.asset)) {
+    go(ev.asset);
+    // Wait for it to load, at most 15 s.
+    const t0 = Date.now();
+    while (!(state.detail?.id === ev.asset && $('#loading').hidden && viewer.a.model) && Date.now() - t0 < 15000) await new Promise((r) => setTimeout(r, 100));
+  }
+  if (ev.view) viewer.view(ev.view);
+  else if (ev.note) {
+    const n = state.detail?.notes.find((x) => x.id === ev.note);
+    if (n?.camera) viewer.setCamera(n.camera);
+    if (n) highlight(n.id, { scroll: true });
+  } else if (ev.position_blender && ev.target_blender) {
+    // Blender (x, y, z), Z up → three.js (x, z, −y).
+    const toThree = ([x, y, z]) => [x, z, -y];
+    viewer.setCamera({ position: toThree(ev.position_blender), target: toThree(ev.target_blender) });
+  }
+  toast(esc(t('Claude turned the view')), 'ok', 2500);
+}
 
 // ── keys ─────────────────────────────────────────────────────────────────────
 

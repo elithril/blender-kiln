@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — kiln-studio, an MCP server: what the user is looking at
+
+- The plugin declares an MCP server, `kiln-studio` (`plugin/.mcp.json`, `studio/mcp_server.py`,
+  standard library, stdio). `get_selection`: the model, stage, camera (Blender frame) and
+  note the open Studio page shows, which the page now reports to the server. `get_notes`:
+  an asset's notes with the pinned point, the camera and the pictures' paths.
+  `reply_to_note`: answer a note, never "resolved". `set_camera`: turn the page's view to a
+  preset, a note's view or a Blender position and target, opening another model if asked.
+  Read-only otherwise. A seeded test drives it over stdio against a running Studio: 59 tests.
+
 ### Added — Kiln Studio: Create and Import
 
 - **Import:** drop a GLB, glTF, FBX or OBJ anywhere on the page, or pick it: it is saved into

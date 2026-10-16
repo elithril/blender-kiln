@@ -17,6 +17,7 @@ import os
 import re
 import shutil
 import struct
+import subprocess
 import sys
 import tempfile
 import threading
@@ -990,6 +991,110 @@ class Api(Base):
         self.studio.refresh()
         code, data = self.req("GET", "/api/assets")
         self.assertEqual(data["batches"]["generated-assets/batch-office"]["range"], [150_000, 255_000])
+
+
+class Mcp(Base):
+    """The kiln-studio MCP server over stdio, against a running Studio and a seeded note."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        glb(self.tmp / "generated-assets" / "crate" / "crate_final.glb")
+        [self.a] = sl.scan(self.p)
+        self.note = sl.add_note(self.p, self.a, "the lid is too thin",
+                                anchor={"point": [0, 1, 0], "point_blender": [0, 0, 1], "object": "SM_Box", "region": "top"},
+                                camera={"position": [1, 1, 1], "target": [0, 0, 0], "position_blender": [1, -1, 1], "target_blender": [0, 0, 0]},
+                                shot=WEBP)
+        self.srv, self.studio = server.make_server(self.p, 0, interval=0.1)
+        self.srv.RequestHandlerClass.log_message = lambda *a: None
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+        port = self.srv.server_address[1]
+        sl.write_json(self.p.data / "server.json", {"port": port, "pid": os.getpid()})
+        # What the page reports when the user has the crate open, note 1 picked.
+        c = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+        c.request("POST", "/api/selection", body=json.dumps({
+            "asset": self.a.id, "variant": "final", "shading": "clay",
+            "camera": {"position_blender": [2, -2, 1.5], "target_blender": [0, 0, 0.5], "fov": 35},
+            "note": {"id": self.note["id"], "number": 1}}),
+            headers={"Host": f"127.0.0.1:{port}", "Content-Type": "application/json", "Origin": f"http://127.0.0.1:{port}"})
+        self.assertEqual(c.getresponse().status, 200)
+        c.close()
+        env = {**os.environ, "KILN_STUDIO_ROOT": str(self.tmp)}
+        self.proc = subprocess.Popen([sys.executable, str(Path(server.__file__).with_name("mcp_server.py"))],
+                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, env=env, cwd="/")
+        self.n = 0
+
+    def tearDown(self) -> None:
+        self.proc.stdin.close()
+        self.proc.wait(timeout=5)
+        self.proc.stdout.close()
+        self.srv.shutdown()
+        self.srv.server_close()
+        super().tearDown()
+
+    def rpc(self, method: str, params: dict | None = None, notify: bool = False):
+        msg = {"jsonrpc": "2.0", "method": method, **({"params": params} if params is not None else {})}
+        if not notify:
+            self.n += 1
+            msg["id"] = self.n
+        self.proc.stdin.write(json.dumps(msg) + "\n")
+        self.proc.stdin.flush()
+        if notify:
+            return None
+        out = json.loads(self.proc.stdout.readline())
+        self.assertEqual(out["id"], self.n)
+        return out
+
+    def tool(self, name: str, **args) -> tuple[bool, dict | str]:
+        r = self.rpc("tools/call", {"name": name, "arguments": args})["result"]
+        text = r["content"][0]["text"]
+        return r["isError"], (text if r["isError"] else json.loads(text))
+
+    def test_the_four_tools(self) -> None:
+        init = self.rpc("initialize", {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "test"}})
+        self.assertEqual((init["result"]["serverInfo"]["name"], init["result"]["protocolVersion"]), ("kiln-studio", "2025-06-18"))
+        self.rpc("notifications/initialized", notify=True)
+        names = [t["name"] for t in self.rpc("tools/list")["result"]["tools"]]
+        self.assertEqual(names, ["get_selection", "get_notes", "reply_to_note", "set_camera"])
+
+        err, sel = self.tool("get_selection")
+        self.assertFalse(err, sel)
+        self.assertEqual((sel["asset"], sel["stage"], sel["shading"]), ("generated-assets/crate", "final", "clay"))
+        self.assertEqual(sel["camera_blender"]["position"], [2, -2, 1.5])
+        self.assertEqual((sel["highlighted_note"]["number"], sel["highlighted_note"]["text"]), (1, "the lid is too thin"))
+
+        err, notes = self.tool("get_notes")   # no asset: the one open in Studio
+        self.assertFalse(err, notes)
+        [n] = notes["notes"]
+        self.assertEqual((n["number"], n["status"], n["pin"]["point_blender"], n["pin"]["region"]), (1, "open", [0, 0, 1], "top"))
+        self.assertTrue(Path(n["pictures"]["screenshot"]).is_file())
+
+        err, r = self.tool("reply_to_note", asset="crate", note="1", text="Lid thickened to 2 cm.", status="addressed")
+        self.assertFalse(err, r)
+        stored = sl.load_notes(self.p, self.a.id)[0]
+        self.assertEqual((stored["status"], stored["thread"][-1]["by"], stored["thread"][-1]["text"]),
+                         ("addressed", "claude", "Lid thickened to 2 cm."))
+        err, msg = self.tool("reply_to_note", asset="crate", note="1", text="done", status="resolved")
+        self.assertTrue(err)   # only the user closes a note
+        self.assertEqual(sl.load_notes(self.p, self.a.id)[0]["status"], "addressed")
+        self.assertTrue(self.tool("reply_to_note", asset="crate", note="7", text="x")[0])
+
+        self.assertTrue(self.tool("set_camera", view="front")[0])   # no page open: it says so
+        q = self.studio.subscribe()   # a page now listens
+        err, cam = self.tool("set_camera", position_blender=[0, -3, 1], target_blender=[0, 0, 0.5])
+        self.assertFalse(err, cam)
+        ev = q.get(timeout=2)
+        self.assertEqual((ev["type"], ev["position_blender"], ev["target_blender"]), ("camera", [0, -3, 1], [0, 0, 0.5]))
+        self.assertFalse(self.tool("set_camera", note="1")[0])
+        self.assertEqual(q.get(timeout=2)["note"], self.note["id"])
+        self.assertTrue(self.tool("set_camera", view="sideways")[0])
+
+    def test_plugin_declares_it(self) -> None:
+        cfg = json.loads((Path(server.__file__).resolve().parent.parent / ".mcp.json").read_text())
+        spec = cfg["mcpServers"]["kiln-studio"]
+        self.assertEqual(spec["args"], ["${CLAUDE_PLUGIN_ROOT}/studio/mcp_server.py"])
+        self.rpc("initialize", {"protocolVersion": "2024-11-05"})
+        self.assertEqual(self.rpc("ping")["result"], {})
+        self.assertEqual(self.rpc("nope")["error"]["code"], -32601)
 
 
 if __name__ == "__main__":

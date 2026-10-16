@@ -428,7 +428,7 @@ plugin/
 | `plugin/references/topology-rules.md` | Poly budgets, quad rules, edge flow | ~90 |
 | `plugin/references/setup-install.md` | Model selection, install commands, post-install validation | ~70 |
 | `plugin/references/sourcing-strategy.md` | PolyHaven (MCP or public API) + Sketchfab search patterns | ~120 |
-| `plugin/references/studio.md` | Kiln Studio: starting it, live view, checks, acting on the user's notes, work in progress, commands, storage, settings, create and import | ~360 |
+| `plugin/references/studio.md` | Kiln Studio: starting it, live view, checks, acting on the user's notes, work in progress, commands, storage, settings, create and import, the MCP server | ~390 |
 | `plugin/studio/` | Kiln Studio: local server and CLI (stdlib Python), checks, live view from Blender, three.js page, tests | ~5,800 |
 
 **Total: ~5,300 lines** of production-tested 3D pipeline knowledge.
