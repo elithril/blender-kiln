@@ -250,6 +250,10 @@ check("seeded: thighs driven through a belly caught as inter-part",
       (kbb["inter_mm2"], kbb["inter_pct"], kbb["fold_mm2"], kbb["by_part_mm2"]))
 check("one skin: one skinned mesh", kid["single_skin"] and kid["skinned_mesh_objects"] == 1,
       kid["skinned_mesh_objects"])
+check("resolver: a winged rig (arms, no thighs) is enough to pose",
+      not [k for k in ("Hips",) if k not in skin_intersect.resolve({"Hips": None, "Head": "Hips",
+          "LeftArm": "Hips", "RightArm": "Hips"})] and {"LeftArm", "RightArm"} <= set(
+          skin_intersect.resolve({"Hips": None, "Head": "Hips", "LeftArm": "Hips", "RightArm": "Hips"})), "owl")
 check("resolver: Rigify DEF- names", skin_intersect.resolve({
     "DEF-spine": None, "DEF-thigh.L": "DEF-spine", "DEF-shin.L": "DEF-thigh.L", "DEF-thigh.R": "DEF-spine",
     "DEF-spine.004": "DEF-spine", "DEF-upper_arm.L": "DEF-spine"}) == {

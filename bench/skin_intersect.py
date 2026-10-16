@@ -19,8 +19,9 @@ spine 20°, neck 30°; quadruped — the study's crease flex. On the evaluated s
 A body part is the family of the bone that weighs most on the vertex. Families come from the
 HIERARCHY, not the names: every bone under the left thigh is LeftHind, whatever it is called.
 The limb roots are found by name — Mixamo-style (kiln's), Rigify DEF-, and the usual
-thigh/upperarm spellings with a side mark; a rig whose limbs cannot be named is reported as
-such, never measured on a guessed pose.
+thigh/upperarm spellings with a side mark. The hips and one pair of limbs are needed (a
+wing is an arm); the limbs a rig lacks are not posed. A rig whose limbs cannot be named is
+reported as such, never measured on a guessed pose.
 """
 import math, re, sys
 
@@ -128,7 +129,9 @@ def measure(rig, meshes):
     B, PB = rig.data.bones, rig.pose.bones
     tree = {b.name: (b.parent.name if b.parent else None) for b in B}
     found = resolve(tree)
-    need = [k for k in ("Hips", "LeftUpLeg", "RightUpLeg") if k not in found]
+    # The hips, and one pair of limbs at least: an owl has wings (arms) and no thighs to bend.
+    pairs = [k for k in ("UpLeg", "Arm") if "Left" + k in found and "Right" + k in found]
+    need = (["Hips"] if "Hips" not in found else []) + ([] if pairs else ["LeftUpLeg/RightUpLeg or LeftArm/RightArm"])
     if not meshes:
         return {"status": "no skinned mesh"}
     if need:
