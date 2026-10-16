@@ -451,7 +451,7 @@ plugin/
 | `plugin/references/characters.md` | Rigging patterns, animation-ready skeleton, an animated creature (one skin, charm, QuadriFlow first, lid weights, matcap), export gotchas, Blender 5.x | ~865 |
 | `plugin/references/animation.md` | Routes by subject, scripted-animation rules, quadruped cycles, UniMate install / loops / prompts | ~170 |
 | `plugin/tools/quadruped.py` | Procedural quadruped idle + walk, IK-planted, measured before export (legs bent, paws in step, exact loop), secondary motion (ears, tail wave, blinks), one GLB with every clip | ~370 |
-| `plugin/tools/motion_loop.py` | Generated clip → seamless loop (pose + direction matched, drift removed); keeps the sample that loops best | ~100 |
+| `plugin/tools/motion_loop.py` | Generated clip → seamless loop (pose + direction matched, drift removed in world axes, one clip with a closing key); keeps the sample that loops best | ~120 |
 | `plugin/tools/bind_rigid_parts.py` | Folds bone-parented parts (eyes, props) into the skin; reports a quadruped posture for routing | ~60 |
 | `plugin/tools/unimate.py` | Installs UniMate at the tested version, reports newer upstream, runs rigged GLB + prompt → animated GLBs | ~350 |
 | `plugin/references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~460 |

@@ -485,30 +485,53 @@ try:
         fail("posture", "the synthetic quadruped is not recognised as one — the UniMate routing guard would not fire")
     else:
         ok(f"rigidparts: a bone-parented part follows its bone once folded in ({g0:.3f} m either way); posture: quadruped recognised")
-    # loop: a joint swinging with a 13-frame period, starting at its peak, cut at 48 frames — mid-swing
+    # loop: a joint swinging with a 13-frame period, starting at its peak, cut at 48 frames — mid-swing.
+    # The root bone is tilted 12.5 degrees, like the Hunyuan3D humanoid's Hips, and walks forward
+    # while it bobs: drift removed on its own location channels, the looped hips rose 115.6 mm there.
     reset()
     ad = bpy.data.armatures.new("osc"); arm = bpy.data.objects.new("osc", ad); bpy.context.scene.collection.objects.link(arm)
     bpy.context.view_layer.objects.active = arm; bpy.ops.object.mode_set(mode='EDIT')
-    a = ad.edit_bones.new("Root"); a.head, a.tail = (0, 0, 0), (0, 0, 1)
+    tilt = math.radians(12.5)
+    a = ad.edit_bones.new("Root"); a.head, a.tail = (0, 0, 0.8), (0, -0.2 * math.sin(tilt), 0.8 + 0.2 * math.cos(tilt))
     b = ad.edit_bones.new("Arm"); b.head, b.tail = (0, 0, 1), (0, 0, 2); b.parent = a
     bpy.ops.object.mode_set(mode='OBJECT')
     bpy.ops.mesh.primitive_cube_add(size=0.2, location=(0, 0, 1.5)); m = bpy.context.object
     m.vertex_groups.new(name="Arm").add(list(range(8)), 1.0, 'REPLACE'); m.parent = arm; m.modifiers.new("A", 'ARMATURE').object = arm
     arm.animation_data_create(); pb = arm.pose.bones["Arm"]; pb.rotation_mode = 'QUATERNION'
+    rp = arm.pose.bones["Root"]; rp.rotation_mode = 'QUATERNION'
     from mathutils import Euler
+    to_bone = rp.bone.matrix_local.to_3x3().inverted()
     for f in range(48):
         pb.rotation_quaternion = Euler((0.6 * math.cos(2 * math.pi * f / 13), 0, 0)).to_quaternion(); pb.keyframe_insert("rotation_quaternion", frame=f)
-        arm.pose.bones["Root"].rotation_mode = 'QUATERNION'; arm.pose.bones["Root"].keyframe_insert("rotation_quaternion", frame=f)
+        rp.keyframe_insert("rotation_quaternion", frame=f)
+        rp.location = to_bone @ Vector((0, -0.02 * f, 0.02 * math.cos(4 * math.pi * f / 13))); rp.keyframe_insert("location", frame=f)
     bpy.ops.object.select_all(action='SELECT'); bpy.ops.export_scene.gltf(filepath="/tmp/_osc.glb", use_selection=True, export_animations=True)
     code, out = _blender_tool("motion_loop.py", "--out", "/tmp/_osc_loop.glb", "/tmp/_osc.glb")
     rec = [json.loads(l.split("motion_loop: ", 1)[1]) for l in out.splitlines() if l.startswith("motion_loop: {")]
+    def _root_heights(path):
+        reset(); bpy.ops.import_scene.gltf(filepath=path)
+        arm = next(o for o in bpy.data.objects if o.type == 'ARMATURE'); act = arm.animation_data.action
+        f0, f1 = (int(round(x)) for x in act.frame_range); z = []
+        for f in range(f0, f1 + 1):
+            bpy.context.scene.frame_set(f); z.append((arm.matrix_world @ arm.pose.bones["Root"].head).z)
+        return z, len(bpy.data.actions)
     if code or not rec:
         fail("loop", f"motion_loop.py found no loop in a clean 13-frame oscillation (exit {code})")
-    elif rec[0]["seam"] > 1.2 or rec[0]["seam_raw"] < 2:
-        fail("loop", f"seam {rec[0]['seam_raw']}x raw -> {rec[0]['seam']}x looped; expected a raw seam > 2x closing to <= 1.2x")
     else:
-        ok(f"loop: a 13-frame swing cut at 48 frames seams {rec[0]['seam_raw']}x raw, {rec[0]['seam']}x looped "
-           f"({rec[0]['frames']} frames kept)")
+        z_src, _ = _root_heights("/tmp/_osc.glb"); z_loop, n_act = _root_heights("/tmp/_osc_loop.glb")
+        last, closing = _glb_clip_end("/tmp/_osc_loop.glb")
+        rise = 1000 * max((max(z_loop) - max(z_src), min(z_loop) - min(z_src)), key=abs)   # peak or trough
+        if rec[0]["seam"] > 1.2 or rec[0]["seam_raw"] < 2:
+            fail("loop", f"seam {rec[0]['seam_raw']}x raw -> {rec[0]['seam']}x looped; expected a raw seam > 2x closing to <= 1.2x")
+        elif n_act != 1:
+            fail("loop", f"the looped GLB carries {n_act} actions — the source's came along, and an importer may make it active")
+        elif abs(rise) > 3:
+            fail("loop", f"the looped root's height is {rise:+.1f} mm off the source's — its drift was removed on tilted bone axes")
+        elif closing > 1e-4 or abs(last - rec[0]["frames"] / 24) > 1e-3:
+            fail("loop", f"the loop's last key ({last:.4f} s) is not frame {rec[0]['frames']} equal to frame 0 (off {closing:.2g})")
+        else:
+            ok(f"loop: a 13-frame swing cut at 48 frames seams {rec[0]['seam_raw']}x raw, {rec[0]['seam']}x looped "
+               f"({rec[0]['frames']} frames + a closing key, one action); a tilted travelling root keeps its height ({rise:+.1f} mm)")
 except Exception as e:
     fail("rigidparts/loop", f"bind_rigid_parts.py or motion_loop.py does not run: {e}")
 

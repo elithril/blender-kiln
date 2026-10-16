@@ -148,7 +148,12 @@ python3 plugin/tools/unimate.py animate --asset SK_Dragon_rigged.glb --loop \
    `tools/motion_loop.py` from the sample that loops best: the window whose end matches
    its start in pose and direction, cross-faded, root drift removed. Raw clips seam at
    2.1-9.7x the local frame step; looped, 0.5-1.2x (12 clips). All samples stay in
-   `samples/`.
+   `samples/`. The file carries **one clip, `Loop`**, with a closing key equal to its first
+   (rule 5 of § Rules for scripted animation), and the root's drift and height are worked in
+   world axes (that section's rule 1): on the Hunyuan3D humanoid, whose `Hips` bone leans
+   12.5°, the bone-local version raised the looped hips up to 115.6 mm (walk) and 148.9 mm
+   (run), and carried the source action too, which the importer made the active one; now
+   −2.5 and −6.9 mm, one action (8 clips, both humanoids, UniMate and preset sources).
 4. **Look at the kept clip before using it** (rule 2): samples of the same prompt
    differ more than prompts do.
 5. **Time:** 2 prompts × 2 samples took 6.5 min end to end on an M4 Pro — labelling,

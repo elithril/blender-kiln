@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — looped clips keep the hips' height, and carry one clip (3.0)
+
+- **`tools/motion_loop.py`** removed the root's drift and blended its height on the bone's
+  own location channels. On a `Hips` bone that leans (12.5° on the Hunyuan3D humanoid) that
+  is the wrong axes: the looped hips climbed up to 115.6 mm on a walk and 148.9 mm on a run.
+  Worked in world axes now: −2.5 and −6.9 mm against the source (8 clips, both humanoids).
+- The `.loop.glb` carried the un-looped source action as well, and on the Hunyuan rig the
+  importer made that one active. It now holds one clip, `Loop`, keyed 0..P with key P equal
+  to key 0 (animation rule 5) — its seam measured 0.55-1.6× a frame step on the 8 clips.
+- `verify_blender.py` loops a travelling root tilted 12.5°: one action, a closing key, the
+  height kept (the bone-local version: −131.4 mm, caught).
+
 ### Added — the photo's own markings, projected (optional, 3.0)
 
 - **`tools/photo_project.py`**: after the last fidelity round, puts the reference photo's own
