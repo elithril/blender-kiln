@@ -761,6 +761,25 @@ A limb's junction ring carries four 5-edge poles whatever is done — the branch
 (the cat's shoulders, hips and tail root): `topology-rules.md`'s "poles away from
 deformation zones" means the rest of the joint.
 
+### Matcap before delivery — mandatory
+
+**An animated creature is not handed over before a matcap review**: the geometry alone, no
+colour, close up. Colour hides a skin's faults; every number above can pass on a skin that
+looks wrong. On the cat it found what the measures had missed — a crushed band and a dimple
+on the nape, an asymmetric crease under the belly, two marks on top of the shoulders — and
+cost four rebuilds; the scripted corgi passed its checks with grooves at every junction of
+its volumes, legs like sausages and eyes stuck on.
+
+```bash
+blender -b --factory-startup --python-exit-code 1 --python tools/review_renders.py -- \
+    SK_Cat_final.glb --out review/matcap --mode matcap --views q1,q3,front,top,under \
+    --close X,Y,Z,SIZE ...       # nape, belly, each shoulder, tail root, ear base, face (mm)
+```
+
+Look at the rest pose and at two or three frames of the walk (the elbows and knees bent).
+In the hand-over, name what stays — a soft crease under the jaw, the contact line of a
+separate eye — and say it was left on purpose.
+
 ## Retopology Tools
 
 | Tool | Type | Best for |
@@ -782,6 +801,7 @@ Phase [5] CLEANUP for characters:
 2. Verify T-pose if rigging is planned
 3. Retopology if AI mesh (typically too dense for rigging) or a voxel skin — QuadriFlow, then the weight check (§ Retopology: QuadriFlow first)
 4. `validate_character_rig()` if armature is present
+5. A creature to animate: the matcap review before delivery (§ Matcap before delivery)
 
 ### Character-specific export
 

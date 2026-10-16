@@ -843,6 +843,10 @@ By target:
     Print → STL, global_scale=1000 (mm); 3MF too if the extension is installed
 ```
 
+**An animated creature:** no hand-over before the matcap review, close up, at rest and mid-walk
+(`references/characters.md` § Matcap before delivery) — on the cat it found four faults the
+measures had missed.
+
 **Print set in CONFIG:** the export ends with `tools/print_check.py --process … --slicer …`
 (PrusaSlicer when installed) on the STL. **PASS is required**; otherwise report each FAIL line
 as the tool printed it — never call the file printable. The hand-over gives the size it was
