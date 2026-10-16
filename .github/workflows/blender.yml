@@ -18,6 +18,8 @@ name: blender
 #     lost volume, odd STL files (no PrusaSlicer on the runner: its cases are skipped)
 #   - fit_coupon.py writes the holes and pegs it says, diamond and round; review_renders.py
 #     frames every view on the subject and fails on an empty one
+#   - photo_project.py recovers a printed letter from a seeded photo, keeps what the photo cannot
+#     see, and refuses a camera that fits under 0.95 IoU
 #   - autorig.py turns a raw SkinTokens output into kiln's named rig, lids and ears included,
 #     and exits 1 on one with an arm missing (no SkinTokens on the runner: a stored raw output)
 
@@ -45,6 +47,8 @@ on:
       - "plugin/tools/test_review_renders.py"
       - "plugin/tools/uv_check.py"
       - "plugin/tools/test_uv_check.py"
+      - "plugin/tools/photo_project.py"
+      - "plugin/tools/test_photo_project.py"
       - "plugin/tools/autorig.py"
       - "plugin/tools/test_autorig.py"
       - "plugin/tools/fixtures/**"
@@ -97,6 +101,10 @@ jobs:
       - name: Check the UV check against seeded unwraps
         run: |
           BLENDER=blender python3 plugin/tools/test_uv_check.py
+
+      - name: Check the photo projection against a seeded photo
+        run: |
+          BLENDER=blender python3 plugin/tools/test_photo_project.py
 
       - name: Check the auto-rig against a stored SkinTokens output
         run: |

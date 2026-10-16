@@ -9,6 +9,13 @@ Third-party work in this plugin
   contributors, https://github.com/Bingeljell/image-to-3dlab, licensed under the Apache
   License, Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0). Changed here:
   written out as one git diff against the pinned SkinTokens commit.
+- tools/photo_project.py adapts the confidence tests (visibility, facing fade, outline,
+  inner-edge and cut-out fades), their defaults and the UV-gutter growth of
+  image_to_3dlab/photo_paint.py from image-to-3dlab (AssetFurnace), Copyright 2026
+  Bingeljell and image-to-3dlab contributors, https://github.com/Bingeljell/image-to-3dlab,
+  Apache License, Version 2.0. Changed here: re-written on Blender's mesh and image I/O,
+  a camera fitted to the photo's silhouette, an exposure gain instead of the raw pixels,
+  part exclusions and a stencil erase.
 
 Third-party software kiln installs but does not ship
 ----------------------------------------------------
