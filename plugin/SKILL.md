@@ -973,7 +973,8 @@ Animate a rigged asset (standalone PHASE 5d): `/kiln animate SK_Cat.glb walk, id
    - articulated object → key the rigid parts, following § Rules for scripted animation.
 5. **Show every kept clip before calling it done** (rule 2): render it or play it in the
    viewport, and say which route made it and, for UniMate, which sample was kept.
-6. **Export** (PHASE 7): one GLB with every action, or one per clip if asked.
+6. **Export** (PHASE 7): one GLB with every action (`quadruped.py` writes it), or one per clip
+   if asked (`--per-clip`).
 
 ### /kiln optimize
 

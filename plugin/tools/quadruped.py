@@ -1,7 +1,10 @@
 """Procedural idle and walk cycles for a rigged quadruped, measured before export.
 
     blender --background --factory-startup --python-exit-code 1 --python quadruped.py -- \\
-        --asset SK_Cat.glb --out ./anim [--motions idle,walk] [--period 32]
+        --asset SK_Cat.glb --out ./anim [--motions idle,walk] [--period 32] [--per-clip]
+
+Writes ONE GLB with every motion as a named clip, {asset}_animated.glb (--per-clip: one
+GLB per motion as well, {motion}.glb).
 
 Why this exists: text-to-motion (UniMate) was measured unusable for quadruped
 locomotion on four rigs, including the model author's own example — see
@@ -194,22 +197,56 @@ def cycle(asset, out, name, P, fn, stride=STRIDE, crouch=CROUCH):
     return sc, arm, m, stride, crouch
 
 
+def keep_action(arm, out, name):
+    """Each clip is built on a fresh import: write its action aside for export_all."""
+    keep = Path(out) / f".{name}.action.blend"
+    bpy.data.libraries.write(str(keep), {arm.animation_data.action}, fake_user=True)
+    return keep
+
+
+def export_all(asset, saved, path):
+    """One GLB, every motion a named clip: the actions on NLA tracks of one fresh import."""
+    sc, arm = load(asset)
+    for pb in arm.pose.bones:                 # the clips key Euler rotations: a fresh import is in quaternions
+        pb.rotation_mode = 'XYZ'
+    ad = arm.animation_data_create()
+    for keep in saved:
+        with bpy.data.libraries.load(str(keep)) as (src, dst):
+            dst.actions = list(src.actions)
+        for act in dst.actions:
+            track = ad.nla_tracks.new(); track.name = act.name
+            strip = track.strips.new(act.name, 0, act)
+            if getattr(act, "slots", None) and hasattr(strip, "action_slot"):
+                strip.action_slot = act.slots[0]
+        keep.unlink()
+    ad.action = None
+    bpy.ops.export_scene.gltf(filepath=str(path), export_animations=True, export_animation_mode='NLA_TRACKS',
+                              export_force_sampling=True)
+    return [t.name for t in ad.nla_tracks]
+
+
 def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     ap = argparse.ArgumentParser(); ap.add_argument("--asset", required=True); ap.add_argument("--out", default="anim")
     ap.add_argument("--motions", default="idle,walk"); ap.add_argument("--period", type=int, default=32)
     ap.add_argument("--stride", type=float, default=STRIDE, help="walk stride, share of the body length")
     ap.add_argument("--crouch", type=float, default=CROUCH, help="walk: hips lowered by this share of a leg, to start")
+    ap.add_argument("--per-clip", action="store_true", help="also one GLB per motion")
     a = ap.parse_args(argv)
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
-    report = {}
+    report, saved = {}, []
     for name in a.motions.split(","):
         fn, P = {"walk": (walk, a.period), "idle": (idle, a.period * 3 // 2)}[name]
         sc, arm, m, stride, crouch = cycle(a.asset, out, name, P, fn, a.stride, a.crouch)
         m.update(stride=round(stride, 3), crouch=round(crouch, 3), ok=m["extension"] <= MAX_EXTENSION)
-        bpy.ops.export_scene.gltf(filepath=str(out / f"{name}.glb"), export_animations=True, export_force_sampling=True)
+        if a.per_clip:
+            bpy.ops.export_scene.gltf(filepath=str(out / f"{name}.glb"), export_animations=True, export_force_sampling=True)
+        saved.append(keep_action(arm, out, name))
         report[name] = m
         print(f"quadruped: {name} {json.dumps(m)}")
+    path = out / f"{Path(a.asset).stem}_animated.glb"
+    clips = export_all(a.asset, saved, path)
+    print(f"quadruped: {path} — clips {clips}")
     (out / "quadruped-report.json").write_text(json.dumps(report, indent=2))
     sys.exit(0 if all(r["ok"] for r in report.values()) else 1)
 

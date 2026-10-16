@@ -366,6 +366,32 @@ try:
 except Exception as e:
     fail("quadruped", f"tools/quadruped.py does not run on a template-named rig: {e}")
 
+# One GLB with every clip: it wrote one file per motion, and a site needs Walk and Idle in one.
+try:
+    keeps = [Q.keep_action(arm, "/tmp", "walk")]
+    sc, arm, _, _, _ = Q.cycle("/tmp/_quad.glb", "/tmp", "idle", 48, Q.idle)
+    keeps.append(Q.keep_action(arm, "/tmp", "idle"))
+    Q.export_all("/tmp/_quad.glb", keeps, Path("/tmp/_quad_animated.glb"))
+    import struct
+    b = open("/tmp/_quad_animated.glb", "rb").read(); n = struct.unpack("<I", b[12:16])[0]
+    j = json.loads(b[20:20 + n]); data = b[28 + n:]
+    moving = {}
+    for an in j.get("animations", []):
+        spread = 0.0
+        for s in an["samplers"]:
+            a_ = j["accessors"][s["output"]]; k = {"SCALAR": 1, "VEC3": 3, "VEC4": 4}[a_["type"]]
+            at = j["bufferViews"][a_["bufferView"]].get("byteOffset", 0) + a_.get("byteOffset", 0)
+            f = struct.unpack_from(f"<{a_['count'] * k}f", data, at)
+            if a_["count"] > 2:
+                spread = max(spread, max(max(f[i::k]) - min(f[i::k]) for i in range(k)))
+        moving[an["name"]] = round(spread, 3)
+    if sorted(moving) != ["idle", "walk"] or min(moving.values()) < 0.01:
+        fail("quadruped", f"the animated GLB's clips are {moving} — want idle and walk, each moving")
+    else:
+        ok(f"quadruped: one GLB, clips {moving} (largest key range)")
+except Exception as e:
+    fail("quadruped", f"one GLB with every clip: {e}")
+
 # ── 5d. Bone-parented parts survive skin-only pipelines; generated clips loop.
 # A Quaternius dragon's eyes hung off a bone by parenting: UniMate kept the skin and left
 # them floating. And UniMate's clips seam at 2.4-8.5x their own frame step.

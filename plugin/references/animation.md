@@ -75,6 +75,11 @@ shortens the stride or lowers the hips until the legs stay bent (≤ 95%). It re
 feet not to skate (0.106 m/s on the cat, the four paws in exact step). It needs the
 Animation-ready skeleton's names; it says which are missing.
 
+It writes **one GLB with every motion as a named clip**, `{asset}_animated.glb` — a site
+plays Walk and Idle from one file (`--per-clip` also writes `{motion}.glb` each, as it once
+did only). The clips are the motions' names (`idle`, `walk`): rename the actions if the
+brief names them otherwise.
+
 ## UniMate
 
 [UniMate](https://github.com/Friedrich-M/UniMate) (SIGGRAPH Asia 2026) generates a
