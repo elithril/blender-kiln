@@ -2215,7 +2215,7 @@ $('#cr-form').onsubmit = async (e) => {
   $('#cr-save').disabled = true;
   $('#cr-status').textContent = t('Saving…');
   try {
-    const r = await api('/api/requests', { method: 'POST', body: { brief, type: $('#cr-type').value, target: $('#cr-target').value, style: $('#cr-style').value, photo: crPhoto } });
+    const r = await api('/api/requests', { method: 'POST', body: { brief, target: $('#cr-target').value, photo: crPhoto } });
     $('#cr-cmd').textContent = r.command;
     $('#cr-copy').onclick = () => copy(r.command);
     $('#cr-form').hidden = true;

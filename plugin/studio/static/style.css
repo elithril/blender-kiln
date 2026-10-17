@@ -844,7 +844,8 @@ body.no-model #right .notes-head, body.no-model #right #handoff { display: none;
 .cr-body textarea, .cr-body select { width: 100%; border-radius: 7px; border: 1px solid var(--line-2); background: var(--bg); padding: 8px 10px; font-size: 13px; color: var(--text); }
 .cr-body select { height: 32px; padding: 0 8px; }
 .cr-body textarea:focus, .cr-body select:focus { outline: none; border-color: var(--accent); }
-.cr-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+/* Only what changes the result's limits: what it is for. The kind and the style are the brief's, in its words. */
+.cr-grid { display: grid; grid-template-columns: minmax(0, 280px); gap: 10px; }
 .cr-photo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .cr-photo .lab { width: 100%; margin: 0; }
 .cr-photo img { width: 54px; height: 54px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line-2); }
