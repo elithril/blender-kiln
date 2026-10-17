@@ -201,6 +201,7 @@ def clean_selection(body: dict) -> dict:
                 if note and sl.NOTE_ID_RE.match(str(note.get("id", ""))) else None,
         "compare": str(body["compare"])[:100] if body.get("compare") else None,
         "shading": str(body["shading"])[:20] if body.get("shading") else None,
+        "visible": body.get("visible") is not False,
         "at": time.time(),
     }
     if out["camera"] is not None and isinstance(cam.get("fov"), (int, float)):
@@ -345,7 +346,9 @@ def make_handler(studio: Studio, port_ref: list[int]):
                     with studio.lock:
                         sel, pages = studio.selection, len(studio.subs)
                     if sel:
-                        sel = {**sel, "age_s": round(time.time() - sel["at"], 1)}
+                        now = time.time()
+                        sel = {**sel, "age_s": round(now - sel["seen_at"], 1),
+                               "changed_s": round(now - sel["changed_at"], 1)}
                     return self._json({"selection": sel, "pages": pages})
                 if parts[:2] == ["api", "events"]:
                     return self._events()
@@ -410,8 +413,15 @@ def make_handler(studio: Studio, port_ref: list[int]):
                     return self._json(r)
                 if method == "POST" and parts == ["api", "selection"]:
                     # The page says what it shows: the model, its stage, the camera, the note picked.
+                    # Sent on every change and every 15 s while the page is open: `seen_at` is
+                    # the last word from the page, `changed_at` the last time what it shows changed.
                     sel = clean_selection(body)
                     with studio.lock:
+                        prev = studio.selection
+                        same = prev and {k: v for k, v in prev.items() if k not in ("at", "seen_at", "changed_at", "visible")} == \
+                            {k: v for k, v in sel.items() if k not in ("at", "seen_at", "changed_at", "visible")}
+                        sel["seen_at"] = sel["at"]
+                        sel["changed_at"] = prev["changed_at"] if same else sel["at"]
                         studio.selection = sel
                     return self._json({"ok": True})
                 if method == "POST" and parts == ["api", "camera"]:

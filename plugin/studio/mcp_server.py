@@ -38,7 +38,10 @@ TOOLS = [
         "name": "get_selection",
         "description": ("What the user has open in Kiln Studio right now: the model (asset id), its stage, "
                         "the camera (Blender frame: metres, Z up, front -Y), the note they picked, and whether "
-                        "they compare. Use it when the user says \"this model\", \"here\" or \"this note\"."),
+                        "they compare. The page reports every change at once and confirms every 15 s: "
+                        "confirmed_seconds_ago says how fresh it is, unchanged_for_seconds how long the user has "
+                        "kept this view; page_open false means the tab is closed. Use it when the user says "
+                        "\"this model\", \"here\" or \"this note\"."),
         "inputSchema": {"type": "object", "properties": {"root": ROOT_ARG}, "additionalProperties": False},
         "annotations": {"readOnlyHint": True},
     },
@@ -153,11 +156,15 @@ def _note_id(project: sl.Project, a: sl.Asset, note: str) -> str:
 def get_selection(args: dict) -> dict:
     project = find_project(args.get("root"))
     out = call_studio(project, "/api/selection")
-    sel = out.get("selection")
+    sel, pages = out.get("selection"), out.get("pages", 0)
+    if not pages:
+        # No page holds the event stream: the tab is closed (or Studio restarted since).
+        return {"page_open": False, "selection": None,
+                "note": "The Studio page is closed: the user is not looking at a model in Studio now."
+                        + (f" The last thing it showed, {sel['age_s']:.0f} s ago: {sel.get('asset')}." if sel else "")}
     if not sel:
-        return {"open_pages": out.get("pages", 0), "selection": None,
-                "note": "No Studio page has reported what it shows yet." if out.get("pages") else
-                        "No Studio page is open: the user is not looking at a model in Studio now."}
+        return {"page_open": True, "open_pages": pages, "selection": None,
+                "note": "A Studio page is open but has not said what it shows yet (it does within a second of loading)."}
     note = None
     if sel.get("asset") and sel.get("note"):
         try:
@@ -168,12 +175,17 @@ def get_selection(args: dict) -> dict:
         except KeyError:
             pass
     cam = sel.get("camera") or {}
-    return {"open_pages": out.get("pages", 0), "seen_seconds_ago": sel.get("age_s"),
+    fresh = sel.get("age_s", 0) <= 30
+    return {"page_open": True, "open_pages": pages, "page_visible": sel.get("visible", True),
+            # The page confirms what it shows every 15 s and reports any change at once.
+            "confirmed_seconds_ago": sel.get("age_s"), "unchanged_for_seconds": sel.get("changed_s"),
+            "current": fresh,
             "asset": sel.get("asset"), "stage": sel.get("variant"), "highlighted_note": note,
             "camera_blender": {"position": cam.get("position_blender"), "target": cam.get("target_blender"),
                                "fov_deg": cam.get("fov")} if cam else None,
             "comparing_with": sel.get("compare"), "shading": sel.get("shading"),
-            "project": str(project.root)}
+            "project": str(project.root),
+            **({} if fresh else {"note": f"The page has not confirmed this for {sel.get('age_s'):.0f} s: it may be asleep or frozen."})}
 
 
 def _pictures(project: sl.Project, n: dict) -> dict:

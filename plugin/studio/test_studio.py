@@ -1024,19 +1024,23 @@ class Mcp(Base):
         threading.Thread(target=self.srv.serve_forever, daemon=True).start()
         port = self.srv.server_address[1]
         sl.write_json(self.p.data / "server.json", {"port": port, "pid": os.getpid()})
+        self.port = port
         # What the page reports when the user has the crate open, note 1 picked.
-        c = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
-        c.request("POST", "/api/selection", body=json.dumps({
-            "asset": self.a.id, "variant": "final", "shading": "clay",
-            "camera": {"position_blender": [2, -2, 1.5], "target_blender": [0, 0, 0.5], "fov": 35},
-            "note": {"id": self.note["id"], "number": 1}}),
-            headers={"Host": f"127.0.0.1:{port}", "Content-Type": "application/json", "Origin": f"http://127.0.0.1:{port}"})
-        self.assertEqual(c.getresponse().status, 200)
-        c.close()
+        self.report(shading="clay")
         env = {**os.environ, "KILN_STUDIO_ROOT": str(self.tmp)}
         self.proc = subprocess.Popen([sys.executable, str(Path(server.__file__).with_name("mcp_server.py"))],
                                      stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, env=env, cwd="/")
         self.n = 0
+
+    def report(self, **change) -> None:
+        body = {"asset": self.a.id, "variant": "final", "shading": "clay",
+                "camera": {"position_blender": [2, -2, 1.5], "target_blender": [0, 0, 0.5], "fov": 35},
+                "note": {"id": self.note["id"], "number": 1}, **change}
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        c.request("POST", "/api/selection", body=json.dumps(body),
+                  headers={"Host": f"127.0.0.1:{self.port}", "Content-Type": "application/json", "Origin": f"http://127.0.0.1:{self.port}"})
+        self.assertEqual(c.getresponse().status, 200)
+        c.close()
 
     def tearDown(self) -> None:
         self.proc.stdin.close()
@@ -1071,8 +1075,15 @@ class Mcp(Base):
         names = [t["name"] for t in self.rpc("tools/list")["result"]["tools"]]
         self.assertEqual(names, ["get_selection", "get_notes", "reply_to_note", "set_camera"])
 
+        err, sel = self.tool("get_selection")   # no page holds the event stream: closed
+        self.assertFalse(err, sel)
+        self.assertEqual((sel["page_open"], sel["selection"]), (False, None))
+        self.assertIn("closed", sel["note"])
+        page = self.studio.subscribe()          # the page is open
         err, sel = self.tool("get_selection")
         self.assertFalse(err, sel)
+        self.assertTrue(sel["page_open"] and sel["current"])
+        self.assertLess(sel["confirmed_seconds_ago"], 5)
         self.assertEqual((sel["asset"], sel["stage"], sel["shading"]), ("generated-assets/crate", "final", "clay"))
         self.assertEqual(sel["camera_blender"]["position"], [2, -2, 1.5])
         self.assertEqual((sel["highlighted_note"]["number"], sel["highlighted_note"]["text"]), (1, "the lid is too thin"))
@@ -1093,6 +1104,16 @@ class Mcp(Base):
         self.assertEqual(sl.load_notes(self.p, self.a.id)[0]["status"], "addressed")
         self.assertTrue(self.tool("reply_to_note", asset="crate", note="7", text="x")[0])
 
+        # The heartbeat: the same view again confirms it, without resetting how long it has been kept.
+        time.sleep(0.3)
+        self.report(shading="clay")
+        err, again = self.tool("get_selection")
+        self.assertLess(again["confirmed_seconds_ago"], again["unchanged_for_seconds"])
+        self.report(shading="lit")   # a change
+        err, changed = self.tool("get_selection")
+        self.assertEqual(changed["shading"], "lit")
+        self.assertLess(changed["unchanged_for_seconds"], 0.3)
+        self.studio.unsubscribe(page)
         self.assertTrue(self.tool("set_camera", view="front")[0])   # no page open: it says so
         q = self.studio.subscribe()   # a page now listens
         err, cam = self.tool("set_camera", position_blender=[0, -3, 1], target_blender=[0, 0, 0.5])

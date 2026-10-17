@@ -1779,13 +1779,20 @@ function reportSelection() {
       note: n ? { id: n.id, number: noteNumber(n) } : null,
       compare: state.compare ? `${state.compare.mode}:${state.compare.target || ''}` : null,
       shading: viewer.opts.shade,
+      visible: document.visibilityState === 'visible',
     };
     api('/api/selection', { method: 'POST', body }).catch(() => { /* the server is gone: the events say */ });
-  }, 400);
+  }, 150);
 }
-// A camera that settles is worth reporting; one moving is not.
+// A camera that settles is worth reporting; one moving is not: at the end of an orbit at
+// once, after a preset view's or a note's camera move once it stops.
 let camSettle = 0;
-const reportCamera = () => { clearTimeout(camSettle); camSettle = setTimeout(reportSelection, 600); };
+const reportCamera = () => { clearTimeout(camSettle); camSettle = setTimeout(reportSelection, 500); };
+viewer.controls.addEventListener('end', () => { clearTimeout(camSettle); camSettle = setTimeout(reportSelection, 250); });
+document.addEventListener('visibilitychange', reportSelection);
+// And every 15 s while the page is open, unchanged or not: Claude then knows the report
+// is current (get_selection's confirmed_seconds_ago), not merely the last one sent.
+setInterval(reportSelection, 15000);
 
 async function onEvent(ev) {
   if (ev.type !== 'camera') return;
