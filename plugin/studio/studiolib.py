@@ -207,15 +207,28 @@ class Asset:
 # defaults (references/studio.md § 9), the server reads exclude and target.
 
 TARGETS = ("web", "desktop", "print")
-CONFIG_DEFAULTS = {"live_view": True, "auto_open": True, "exclude": [], "target": "web"}
+BLENDER_MCPS = ("ahujasid", "lab")
+RESERVED_PORT = 9876   # the usual Blender MCP port: the user's own Blender, never the worker's
+CONFIG_DEFAULTS = {"live_view": True, "auto_open": True, "exclude": [], "target": "web",
+                   # The Claude worker (worker.py): off until the user turns it on; its own
+                   # Blender's port, and which Blender MCP server drives it.
+                   "claude_worker": False, "blender_port": 9877, "blender_mcp": "ahujasid"}
+
+
+def _port_ok(v) -> bool:
+    return isinstance(v, int) and not isinstance(v, bool) and 1024 <= v <= 65535 and v != RESERVED_PORT
 
 
 def clean_config(data: dict) -> dict:
     """The known keys, of the right type; anything else is left out (but kept on disk)."""
     out: dict = {}
-    for k in ("live_view", "auto_open"):
+    for k in ("live_view", "auto_open", "claude_worker"):
         if isinstance(data.get(k), bool):
             out[k] = data[k]
+    if _port_ok(data.get("blender_port")):
+        out["blender_port"] = data["blender_port"]
+    if data.get("blender_mcp") in BLENDER_MCPS:
+        out["blender_mcp"] = data["blender_mcp"]
     ex = data.get("exclude")
     if isinstance(ex, list):
         out["exclude"] = [str(x).strip() for x in ex if str(x).strip()][:200]
@@ -230,8 +243,13 @@ def save_config(project: "Project", updates: dict) -> dict:
     for k, v in updates.items():
         if k not in CONFIG_DEFAULTS:
             raise ValueError(f"unknown setting {k!r} (known: {', '.join(CONFIG_DEFAULTS)})")
-        if k in ("live_view", "auto_open") and not isinstance(v, bool):
+        if k in ("live_view", "auto_open", "claude_worker") and not isinstance(v, bool):
             raise ValueError(f"{k} must be true or false")
+        if k == "blender_port" and not _port_ok(v):
+            raise ValueError(f"blender_port must be a port from 1024 to 65535, not {RESERVED_PORT} "
+                             "(the usual Blender MCP port, kept for your own Blender)")
+        if k == "blender_mcp" and v not in BLENDER_MCPS:
+            raise ValueError(f"blender_mcp must be one of {', '.join(BLENDER_MCPS)}")
         if k == "exclude" and not (isinstance(v, list) and all(isinstance(x, str) for x in v)):
             raise ValueError("exclude must be a list of glob patterns")
         if k == "target" and v not in TARGETS:

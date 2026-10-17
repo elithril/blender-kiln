@@ -22,6 +22,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 import checks
 import setup_status
 import studiolib as sl
+import worker as wk
 
 VERSION = "1.0.0"
 STATIC = Path(__file__).resolve().parent / "static"
@@ -49,6 +50,8 @@ class Studio:
         self.selection: dict | None = None
         # The view images asked of the page (get_view_image): id -> (event, image bytes).
         self.captures: dict[str, list] = {}
+        # Claude Code runs started from the page (worker.py): off until the project turns it on.
+        self.worker = wk.Worker(project, self.emit)
         self.refresh(initial=True)
 
     # live events
@@ -404,6 +407,14 @@ def make_handler(studio: Studio, port_ref: list[int]):
                     return self._json({"selection": sel, "pages": pages})
                 if parts[:2] == ["api", "events"]:
                     return self._events()
+                if parts == ["api", "claude"]:
+                    q = parse_qs(urlparse(self.path).query)
+                    return self._json(studio.worker.status(force_auth=q.get("auth", [""])[0] == "1"))
+                if parts == ["api", "claude", "thread"]:
+                    key = parse_qs(urlparse(self.path).query).get("key", [""])[0]
+                    if not key.startswith(("asset:", "request:")):
+                        raise ValueError("key is asset:<id> or request:<id>")
+                    return self._json(studio.worker.thread(key))
                 if parts[:2] == ["api", "assets"]:
                     cat = sl.load_catalog(project)
                     with studio.lock:
@@ -526,6 +537,21 @@ def make_handler(studio: Studio, port_ref: list[int]):
                             slot[1] = img
                             slot[0].set()
                     return self._json({"ok": bool(slot)})
+                if method == "POST" and parts == ["api", "claude", "jobs"]:
+                    # Ask Claude: a chat message, the open notes, a Create request, an answer.
+                    return self._json(studio.worker.submit(
+                        str(body.get("kind", "")), asset=str(body["asset"])[:500] if body.get("asset") else None,
+                        text=str(body.get("text", "")), request=str(body["request"])[:40] if body.get("request") else None,
+                        lang=str(body.get("lang", "en")),
+                        key=str(body["key"])[:600] if str(body.get("key", "")).startswith("request:") else None))
+                if method == "POST" and parts[:3] == ["api", "claude", "jobs"] and len(parts) == 5:
+                    if parts[4] == "stop":
+                        return self._json(studio.worker.stop(parts[3]))
+                    if parts[4] == "answer":
+                        return self._json(studio.worker.answer(parts[3], str(body.get("decision", "")), str(body.get("reason", ""))))
+                if method == "POST" and parts == ["api", "claude", "blender", "stop"]:
+                    studio.worker.blender.stop()
+                    return self._json(studio.worker.blender.status())
                 if method == "POST" and parts == ["api", "example"]:
                     aid = sl.add_example(project)
                     studio.refresh()

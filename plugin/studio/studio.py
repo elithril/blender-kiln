@@ -131,7 +131,7 @@ def _url(port: int, asset: str | None) -> str:
 
 def serve(project: sl.Project, port: int, open_url: str | None = None) -> None:
     import server
-    srv, _ = server.make_server(project, port)
+    srv, st = server.make_server(project, port)
     port = srv.server_address[1]
     project.ensure()
     info = {"port": port, "pid": os.getpid(), "url": f"http://127.0.0.1:{port}/",
@@ -139,6 +139,10 @@ def serve(project: sl.Project, port: int, open_url: str | None = None) -> None:
     sl.write_json(project.data / "server.json", info)
 
     def bye(*_):
+        try:
+            st.worker.shutdown()   # the worker's run and its Blender go with Studio
+        except Exception:
+            pass
         try:
             cur = sl.read_json(project.data / "server.json", {})
             if cur.get("pid") == os.getpid():
@@ -532,12 +536,16 @@ def cmd_config(args) -> None:
             if not sep:
                 raise SystemExit(f"expected KEY=VALUE, got {item!r}")
             k = k.strip()
-            if k in ("live_view", "auto_open"):
+            if k in ("live_view", "auto_open", "claude_worker"):
                 if v.lower() not in ("true", "false", "on", "off", "yes", "no", "1", "0"):
                     raise SystemExit(f"{k} is true or false")
                 updates[k] = v.lower() in ("true", "on", "yes", "1")
             elif k == "exclude":
                 updates[k] = [x.strip() for x in v.split(",") if x.strip()]
+            elif k == "blender_port":
+                if not v.strip().isdigit():
+                    raise SystemExit("blender_port is a number")
+                updates[k] = int(v)
             else:
                 updates[k] = v.strip()
         try:
@@ -551,7 +559,7 @@ def cmd_config(args) -> None:
     explicit = sl.clean_config(project.config())
     for k, v in st.items():
         shown = ", ".join(v) or "-" if isinstance(v, list) else json.dumps(v) if isinstance(v, bool) else v
-        print(f"{k:10s} {shown}" + ("" if k in explicit else "   (default)"))
+        print(f"{k:14s} {shown}" + ("" if k in explicit else "   (default)"))
 
 
 def cmd_requests(args) -> None:
@@ -646,7 +654,7 @@ def main(argv: list[str] | None = None) -> None:
     wk.add_argument("assets", nargs="*", help="start: the models, in order; begin/done: one model")
     wk.add_argument("--label", help="start: what the run does, in a few words (\"acting on notes\")")
     wk.add_argument("--text", help="next/done/end: what was done, in a few words")
-    cf = p("config", cmd_config, "the project's settings: print them, or set KEY=VALUE (live_view, auto_open, target, exclude)")
+    cf = p("config", cmd_config, "the project's settings: print them, or set KEY=VALUE (live_view, auto_open, target, exclude, claude_worker, blender_port, blender_mcp)")
     cf.add_argument("set", nargs="*", metavar="KEY=VALUE", help="exclude takes a comma-separated list")
     cf.add_argument("--json", action="store_true")
     rq = p("requests", cmd_requests, "the models asked for in Studio's Create form (open ones; --all)")
