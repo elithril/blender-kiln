@@ -920,3 +920,61 @@ body.present #pins, body.present #labels, body.present .topbar .stats, body.pres
 body.present .topbar { pointer-events: none; opacity: .85; }
 #present-exit { position: absolute; top: 12px; right: 12px; z-index: 30; opacity: .35; transition: opacity .2s; }
 #present-exit:hover, #present-exit:focus-visible { opacity: 1; }
+
+/* ── Claude in Studio: the Claude tab ──────────────────────────────────────── */
+.tabs [role=tab] .spark { color: var(--new); font-size: 11px; }
+.tabs .tc.run { color: var(--new-ink); background: var(--new); }
+.tabs .tc.warn { color: var(--warn-ink); background: var(--warn); }
+#tab-claude:not([hidden]) { display: flex; flex-direction: column; overflow: hidden; }
+.cl-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); flex: none; }
+.cl-head:empty { display: none; }
+.cl-head .ttl { flex: 1; min-width: 0; }
+.cl-head .ttl b { display: block; font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cl-head .ttl span { font-size: 11px; color: var(--text-3); }
+.cl-thread { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+.cl-msg { font-size: 12.5px; line-height: 1.55; overflow-wrap: anywhere; }
+.cl-msg .who { font-size: 11px; color: var(--text-3); margin-bottom: 3px; }
+.cl-msg.cl .who b { color: var(--new); font-weight: 600; }
+.cl-msg.me { align-self: flex-end; max-width: 88%; background: var(--panel-3); border: 1px solid var(--line-2); border-radius: 10px 10px 2px 10px; padding: 8px 10px; }
+.cl-msg code, .cl-card code { font: 11px var(--mono); background: var(--panel-3); padding: 0 4px; border-radius: 4px; }
+.cl-tools { display: flex; flex-direction: column; gap: 1px; }
+.cl-tl { all: unset; box-sizing: border-box; cursor: pointer; display: flex; gap: 6px; align-items: center; width: 100%; padding: 3px 8px; border-left: 2px solid var(--line-2); font: 11px var(--mono); color: var(--text-3); }
+.cl-tl:hover, .cl-tl:focus-visible { color: var(--text-2); border-left-color: var(--line-3); }
+.cl-tl b { color: var(--text-2); font-weight: 500; white-space: nowrap; }
+.cl-tl .in { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cl-tl .r.ok { color: var(--ok); } .cl-tl .r.err { color: var(--danger); } .cl-tl .r.run { color: var(--new); }
+.cl-io { margin: 2px 0 4px 10px; padding: 6px 8px; font: 10.5px/1.5 var(--mono); color: var(--text-2); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 220px; overflow: auto; }
+.cl-sys { font-size: 11px; color: var(--text-3); display: flex; gap: 6px; align-items: center; }
+.cl-res { font: 10.5px var(--mono); color: var(--text-3); }
+.cl-card { border: 1px solid var(--line-2); border-radius: 10px; padding: 10px 12px; background: var(--panel-2); font-size: 12.5px; line-height: 1.45; }
+.cl-card .k { font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; margin-bottom: 5px; }
+.cl-card p { margin: 0 0 8px; }
+.cl-card .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.cl-card .code { margin: 0 0 8px; padding: 6px 8px; font: 11px/1.45 var(--mono); background: var(--bg); border: 1px solid var(--line-2); border-radius: 6px; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-2); }
+.cl-card.prop { border-color: color-mix(in srgb, var(--new) 55%, transparent); background: var(--new-soft); }
+.cl-card.prop .k { color: var(--new); }
+.cl-card.appr { border-color: color-mix(in srgb, var(--warn) 60%, transparent); background: var(--warn-soft); }
+.cl-card.appr .k { color: var(--warn); }
+.cl-card.err { border-color: color-mix(in srgb, var(--danger) 55%, transparent); }
+.cl-card.err .k { color: var(--danger); }
+.btn.warn { background: var(--warn); border-color: var(--warn); color: var(--warn-ink); font-weight: 600; }
+.cl-composer { border-top: 1px solid var(--line); padding: 10px 12px; flex: none; display: flex; flex-direction: column; gap: 6px; }
+.cl-composer[hidden] { display: none; }
+.cl-box { border: 1px solid var(--line-3); border-radius: 10px; background: var(--panel-2); padding: 6px 8px; }
+.cl-box:focus-within { border-color: var(--accent); }
+.cl-box textarea { width: 100%; border: 0; background: none; color: var(--text); font: inherit; font-size: 12.5px; resize: none; outline: none; min-height: 38px; }
+.cl-bar { display: flex; align-items: center; gap: 6px; }
+.cl-bar .sp { flex: 1; }
+.cl-ctx { display: flex; gap: 4px; flex-wrap: wrap; }
+.chip { font: 11px var(--font); padding: 2px 7px; border-radius: 5px; border: 1px solid var(--line-2); background: none; color: var(--text-3); cursor: pointer; }
+.chip.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.cl-hint { font-size: 10.5px; color: var(--text-3); }
+.warn-t { color: var(--warn); }
+.dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; background: var(--new); }
+.pulse { animation: cl-pulse 1.4s ease-in-out infinite; }
+.caret { display: inline-block; width: 7px; height: 13px; margin-left: 2px; background: var(--new); vertical-align: -2px; animation: cl-pulse 1s steps(2) infinite; }
+@keyframes cl-pulse { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .pulse, .caret { animation: none; } }
+.tabs [role=tab] { padding-left: 5px; padding-right: 5px; min-width: 0; font-size: 12px; gap: 4px; }
+.tabs [role=tab] > span[data-i18n] { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tabs .icon-tab .spark { font-size: 14px; }

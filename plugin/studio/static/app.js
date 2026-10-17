@@ -638,6 +638,8 @@ async function openAsset(id) {
   for (const v of state.detail.variants) if (!state.detail.thumbs.includes(v.hash)) queueThumb(id, v);
   queueAfterShots(state.detail);
   reportSelection();
+  claude.partial = null;
+  if (!$('#tab-claude').hidden) claudeLoad(); else renderClaudeBadge();
 }
 
 async function fetchDetail() {
@@ -997,6 +999,7 @@ function highlight(id, { scroll = false } = {}) {
   }
   renderNotes();
   renderPins();
+  if (!$('#tab-claude').hidden) renderClaude();   // the note chip
   if (state.hl) {
     const el = $(`#note-list .note[data-id="${CSS.escape(id)}"]`);
     el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -1128,7 +1131,8 @@ canvas.addEventListener('pointerleave', () => ($('#hover').hidden = true));
 
 function setTab(name) {
   $$('.tabs [role=tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
-  for (const k of ['notes', 'checks', 'details', 'history']) $(`#tab-${k}`).hidden = k !== name;
+  for (const k of ['notes', 'checks', 'details', 'history', 'claude']) $(`#tab-${k}`).hidden = k !== name;
+  if (name === 'claude') claudeOpen();
   $$('#right .rail [data-rtab]').forEach((b) => b.classList.toggle('on', b.dataset.rtab === name));
   prefs.tab = name; savePrefs();
 }
@@ -1852,6 +1856,7 @@ async function onCapture(ev) {
 }
 
 async function onEvent(ev) {
+  if (ev.type === 'claude' || ev.type === 'claude-text') return onClaude(ev);
   if (ev.type === 'control') return onControl(ev);
   if (ev.type === 'capture') return onCapture(ev);
   if (ev.type !== 'camera') return;
@@ -1867,6 +1872,233 @@ async function onEvent(ev) {
     viewer.setCamera({ position: toThree(ev.position_blender), target: toThree(ev.target_blender) });
   }
   toast(esc(t('Claude turned the view')), 'ok', 2500);
+}
+
+// ── Claude in Studio: a conversation per model (worker.py runs `claude -p`) ───
+// The worker answers one request at a time on the user's Claude login. The tab shows the
+// model's conversation: your messages, Claude's, each tool call on one line, and the two
+// things Claude waits on — a proposal (Accept / Decline) and a tool call outside the safe
+// list (Allow once / Deny). What Claude writes streams in as it comes.
+
+const claude = { status: null, thread: null, key: null, partial: null, open: new Set(), ctxNote: true, ctxView: false, loading: false };
+const claudeKey = () => (state.id ? `asset:${state.id}` : null);
+
+async function claudeStatus() {
+  try { claude.status = await api('/api/claude'); } catch { claude.status = null; }
+  renderClaudeBadge();
+  return claude.status;
+}
+
+async function claudeOpen() {
+  if (!claude.status) await claudeStatus();
+  await claudeLoad();
+}
+
+async function claudeLoad() {
+  const key = claudeKey();
+  claude.key = key;
+  if (!key) { claude.thread = null; renderClaude(); return; }
+  try {
+    const th = await api(`/api/claude/thread?key=${enc(key)}`);
+    if (claude.key === key) claude.thread = th;
+  } catch (e) { claude.thread = { key, messages: [], jobs: [], error: e.message }; }
+  renderClaude();
+}
+
+// The job on this conversation that runs, waits in the queue or waits for you.
+function claudeJob() {
+  const jobs = claude.thread?.jobs || [];
+  return [...jobs].reverse().find((j) => ['queued', 'running', 'waiting'].includes(j.state)) || null;
+}
+
+function renderClaudeBadge() {
+  const st = claude.status;
+  const mine = st?.jobs?.filter((j) => j.key === claudeKey() && ['queued', 'running', 'waiting'].includes(j.state)) || [];
+  const waiting = mine.some((j) => j.state === 'waiting');
+  const el = $('#tc-claude');
+  el.textContent = waiting ? '!' : mine.length ? '•' : '';
+  el.className = `tc${waiting ? ' warn' : mine.length ? ' run' : ''}`;
+  const rc = $('#rc-claude');
+  rc.hidden = !mine.length;
+  rc.textContent = waiting ? '!' : '•';
+}
+
+// Claude's text: escaped, then **bold**, `code` and line breaks; nothing else.
+// The proposal's own line is the card below, not text to read twice.
+const mdLite = (s) => esc(String(s ?? '').replace(/^\s*KILN-PROPOSAL:.*$/gm, '').trim()).replace(/`([^`\n]+)`/g, '<code>$1</code>').replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+
+function claudeEntry(e, results, job) {
+  const live = job && e.job === job.id && job.state === 'waiting';
+  switch (e.role) {
+    case 'user':
+      return `<div class="cl-msg me">${e.kind === 'notes' ? `<span class="dim">${esc(t('Work on the open notes'))}</span>` : mdLite(e.text)}</div>`;
+    case 'assistant':
+      return `<div class="cl-msg cl"><div class="who"><b>Claude</b> · <span title="${esc(stamp(e.at))}">${esc(ago(e.at))}</span></div>${mdLite(e.text)}</div>`;
+    case 'tool': {
+      const r = results.get(e.id);
+      const name = String(e.tool || '').replace(/^mcp__(plugin_[^_]+(?:-[^_]+)*_)?/, '').replace(/__/g, ' · ');
+      const open = claude.open.has(e.id);
+      return `<div class="cl-tool${open ? ' open' : ''}" data-tool="${esc(e.id)}"><button class="cl-tl"><span class="car">${open ? '▾' : '▸'}</span><b>${esc(name)}</b><span class="in">${esc(e.input)}</span><span class="r ${r ? (r.error ? 'err' : 'ok') : 'run'}">${r ? (r.error ? '✕' : '✓') : '…'}</span></button>${open ? `<pre class="cl-io">${esc(e.input)}${r ? `\n— \n${esc(r.text)}` : ''}</pre>` : ''}</div>`;
+    }
+    case 'system':
+      return `<div class="cl-sys">${esc(e.text)}</div>`;
+    case 'error':
+      return `<div class="cl-card err"><div class="k">${esc(t('Claude could not go on'))}</div><p>${esc(e.text)}</p></div>`;
+    case 'result':
+      if (e.text) return `<div class="cl-sys">${esc(t(e.text))}</div>`;
+      return `<div class="cl-res">${esc([e.turns != null && tp(e.turns, '{n} turn', '{n} turns'), e.duration_ms != null && fmtSecs(e.duration_ms / 1000), e.cost_usd != null && t('≈ ${c} API-equivalent, included in your subscription', { c: fmtD(e.cost_usd, 2) })].filter(Boolean).join(' · '))}</div>`;
+    case 'proposal':
+      return `<div class="cl-card prop"><div class="k">${esc(t('Claude proposes'))}</div><p>${mdLite(e.question)}</p>${live
+        ? `<div class="acts"><button class="btn sm accent" data-cl="accept">${esc(t('Accept'))}</button><button class="btn sm" data-cl="decline">${esc(t('Decline'))}</button><button class="btn sm ghost" data-cl="other">${esc(t('Answer something else…'))}</button></div>`
+        : ''}</div>`;
+    case 'approval':
+      return `<div class="cl-card appr"><div class="k">${esc(t('Approval asked'))}</div><p>${esc(t('Claude wants to use a tool outside the safe list:'))}</p><pre class="code">${esc(approvalText(e))}</pre>${live
+        ? `<div class="acts"><button class="btn sm warn" data-cl="allow">${esc(t('Allow once'))}</button><button class="btn sm" data-cl="deny">${esc(t('Deny'))}</button></div>`
+        : ''}</div>`;
+    case 'approval-answer':
+      return `<div class="cl-sys">${esc(e.decision === 'allow' ? t('You allowed {tool}', { tool: e.tool }) : t('You denied {tool}', { tool: e.tool }))}</div>`;
+    default:
+      return '';
+  }
+}
+// A shell command reads as one; anything else as the tool and its input.
+function approvalText(e) {
+  try { const i = JSON.parse(e.input); if (i && typeof i.command === 'string') return `$ ${i.command}`; if (i?.file_path) return `${e.tool} ${i.file_path}`; } catch { /* cut short: shown as is */ }
+  return `${e.tool}\n${e.input}`;
+}
+const fmtSecs = (s) => (s < 90 ? t('{s} s', { s: Math.round(s) }) : t('{m} min {s}', { m: Math.floor(s / 60), s: String(Math.round(s % 60)).padStart(2, '0') }));
+
+function renderClaude() {
+  const tab = $('#tab-claude');
+  if (tab.hidden) { renderClaudeBadge(); return; }
+  const st = claude.status, head = $('#cl-head'), thread = $('#cl-thread');
+  const composer = $('#cl-composer');
+  renderClaudeBadge();
+  if (!st) { head.innerHTML = ''; thread.innerHTML = `<div class="empty-notes"><b>${esc(t('Claude is not reachable'))}</b>${esc(t('This Studio server has no Claude worker.'))}</div>`; composer.hidden = true; return; }
+  if (!st.enabled) {
+    head.innerHTML = '';
+    thread.innerHTML = `<div class="empty-notes cl-off"><b>${esc(t('Claude in Studio is off'))}</b>${esc(t('Turn it on and Claude works on your models from here: one request at a time, on your Claude subscription, in a Blender of its own (port {p}) — yours is never touched.', { p: st.port }))}<div style="margin-top:12px"><button class="btn sm accent" data-cl="enable">${esc(t('Turn on'))}</button></div></div>`;
+    composer.hidden = true;
+    return;
+  }
+  if (!state.id) { head.innerHTML = ''; thread.innerHTML = `<div class="empty-notes"><b>${esc(t('No model open'))}</b>${esc(t('Open a model to talk to Claude about it.'))}</div>`; composer.hidden = true; return; }
+  composer.hidden = false;
+  const job = claudeJob();
+  const msgs = claude.thread?.messages || [];
+  const name = state.detail?.name || state.id;
+  const stateLine = !job ? (msgs.length ? t('{n} messages', { n: msgs.filter((m) => m.role === 'user' || m.role === 'assistant').length }) : t('new conversation'))
+    : job.state === 'running' ? t('Claude is working') : job.state === 'queued' ? t('waiting in line ({n})', { n: job.position || 1 }) : t('waiting for your answer');
+  head.innerHTML = `<div class="ttl"><b>${esc(t('Conversation on {name}', { name }))}</b><span>${esc(stateLine)}</span></div>${job && ['running', 'queued'].includes(job.state) ? `<button class="btn sm" data-cl="stop">■ ${esc(t('Stop'))}</button>` : ''}`;
+  const results = new Map(msgs.filter((m) => m.role === 'tool-result').map((m) => [m.id, m]));
+  // Tool calls in a row are one block.
+  let html = '', inTools = false;
+  for (const e of msgs) {
+    if (e.role === 'tool-result') continue;
+    const tool = e.role === 'tool';
+    if (tool && !inTools) { html += '<div class="cl-tools">'; inTools = true; }
+    if (!tool && inTools) { html += '</div>'; inTools = false; }
+    html += claudeEntry(e, results, job);
+  }
+  if (inTools) html += '</div>';
+  if (claude.partial && job && claude.partial.job === job.id && job.state === 'running') html += `<div class="cl-msg cl"><div class="who"><b>Claude</b> · ${esc(t('now'))}</div>${mdLite(claude.partial.text)}<span class="caret"></span></div>`;
+  else if (job?.state === 'running') html += `<div class="cl-sys"><span class="dot pulse"></span> ${esc(t('Claude is working…'))}</div>`;
+  if (!msgs.length && !job) html = `<div class="empty-notes"><b>${esc(t('Ask Claude about {name}', { name }))}</b>${esc(t('It sees the model you have open, your notes and your view, and changes the model in its own Blender. Studio shows each new version here.'))}${(state.detail?.counts?.open || 0) ? `<div style="margin-top:12px"><button class="btn sm" data-cl="notes">${esc(tp(state.detail.counts.open, 'Work on the open note', 'Work on the {n} open notes'))}</button></div>` : ''}</div>`;
+  const atEnd = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 40;
+  thread.innerHTML = html;
+  if (atEnd || claude.stick) { thread.scrollTop = thread.scrollHeight; claude.stick = false; }
+  // composer
+  const tool = job?.state === 'waiting' && (claude.thread?.jobs || []).some((j) => j.id === job.id && j.waiting?.type === 'tool');
+  const busy = job && ['running', 'queued'].includes(job.state);
+  $('#cl-text').placeholder = tool ? t('Answer the approval first') : t('Ask Claude about {name}…', { name });
+  $('#cl-text').disabled = !!tool;
+  $('#cl-send').disabled = !!tool || !!busy;
+  const hl = state.hl && state.detail?.notes.find((n) => n.id === state.hl);
+  $('#cl-ctx').innerHTML = [
+    hl ? `<button class="chip${claude.ctxNote ? ' on' : ''}" data-cl="ctx-note" title="${esc(t('Send the highlighted note with the message'))}">● ${esc(t('note {n}', { n: noteNumber(hl) }))}</button>` : '',
+    `<button class="chip${claude.ctxView ? ' on' : ''}" data-cl="ctx-view" title="${esc(t('Claude looks at your view first'))}">${esc(t('my view'))}</button>`,
+  ].join('');
+  const a = st.auth || {};
+  $('#cl-hint').innerHTML = busy ? esc(t('Claude is working: send when it is done, or stop it.'))
+    : a.ok === false ? `<span class="warn-t">${esc(a.message || t('Claude Code is not ready'))}</span>`
+    : esc(t('On {who} · Blender of Studio, port {p}', { who: a.subscription ? t('your Claude {plan} subscription', { plan: a.subscription[0].toUpperCase() + a.subscription.slice(1) }) : t('your Claude subscription'), p: st.port }));
+}
+
+function claudeCompose(text) {
+  const parts = [];
+  const hl = state.hl && state.detail?.notes.find((n) => n.id === state.hl);
+  if (hl && claude.ctxNote) parts.push(`(About note ${noteNumber(hl)}, ${hl.id}: “${hl.text}”.)`);
+  if (claude.ctxView) parts.push('(Look at my current Studio view first: kiln-studio get_view_image.)');
+  return [...parts, text].join('\n');
+}
+
+async function claudeSend(kind, text = '') {
+  try {
+    await api('/api/claude/jobs', { method: 'POST', body: { kind, asset: state.id, text, lang: getLang() } });
+    claude.stick = true;
+    await claudeStatus();
+    await claudeLoad();
+    return true;
+  } catch (e) { toast(esc(e.message), 'warn', 6000); return false; }
+}
+
+$('#cl-send').onclick = async () => {
+  const ta = $('#cl-text'), text = ta.value.trim();
+  if (!text) return;
+  const job = claudeJob();
+  const kind = job?.state === 'waiting' ? 'answer' : 'chat';
+  if (await claudeSend(kind, claudeCompose(text))) ta.value = '';
+};
+$('#cl-text').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); $('#cl-send').click(); } });
+$('#tab-claude').addEventListener('click', async (e) => {
+  const tl = e.target.closest('.cl-tl');
+  if (tl) { const id = tl.parentElement.dataset.tool; claude.open.has(id) ? claude.open.delete(id) : claude.open.add(id); renderClaude(); return; }
+  const act = e.target.closest('[data-cl]')?.dataset.cl;
+  if (!act) return;
+  const job = claudeJob();
+  if (act === 'enable') {
+    try { await api('/api/config', { method: 'PUT', body: { claude_worker: true } }); await claudeStatus(); renderClaude(); } catch (err) { toast(esc(err.message), 'warn'); }
+  } else if (act === 'stop' && job) {
+    try { await api(`/api/claude/jobs/${enc(job.id)}/stop`, { method: 'POST', body: {} }); } catch (err) { toast(esc(err.message), 'warn'); }
+  } else if (act === 'notes') {
+    claudeSend('notes');
+  } else if (act === 'accept') {
+    claudeSend('answer', 'Yes, go ahead.');
+  } else if (act === 'decline') {
+    claudeSend('answer', 'No, do not do that.');
+  } else if (act === 'other') {
+    $('#cl-text').focus();
+  } else if ((act === 'allow' || act === 'deny') && job) {
+    try { await api(`/api/claude/jobs/${enc(job.id)}/answer`, { method: 'POST', body: { decision: act } }); claude.stick = true; await claudeStatus(); await claudeLoad(); } catch (err) { toast(esc(err.message), 'warn'); }
+  } else if (act === 'ctx-note') { claude.ctxNote = !claude.ctxNote; renderClaude(); }
+  else if (act === 'ctx-view') { claude.ctxView = !claude.ctxView; renderClaude(); }
+});
+
+let claudeTimer = 0;
+async function onClaude(ev) {
+  if (ev.type === 'claude-text') {
+    if (ev.key !== claudeKey()) return;
+    claude.partial = { job: ev.job, text: ev.text };
+    cancelAnimationFrame(claudeTimer);
+    claudeTimer = requestAnimationFrame(renderClaude);
+    return;
+  }
+  // A job changed, or a message was added: the status always, the thread if it is this one.
+  if (ev.entry?.role === 'assistant' && claude.partial?.job === ev.job?.id) claude.partial = null;
+  if (claude.status) {
+    const jobs = claude.status.jobs || [];
+    const i = jobs.findIndex((j) => j.id === ev.job.id);
+    if (i >= 0) jobs[i] = { ...jobs[i], ...ev.job }; else jobs.push(ev.job);
+  }
+  if (ev.job?.key === claudeKey() && claude.thread) {
+    if (ev.entry) claude.thread.messages.push(ev.entry);
+    const jobs = claude.thread.jobs;
+    const i = jobs.findIndex((j) => j.id === ev.job.id);
+    if (i >= 0) jobs[i] = { ...jobs[i], ...ev.job }; else jobs.push(ev.job);
+  }
+  if (ev.job && !['queued', 'running'].includes(ev.job.state)) claudeStatus().then(renderClaude);
+  renderClaude();
+  if (ev.job?.state === 'waiting' && ev.entry && ['proposal', 'approval'].includes(ev.entry.role) && ev.job.key !== claudeKey())
+    toast(esc(t('Claude waits for your answer on {name}', { name: (ev.job.asset || '').split('/').pop() })), 'warn', 6000);
 }
 
 // ── keys ─────────────────────────────────────────────────────────────────────
@@ -2315,6 +2547,7 @@ window.addEventListener('hashchange', fromHash);
     return;
   }
   liveEvents();
+  claudeStatus().then(renderClaude);
   fromHash();
   // The fonts change the bar's width once they load.
   document.fonts?.ready.then(fitSoon);

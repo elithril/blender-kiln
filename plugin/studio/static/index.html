@@ -182,6 +182,7 @@
       <button role="tab" id="tb-checks" data-tab="checks" aria-selected="false" aria-controls="tab-checks"><span data-i18n>Checks</span> <span class="tc" id="tc-checks"></span></button>
       <button role="tab" id="tb-details" data-tab="details" aria-selected="false" aria-controls="tab-details"><span data-i18n>Details</span></button>
       <button role="tab" id="tb-history" data-tab="history" aria-selected="false" aria-controls="tab-history"><span data-i18n>History</span></button>
+      <button role="tab" id="tb-claude" class="icon-tab" data-tab="claude" aria-selected="false" aria-controls="tab-claude" aria-label="Claude" title="Claude" data-i18n-attr="aria-label,title"><span class="spark" aria-hidden="true">✦</span><span class="tc" id="tc-claude"></span></button>
       <button class="btn icon sm ghost collapse" data-toggle="right" aria-label="Collapse the notes panel (])" title="Collapse ( ] )" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
     </div>
     <section id="tab-notes" class="tab" role="tabpanel" aria-labelledby="tb-notes">
@@ -201,6 +202,17 @@
     <section id="tab-checks" class="tab" role="tabpanel" aria-labelledby="tb-checks" hidden></section>
     <section id="tab-details" class="tab" role="tabpanel" aria-labelledby="tb-details" hidden></section>
     <section id="tab-history" class="tab" role="tabpanel" aria-labelledby="tb-history" hidden></section>
+    <section id="tab-claude" class="tab" role="tabpanel" aria-labelledby="tb-claude" hidden>
+      <div class="cl-head" id="cl-head"></div>
+      <div class="cl-thread" id="cl-thread" aria-live="polite"></div>
+      <div class="cl-composer" id="cl-composer">
+        <div class="cl-box">
+          <textarea id="cl-text" rows="2" aria-label="Message to Claude" data-i18n-attr="aria-label"></textarea>
+          <div class="cl-bar"><span class="cl-ctx" id="cl-ctx"></span><span class="sp"></span><button class="btn sm accent" id="cl-send"><span data-i18n>Send</span> <kbd>⌘↵</kbd></button></div>
+        </div>
+        <div class="cl-hint" id="cl-hint"></div>
+      </div>
+    </section>
   </div>
   <div class="rail" aria-label="Notes (collapsed)" data-i18n-attr="aria-label">
     <button class="rbtn" data-toggle="right" aria-label="Expand the notes panel (])" title="Expand ( ] )" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
@@ -209,6 +221,7 @@
     <button class="rbtn" data-rtab="checks" aria-label="Checks" title="Checks" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg><span class="cnt" id="rc-checks" hidden></span></button>
     <button class="rbtn" data-rtab="details" aria-label="Details" title="Details" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 11v5M12 8v.5"/></svg></button>
     <button class="rbtn" data-rtab="history" aria-label="History" title="History" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button>
+    <button class="rbtn" data-rtab="claude" aria-label="Claude" title="Claude" data-i18n-attr="aria-label,title"><span class="letter">✦</span><span class="cnt" id="rc-claude" hidden></span></button>
     <div class="rsep"></div>
     <button class="rbtn" id="r-pin" aria-label="Pin a note (N)" title="Pin a note (N)" data-i18n-attr="aria-label,title"><span class="letter">N</span></button>
     <button class="rbtn" id="r-general" aria-label="Note on the whole model (M)" title="Whole model (M)" data-i18n-attr="aria-label,title"><span class="letter">M</span></button>
