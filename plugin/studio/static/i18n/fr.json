@@ -1,6 +1,14 @@
 {
  "_": "Kiln Studio in French. ui: the page's words, keyed by their English; checks: checks.py MESSAGES, same codes and placeholders.",
  "ui": {
+  "note {n} · from Claude": "note {n} · de Claude",
+  "Claude noted note {n} (whole model)": "Claude a écrit la note {n} (modèle entier)",
+  "Leave present mode": "Quitter la présentation",
+  "Leave present mode (Esc)": "Quitter la présentation (Échap)",
+  "Claude asked for \"{id}\", not in this project": "Claude a demandé « {id} », absent de ce projet",
+  "Claude opened {name}": "Claude a ouvert {name}",
+  "Claude changed the view": "Claude a changé la vue",
+  "This model has no clip \"{c}\"": "Ce modèle n'a pas de clip « {c} »",
   " and close-up": " et son gros plan",
   " or ": " ou ",
   " tokens": " tokens",

@@ -665,12 +665,13 @@ export class Viewer {
   // `shot`, the view cropped to the model (and the pin), and for a pin `detail`, a
   // close-up rendered nearer along the user's line of sight to it, the spot marked
   // without being covered. `view` is what an "after" render needs to frame both again.
-  screenshot({ pin = null } = {}) {
+  // whole: the view as shown (Claude's get_view_image), not cropped to the model.
+  screenshot({ pin = null, whole = false } = {}) {
     this.draw({ solo: true });
     const src = this.renderer.domElement;
     const v = this.viewRect(), k = src.width / this.size.w;
     // Cropped to the model, widened to the note card's 4:3 inside the view.
-    const crop = this.a.model ? widenCrop(modelCrop(this.a.box, this.camera, pin), v.w, v.h, 4 / 3) : [0, 0, 1, 1];
+    const crop = this.a.model && !whole ? widenCrop(modelCrop(this.a.box, this.camera, pin), v.w, v.h, 4 / 3) : [0, 0, 1, 1];
     const full = document.createElement('canvas');
     full.width = Math.round(v.w * k); full.height = Math.round(v.h * k);
     const g = full.getContext('2d');

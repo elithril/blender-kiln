@@ -374,29 +374,45 @@ python3 <skill>/studio/studio.py request q_… --status done --asset <the asset>
 
 ---
 
-## 11. The kiln-studio MCP server — what the user is looking at
+## 11. The kiln-studio MCP server — what the user is looking at, and driving Studio
 
 The plugin declares a small MCP server, `kiln-studio` (`.mcp.json` at the plugin root →
 `studio/mcp_server.py`, standard library, stdio). It reads what the open Studio page shows
-and the notes; it writes nothing but note replies.
+and the notes, drives the open page (so the user can keep Studio on a second screen and work
+in the terminal), and writes nothing but Studio's own records: note replies and Claude's
+notes. It never touches a model file.
 
 | Tool | Gives / does |
 |---|---|
 | `get_selection` | The model the page shows (asset id), its stage, the camera in Blender's frame, the note picked, compare and shading, and how many seconds ago the page said so |
+| `get_view_image` | The image the page shows now (whole view; `crop` to the model), saved under `.kiln-studio/cache/views/` (last 20 kept): read the path to see what the user sees |
+| `list_models` | The project's models: id, folder, stages, notes per status, a build in progress |
 | `get_notes` | The notes of an asset (default: the one open), as `studio.py show` gives them, with the pictures' absolute paths to read; no asset and none open: the assets with notes |
 | `reply_to_note` | `studio.py reply`: `status` addressed, open or wontfix — never resolved |
+| `add_note` | A note by Claude on a whole model (a finding, a question), shown as "from Claude"; the user answers or closes it |
+| `open_model` | Opens a model in the page, at a `stage` |
 | `set_camera` | Turns the open page's view: `view` (front, back, left, right, top, iso), a `note`'s own view, or `position_blender` and `target_blender`; with `asset`, opens it first |
+| `set_view` | `shading` (lit, unlit, clay, normals, uv, faces), `background`, `wire`, `grid`, `bounds` (size), `skeleton` (bones), a preset `view`, `frame` |
+| `compare` | `mode` split or side with a `target` stage or `baseline` (the previous version); `off` |
+| `play_clip` | An animation `clip` (`walk`, `run_loop`…), `playing`, `speed` (0.25, 0.5, 1, 2), `time` |
+| `present` | Present mode: the model alone, full window, no panels — for a second screen; `on: false` leaves it (so do Esc and the page's button; `?present` in the URL opens in it) |
 
 Their full names, as Claude Code calls a plugin's MCP tools (`mcp__plugin_<plugin>_<server>__<tool>`):
-`mcp__plugin_blender-kiln_kiln-studio__get_selection`, `…__get_notes`, `…__reply_to_note`,
-`…__set_camera` — the skill's `allowed-tools` lists all four.
+`mcp__plugin_blender-kiln_kiln-studio__get_selection`, `…__open_model` and so on — the skill's
+`allowed-tools` lists every one.
 
 **When to call `get_selection`:** before anything the user says about what is on their
 screen without naming it — "what am I looking at", "fix this", "this note", "here", "the
 one open" — and at the start of `/kiln studio` without an argument when Studio is open.
 Then `get_notes` for that model; `set_camera` to show the user a change from the note's view.
 
+**Showing the user a result:** `open_model` at the stage you exported, `set_view` /
+`play_clip` for what matters (clay for the shape, normals for shading seams, the clip you
+just keyed), `compare` with `baseline` for before / after, then ask them to look. To check
+it yourself, `get_view_image` and read the file. Every page open on the project gets the
+command; for `get_view_image` the tab in front answers first.
+
 It finds the project from `KILN_STUDIO_ROOT`, `CLAUDE_PROJECT_DIR` (the plugin passes it) or the session's folder,
-upwards (each tool takes `root`). Without a running Studio, `get_selection` and `set_camera`
-say so; `get_notes` and `reply_to_note` work from the files alone. Use `set_camera` to show
-the user what you changed, from the note's camera, before asking them to look.
+upwards (each tool takes `root`). Without a running Studio or an open page, the tools that
+drive the page say so; `get_notes`, `list_models`, `reply_to_note` and `add_note` work from
+the files alone.

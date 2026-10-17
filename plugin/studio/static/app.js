@@ -1198,7 +1198,7 @@ function noteEl(n) {
   el.className = `note${state.hl === n.id ? ' hl' : ''}`;
   el.dataset.id = n.id;
   el.innerHTML = `
-    <header><span class="num ${a ? n.status : 'whole'}" aria-hidden="true"><span>${a ? num : 'M'}</span></span><span class="status ${n.status}">${esc(statusLabel(n.status))}</span><span class="kind">${esc(a ? t('pin {n}', { n: num }) : t('note {n} · whole model', { n: num }))}${d.variants.length > 1 && n.version?.variant ? ` · ${esc(n.version.variant)}` : ''}</span><time title="${esc(stamp(n.created))}">${esc(ago(n.created))}</time></header>
+    <header><span class="num ${a ? n.status : 'whole'}" aria-hidden="true"><span>${a ? num : 'M'}</span></span><span class="status ${n.status}">${esc(statusLabel(n.status))}</span><span class="kind">${esc(a ? t('pin {n}', { n: num }) : (n.by === 'claude' ? t('note {n} · from Claude', { n: num }) : t('note {n} · whole model', { n: num })))}${d.variants.length > 1 && n.version?.variant ? ` · ${esc(n.version.variant)}` : ''}</span><time title="${esc(stamp(n.created))}">${esc(ago(n.created))}</time></header>
     ${state.editing === n.id
       ? `<textarea class="edit-text" rows="3" aria-label="${esc(t('Note text'))}">${esc(n.text)}</textarea><div class="actions" style="margin-bottom:8px"><button class="btn sm accent" data-act="save-edit">${esc(t('Save'))}</button><button class="btn sm" data-act="cancel-edit">${esc(t('Cancel'))}</button></div>`
       : `<p class="text">${esc(n.text)}</p>`}
@@ -1593,7 +1593,7 @@ function renderHistory() {
     if (e.type === 'log') return li('log', e, `<div class="h">${esc(e.by === 'claude' ? t('Claude: changelog') : t('You: changelog'))}</div><div class="b">${esc(e.text)}</div>`);
     if (e.type === 'baseline') return li('baseline', e, `<div class="h">${esc(t('Kept {v} {h} as the previous version', { v: e.variant, h: e.hash.slice(0, 7) }))}</div><div class="b dim">${esc(e.reason)}</div>`);
     if (e.type === 'revert') return li('revert', e, `<div class="h">${esc(t('Put back {v} {h}', { v: e.variant, h: e.hash.slice(0, 7) }))}</div>`);
-    if (e.type === 'note') return li('note', e, `<div class="h">${esc(e.n.anchor ? t('You noted pin {n}', { n: noteNumber(e.n) }) : t('You noted note {n} (whole model)', { n: noteNumber(e.n) }))}</div><div class="b">${esc(e.n.text)}</div>`);
+    if (e.type === 'note') return li('note', e, `<div class="h">${esc(e.n.anchor ? t('You noted pin {n}', { n: noteNumber(e.n) }) : (e.n.by === 'claude' ? t('Claude noted note {n} (whole model)', { n: noteNumber(e.n) }) : t('You noted note {n} (whole model)', { n: noteNumber(e.n) })))}</div><div class="b">${esc(e.n.text)}</div>`);
     if (e.type === 'reply') {
       const who = e.r.by === 'claude' ? 'Claude' : t('You');
       return li(`reply-${e.r.by === 'claude' ? 'claude' : 'you'}`, e, `<div class="h">${esc(who)} ${e.r.status ? `${esc(t('marked note {n}', { n: noteNumber(e.n) }))} <span class="status ${e.r.status}">${esc(statusLabel(e.r.status))}</span>` : esc(t('replied on note {n}', { n: noteNumber(e.n) }))}</div>${e.r.text ? `<div class="b">${esc(e.r.text)}</div>` : ''}`);
@@ -1794,14 +1794,68 @@ document.addEventListener('visibilitychange', reportSelection);
 // is current (get_selection's confirmed_seconds_ago), not merely the last one sent.
 setInterval(reportSelection, 15000);
 
-async function onEvent(ev) {
-  if (ev.type !== 'camera') return;
-  if (ev.asset && ev.asset !== state.id && state.byId.has(ev.asset)) {
-    go(ev.asset);
-    // Wait for it to load, at most 15 s.
-    const t0 = Date.now();
-    while (!(state.detail?.id === ev.asset && $('#loading').hidden && viewer.a.model) && Date.now() - t0 < 15000) await new Promise((r) => setTimeout(r, 100));
+// Open a model and wait for it to load, at most 15 s.
+async function openAndWait(id) {
+  if (!id || id === state.id || !state.byId.has(id)) return;
+  go(id);
+  const t0 = Date.now();
+  while (!(state.detail?.id === id && $('#loading').hidden && viewer.a.model) && Date.now() - t0 < 15000) await new Promise((r) => setTimeout(r, 100));
+}
+
+// Present: the model alone, full window, for a second screen; Claude drives it from the
+// terminal (kiln-studio MCP: present). Esc or the button leaves it.
+function setPresent(on) {
+  document.body.classList.toggle('present', on);
+  $('#present-exit').hidden = !on;
+  fitSoon();
+}
+$('#present-exit').onclick = () => setPresent(false);
+if (new URLSearchParams(location.search).has('present')) setPresent(true);
+
+// What Claude does to the page from the kiln-studio MCP server, said in a toast.
+async function onControl(ev) {
+  if (ev.action === 'open') {
+    if (!state.byId.has(ev.asset)) { toast(t('Claude asked for "{id}", not in this project', { id: esc(ev.asset) }), 'warn'); return; }
+    await openAndWait(ev.asset);
+    if (ev.stage && ev.stage !== state.variant && state.detail?.variants.some((v) => v.label === ev.stage)) await loadVariant(ev.stage);
+    toast(esc(t('Claude opened {name}', { name: state.detail?.name || ev.asset })), 'ok', 2500);
+  } else if (ev.action === 'view') {
+    if (ev.shading) setOpt('shade', ev.shading);
+    if (ev.background) setOpt('bg', ev.background);
+    for (const k of ['wire', 'grid', 'bounds', 'skeleton']) if (k in ev) setOpt(k, ev[k]);
+    if (ev.view) viewer.view(ev.view);
+    if (ev.frame) viewer.frame();
+    toast(esc(t('Claude changed the view')), 'ok', 2000);
+  } else if (ev.action === 'compare') {
+    await setCompare(ev.mode === 'off' ? null : ev.mode, ev.target);
+  } else if (ev.action === 'play') {
+    const clips = state.clientStats?.clips || [];
+    if (ev.clip && !clips.some((c) => c.name === ev.clip)) { toast(t('This model has no clip "{c}"', { c: esc(ev.clip) }), 'warn'); return; }
+    if (ev.clip) { viewer.playClip(ev.clip); $('#a-clip').value = ev.clip; }
+    if (ev.speed) { viewer.speed = ev.speed; $('#a-speed').value = String(ev.speed); }
+    if ('time' in ev) { viewer.seek(Math.min(ev.time, viewer.clipDuration)); viewer.onAnimate(); }
+    setPlaying('playing' in ev ? ev.playing : true);
+  } else if (ev.action === 'present') {
+    setPresent(ev.on);
   }
+  reportSelection();
+}
+
+async function onCapture(ev) {
+  // Every open page is asked and the first answer is kept: a hidden tab waits, so the one
+  // the user has in front of them answers first.
+  if (document.hidden) await new Promise((r) => setTimeout(r, 1500));
+  try {
+    const { shot } = viewer.screenshot({ whole: ev.full !== false });
+    await api(`/api/view-image/${enc(ev.id)}`, { method: 'POST', body: { image: shot } });
+  } catch (e) { console.warn('view image', e); }
+}
+
+async function onEvent(ev) {
+  if (ev.type === 'control') return onControl(ev);
+  if (ev.type === 'capture') return onCapture(ev);
+  if (ev.type !== 'camera') return;
+  await openAndWait(ev.asset);
   if (ev.view) viewer.view(ev.view);
   else if (ev.note) {
     const n = state.detail?.notes.find((x) => x.id === ev.note);
@@ -1865,6 +1919,7 @@ document.addEventListener('keydown', (e) => {
     if (typing) { e.target.blur?.(); return; }
     if (!pop.hidden) { setPop(false); return; }
     if (state.compare) { setCompare(null); return; }
+    if (document.body.classList.contains('present')) { setPresent(false); return; }
     if (state.hl) highlight(state.hl);
     return;
   }

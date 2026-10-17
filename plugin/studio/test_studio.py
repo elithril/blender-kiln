@@ -1068,12 +1068,13 @@ class Mcp(Base):
         text = r["content"][0]["text"]
         return r["isError"], (text if r["isError"] else json.loads(text))
 
-    def test_the_four_tools(self) -> None:
+    def test_the_tools(self) -> None:
         init = self.rpc("initialize", {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "test"}})
         self.assertEqual((init["result"]["serverInfo"]["name"], init["result"]["protocolVersion"]), ("kiln-studio", "2025-06-18"))
         self.rpc("notifications/initialized", notify=True)
         names = [t["name"] for t in self.rpc("tools/list")["result"]["tools"]]
-        self.assertEqual(names, ["get_selection", "get_notes", "reply_to_note", "set_camera"])
+        self.assertEqual(names, ["get_selection", "get_notes", "reply_to_note", "set_camera", "get_view_image", "list_models",
+                                 "add_note", "open_model", "set_view", "compare", "play_clip", "present"])
 
         err, sel = self.tool("get_selection")   # no page holds the event stream: closed
         self.assertFalse(err, sel)
@@ -1124,12 +1125,63 @@ class Mcp(Base):
         self.assertEqual(q.get(timeout=2)["note"], self.note["id"])
         self.assertTrue(self.tool("set_camera", view="sideways")[0])
 
+        # Driving the page: each tool sends one control event, checked before it goes.
+        err, r = self.tool("open_model", asset="crate", stage="final")
+        self.assertFalse(err, r)
+        self.assertEqual({k: v for k, v in q.get(timeout=2).items()}, {"type": "control", "action": "open", "asset": self.a.id, "stage": "final"})
+        self.assertTrue(self.tool("open_model", asset="crate", stage="nope")[0])   # no such stage: refused here
+        self.assertFalse(self.tool("set_view", shading="clay", wire=True, view="front")[0])
+        ev = q.get(timeout=2)
+        self.assertEqual((ev["action"], ev["shading"], ev["wire"], ev["view"]), ("view", "clay", True, "front"))
+        self.assertTrue(self.tool("set_view")[0])                      # nothing to change
+        self.assertTrue(self.tool("set_view", shading="chrome")[0])
+        self.assertFalse(self.tool("compare", mode="side", target="baseline")[0])
+        self.assertEqual((q.get(timeout=2)["mode"]), "side")
+        self.assertFalse(self.tool("play_clip", clip="walk_loop", speed=0.5)[0])
+        ev = q.get(timeout=2)
+        self.assertEqual((ev["action"], ev["clip"], ev["speed"]), ("play", "walk_loop", 0.5))
+        self.assertTrue(self.tool("play_clip", speed=3)[0])
+        self.assertFalse(self.tool("present")[0])
+        self.assertEqual(q.get(timeout=2), {"type": "control", "action": "present", "on": True})
+        self.assertFalse(self.tool("present", on=False)[0])
+        self.assertEqual(q.get(timeout=2)["on"], False)
+
+        # The view image: the page answers the capture event with its picture.
+        def answer() -> None:
+            ev = q.get(timeout=5)
+            self.assertEqual((ev["type"], ev["full"]), ("capture", True))
+            png = base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"0" * 64).decode()
+            c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+            c.request("POST", f"/api/view-image/{ev['id']}", body=json.dumps({"image": "data:image/png;base64," + png}),
+                      headers={"Host": f"127.0.0.1:{self.port}", "Content-Type": "application/json", "Origin": f"http://127.0.0.1:{self.port}"})
+            c.getresponse().read()
+            c.close()
+        t = threading.Thread(target=answer)
+        t.start()
+        err, img = self.tool("get_view_image")
+        t.join()
+        self.assertFalse(err, img)
+        self.assertTrue(Path(img["path"]).is_file() and img["path"].endswith(".png"))
+        self.assertEqual(img["asset"], "generated-assets/crate")
+
+        err, models = self.tool("list_models")
+        self.assertFalse(err, models)
+        [m] = models["models"]
+        self.assertEqual((m["asset"], m["notes"]["open"] + m["notes"].get("addressed", 0) >= 1), ("generated-assets/crate", True))
+
+        err, nn = self.tool("add_note", asset="crate", text="The handles look thin from the side.")
+        self.assertFalse(err, nn)
+        stored = sl.load_notes(self.p, self.a.id)[-1]
+        self.assertEqual((stored["by"], stored["kind"], stored["status"], nn["number"]), ("claude", "general", "open", 2))
+        self.studio.unsubscribe(q)
+        self.assertTrue(self.tool("present")[0])   # no page open: it says so
+
     def test_plugin_declares_it(self) -> None:
         cfg = json.loads((Path(server.__file__).resolve().parent.parent / ".mcp.json").read_text())
         spec = cfg["mcpServers"]["kiln-studio"]
         self.assertEqual(spec["args"], ["${CLAUDE_PLUGIN_ROOT}/studio/mcp_server.py"])
         self.assertEqual(spec["env"], {"CLAUDE_PROJECT_DIR": "${CLAUDE_PROJECT_DIR}"})
-        # The skill may call the four tools by the names Claude Code gives a plugin's MCP
+        # The skill may call every tool by the names Claude Code gives a plugin's MCP
         # tools: mcp__plugin_<plugin>_<server>__<tool>.
         plugin = json.loads((Path(server.__file__).resolve().parent.parent / ".claude-plugin" / "plugin.json").read_text())["name"]
         skill = (Path(server.__file__).resolve().parent.parent / "SKILL.md").read_text().split("\n---", 1)[0]

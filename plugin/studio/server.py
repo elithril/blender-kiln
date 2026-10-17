@@ -47,6 +47,8 @@ class Studio:
         self.lock = threading.Lock()
         # What the open page shows (it reports it): read by the kiln-studio MCP server.
         self.selection: dict | None = None
+        # The view images asked of the page (get_view_image): id -> (event, image bytes).
+        self.captures: dict[str, list] = {}
         self.refresh(initial=True)
 
     # live events
@@ -231,6 +233,56 @@ def clean_camera(body: dict) -> dict:
             raise ValueError("the camera and its target are the same point")
         out["position_blender"], out["target_blender"] = pos, tgt
     return out
+
+
+SHADINGS = ("lit", "unlit", "clay", "normals", "uv", "faces")
+TOGGLES = ("wire", "grid", "bounds", "skeleton")
+BACKGROUNDS = ("dark", "mid", "light")
+COMPARE_MODES = ("split", "side", "off")
+
+
+def clean_control(body: dict) -> dict:
+    """A command for the open page (the kiln-studio MCP server drives Studio with them):
+    open a model and a stage, set the view, compare, play a clip, present."""
+    action = body.get("action")
+    out: dict = {"action": action}
+    s = lambda k, n=200: str(body[k])[:n] if body.get(k) not in (None, "") else None
+    if action == "open":
+        if not s("asset", 500):
+            raise ValueError("open needs an asset")
+        out["asset"], out["stage"] = s("asset", 500), s("stage", 100)
+    elif action == "view":
+        if body.get("shading") is not None and body["shading"] not in SHADINGS:
+            raise ValueError(f"shading is one of {', '.join(SHADINGS)}")
+        if body.get("background") is not None and body["background"] not in BACKGROUNDS:
+            raise ValueError(f"background is one of {', '.join(BACKGROUNDS)}")
+        if body.get("view") is not None and body["view"] not in VIEWS:
+            raise ValueError(f"view is one of {', '.join(VIEWS)}")
+        out.update({k: body[k] for k in ("shading", "background", "view") if body.get(k) is not None})
+        out.update({k: bool(body[k]) for k in (*TOGGLES, "frame") if body.get(k) is not None})
+        if len(out) == 1:
+            raise ValueError("view needs at least one of shading, background, view, frame, " + ", ".join(TOGGLES))
+    elif action == "compare":
+        if body.get("mode") not in COMPARE_MODES:
+            raise ValueError(f"compare mode is one of {', '.join(COMPARE_MODES)}")
+        out["mode"], out["target"] = body["mode"], s("target", 100)
+    elif action == "play":
+        out["clip"] = s("clip", 200)
+        if body.get("playing") is not None:
+            out["playing"] = bool(body["playing"])
+        if body.get("speed") is not None:
+            if body["speed"] not in (0.25, 0.5, 1, 2):
+                raise ValueError("speed is 0.25, 0.5, 1 or 2")
+            out["speed"] = body["speed"]
+        if body.get("time") is not None:
+            if not isinstance(body["time"], (int, float)) or body["time"] < 0:
+                raise ValueError("time is seconds from the clip's start")
+            out["time"] = float(body["time"])
+    elif action == "present":
+        out["on"] = body.get("on") is not False
+    else:
+        raise ValueError("action is open, view, compare, play or present")
+    return {k: v for k, v in out.items() if v is not None}
 
 
 def make_handler(studio: Studio, port_ref: list[int]):
@@ -433,6 +485,47 @@ def make_handler(studio: Studio, port_ref: list[int]):
                         return self._err(409, "no Studio page is open to turn")
                     studio.emit({"type": "camera", **ev})
                     return self._json({"pages": pages, **ev})
+                if method == "POST" and parts == ["api", "control"]:
+                    # Drive the open page (the kiln-studio MCP server's open_model, set_view, …).
+                    ev = clean_control(body)
+                    with studio.lock:
+                        pages = len(studio.subs)
+                    if not pages:
+                        return self._err(409, "no Studio page is open to drive")
+                    studio.emit({"type": "control", **ev})
+                    return self._json({"pages": pages, **ev})
+                if method == "POST" and parts == ["api", "view-image"]:
+                    # Ask the open page for the image it shows; it posts it back below.
+                    with studio.lock:
+                        pages = len(studio.subs)
+                    if not pages:
+                        return self._err(409, "no Studio page is open to look at")
+                    cid = sl.new_id("v")
+                    done = threading.Event()
+                    with studio.lock:
+                        studio.captures[cid] = [done, None]
+                    studio.emit({"type": "capture", "id": cid, "full": body.get("full") is not False})
+                    done.wait(10)
+                    with studio.lock:
+                        _, img = studio.captures.pop(cid)
+                    if img is None:
+                        return self._err(504, "the page did not send its view in 10 s (hidden tab, or still loading)")
+                    ext = "jpg" if img[:2] == b"\xff\xd8" else "webp" if img[:4] == b"RIFF" else "png"
+                    d = project.data / "cache" / "views"
+                    d.mkdir(parents=True, exist_ok=True)
+                    for old in sorted(d.glob("v_*"))[:-20]:   # keep the last 20
+                        old.unlink(missing_ok=True)
+                    path = d / f"{cid}.{ext}"
+                    path.write_bytes(img)
+                    return self._json({"path": str(path), "bytes": len(img)})
+                if method == "POST" and parts[:2] == ["api", "view-image"] and len(parts) == 3:
+                    img = _decode_image(str(body.get("image", "")))
+                    with studio.lock:
+                        slot = studio.captures.get(parts[2])
+                        if slot and slot[1] is None:
+                            slot[1] = img
+                            slot[0].set()
+                    return self._json({"ok": bool(slot)})
                 if method == "POST" and parts == ["api", "example"]:
                     aid = sl.add_example(project)
                     studio.refresh()

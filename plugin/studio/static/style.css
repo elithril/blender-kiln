@@ -913,3 +913,10 @@ body.no-model #right .notes-head, body.no-model #right #handoff { display: none;
 .theme-card[aria-checked="true"] { color: var(--text); border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
 .theme-card .sw3 { display: flex; gap: 3px; }
 .theme-card .sw3 i { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(128, 128, 128, .5); }
+
+/* Present: the model alone, full window, for a second screen (kiln-studio MCP: present). */
+body.present .panel, body.present #views, body.present #toolbar, body.present #tb-more-pop,
+body.present #pins, body.present #labels, body.present .topbar .stats, body.present #stages { display: none !important; }
+body.present .topbar { pointer-events: none; opacity: .85; }
+#present-exit { position: absolute; top: 12px; right: 12px; z-index: 30; opacity: .35; transition: opacity .2s; }
+#present-exit:hover, #present-exit:focus-visible { opacity: 1; }

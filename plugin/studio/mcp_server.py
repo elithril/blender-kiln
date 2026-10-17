@@ -1,15 +1,24 @@
 #!/usr/bin/env python3
 """kiln-studio: a small MCP server (stdio) that lets Claude see what the user has open in
-Kiln Studio and answer their notes. Shipped with the plugin (`.mcp.json` at its root).
+Kiln Studio, answer their notes, and drive the page from the terminal (Studio on a second
+screen, say). Shipped with the plugin (`.mcp.json` at its root).
 
-Read-only, but for note replies:
-
+Seeing:
 - get_selection   the model, stage, camera and highlighted note the open Studio page shows
                   (the page reports them to the Studio server);
-- get_notes       an asset's notes, as `studio.py show` gives them (or the assets with notes);
+- get_view_image  the image the page shows now, saved to a file Claude reads;
+- list_models     the project's models, their stages, notes and build state;
+- get_notes       an asset's notes, as `studio.py show` gives them (or the assets with notes).
+Writing, Studio's own records only (never the models):
 - reply_to_note   answer a note, as `studio.py reply` (never "resolved": only the user closes);
-- set_camera      turn the open page's view: a preset, a note's own view, or a camera
-                  position and target in Blender's frame.
+- add_note        a note by Claude on a model, on the whole model, for the user to look at.
+Driving the open page:
+- open_model      open a model, at a stage;
+- set_camera      a preset, a note's own view, or a camera position and target in Blender's frame;
+- set_view        shading, background, wire, grid, size, bones, framing;
+- compare         split or side by side with another stage or the previous version, or off;
+- play_clip       pick an animation clip, play, pause, speed, time;
+- present         the model alone, full window, for a second screen.
 
 The project is the first folder holding `.kiln-studio/` from KILN_STUDIO_ROOT, else
 CLAUDE_PROJECT_DIR, else the current folder, upwards; each tool also takes `root`.
@@ -82,6 +91,81 @@ TOOLS = [
             "root": ROOT_ARG}, "additionalProperties": False},
         "annotations": {"readOnlyHint": True},
     },
+    {
+        "name": "get_view_image",
+        "description": ("The image the open Studio page shows right now (the whole view, or cropped to the model), "
+                        "saved under .kiln-studio/cache/views/: read the returned path to see what the user sees."),
+        "inputSchema": {"type": "object", "properties": {
+            "crop": {"type": "boolean", "description": "Crop to the model, as a note's screenshot (default: the whole view)"},
+            "root": ROOT_ARG}, "additionalProperties": False},
+        "annotations": {"readOnlyHint": True},
+    },
+    {
+        "name": "list_models",
+        "description": "The project's models in Studio: id, folder, stages, triangles, open notes, and a build in progress.",
+        "inputSchema": {"type": "object", "properties": {"root": ROOT_ARG}, "additionalProperties": False},
+        "annotations": {"readOnlyHint": True},
+    },
+    {
+        "name": "add_note",
+        "description": ("Add a note by Claude on a whole model, for the user to look at in Studio (a finding, a question). "
+                        "It shows in the Notes tab as Claude's; the user answers or closes it."),
+        "inputSchema": {"type": "object", "properties": {
+            "asset": {"type": "string", "description": "Default: the one open in Studio"},
+            "text": {"type": "string"}, "stage": {"type": "string", "description": "The stage it is about (default: the first)"},
+            "root": ROOT_ARG}, "required": ["text"], "additionalProperties": False},
+        "annotations": {"readOnlyHint": False, "destructiveHint": False},
+    },
+    {
+        "name": "open_model",
+        "description": "Open a model in the Studio page, at a stage (final, original, a kiln stage…).",
+        "inputSchema": {"type": "object", "properties": {
+            "asset": {"type": "string"}, "stage": {"type": "string"}, "root": ROOT_ARG},
+            "required": ["asset"], "additionalProperties": False},
+        "annotations": {"readOnlyHint": True},
+    },
+    {
+        "name": "set_view",
+        "description": ("Change how the Studio page shows the model: shading (lit, unlit, clay, normals, uv, faces), "
+                        "background, wire, grid, size box (bounds), bones (skeleton), a preset view, or frame it."),
+        "inputSchema": {"type": "object", "properties": {
+            "shading": {"type": "string", "enum": ["lit", "unlit", "clay", "normals", "uv", "faces"]},
+            "background": {"type": "string", "enum": ["dark", "mid", "light"]},
+            "wire": {"type": "boolean"}, "grid": {"type": "boolean"}, "bounds": {"type": "boolean"},
+            "skeleton": {"type": "boolean"},
+            "view": {"type": "string", "enum": ["front", "back", "left", "right", "top", "iso"]},
+            "frame": {"type": "boolean", "description": "Frame the model"},
+            "root": ROOT_ARG}, "additionalProperties": False},
+        "annotations": {"readOnlyHint": True},
+    },
+    {
+        "name": "compare",
+        "description": ("Compare the model in the Studio page with another stage or its previous version (target "
+                        "\"baseline\"): split (a divider) or side by side; off to stop."),
+        "inputSchema": {"type": "object", "properties": {
+            "mode": {"type": "string", "enum": ["split", "side", "off"]},
+            "target": {"type": "string", "description": "A stage label, or baseline (default: the first available)"},
+            "root": ROOT_ARG}, "required": ["mode"], "additionalProperties": False},
+        "annotations": {"readOnlyHint": True},
+    },
+    {
+        "name": "play_clip",
+        "description": "Play an animation clip of the open model in Studio (walk, run_loop…), pause it, set its speed or time.",
+        "inputSchema": {"type": "object", "properties": {
+            "clip": {"type": "string"}, "playing": {"type": "boolean", "description": "Default true"},
+            "speed": {"type": "number", "enum": [0.25, 0.5, 1, 2]},
+            "time": {"type": "number", "description": "Seconds from the clip's start"},
+            "root": ROOT_ARG}, "additionalProperties": False},
+        "annotations": {"readOnlyHint": True},
+    },
+    {
+        "name": "present",
+        "description": ("Present mode in the Studio page: the model alone, full window, no panels, for a second "
+                        "screen the user watches while working in the terminal. on false to leave it."),
+        "inputSchema": {"type": "object", "properties": {"on": {"type": "boolean"}, "root": ROOT_ARG},
+                        "additionalProperties": False},
+        "annotations": {"readOnlyHint": True},
+    },
 ]
 
 
@@ -110,13 +194,13 @@ def studio_url(project: sl.Project) -> str:
     return f"http://127.0.0.1:{info['port']}"
 
 
-def call_studio(project: sl.Project, path: str, body: dict | None = None) -> dict:
+def call_studio(project: sl.Project, path: str, body: dict | None = None, timeout: float = 5) -> dict:
     url = studio_url(project) + path
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, method="POST" if body is not None else "GET",
                                  headers={"Connection": "close", **({"Content-Type": "application/json"} if data else {})})
     try:
-        with urllib.request.urlopen(req, timeout=5) as r:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
             return json.loads(r.read())
     except urllib.error.HTTPError as e:
         try:
@@ -271,7 +355,79 @@ def set_camera(args: dict) -> dict:
     return {"sent": True, "pages": out.get("pages"), **{k: v for k, v in out.items() if k != "pages"}}
 
 
-HANDLERS = {"get_selection": get_selection, "get_notes": get_notes, "reply_to_note": reply_to_note, "set_camera": set_camera}
+def _control(args: dict, action: str, **fields) -> dict:
+    project = find_project(args.get("root"))
+    out = call_studio(project, "/api/control", {"action": action, **{k: v for k, v in fields.items() if v is not None}})
+    return {"sent": True, **out}
+
+
+def open_model(args: dict) -> dict:
+    project = find_project(args.get("root"))
+    a = _asset(project, args["asset"])
+    if args.get("stage"):
+        try:
+            a.variant(args["stage"])
+        except KeyError as e:
+            raise ToolError(str(e).strip("'\""))
+    return _control(args, "open", asset=a.id, stage=args.get("stage"))
+
+
+def set_view(args: dict) -> dict:
+    keys = ("shading", "background", "wire", "grid", "bounds", "skeleton", "view", "frame")
+    return _control(args, "view", **{k: args.get(k) for k in keys})
+
+
+def compare(args: dict) -> dict:
+    return _control(args, "compare", mode=args.get("mode"), target=args.get("target"))
+
+
+def play_clip(args: dict) -> dict:
+    return _control(args, "play", **{k: args.get(k) for k in ("clip", "playing", "speed", "time")})
+
+
+def present(args: dict) -> dict:
+    return _control(args, "present", on=args.get("on", True))
+
+
+def get_view_image(args: dict) -> dict:
+    project = find_project(args.get("root"))
+    try:
+        out = call_studio(project, "/api/view-image", {"full": not args.get("crop")}, timeout=15)
+    except ToolError as e:
+        raise ToolError(f"{e} Is the Studio tab open in a browser window?")
+    sel = (call_studio(project, "/api/selection").get("selection") or {})
+    return {"path": out["path"], "asset": sel.get("asset"), "stage": sel.get("variant"), "shading": sel.get("shading"),
+            "next": "Read the path to see the image."}
+
+
+def list_models(args: dict) -> dict:
+    project = find_project(args.get("root"))
+    rows = []
+    for a in project.scan():
+        live = sl.load_live(project, a.id) if a.kiln else None
+        rows.append({"asset": a.id, "folder": a.folder, "stages": [v.label for v in a.variants],
+                     "files": [v.rel for v in a.variants], "notes": sl.counts(sl.load_notes(project, a.id)),
+                     **({"building": {"state": live.get("state"), "phase": live.get("phase")}} if live else {})})
+    return {"project": str(project.root), "models": rows}
+
+
+def add_note(args: dict) -> dict:
+    project = find_project(args.get("root"))
+    a = _asset(project, args.get("asset"))
+    text = str(args.get("text", "")).strip()
+    if not text:
+        raise ToolError("a note needs text")
+    try:
+        n = sl.add_note(project, a, text, variant=args.get("stage"), by="claude")
+    except (KeyError, ValueError) as e:
+        raise ToolError(str(e).strip("'\""))
+    number = next((i for i, x in enumerate(sl.load_notes(project, a.id), 1) if x["id"] == n["id"]), None)
+    return {"asset": a.id, "note": n["id"], "number": number, "status": n["status"]}
+
+
+HANDLERS = {"get_selection": get_selection, "get_notes": get_notes, "reply_to_note": reply_to_note, "set_camera": set_camera,
+            "get_view_image": get_view_image, "list_models": list_models, "add_note": add_note, "open_model": open_model,
+            "set_view": set_view, "compare": compare, "play_clip": play_clip, "present": present}
 
 
 def handle(msg: dict) -> dict | None:
@@ -287,8 +443,9 @@ def handle(msg: dict) -> dict | None:
         want = params.get("protocolVersion")
         return ok({"protocolVersion": want if want in PROTOCOLS else PROTOCOLS[0],
                    "capabilities": {"tools": {"listChanged": False}}, "serverInfo": SERVER,
-                   "instructions": "Kiln Studio: what the user looks at (get_selection), their notes "
-                                   "(get_notes), your answers (reply_to_note), and turning their view (set_camera)."})
+                   "instructions": "Kiln Studio: what the user looks at (get_selection, get_view_image, list_models), "
+                                   "their notes (get_notes, reply_to_note, add_note), and driving the open page "
+                                   "(open_model, set_camera, set_view, compare, play_clip, present)."})
     if method == "ping":
         return ok({})
     if method == "tools/list":
