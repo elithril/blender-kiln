@@ -412,8 +412,8 @@ def make_handler(studio: Studio, port_ref: list[int]):
                     return self._json(studio.worker.status(force_auth=q.get("auth", [""])[0] == "1"))
                 if parts == ["api", "claude", "thread"]:
                     key = parse_qs(urlparse(self.path).query).get("key", [""])[0]
-                    if not key.startswith(("asset:", "request:")):
-                        raise ValueError("key is asset:<id> or request:<id>")
+                    if not (key.startswith(("asset:", "request:")) or key == wk.PROJECT_KEY):
+                        raise ValueError("key is asset:<id>, request:<id> or project")
                     return self._json(studio.worker.thread(key))
                 if parts[:2] == ["api", "assets"]:
                     cat = sl.load_catalog(project)
@@ -543,7 +543,7 @@ def make_handler(studio: Studio, port_ref: list[int]):
                         str(body.get("kind", "")), asset=str(body["asset"])[:500] if body.get("asset") else None,
                         text=str(body.get("text", "")), request=str(body["request"])[:40] if body.get("request") else None,
                         lang=str(body.get("lang", "en")),
-                        key=str(body["key"])[:600] if str(body.get("key", "")).startswith("request:") else None))
+                        key=str(body["key"])[:600] if str(body.get("key", "")).startswith("request:") or body.get("key") == wk.PROJECT_KEY else None))
                 if method == "POST" and parts[:3] == ["api", "claude", "jobs"] and len(parts) == 5:
                     if parts[4] == "stop":
                         return self._json(studio.worker.stop(parts[3]))

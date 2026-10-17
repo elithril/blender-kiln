@@ -84,6 +84,10 @@
   <span id="lab-cur" class="cmplab" hidden></span>
 
   <button id="present-exit" class="btn sm" hidden title="Leave present mode (Esc)" data-i18n data-i18n-attr="title">Leave present mode</button>
+  <div id="cl-pill" class="cl-pill" hidden>
+    <button id="cl-pill-btn" class="cl-pill-btn" aria-haspopup="true" aria-expanded="false" aria-controls="cl-act"></button>
+    <div id="cl-act" class="cl-act" role="dialog" aria-label="Claude's activity" data-i18n-attr="aria-label" hidden></div>
+  </div>
   <div class="topbar" id="topbar" hidden>
     <div class="titlecol">
       <div class="title">
@@ -253,7 +257,8 @@
     <div class="cr-photo"><span class="lab" data-i18n>Reference photo</span>
       <label class="btn sm" for="cr-file"><span data-i18n>Choose a photo</span></label><input type="file" id="cr-file" accept="image/jpeg,image/png,image/webp" hidden>
       <img id="cr-thumb" alt="" hidden><button type="button" class="btn sm ghost" id="cr-nophoto" hidden data-i18n>Remove</button><span class="dim small" data-i18n>optional · JPEG, PNG or WebP</span></div>
-    <div class="row"><button class="btn accent" id="cr-save" type="submit" data-i18n>Save the request</button><span class="dim small" id="cr-status" aria-live="polite"></span></div>
+    <p class="cr-queue" id="cr-queue" hidden></p>
+    <div class="row"><button class="btn accent" id="cr-launch" type="submit" hidden data-i18n>Make it with Claude</button><button class="btn accent" id="cr-save" type="submit" data-i18n>Save the request</button><span class="dim small" id="cr-status" aria-live="polite"></span></div>
   </form>
   <div id="cr-done" class="cr-body" hidden>
     <p data-i18n>Saved in .kiln-studio/requests.json, open until Claude has built it. Paste this in Claude Code:</p>

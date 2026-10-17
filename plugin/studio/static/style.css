@@ -979,3 +979,45 @@ body.present .topbar { pointer-events: none; opacity: .85; }
 .tabs [role=tab] { padding-left: 5px; padding-right: 5px; min-width: 0; font-size: 12px; gap: 4px; }
 .tabs [role=tab] > span[data-i18n] { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tabs .icon-tab .spark { font-size: 14px; }
+.wdot.waiting { background: var(--warn); box-shadow: 0 0 0 3px var(--warn-soft); }
+/* the pill over the view: what Claude does, and its menu */
+.cl-pill { position: absolute; top: 12px; right: 12px; z-index: 25; }
+.cl-pill-btn { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 11px; border-radius: 15px; background: color-mix(in srgb, var(--glass) 88%, transparent); border: 1px solid var(--line-2); color: var(--text-2); font: 11.5px var(--font); white-space: nowrap; backdrop-filter: blur(8px); }
+.cl-pill-btn b { color: var(--text); font-weight: 600; }
+.cl-pill-btn .dot { background: var(--ok); }
+.cl-pill-btn.run .dot { background: var(--new); }
+.cl-pill-btn.wait { border-color: var(--warn); color: var(--warn); }
+.cl-pill-btn.wait .dot { background: var(--warn); animation: cl-pulse 1.1s ease-in-out infinite; }
+.cl-pill-btn .sep { width: 1px; height: 14px; background: var(--line-3); }
+.cl-pill-btn .q, .cl-act .bar { width: 46px; height: 4px; border-radius: 2px; background: var(--line-3); overflow: hidden; display: inline-block; }
+.cl-pill-btn .q i, .cl-act .bar i { display: block; height: 100%; background: var(--accent); }
+.cl-act { position: absolute; right: 0; top: 38px; width: 360px; max-height: 70vh; overflow-y: auto; background: var(--panel); border: 1px solid var(--line-2); border-radius: 12px; box-shadow: var(--shadow); font-size: 12px; }
+.cl-act .h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.cl-act .h span { font-size: 11px; color: var(--text-3); }
+.cl-act .g { padding: 10px 14px 4px; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); }
+.cl-act .it { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 14px; }
+.cl-act .it:hover, .cl-act .it:focus-visible { background: var(--panel-3); }
+.cl-act .it .t { flex: 1; min-width: 0; }
+.cl-act .it .t b { display: block; font-weight: 500; font-size: 12.5px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cl-act .it .t span { font-size: 11px; color: var(--text-3); }
+.cl-act .it.proj { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 10px; }
+.cl-act .state { font: 10px var(--mono); padding: 1px 6px; border-radius: 10px; white-space: nowrap; }
+.cl-act .state.running { color: var(--new); background: var(--new-soft); }
+.cl-act .state.waiting { color: var(--warn); background: var(--warn-soft); }
+.cl-act .state.queued { color: var(--text-2); background: var(--panel-3); }
+.cl-act .none { padding: 10px 14px; color: var(--text-3); }
+.cl-act .qrow { display: flex; align-items: center; gap: 10px; padding: 4px 14px; color: var(--text-2); }
+.cl-act .qrow .bar { flex: 1; width: auto; }
+.cl-act .foot { padding: 10px 14px 12px; color: var(--text-3); font-size: 11px; border-top: 1px solid var(--line); margin-top: 8px; }
+.linkish { all: unset; cursor: pointer; color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+body.present .cl-pill { display: none; }
+.cr-queue { margin: 0; font-size: 12px; color: var(--text-2); padding: 8px 10px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--line-2); }
+.whero { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 18px; padding: 10px 12px; border: 1px solid var(--line-3); border-radius: 12px; background: var(--panel-2); text-align: left; }
+.whero:focus-within { border-color: var(--accent); }
+.whero textarea { border: 0; background: none; color: var(--text); font: inherit; font-size: 14px; resize: vertical; outline: none; min-height: 56px; }
+.whero .row { display: flex; align-items: center; gap: 8px; }
+.whero .sp { flex: 1; }
+/* the ✦ tab's badge sits on the icon, as a notification does: the tabs keep their width */
+#tb-claude { position: relative; padding-right: 9px; }
+#tc-claude { position: absolute; top: 3px; right: -1px; min-width: 14px; height: 14px; padding: 0 3px; font-size: 9px; line-height: 14px; }
+.whero select { height: 30px; border-radius: 7px; border: 1px solid var(--line-2); background: var(--bg); color: var(--text); padding: 0 8px; font-size: 12.5px; max-width: 240px; }

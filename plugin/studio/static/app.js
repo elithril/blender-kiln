@@ -262,7 +262,8 @@ async function copy(text) {
 
 const counts = (a) => a.counts || { open: 0, addressed: 0, resolved: 0, wontfix: 0 };
 const isBuilding = (a) => a.live?.state === 'building';
-const dotOf = (a) => state.work?.dots[a.id]?.state;
+// Claude's own runs from this page (worker.py) first, then a kiln command's (studio.py work).
+const dotOf = (a) => claudeDot(a) || state.work?.dots[a.id]?.state;
 const isNew = (a) => !!(seen[a.id] && seen[a.id] !== a.variants[0]?.hash && a.id !== state.id);
 const catOf = (a) => a.category || '';
 
@@ -281,6 +282,7 @@ async function fetchAssets() {
   $('#project').title = data.root;
   $('#logo').title = `Kiln Studio · ${data.root}`;
   document.title = `${data.name} · Kiln Studio`;
+  if (claude.status) claudeChanged();
   renderTags();
   renderStrip();
   renderWork();
@@ -326,7 +328,7 @@ function visibleAssets() {
     if (f === 'addressed') return c.addressed > 0;
     if (f === 'notes') return any;
     if (f === 'clean') return !any;
-    if (f === 'working') return ['active', 'queued'].includes(dotOf(a));
+    if (f === 'working') return ['active', 'queued', 'waiting'].includes(dotOf(a));
     if (f === 'building') return isBuilding(a);
     return true;
   };
@@ -339,7 +341,7 @@ function visibleAssets() {
 }
 
 const SECTIONS = [
-  ['works', N_('Claude works'), (a) => ['active', 'queued'].includes(dotOf(a))],
+  ['works', N_('Claude works'), (a) => ['active', 'queued', 'waiting'].includes(dotOf(a))],
   ['building', N_('Building'), (a) => isBuilding(a)],
   ['check', N_('To check'), (a) => counts(a).addressed > 0 || dotOf(a) === 'done'],
   ['open', N_('Open notes'), (a) => counts(a).open > 0],
@@ -403,7 +405,7 @@ function itemInner(a) {
   const sub = building ? `<span class="bld">${esc(t('building · {phase}', { phase: a.live.phase || t('starting') }))}</span>`
     : esc([a.tris != null ? t('{n} tris', { n: fmtK(a.tris) }) : v.ext.slice(1).toUpperCase(),
       n > 1 ? (a.kiln ? tp(n, '{n} stage', '{n} stages') : tp(n, '{n} file', '{n} files')) : fmtB(v.size)].join(' · '));
-  const dotT = dot && workTitle(state.work.dots[a.id]);
+  const dotT = dot && (claudeDot(a) ? claudeDotTitle(a) : workTitle(state.work.dots[a.id]));
   return `<img class="thumb" alt="" ${a.thumb ? `src="${esc(fileUrl(a.thumb))}"` : ''}>
     <div class="meta"><div class="name" title="${esc(a.id)}">${esc(a.name)}</div><div class="sub">${sub}</div></div>
     <span class="badges">${isNew(a) ? `<span class="badge new" title="${esc(t('Changed since you last looked'))}">${esc(t('new'))}</span>` : ''}${building && dot !== 'active' ? `<i class="bmark" title="${esc(t('kiln is building it: open it to watch'))}"></i>` : ''}${c.open ? `<span class="badge open" title="${esc(tp(c.open, '{n} open note', '{n} open notes'))}">${fmtN(c.open)}</span>` : ''}${c.addressed ? `<span class="badge addressed" title="${esc(tp(c.addressed, '{n} to check: Claude addressed it', '{n} to check: Claude addressed them'))}">${fmtN(c.addressed)}</span>` : ''}</span>
@@ -495,7 +497,7 @@ function renderStrip() {
   const tot = state.assets.reduce((s, a) => { const c = counts(a); s.addressed += c.addressed; s.open += c.open; return s; }, { addressed: 0, open: 0 });
   const vals = {
     addressed: tot.addressed, open: tot.open,
-    working: Object.values(state.work?.dots || {}).filter((d) => d.state !== 'done').length,
+    working: state.assets.filter((a) => ['active', 'queued', 'waiting'].includes(dotOf(a))).length,
     building: state.assets.filter(isBuilding).length,
   };
   for (const p of $$('#strip .pill')) {
@@ -520,7 +522,7 @@ function workTitle(d) {
 function renderWork() {
   const w = state.work, bar = $('#workline');
   bar.hidden = !w;
-  $('#list').classList.toggle('working', !!w);
+  $('#list').classList.toggle('working', !!w || claudeLive().length > 0);
   if (!w) return;
   const name = (id) => state.byId.get(id)?.name || id.split('/').pop();
   const done = Object.values(w.dots).filter((d) => d.state === 'done').length;
@@ -639,6 +641,7 @@ async function openAsset(id) {
   queueAfterShots(state.detail);
   reportSelection();
   claude.partial = null;
+  claude.view = null;
   if (!$('#tab-claude').hidden) claudeLoad(); else renderClaudeBadge();
 }
 
@@ -727,17 +730,37 @@ const welcomeCards = [];
 let setup = null;
 function renderWelcome() {
   const el = $('#empty');
-  const cards = welcomeCards.map((c) => `<button class="wcard" data-w="${c.key}">${c.icon}<b>${esc(t(c.title))}</b><span>${esc(t(c.text))}</span></button>`).join('');
+  // With Claude on, the form above is the way to create: the Create card would say it twice.
+  const cards = welcomeCards.filter((c) => !(claude.status?.enabled && c.key === 'create')).map((c) => `<button class="wcard" data-w="${c.key}">${c.icon}<b>${esc(t(c.title))}</b><span>${esc(t(c.text))}</span></button>`).join('');
   el.innerHTML = `<div class="welcome">
     <div class="wlogo" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M16 3c3 6 9 8 9 16a9 9 0 0 1-18 0c0-5 3-7 4-11 1 3 3 4 3 4s-1-5 2-9z"/></svg></div>
-    <p class="big">${esc(t('Nothing here yet'))}</p>
-    <p>${esc(t('Studio shows every .glb, .gltf, .fbx and .obj under {root}. Start one of three ways:', { root: state.name || state.root }))}</p>
+    ${claude.status?.enabled ? `<p class="big">${esc(t('What do you want to make?'))}</p>
+    <p>${esc(t('Describe a model in your words — what it is, its style, its size. Claude builds it in Studio\'s Blender and you watch it appear here.'))}</p>
+    <form class="whero" id="w-hero"><textarea id="w-brief" rows="3" required placeholder="${esc(t('A sturdy oak barrel with iron hoops, worn, for a tavern game'))}" aria-label="${esc(t('Brief'))}"></textarea>
+      <div class="row"><select id="w-target" aria-label="${esc(t('Made for'))}">${['web', 'desktop', 'ar', 'print'].map((v) => `<option value="${v}">${esc(t({ web: 'Web (glTF)', desktop: 'Unity / Unreal (FBX)', ar: 'AR (USDZ)', print: '3D print' }[v]))}</option>`).join('')}</select><span class="sp"></span><button class="btn accent" type="submit">${esc(t('Make it with Claude'))} <kbd>⌘↵</kbd></button></div></form>
+    <p>${esc(t('Or start another way:'))}</p>` : `<p class="big">${esc(t('Nothing here yet'))}</p>
+    <p>${esc(t('Studio shows every .glb, .gltf, .fbx and .obj under {root}. Start one of three ways:', { root: state.name || state.root }))}</p>`}
     <div class="wcards">${cards}</div>
     <h4>${esc(t('Your setup'))}${setup?.kiln ? ` <span class="dim">· kiln ${esc(setup.kiln)}</span>` : ''}</h4>
     <ul class="setup">${setup ? setup.rows.map(setupRow).join('') : `<li class="dim">${esc(t('Looking…'))}</li>`}</ul>
     <p class="dim small">${t('The full check, and help installing what is missing: {cmd} in Claude Code.', { cmd: '<code>/kiln setup</code>' })}</p>
   </div>`;
   $$('.wcard', el).forEach((b) => (b.onclick = () => welcomeCards.find((c) => c.key === b.dataset.w).run()));
+  const hero = $('#w-hero', el);
+  if (hero) {
+    $('#w-brief').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); hero.requestSubmit(); } });
+    hero.onsubmit = async (e) => {
+      e.preventDefault();
+      const brief = $('#w-brief').value.trim();
+      if (!brief) return;
+      try {
+        const r = await api('/api/requests', { method: 'POST', body: { brief, target: $('#w-target').value } });
+        await api('/api/claude/jobs', { method: 'POST', body: { kind: 'create', request: r.id, lang: getLang() } });
+        await claudeStatus();
+        openClaudeView(`request:${r.id}`);
+      } catch (err) { toast(esc(err.message), 'warn', 6000); }
+    };
+  }
   if (!setup) api('/api/status').then((s) => { setup = s; if (!state.assets.length && !state.id) renderWelcome(); }).catch(() => {});
 }
 function setupRow(r) {
@@ -1880,13 +1903,47 @@ async function onEvent(ev) {
 // things Claude waits on — a proposal (Accept / Decline) and a tool call outside the safe
 // list (Allow once / Deny). What Claude writes streams in as it comes.
 
-const claude = { status: null, thread: null, key: null, partial: null, open: new Set(), ctxNote: true, ctxView: false, loading: false };
-const claudeKey = () => (state.id ? `asset:${state.id}` : null);
+const claude = { status: null, thread: null, key: null, view: null, partial: null, open: new Set(), ctxNote: true, ctxView: false, menu: false };
+// The conversation the tab shows: the project's or a Create request's when picked
+// (claude.view), else the open model's.
+const claudeKey = () => claude.view || (state.id ? `asset:${state.id}` : null);
+// The key the server files it under: a model made from a request keeps the request's.
+const threadKey = () => claude.thread?.key || claudeKey();
+function openClaudeView(key) {
+  claude.view = key && !key.startsWith('asset:') ? key : null;
+  if (key?.startsWith('asset:') && key.slice(6) !== state.id) go(key.slice(6));
+  claude.partial = null;
+  setPanel(right, true);
+  setTab('claude');
+}
 
 async function claudeStatus() {
   try { claude.status = await api('/api/claude'); } catch { claude.status = null; }
-  renderClaudeBadge();
+  claudeChanged();
   return claude.status;
+}
+
+// The page's live jobs, newest first: what the list, the pill and the title show.
+const claudeLive = () => (claude.status?.jobs || []).filter((j) => ['queued', 'running', 'waiting'].includes(j.state)).reverse();
+function claudeDot(a) {
+  const j = claudeLive().find((x) => x.asset === a.id);
+  return j ? { running: 'active', queued: 'queued', waiting: 'waiting' }[j.state] : null;
+}
+function claudeDotTitle(a) {
+  const j = claudeLive().find((x) => x.asset === a.id);
+  return !j ? '' : j.state === 'waiting' ? t('Claude waits for your answer') : j.state === 'running' ? t('Claude is working on it') : t('Waiting in line for Claude ({n})', { n: j.position || 1 });
+}
+// Something changed in Claude's runs: the rows, the counters, the pill, the page title.
+function claudeChanged() {
+  // The dots' column shows while a kiln command or Claude's runs have any.
+  $('#list').classList.toggle('working', !!state.work || claudeLive().length > 0);
+  for (const a of state.assets) if (state.rowSig.has(a.id) && state.rowSig.get(a.id) !== rowSig(a)) patchRow(a.id, false);
+  renderStrip();
+  renderClaudeBadge();
+  renderClaudePill();
+  const waiting = claudeLive().filter((j) => j.state === 'waiting').length;
+  const base = state.name ? `${state.name} · Kiln Studio` : 'Kiln Studio';
+  document.title = waiting ? `(${waiting}) ${base}` : base;
 }
 
 async function claudeOpen() {
@@ -1913,7 +1970,7 @@ function claudeJob() {
 
 function renderClaudeBadge() {
   const st = claude.status;
-  const mine = st?.jobs?.filter((j) => j.key === claudeKey() && ['queued', 'running', 'waiting'].includes(j.state)) || [];
+  const mine = st?.jobs?.filter((j) => j.key === threadKey() && ['queued', 'running', 'waiting'].includes(j.state)) || [];
   const waiting = mine.some((j) => j.state === 'waiting');
   const el = $('#tc-claude');
   el.textContent = waiting ? '!' : mine.length ? '•' : '';
@@ -1931,6 +1988,7 @@ function claudeEntry(e, results, job) {
   const live = job && e.job === job.id && job.state === 'waiting';
   switch (e.role) {
     case 'user':
+      if (e.kind === 'create') return `<div class="cl-msg me"><span class="dim small">${esc(t('New model'))}</span><br>${mdLite(createBrief(e.text))}</div>`;
       return `<div class="cl-msg me">${e.kind === 'notes' ? `<span class="dim">${esc(t('Work on the open notes'))}</span>` : mdLite(e.text)}</div>`;
     case 'assistant':
       return `<div class="cl-msg cl"><div class="who"><b>Claude</b> · <span title="${esc(stamp(e.at))}">${esc(ago(e.at))}</span></div>${mdLite(e.text)}</div>`;
@@ -1944,9 +2002,13 @@ function claudeEntry(e, results, job) {
       return `<div class="cl-sys">${esc(e.text)}</div>`;
     case 'error':
       return `<div class="cl-card err"><div class="k">${esc(t('Claude could not go on'))}</div><p>${esc(e.text)}</p></div>`;
-    case 'result':
+    case 'result': {
       if (e.text) return `<div class="cl-sys">${esc(t(e.text))}</div>`;
-      return `<div class="cl-res">${esc([e.turns != null && tp(e.turns, '{n} turn', '{n} turns'), e.duration_ms != null && fmtSecs(e.duration_ms / 1000), e.cost_usd != null && t('≈ ${c} API-equivalent, included in your subscription', { c: fmtD(e.cost_usd, 2) })].filter(Boolean).join(' · '))}</div>`;
+      // A Create request done: its model, one click away.
+      const made = job == null && claude.view?.startsWith('request:') && (claude.status?.jobs || []).find((j) => j.id === e.job)?.asset;
+      const open = made && state.byId.has(made) ? `<button class="btn sm accent" data-open-key="asset:${esc(made)}">${esc(t('Open {name}', { name: state.byId.get(made).name }))}</button>` : '';
+      return `<div class="cl-res">${esc([e.turns != null && tp(e.turns, '{n} turn', '{n} turns'), e.duration_ms != null && fmtSecs(e.duration_ms / 1000), e.cost_usd != null && t('≈ ${c} API-equivalent, included in your subscription', { c: fmtD(e.cost_usd, 2) })].filter(Boolean).join(' · '))}</div>${open}`;
+    }
     case 'proposal':
       return `<div class="cl-card prop"><div class="k">${esc(t('Claude proposes'))}</div><p>${mdLite(e.question)}</p>${live
         ? `<div class="acts"><button class="btn sm accent" data-cl="accept">${esc(t('Accept'))}</button><button class="btn sm" data-cl="decline">${esc(t('Decline'))}</button><button class="btn sm ghost" data-cl="other">${esc(t('Answer something else…'))}</button></div>`
@@ -1961,11 +2023,14 @@ function claudeEntry(e, results, job) {
       return '';
   }
 }
+const approvalShort = (w) => { const x = approvalText(w || {}); return x.length > 60 ? `${x.slice(0, 59)}…` : x; };
 // A shell command reads as one; anything else as the tool and its input.
 function approvalText(e) {
   try { const i = JSON.parse(e.input); if (i && typeof i.command === 'string') return `$ ${i.command}`; if (i?.file_path) return `${e.tool} ${i.file_path}`; } catch { /* cut short: shown as is */ }
   return `${e.tool}\n${e.input}`;
 }
+// A Create request's prompt, as the user wrote it: the brief, without kiln's command around it.
+const createBrief = (text) => String(text || '').replace(/^\/\S+\s+/, '').replace(/\s*\(Studio request q_\w+\)\s*$/, '');
 const fmtSecs = (s) => (s < 90 ? t('{s} s', { s: Math.round(s) }) : t('{m} min {s}', { m: Math.floor(s / 60), s: String(Math.round(s % 60)).padStart(2, '0') }));
 
 function renderClaude() {
@@ -1981,14 +2046,17 @@ function renderClaude() {
     composer.hidden = true;
     return;
   }
-  if (!state.id) { head.innerHTML = ''; thread.innerHTML = `<div class="empty-notes"><b>${esc(t('No model open'))}</b>${esc(t('Open a model to talk to Claude about it.'))}</div>`; composer.hidden = true; return; }
+  if (!claudeKey()) { head.innerHTML = ''; thread.innerHTML = `<div class="empty-notes"><b>${esc(t('No model open'))}</b>${esc(t('Open a model to talk to Claude about it, or talk about the whole project.'))}<div style="margin-top:12px"><button class="btn sm" data-cl="project">${esc(t('Project conversation'))}</button></div></div>`; composer.hidden = true; return; }
   composer.hidden = false;
   const job = claudeJob();
   const msgs = claude.thread?.messages || [];
-  const name = state.detail?.name || state.id;
+  const req = claude.view?.startsWith('request:') ? (st.jobs || []).find((j) => `request:${j.request}` === claude.view) : null;
+  const name = claude.view === 'project' ? t('the project') : req ? (req.brief || t('the new model')) : state.detail?.name || state.id;
+  const title = claude.view === 'project' ? t('Project conversation') : req ? t('Making: {brief}', { brief: req.brief || '' }) : t('Conversation on {name}', { name });
+  const back = claude.view && state.id ? `<button class="btn sm ghost" data-cl="back" title="${esc(t('Back to the conversation on {name}', { name: state.detail?.name || state.id }))}">↩ ${esc(state.detail?.name || '')}</button>` : '';
   const stateLine = !job ? (msgs.length ? t('{n} messages', { n: msgs.filter((m) => m.role === 'user' || m.role === 'assistant').length }) : t('new conversation'))
     : job.state === 'running' ? t('Claude is working') : job.state === 'queued' ? t('waiting in line ({n})', { n: job.position || 1 }) : t('waiting for your answer');
-  head.innerHTML = `<div class="ttl"><b>${esc(t('Conversation on {name}', { name }))}</b><span>${esc(stateLine)}</span></div>${job && ['running', 'queued'].includes(job.state) ? `<button class="btn sm" data-cl="stop">■ ${esc(t('Stop'))}</button>` : ''}`;
+  head.innerHTML = `<div class="ttl"><b>${esc(title)}</b><span>${esc(stateLine)}</span></div>${back}${job && ['running', 'queued'].includes(job.state) ? `<button class="btn sm" data-cl="stop">■ ${esc(t('Stop'))}</button>` : ''}`;
   const results = new Map(msgs.filter((m) => m.role === 'tool-result').map((m) => [m.id, m]));
   // Tool calls in a row are one block.
   let html = '', inTools = false;
@@ -2002,7 +2070,7 @@ function renderClaude() {
   if (inTools) html += '</div>';
   if (claude.partial && job && claude.partial.job === job.id && job.state === 'running') html += `<div class="cl-msg cl"><div class="who"><b>Claude</b> · ${esc(t('now'))}</div>${mdLite(claude.partial.text)}<span class="caret"></span></div>`;
   else if (job?.state === 'running') html += `<div class="cl-sys"><span class="dot pulse"></span> ${esc(t('Claude is working…'))}</div>`;
-  if (!msgs.length && !job) html = `<div class="empty-notes"><b>${esc(t('Ask Claude about {name}', { name }))}</b>${esc(t('It sees the model you have open, your notes and your view, and changes the model in its own Blender. Studio shows each new version here.'))}${(state.detail?.counts?.open || 0) ? `<div style="margin-top:12px"><button class="btn sm" data-cl="notes">${esc(tp(state.detail.counts.open, 'Work on the open note', 'Work on the {n} open notes'))}</button></div>` : ''}</div>`;
+  if (!msgs.length && !job) html = `<div class="empty-notes"><b>${esc(t('Ask Claude about {name}', { name }))}</b>${esc(t('It sees the model you have open, your notes and your view, and changes the model in its own Blender. Studio shows each new version here.'))}${!claude.view && (state.detail?.counts?.open || 0) ? `<div style="margin-top:12px"><button class="btn sm" data-cl="notes">${esc(tp(state.detail.counts.open, 'Work on the open note', 'Work on the {n} open notes'))}</button></div>` : ''}</div>`;
   const atEnd = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 40;
   thread.innerHTML = html;
   if (atEnd || claude.stick) { thread.scrollTop = thread.scrollHeight; claude.stick = false; }
@@ -2012,7 +2080,7 @@ function renderClaude() {
   $('#cl-text').placeholder = tool ? t('Answer the approval first') : t('Ask Claude about {name}…', { name });
   $('#cl-text').disabled = !!tool;
   $('#cl-send').disabled = !!tool || !!busy;
-  const hl = state.hl && state.detail?.notes.find((n) => n.id === state.hl);
+  const hl = !claude.view && state.hl && state.detail?.notes.find((n) => n.id === state.hl);
   $('#cl-ctx').innerHTML = [
     hl ? `<button class="chip${claude.ctxNote ? ' on' : ''}" data-cl="ctx-note" title="${esc(t('Send the highlighted note with the message'))}">● ${esc(t('note {n}', { n: noteNumber(hl) }))}</button>` : '',
     `<button class="chip${claude.ctxView ? ' on' : ''}" data-cl="ctx-view" title="${esc(t('Claude looks at your view first'))}">${esc(t('my view'))}</button>`,
@@ -2025,7 +2093,7 @@ function renderClaude() {
 
 function claudeCompose(text) {
   const parts = [];
-  const hl = state.hl && state.detail?.notes.find((n) => n.id === state.hl);
+  const hl = !claude.view && state.hl && state.detail?.notes.find((n) => n.id === state.hl);
   if (hl && claude.ctxNote) parts.push(`(About note ${noteNumber(hl)}, ${hl.id}: “${hl.text}”.)`);
   if (claude.ctxView) parts.push('(Look at my current Studio view first: kiln-studio get_view_image.)');
   return [...parts, text].join('\n');
@@ -2033,7 +2101,8 @@ function claudeCompose(text) {
 
 async function claudeSend(kind, text = '') {
   try {
-    await api('/api/claude/jobs', { method: 'POST', body: { kind, asset: state.id, text, lang: getLang() } });
+    const body = claude.view ? { kind, key: claude.view, text, lang: getLang() } : { kind, asset: state.id, text, lang: getLang() };
+    await api('/api/claude/jobs', { method: 'POST', body });
     claude.stick = true;
     await claudeStatus();
     await claudeLoad();
@@ -2069,14 +2138,72 @@ $('#tab-claude').addEventListener('click', async (e) => {
     $('#cl-text').focus();
   } else if ((act === 'allow' || act === 'deny') && job) {
     try { await api(`/api/claude/jobs/${enc(job.id)}/answer`, { method: 'POST', body: { decision: act } }); claude.stick = true; await claudeStatus(); await claudeLoad(); } catch (err) { toast(esc(err.message), 'warn'); }
-  } else if (act === 'ctx-note') { claude.ctxNote = !claude.ctxNote; renderClaude(); }
+  } else if (act === 'project') { openClaudeView('project'); }
+  else if (act === 'back') { openClaudeView(null); }
+  else if (act === 'ctx-note') { claude.ctxNote = !claude.ctxNote; renderClaude(); }
   else if (act === 'ctx-view') { claude.ctxView = !claude.ctxView; renderClaude(); }
 });
+
+// ── what Claude is doing, at a glance: the pill over the view and its menu ──
+const jobLabel = (j) => j.key === 'project' ? t('Project conversation')
+  : j.asset ? (state.byId.get(j.asset)?.name || j.asset.split('/').pop())
+  : j.request ? t('New: {brief}', { brief: j.brief || '' }) : '?';
+// Where a job's conversation is shown: on its model when there is one.
+const jobKey = (j) => (j.asset ? `asset:${j.asset}` : j.key);
+
+function renderClaudePill() {
+  const st = claude.status, pill = $('#cl-pill');
+  pill.hidden = !st?.enabled;
+  if (pill.hidden) return;
+  const live = claudeLive();
+  const run = live.find((j) => j.state === 'running'), wait = live.filter((j) => j.state === 'waiting'), queue = live.filter((j) => j.state === 'queued');
+  const util = st.rate?.utilization;
+  const btn = $('#cl-pill-btn');
+  btn.className = `cl-pill-btn${wait.length ? ' wait' : run ? ' run' : ''}`;
+  btn.innerHTML = `<span class="dot${run && !wait.length ? ' pulse' : ''}"></span><b>Claude</b><span>${esc(
+    wait.length ? tp(wait.length, 'waits for you', '{n} wait for you') : run ? t('on {name}', { name: jobLabel(run) }) : t('ready'))}</span>${queue.length ? `<span class="sep"></span><span>${esc(t('{n} in line', { n: queue.length }))}</span>` : ''}${util != null ? `<span class="sep"></span><span class="q"><i style="width:${Math.round(util * 100)}%"></i></span><span>${Math.round(util * 100)} %</span>` : ''}`;
+  btn.setAttribute('aria-expanded', String(claude.menu));
+  $('#cl-act').hidden = !claude.menu;
+  if (!claude.menu) return;
+  const row = (j) => `<button class="it" data-key="${esc(jobKey(j))}"><span class="t"><b>${esc(jobLabel(j))}</b><span>${esc(j.state === 'waiting' ? (j.waiting?.type === 'tool' ? t('approval: {tool}', { tool: approvalShort(j.waiting) }) : t('a proposal to answer')) : j.state === 'running' ? t('working · since {ago}', { ago: ago(j.started) }) : t('in line · {n}', { n: j.position || 1 }))}</span></span><span class="state ${j.state}">${esc({ running: t('running'), waiting: t('waits for you'), queued: t('in line') }[j.state])}</span></button>`;
+  const group = (title, js) => js.length ? `<div class="g">${esc(title)}</div>${js.map(row).join('')}` : '';
+  const rl = st.rate || {};
+  const quota = util != null ? `<div class="g">${esc(t('Quota'))}</div><div class="qrow"><span>${esc({ five_hour: t('Session (5 h)'), seven_day: t('Week') }[rl.rateLimitType] || t('Usage'))}</span><span class="bar"><i style="width:${Math.round(util * 100)}%"></i></span><span>${Math.round(util * 100)} %${rl.resetsAt ? ` · ${esc(t('resets {at}', { at: new Date(rl.resetsAt * 1000).toLocaleTimeString(getLang(), { hour: '2-digit', minute: '2-digit' }) }))}` : ''}</span></div>` : '';
+  const u = st.usage || {};
+  $('#cl-act').innerHTML = `<div class="h"><b>${esc(t("Claude's activity"))}</b><span>${esc(st.auth?.subscription ? t('your Claude {plan} subscription', { plan: st.auth.subscription[0].toUpperCase() + st.auth.subscription.slice(1) }) : '')}</span></div>
+    ${group(t('Waits for your answer'), wait)}${group(t('Running'), run ? [run] : [])}${group(t('In line'), queue)}
+    ${live.length ? '' : `<div class="none">${esc(t('Nothing running. Ask from a model\'s ✦ tab, the project conversation, or New model.'))}</div>`}
+    <button class="it proj" data-key="project"><span class="t"><b>${esc(t('Project conversation'))}</b><span>${esc(t('What concerns several models at once'))}</span></span></button>
+    ${quota}<div class="foot">${esc(tp(u.runs || 0, '{n} request', '{n} requests'))}${u.cost_usd_equiv ? ` · ${esc(t('≈ ${c} API-equivalent, included in your subscription', { c: fmtD(u.cost_usd_equiv, 2) }))}` : ''}${'Notification' in window && Notification.permission === 'default' ? ` · <button class="linkish" data-notify>${esc(t('Notify me when Claude waits'))}</button>` : ''}</div>`;
+}
+$('#cl-pill-btn').onclick = (e) => { e.stopPropagation(); claude.menu = !claude.menu; renderClaudePill(); };
+$('#cl-act').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (e.target.closest('[data-notify]')) { Notification.requestPermission().then(renderClaudePill); return; }
+  const it = e.target.closest('[data-key]');
+  if (!it) return;
+  claude.menu = false; renderClaudePill();
+  openClaudeView(it.dataset.key);
+});
+document.addEventListener('click', (e) => { if (claude.menu && !e.target.closest('#cl-pill')) { claude.menu = false; renderClaudePill(); } });
+
+// Claude waits on a conversation you are not looking at: a toast you can follow, and a
+// system notification when the page is in the background (if allowed).
+function claudeWaits(job) {
+  const name = jobLabel(job);
+  const what = job.waiting?.type === 'tool' ? t('Claude asks to run {tool} on {name}', { tool: approvalShort(job.waiting), name }) : t('Claude waits for your answer on {name}', { name });
+  toast(`${esc(what)} · <button class="linkish" data-open-key="${esc(jobKey(job))}">${esc(t('Answer'))}</button>`, 'warn', 9000);
+  if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
+    const n = new Notification('Kiln Studio', { body: what, tag: `claude-${job.id}` });
+    n.onclick = () => { window.focus(); openClaudeView(jobKey(job)); n.close(); };
+  }
+}
+document.addEventListener('click', (e) => { const b = e.target.closest('[data-open-key]'); if (b) openClaudeView(b.dataset.openKey); });
 
 let claudeTimer = 0;
 async function onClaude(ev) {
   if (ev.type === 'claude-text') {
-    if (ev.key !== claudeKey()) return;
+    if (ev.key !== threadKey()) return;
     claude.partial = { job: ev.job, text: ev.text };
     cancelAnimationFrame(claudeTimer);
     claudeTimer = requestAnimationFrame(renderClaude);
@@ -2089,16 +2216,19 @@ async function onClaude(ev) {
     const i = jobs.findIndex((j) => j.id === ev.job.id);
     if (i >= 0) jobs[i] = { ...jobs[i], ...ev.job }; else jobs.push(ev.job);
   }
-  if (ev.job?.key === claudeKey() && claude.thread) {
+  if (ev.job?.key === threadKey() && claude.thread) {
     if (ev.entry) claude.thread.messages.push(ev.entry);
     const jobs = claude.thread.jobs;
     const i = jobs.findIndex((j) => j.id === ev.job.id);
     if (i >= 0) jobs[i] = { ...jobs[i], ...ev.job }; else jobs.push(ev.job);
   }
   if (ev.job && !['queued', 'running'].includes(ev.job.state)) claudeStatus().then(renderClaude);
+  if (ev.job?.kind === 'create' && ev.job.state === 'done' && ev.job.asset && ev.entry?.role === 'result')
+    setTimeout(() => toast(`${esc(t('Claude made {name}', { name: ev.job.asset.split('/').pop() }))} · <button class="linkish" data-open-key="asset:${esc(ev.job.asset)}">${esc(t('Open'))}</button>`, 'ok', 9000), 600);
+  claudeChanged();
   renderClaude();
-  if (ev.job?.state === 'waiting' && ev.entry && ['proposal', 'approval'].includes(ev.entry.role) && ev.job.key !== claudeKey())
-    toast(esc(t('Claude waits for your answer on {name}', { name: (ev.job.asset || '').split('/').pop() })), 'warn', 6000);
+  if (ev.job?.state === 'waiting' && ev.entry && ['proposal', 'approval'].includes(ev.entry.role) && (ev.job.key !== threadKey() || $('#tab-claude').hidden || !isOpen(right) || document.hidden))
+    claudeWaits(ev.job);
 }
 
 // ── keys ─────────────────────────────────────────────────────────────────────
@@ -2173,9 +2303,25 @@ async function openCreate() {
   $('#cr-done').hidden = true;
   $('#cr-status').textContent = '';
   try { const pt = (await api('/api/config')).settings.target; if ($(`#cr-target option[value="${pt}"]`)) $('#cr-target').value = pt; } catch { /* web */ }
+  await claudeStatus();
+  renderCreateMode();
   renderRequests();
   $('#create').showModal();
   $('#cr-brief').focus();
+}
+// With Claude in Studio on, the request goes straight to Claude; the dialog says first
+// whether it waits behind another run. Off, it is saved for a terminal, as before.
+function renderCreateMode() {
+  const on = !!claude.status?.enabled;
+  $('#cr-launch').hidden = !on;
+  $('#cr-save').classList.toggle('accent', !on);
+  $('#cr-save').textContent = on ? t('Save without making it') : t('Save the request');
+  const live = claudeLive(), run = live.find((j) => j.state === 'running');
+  const q = $('#cr-queue');
+  q.hidden = !on || !live.length;
+  if (!q.hidden) q.textContent = run
+    ? tp(live.filter((j) => j.state === 'queued').length + 1, 'Claude is working on {name}: this model comes next.', 'Claude is working on {name}: this model comes after {n} others.', { name: jobLabel(run) })
+    : t('Claude waits for your answer elsewhere: this model starts once you have answered.');
 }
 async function renderRequests() {
   let items = [];
@@ -2212,10 +2358,20 @@ $('#cr-form').onsubmit = async (e) => {
   e.preventDefault();
   const brief = $('#cr-brief').value.trim();
   if (!brief) { $('#cr-brief').focus(); return; }
-  $('#cr-save').disabled = true;
+  const launch = e.submitter?.id === 'cr-launch' || (!e.submitter && !$('#cr-launch').hidden);
+  $('#cr-save').disabled = $('#cr-launch').disabled = true;
   $('#cr-status').textContent = t('Saving…');
   try {
     const r = await api('/api/requests', { method: 'POST', body: { brief, target: $('#cr-target').value, photo: crPhoto } });
+    if (launch) {
+      await api('/api/claude/jobs', { method: 'POST', body: { kind: 'create', request: r.id, lang: getLang() } });
+      $('#cr-brief').value = ''; $('#cr-nophoto').click();
+      $('#create').close();
+      await claudeStatus();
+      openClaudeView(`request:${r.id}`);
+      toast(esc(t('Claude makes it: follow it in the ✦ tab and the pill above the view')), 'ok', 5000);
+      return;
+    }
     $('#cr-cmd').textContent = r.command;
     $('#cr-copy').onclick = () => copy(r.command);
     $('#cr-form').hidden = true;
@@ -2223,7 +2379,7 @@ $('#cr-form').onsubmit = async (e) => {
     $('#cr-brief').value = ''; $('#cr-nophoto').click();
     renderRequests();
   } catch (err) { $('#cr-status').textContent = t('Not saved: {e}', { e: err.message }); }
-  finally { $('#cr-save').disabled = false; }
+  finally { $('#cr-save').disabled = $('#cr-launch').disabled = false; }
 };
 $('#cr-another').onclick = () => { $('#cr-form').hidden = false; $('#cr-done').hidden = true; $('#cr-status').textContent = ''; $('#cr-brief').focus(); };
 $('#t-create').onclick = openCreate;
@@ -2547,7 +2703,7 @@ window.addEventListener('hashchange', fromHash);
     return;
   }
   liveEvents();
-  claudeStatus().then(renderClaude);
+  claudeStatus().then(() => { renderClaude(); if (!state.assets.length && !state.id) renderWelcome(); });
   fromHash();
   // The fonts change the bar's width once they load.
   document.fonts?.ready.then(fitSoon);

@@ -253,8 +253,15 @@ class Blender:
 # ── conversations: .kiln-studio/claude/ ──────────────────────────────────────
 
 
+PROJECT_KEY = "project"
+
+
 def thread_key(kind: str, asset: str | None, request: str | None) -> str:
-    return f"request:{request}" if kind == "create" or (request and not asset) else f"asset:{asset}"
+    """A conversation per model (asset:<id>), per Create request (request:<id>), and one for
+    the whole project (project): what concerns several models at once."""
+    if kind == "create" or (request and not asset):
+        return f"request:{request}"
+    return f"asset:{asset}" if asset else PROJECT_KEY
 
 
 def short(v, n: int = 300) -> str:
@@ -303,6 +310,23 @@ class Store:
     def sessions(self) -> dict:
         return sl.read_json(self.dir / "sessions.json", {})
 
+    def canonical(self, key: str) -> str:
+        """The conversation a key stands for. A model made from a Create request keeps that
+        request's conversation: Claude remembers making it, and the page shows it on the model."""
+        if not key.startswith("asset:"):
+            return key
+        link = (self.sessions().get(key) or {}).get("alias")
+        if link:
+            return link
+        if self.session(key):
+            return key
+        asset = key.split(":", 1)[1]
+        r = next((x for x in sl.load_requests(self.project) if x.get("asset") == asset), None)
+        if r and self.session(f"request:{r['id']}"):
+            self.set_session(key, alias=f"request:{r['id']}")
+            return f"request:{r['id']}"
+        return key
+
     def session(self, key: str) -> dict | None:
         return self.sessions().get(key)
 
@@ -336,7 +360,11 @@ class Store:
 
 def system_context(project: sl.Project, job: dict, port: int, lang: str) -> str:
     target = (f"The model the user has open in Kiln Studio is `{job['asset']}`." if job.get("asset")
-              else "This conversation is about a model the user asked for in Studio's Create form.")
+              else "This conversation is about the whole project, not one model: the user may ask about "
+                   "several models at once. `studio.py list` and the kiln-studio list_models tool name them."
+              if job.get("key") == PROJECT_KEY
+              else "This conversation is about a model the user asked for in Studio's Create form. When it "
+                   "exists, close the request with its asset (`studio.py request <id> --asset <asset>`).")
     return "\n".join([
         "You are running inside Kiln Studio, the user's browser page, started by its Claude worker with "
         "`claude -p`. There is no terminal: the user reads your messages in the page and answers in a later turn.",
@@ -382,9 +410,15 @@ class Worker:
         return self._auth[1]
 
     def view(self, job: dict) -> dict:
-        return {k: job.get(k) for k in ("id", "kind", "key", "asset", "request", "text", "state", "created",
-                                        "started", "ended", "session", "cost_usd", "turns", "duration_ms",
-                                        "stop_reason", "error", "waiting", "position")}
+        out = {k: job.get(k) for k in ("id", "kind", "key", "asset", "request", "text", "state", "created",
+                                       "started", "ended", "session", "cost_usd", "turns", "duration_ms",
+                                       "stop_reason", "error", "waiting", "position")}
+        if out["request"] and not out["asset"]:
+            # A Create request's model, once kiln has named it.
+            r = next((x for x in sl.load_requests(self.project) if x["id"] == out["request"]), None)
+            out["asset"] = (r or {}).get("asset")
+            out["brief"] = (r or {}).get("brief")
+        return out
 
     def status(self, force_auth: bool = False) -> dict:
         st = self.project.settings()
@@ -400,6 +434,7 @@ class Worker:
                 "api_key_in_env": bool(os.environ.get("ANTHROPIC_API_KEY"))}
 
     def thread(self, key: str) -> dict:
+        key = self.store.canonical(key)
         with self.cv:
             jobs = [self.view(j) for j in self.jobs.values() if j["key"] == key]
         return {"key": key, "messages": self.store.thread(key), "session": self.store.session(key),
@@ -420,7 +455,7 @@ class Worker:
             raise ValueError("a message needs text")
         if len(text) > 8000:
             raise ValueError("the message is too long (8,000 characters at most)")
-        if kind in ("chat", "notes", "answer") and not asset and not (key or "").startswith("request:"):
+        if kind == "notes" and not asset:
             raise ValueError("which model? (asset)")
         if kind == "create":
             r = next((x for x in sl.load_requests(self.project) if x["id"] == request), None)
@@ -430,7 +465,7 @@ class Worker:
         if kind == "notes":
             text = f"/blender-kiln:kiln studio {asset}"
         job = {"id": sl.new_id("j"), "kind": kind, "asset": asset, "request": request,
-               "key": key or thread_key(kind, asset, request), "text": text, "lang": lang if lang in ("en", "fr") else "en",
+               "key": self.store.canonical(key or thread_key(kind, asset, request)), "text": text, "lang": lang if lang in ("en", "fr") else "en",
                "state": "queued", "created": sl.now(), "deferred": deferred}
         with self.cv:
             busy = [j for j in self.jobs.values() if j["key"] == job["key"] and j["state"] in ("queued", "running")]
@@ -643,6 +678,7 @@ class Worker:
                 proc.wait(30)
             except subprocess.TimeoutExpired:
                 proc.kill()
+            proc.stdout.close()
             err.close()
         job.update(ended=sl.now(), cost_usd=result.get("total_cost_usd"), turns=result.get("num_turns"),
                    duration_ms=result.get("duration_ms"), stop_reason=result.get("stop_reason"))

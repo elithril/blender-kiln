@@ -182,6 +182,29 @@ class Runs(Base):
         self.assertEqual(j["key"], f"request:{r['id']}")
         self.assertTrue(self.calls()[1]["prompt"].startswith("/blender-kiln:kiln an oak barrel, type prop"))
 
+    def test_the_project_conversation(self) -> None:
+        j = self.wait(self.w.submit("chat", key="project", text="harmonise the tavern's colours")["id"])
+        self.assertEqual((j["state"], j["key"], j["asset"]), ("done", "project", None))
+        prompt = self.calls()[0]["args"]
+        self.assertIn("whole project", prompt[prompt.index("--append-system-prompt") + 1])
+        self.assertEqual(self.w.thread("project")["messages"][0]["text"], "harmonise the tavern's colours")
+        with self.assertRaises(ValueError):
+            self.w.submit("notes")   # the open notes are a model's
+
+    def test_a_created_model_keeps_its_request_conversation(self) -> None:
+        r = sl.add_request(self.p, "a sturdy oak barrel")
+        j = self.wait(self.w.submit("create", request=r["id"])["id"])
+        self.assertEqual(j["key"], f"request:{r['id']}")
+        sid = self.w.store.session(f"request:{r['id']}")["id"]
+        self.assertEqual(self.w.thread("asset:props/barrel")["key"], "asset:props/barrel")   # not made yet
+        sl.close_request(self.p, r["id"], asset="props/barrel")
+        self.assertEqual(self.w.view(j)["asset"], "props/barrel")
+        th = self.w.thread("asset:props/barrel")
+        self.assertEqual((th["key"], th["messages"][0]["kind"]), (f"request:{r['id']}", "create"))
+        k = self.wait(self.w.submit("chat", asset="props/barrel", text="thinner hoops")["id"])
+        a = self.calls()[-1]["args"]
+        self.assertEqual((k["key"], a[a.index("--resume") + 1]), (f"request:{r['id']}", sid))
+
     def test_refuses_without_the_subscription(self) -> None:
         os.environ["FAKE_AUTH"] = json.dumps({"loggedIn": True, "authMethod": "api-key", "apiProvider": "firstParty"})
         j = self.wait(self.w.submit("chat", asset="a", text="hi")["id"])
