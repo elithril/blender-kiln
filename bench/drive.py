@@ -16,7 +16,11 @@ where it stopped.
 - Port 9876 taken (someone opened their own Blender MCP): wait, never drive it.
 - The subscription's usage limit ends a session early with an error. That run is not a
   measurement: its folder moves to bench/runs/_aborted/, the driver waits and runs the brief
-  again. Any other failure is a result — kept as the baseline recorded it.
+  again. Any other failure is a result — kept as the baseline recorded it. The limit is read
+  off the transcript's result event (api_error_status 429, api_error usage_limit_reached),
+  not only the text: on 16 Oct "You've hit your session limit · resets 7:20pm" got past the
+  text pattern and 28 sessions were recorded as results. The wait lasts until the reset the
+  rate-limit event announces (resetsAt), 5 min past it, or LIMIT_WAIT_S when none is given.
 - Every session gets BENCH_TIMEOUT_S (default here 5400 s, recorded in result.json): the
   rig and print briefs run longer than the first six.
 """
@@ -27,8 +31,8 @@ BENCH = Path(__file__).resolve().parent
 RUNS = BENCH / "runs"
 LOG, PID, STOP = RUNS / "_driver.log", RUNS / "_driver.pid", RUNS / "_driver.stop"
 PORT = 9876
-LIMIT = re.compile(r"usage limit|limit reached|hit your (?:usage )?limit|rate[ _-]?limit|"
-                   r"too many requests|\b429\b|resets? (?:at|in)\b|out of (?:extra )?usage", re.I)
+LIMIT = re.compile(r"usage limit|limit reached|hit your (?:\w+ )?limit|rate[ _-]?limit|"
+                   r"too many requests|\b429\b|resets? (?:at |in )?\d|out of (?:extra )?usage", re.I)
 FATAL = re.compile(r"not logged in|please run /login|invalid api key|credit balance", re.I)
 LIMIT_WAIT_S = int(os.environ.get("BENCH_LIMIT_WAIT_S", "1800"))
 MAX_LIMIT_WAITS = 96            # two days of half-hours
@@ -48,18 +52,55 @@ def port_open():
         return s.connect_ex(("localhost", PORT)) == 0
 
 
+def transcript_limit(outdir):
+    """(limit hit, reset epoch or None) from the transcript's events: the result's API error,
+    and the last rate-limit event's reset time."""
+    hit, reset = False, None
+    try:
+        lines = (outdir / "transcript.jsonl").read_text(errors="ignore").splitlines()
+    except OSError:
+        return False, None
+    for line in lines:
+        if '"rate_limit' not in line and '"result"' not in line and '"api_error' not in line:
+            continue
+        try:
+            ev = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(ev, dict):
+            continue
+        info = ev.get("rate_limit_info")
+        if isinstance(info, dict) and info.get("status") == "rejected" and info.get("resetsAt"):
+            reset = info["resetsAt"]
+        if ev.get("api_error_status") == 429 or ev.get("api_error") == "usage_limit_reached" \
+                or (ev.get("terminal_reason") == "api_error" and ev.get("num_turns", 0) <= 1):
+            hit = True
+    for m in re.finditer(r'"resetsAt":\s*(\d+)', "\n".join(lines[-50:])):
+        reset = reset or int(m.group(1))
+    return hit, reset
+
+
 def limit_hit(outdir):
-    """The session ended on the subscription's limit, not on the task."""
+    """(limit hit, fatal, reset epoch or None): the session ended on the subscription's limit,
+    or on a login problem, not on the task."""
     try:
         r = json.loads((outdir / "result.json").read_text())
     except (OSError, json.JSONDecodeError):
-        return False, False
+        return False, False, None
     err = (outdir / "claude.err").read_text(errors="ignore") if (outdir / "claude.err").exists() else ""
     text = (r.get("final_text") or "") + "\n" + err[-4000:]
     if FATAL.search(text):
-        return False, True
+        return False, True, None
     errored = r.get("is_error") or r.get("claude_exit") not in (0, "timeout")
-    return bool(errored and LIMIT.search(text)), False
+    hit, reset = transcript_limit(outdir)
+    return bool(hit or (errored and LIMIT.search(text))), False, reset
+
+
+def limit_wait(reset):
+    """Seconds to wait: until 5 min past the announced reset, else LIMIT_WAIT_S."""
+    if reset:
+        return int(min(max(reset - time.time() + 300, 300), 6 * 3600))
+    return LIMIT_WAIT_S
 
 
 def stopping():
@@ -113,7 +154,7 @@ def main():
                         break
                     time.sleep(60)
                     continue
-                hit, fatal = limit_hit(outdir)
+                hit, fatal, reset = limit_hit(outdir)
                 if fatal:
                     log(f"FATAL {label} / {b['id']}: authentication problem — driver stops; nothing else will run")
                     dest = RUNS / "_aborted" / label / f"{b['id']}-{time.strftime('%Y%m%d-%H%M%S')}"
@@ -125,12 +166,17 @@ def main():
                     dest = RUNS / "_aborted" / label / f"{b['id']}-{time.strftime('%Y%m%d-%H%M%S')}"
                     dest.parent.mkdir(parents=True, exist_ok=True)
                     shutil.move(str(outdir), dest)
+                    wait = limit_wait(reset)
+                    until = time.strftime("%H:%M", time.localtime(time.time() + wait))
                     log(f"LIMIT {label} / {b['id']} after {mins} min — moved to {dest.relative_to(RUNS)}, "
-                        f"waiting {LIMIT_WAIT_S // 60} min ({waits}/{MAX_LIMIT_WAITS})")
+                        f"waiting {wait // 60} min, until {until} ({waits}/{MAX_LIMIT_WAITS})")
                     if waits >= MAX_LIMIT_WAITS:
                         log("too many limit waits — driver stops")
                         return
-                    time.sleep(LIMIT_WAIT_S)
+                    for _ in range(wait // 30):        # the stop file is still honoured while waiting
+                        if STOP.exists():
+                            break
+                        time.sleep(30)
                     continue
                 r = json.loads((outdir / "result.json").read_text())
                 log(f"done  {label} / {b['id']}: exit={r.get('claude_exit')} turns={r.get('num_turns')} "
