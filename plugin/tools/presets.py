@@ -6,7 +6,8 @@
         [--loop] [--speed 1.0] [--take A|B] [--out ./anim] [--stiff-fingers]
 
 Writes {out}/{asset}_animated.glb with ONE clip per motion, named exactly as asked (`walk`,
-`run`…), {asset}_animated.measures.json (tools/motion_measure.py on every clip of the file
+`run`…) — with --loop, a cyclic motion gives two: the whole take (`run`, with its start and its
+end, travelling) and its in-place cycle (`run_loop`) — {asset}_animated.measures.json (tools/motion_measure.py on every clip of the file
 written) and {asset}_animated.provenance.json (where each motion comes from, its licence).
 
 The clips are image-to-3dlab's (AssetFurnace) presets, generated once with NVIDIA Kimodo
@@ -49,7 +50,7 @@ SOURCE = dict(
     motion_licence="Licensed by NVIDIA Corporation under the NVIDIA Open Model License; "
                    "NVIDIA claims no ownership of outputs; commercial use allowed",
 )
-# Motions that repeat, which --loop turns into a seamless cycle. The rest are one-shots.
+# Motions that repeat, for which --loop adds a seamless in-place cycle. The rest are one-shots.
 CYCLIC = ("idle", "walk", "walk_woman", "run", "sneak", "fight_stance")
 
 
@@ -90,7 +91,7 @@ def parse(argv):
     an.add_argument("--asset", required=True, type=Path, help="kiln-named rigged GLB")
     an.add_argument("--motion", required=True, help="comma-separated, e.g. walk,run,jump,dance")
     an.add_argument("--out", type=Path, help="output folder (default: next to the asset)")
-    an.add_argument("--loop", action="store_true", help="cut the cyclic motions into seamless in-place cycles")
+    an.add_argument("--loop", action="store_true", help="also cut each cyclic motion into a seamless in-place cycle, clip {motion}_loop")
     an.add_argument("--speed", type=float, default=1.0, help="play faster (>1) or slower (<1)")
     an.add_argument("--take", choices=("A", "B"), default="A")
     an.add_argument("--stiff-fingers", action="store_true", help="fingers follow the hand rigidly")
@@ -184,7 +185,15 @@ def blender_animate(args) -> int:  # pragma: no cover - needs bpy
         pb.rotation_mode = "QUATERNION"
     ad = arm.animation_data_create()
     report, prov = {}, []
+    jobs = []                                      # (clip, motion, looped)
     for name in names:
+        jobs.append((name, name, False))
+        if args.loop and name in CYCLIC:
+            jobs.append((f"{name}_loop", name, True))
+        elif args.loop:
+            print(f"presets: {name} is a one-shot, kept whole (not looped)")
+    clips = [j[0] for j in jobs]
+    for clip, name, looped in jobs:
         take = args.take if args.take in cat[name]["takes"] else "A"
         preset = cat[name]["takes"][take]
         npz = MOTIONS / f"{preset['id']}.npz"
@@ -192,18 +201,15 @@ def blender_animate(args) -> int:  # pragma: no cover - needs bpy
         g, hips = R.resample(g, hips, args.speed)
         frames, info = R.retarget(rig, g, joints0, hips, mapping)
         contacts = R.soma_contacts(g, joints0, hips, fps, args.speed)
-        looped = args.loop and name in CYCLIC
         tread, loop = None, None
         if looped:
             frames, contacts, tread, loop = R.cut_loop(rig, frames, contacts, fps, mapping)
-        elif args.loop:
-            print(f"presets: {name} is a one-shot, kept whole (not looped)")
         swings = R.clear_arms(rig, frames, proxy, cyclic=looped,
                               upper_points=R.UPPER_ARM_POINTS if arms_kiln else ()) if proxy else {}
         feet = R.lock_feet(rig, frames, fps, contacts, cyclic=looped, tread=tread) if "feet" not in skip else {}
         if looped:
             frames = frames + [frames[0]]          # key P = key 0 (animation.md rule 5)
-        act = bpy.data.actions.new(name)
+        act = bpy.data.actions.new(clip)
         ad.action = act
         for t, basis in enumerate(R.bases(rig, frames)):
             for b, mtx in basis.items():
@@ -213,19 +219,19 @@ def blender_animate(args) -> int:  # pragma: no cover - needs bpy
                 if parents[b] is None:
                     pb.keyframe_insert("location", frame=t)
         track = ad.nla_tracks.new()
-        track.name = name
-        strip = track.strips.new(name, 0, act)
+        track.name = clip
+        strip = track.strips.new(clip, 0, act)
         if getattr(act, "slots", None) and hasattr(strip, "action_slot"):
             strip.action_slot = act.slots[0]
         ad.action = None
-        report[name] = dict(frames=len(frames), seconds=round((len(frames) - 1) / fps, 2),
+        report[clip] = dict(frames=len(frames), seconds=round((len(frames) - 1) / fps, 2),
                             hip_scale=round(info["hip_scale"], 3), arm_swing=swings, feet=feet,
                             loop=loop)
-        prov.append(dict(clip=name, preset=preset["id"], take=take, prompt=preset["prompt"],
+        prov.append(dict(clip=clip, preset=preset["id"], take=take, prompt=preset["prompt"],
                          made_with=preset["made_with"], seed=preset["seed"], speed=args.speed,
                          looped=bool(looped), root_speed_m_s=loop and loop["root_speed_m_s"],
                          frames=len(frames), fps=fps, file=f"tools/motions/{npz.name}", sha256=sha256(npz)))
-        print(f"presets: {name} {json.dumps(report[name])}")
+        print(f"presets: {clip} {json.dumps(report[clip])}")
     for pb in arm.pose.bones:
         pb.matrix_basis = Matrix.Identity(4)
     sc.frame_start, sc.frame_end = 0, max(r["frames"] for r in report.values()) - 1
@@ -240,12 +246,12 @@ def blender_animate(args) -> int:  # pragma: no cover - needs bpy
     if not args.no_measure:
         import motion_measure as M
         measures = {}
-        for name in names:
-            measures[name] = M.measure(str(path), name=name)
-            measures[name]["presets"] = report[name]
-            fs, fl, sk = measures[name]["foot_slide"], measures[name]["floor"], measures[name]["skin"]
-            print(f"presets: measured {name}: slide {fs['mm_s']} mm/s, below floor {fl['below_mm']} mm, "
-                  f"arms in body {sk['mean_arm_body_mm2']} mm², seam {measures[name]['seam_x_step']}x a step")
+        for clip in clips:
+            measures[clip] = M.measure(str(path), name=clip)
+            measures[clip]["presets"] = report[clip]
+            fs, fl, sk = measures[clip]["foot_slide"], measures[clip]["floor"], measures[clip]["skin"]
+            print(f"presets: measured {clip}: slide {fs['mm_s']} mm/s, below floor {fl['below_mm']} mm, "
+                  f"arms in body {sk['mean_arm_body_mm2']} mm², seam {measures[clip]['seam_x_step']}x a step")
         (out / f"{stem}_animated.measures.json").write_text(json.dumps(measures, indent=1))
     return 0
 

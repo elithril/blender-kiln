@@ -13,8 +13,9 @@ kiln child's joints, a skin of tubes and box feet, 100% to one bone each):
 - the provenance names the motions' licence for every clip;
 - feet: the walk's standing feet slide < 50 mm/s and no skin goes 5 mm under the floor, where
   the same clip with --no-fix feet slides and sinks (the regression direction);
-- --loop: the walk comes back as an in-place cycle, its last key equal to its first, the seam
-  <= 1.2x a frame step, the speed to move it at recorded; the jump, a one-shot, kept whole;
+- --loop: the walk comes back twice, whole (`walk`, the take as made) and as an in-place cycle
+  (`walk_loop`), its last key equal to its first, the seam <= 1.2x a frame step, the speed to
+  move it at recorded; the jump, a one-shot, kept whole and not looped;
 - arms: the jump's hands and forearms, which hang into the wide hips, cross the body < 500 mm²,
   where upstream's clearance (--no-fix arms: torso, neck and head only) leaves > 500;
 - a rig missing a leg bone is refused, naming it.
@@ -220,10 +221,11 @@ def main():
     out = tmp / "SK_Test_rigged_animated.glb"
     check("presets.py animate runs on a kiln-named rig", run.returncode == 0 and out.exists(), run.stdout[-600:] + run.stderr[-600:])
     if out.exists():
-        check("one clip per motion, named exactly as asked", glb_animations(out) == ["walk", "jump"], glb_animations(out))
+        check("one clip per motion, named exactly as asked, + walk_loop", glb_animations(out) == ["walk", "walk_loop", "jump"],
+              glb_animations(out))
         prov = json.loads((tmp / "SK_Test_rigged_animated.provenance.json").read_text())
         check("the provenance names the motions' licence and source for every clip",
-              "NVIDIA Open Model License" in prov["source"]["motion_licence"] and len(prov["clips"]) == 2
+              "NVIDIA Open Model License" in prov["source"]["motion_licence"] and len(prov["clips"]) == 3
               and all(c["sha256"] == presets.sha256(presets.MOTIONS / f"{c['preset']}.npz") for c in prov["clips"]))
         meas = json.loads((tmp / "SK_Test_rigged_animated.measures.json").read_text())
         nofix = subprocess.run([sys.executable, str(HERE / "presets.py"), "animate", "--asset", str(rig), "--motion", "walk,jump",
@@ -236,13 +238,17 @@ def main():
               f"(without the fix: {raw and raw['foot_slide']['mm_s']} mm/s, {raw and raw['floor']['below_mm']} mm)",
               raw and w["foot_slide"]["mm_s"] < 50 and w["floor"]["below_mm"] < 5
               and (raw["foot_slide"]["mm_s"] > 50 or raw["floor"]["below_mm"] > 5))
-        keys, gap = glb_closing(out, "walk")
+        keys, gap = glb_closing(out, "walk_loop")
+        wkeys, _ = glb_closing(out, "walk")
         jkeys, _ = glb_closing(out, "jump")
-        lp = next(c for c in prov["clips"] if c["clip"] == "walk")
-        check(f"--loop: the walk is a cycle of {keys - 1} frames + a closing key equal to the first (off {gap:.1g}), "
-              f"seam {w['seam_x_step']}x a step, {lp['root_speed_m_s']} m/s in place; the jump kept whole ({jkeys} keys)",
-              gap < 1e-4 and keys - 1 < 75 and w["seam_x_step"] <= 1.2 and w["travel_m"] < 0.01
-              and lp["looped"] and lp["root_speed_m_s"] > 0 and jkeys == 75)
+        lp = next(c for c in prov["clips"] if c["clip"] == "walk_loop")
+        wl = meas["walk_loop"]
+        check(f"--loop: walk_loop is a cycle of {keys - 1} frames + a closing key equal to the first (off {gap:.1g}), "
+              f"seam {wl['seam_x_step']}x a step, {lp['root_speed_m_s']} m/s in place; the walk kept whole ({wkeys} keys), "
+              f"the jump too ({jkeys} keys)",
+              gap < 1e-4 and keys - 1 < 75 and wl["seam_x_step"] <= 1.2 and wl["travel_m"] < 0.01
+              and lp["looped"] and lp["root_speed_m_s"] > 0 and jkeys == 75 and wkeys == 120
+              and wl["foot_slide"]["mm_s"] < 50 and wl["floor"]["below_mm"] < 5)
         j, rj = meas["jump"]["skin"]["mean_arm_body_mm2"], raws.get("jump", {}).get("skin", {}).get("mean_arm_body_mm2")
         check(f"arms out of the hips: jump {j} mm² of arm through body (upstream's clearance: {rj} mm²)",
               rj is not None and j < 500 < rj)

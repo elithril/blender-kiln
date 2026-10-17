@@ -16,10 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tools/motions/` (2.1 MB); `tools/retarget.py` adapts its retarget; both in `plugin/NOTICE`.
 - **Corrected before keying**, each measured on the kiln child and the Hunyuan3D humanoid
   (`references/animation.md` § Humanoid presets): bones by name (Hunyuan's handless arm: arm
-  through body 4,285 → 1,548 mm² on the walk); feet planted (walk slide 293 → 2.9 mm/s and
-  568 → 9.5, under the floor 22.9 → 0 and 38.2 → 0.7 mm); arms out of the hips and belly, the
-  swing capped at 25° (child walk 2,638 → 377 mm²); `--loop` closed in-place cycles (walk seam
-  6.22 → 0.73× a step, 6.42 → 1.10). The Hunyuan humanoid stays above 500 mm² of arm through
+  through body 4,285 → 1,548 mm² on the walk); feet planted (walk slide 293 → 2.7 mm/s and
+  568 → 10.6, under the floor 22.9 → 0 and 38.2 → 0.5 mm); arms out of the hips and belly, the
+  swing capped at 25° (child walk 2,638 → 377 mm²); `--loop` adds a closed in-place cycle,
+  `{motion}_loop` (walk seam 6.22 → 0.69× a step, 6.42 → 1.20), beside the whole take, which
+  keeps the run's start and stop; a near-straight knee bends toward the thigh's front while the
+  feet are planted (the child's walk had bent its knee backward 17-35° around heel strike).
+  The Hunyuan humanoid stays above 500 mm² of arm through
   body on walk, jump and dance: its fused hand and its shoulder's skin; said, not hidden.
 - **PHASE 5d routes** a kiln-named humanoid and a move in the list to `presets.py`; another
   move, a non-human biped or wings to UniMate, non-commercial; quadrupeds unchanged.

@@ -123,32 +123,37 @@ humanoid whose right hand is fused to its hip:
    rig's own heights pick the wrong frames on the chibi child), the foot's lowest skin points
    stay where they were the frame before, the lowest on the floor; a two-bone solve moves thigh
    and shin; the hips drop where a leg cannot reach (21 mm at most). In the air the foot clears
-   the floor by 0.8 × the foot-skate scale.
+   the floor by 0.8 × the foot-skate scale. A knee the actor holds near straight (under 5°)
+   bends toward the thigh's front, eased to the actor's own plane by 25°: read off the pose
+   alone, that plane is noise, and the child's walk bent its knee backward 17-35° around heel
+   strike, flipping 130-155° from one frame to the next.
 3. **Arms out of the hips and belly**: the hips join upstream's capsules (torso, neck, head), a
    point at 80% of the upper arm is kept out too, capsules at the 95th percentile of their
    skin, and the swing it adds is **capped at 25°** — uncapped, the child's arms went out
    61-78° (median), back to its A-pose. Thighs stay out (upstream: arms held out like wings).
-4. **`--loop`** (idle, walk, walk_woman, run, sneak, fight_stance): the window whose end matches
-   its start, the mismatch spread over it, frame P keyed equal to frame 0 (rule 5 of § Rules for
-   scripted animation), the hips' travel taken out; the root speed to move the character at is
-   recorded. One-shots are kept whole.
+4. **`--loop`** (idle, walk, walk_woman, run, sneak, fight_stance) adds a second clip,
+   **`{motion}_loop`**, beside the whole take (`run`: its start and its stop, travelling, as
+   Kimodo made it): the window whose end matches its start, the mismatch spread over it, frame P
+   keyed equal to frame 0 (rule 5 of § Rules for scripted animation), the hips' travel taken
+   out; the root speed to move the character at is recorded. One-shots are kept whole, not
+   looped.
 
 **Measured** with `tools/motion_measure.py`, the same measure on every route (method in its
 docstring): standing-foot slide (mm/s), deepest skin under the floor (mm), arm through body
-(mm² per frame, rest crossings subtracted), loop seam (× the mean frame step; walk and run
-looped, jump and dance are one-shots, their seam is the take's own end). Targets: < 50 mm/s,
+(mm² per frame, rest crossings subtracted), loop seam (× the mean frame step; walk and run:
+the `_loop` clips, jump and dance are one-shots, their seam is the take's own end). Targets: < 50 mm/s,
 < 5 mm, < 500 mm², ≤ 1.2×. UniMate: the comparison study's samples (`--loop` for walk and run).
 
 | Character | Move | UniMate | Upstream presets | **`presets.py`** |
 |---|---|---|---|---|
-| Child | walk | 149 · 0.0 · 0 · 1.62 | 293 · 22.9 · 2,638 · 6.22 | **2.9 · 0.0 · 377 · 0.73** |
+| Child | walk | 149 · 0.0 · 0 · 1.62 | 293 · 22.9 · 2,638 · 6.22 | **2.7 · 0.0 · 377 · 0.69** |
 | Child | run | 120 · 6.5 · 1,482 · 0.51 | 372 · 5.8 · 1,305 · 6.47 | **0.8 · 0.0 · 159 · 1.05** |
-| Child | jump | 48 · 0.0 · 545 · — | 47 · 4.0 · 4,539 · — | **0.8 · 0.0 · 74 · —** |
-| Child | dance | 102 · 6.7 · 564 · — | 103 · 0.5 · 1,162 · — | **0.9 · 0.0 · 84 · —** |
-| Hunyuan | walk | 962 · 54.6 · 1 · 0.97 | 568 · 38.2 · 4,285 · 6.42 | **9.5 · 0.7 · 837 · 1.10** |
-| Hunyuan | run | 277 · 46.2 · 236 · 1.73 | 353 · 34.7 · 9,690 · 5.92 | **5.6 · 0.0 · 489 · 1.20** |
-| Hunyuan | jump | 63 · 36.9 · 327 · — | 15 · 13.5 · 6,715 · — | **3.7 · 0.2 · 2,033 · —** |
-| Hunyuan | dance | 35 · 11.7 · 617 · — | 34 · 14.0 · 13,638 · — | **8.2 · 0.2 · 970 · —** |
+| Child | jump | 48 · 0.0 · 545 · — | 47 · 4.0 · 4,539 · — | **0.7 · 0.0 · 74 · —** |
+| Child | dance | 102 · 6.7 · 564 · — | 103 · 0.5 · 1,162 · — | **1.0 · 0.0 · 84 · —** |
+| Hunyuan | walk | 962 · 54.6 · 1 · 0.97 | 568 · 38.2 · 4,285 · 6.42 | **10.6 · 0.5 · 858 · 1.20** |
+| Hunyuan | run | 277 · 46.2 · 236 · 1.73 | 353 · 34.7 · 9,690 · 5.92 | **5.4 · 0.0 · 481 · 1.20** |
+| Hunyuan | jump | 63 · 36.9 · 327 · — | 15 · 13.5 · 6,715 · — | **3.5 · 0.2 · 2,029 · —** |
+| Hunyuan | dance | 35 · 11.7 · 617 · — | 34 · 14.0 · 13,638 · — | **8.4 · 0.2 · 973 · —** |
 
 Each cell: slide · under the floor · arm through body · seam. A reviewer, shown UniMate and the
 upstream presets side by side, preferred the presets for walk and run, and found UniMate more

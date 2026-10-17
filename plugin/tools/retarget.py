@@ -549,7 +549,12 @@ FOOT_SKATE_H = 0.025
 ROLL_SET_MM = 3.0        # the points a foot rolls on: within 3 mm of its lowest (the measure's)
 FLOOR_MARGIN = 0.001     # the lowest sole point sits this far above the rest floor
 EDGE_EASE = 6            # frames over which a correction eases in and out, at a clip's ends
-REACH = 0.995            # a leg straighter than this share of its length cannot be solved
+REACH = 0.9995           # a leg straighter than this share of its length cannot be solved
+# A knee posed straighter than 5 degrees bends toward the thigh's front; past 25 degrees, in the
+# plane it was posed in. Taken from the pose alone, the plane of a near-straight leg is noise:
+# the child's walk flipped its knee 130-155 degrees from one frame to the next at heel strike
+# and toe-off, and bent it backward up to 44 degrees.
+POLE_BEND = (5.0, 25.0)
 
 
 def soma_joints(g, joints0, hips) -> np.ndarray:
@@ -642,9 +647,12 @@ def _clean(mask, cyclic, gap=2, shortest=2):
     return m
 
 
-def two_bone(H, K0, A0, A, L1, L2):
+def two_bone(H, K0, A0, A, L1, L2, ahead=None):
     """Knee and ankle for a leg hip H -> knee -> ankle reaching for A, bending in the plane
-    the knee bent in (K0, A0 as posed). Returns (knee, ankle reached)."""
+    the knee bent in (K0, A0 as posed). A leg posed near straight says nothing of that plane:
+    the knee then bends toward `ahead` (where the thigh's front points), fully below
+    POLE_BEND[0] degrees of bend, eased to the posed plane by POLE_BEND[1]. Returns (knee,
+    ankle reached)."""
     d_vec = A - H
     d = float(np.linalg.norm(d_vec))
     u = d_vec / max(d, 1e-9)
@@ -652,6 +660,13 @@ def two_bone(H, K0, A0, A, L1, L2):
     p = (K0 - H) - ((K0 - H) @ u) * u
     if np.linalg.norm(p) < 1e-6:
         p = (A0 - H) - ((A0 - H) @ u) * u
+    if ahead is not None:
+        q = ahead - (ahead @ u) * u
+        bend = np.degrees(np.arccos(np.clip(_unit(K0 - H) @ _unit(A0 - K0), -1, 1)))
+        w = float(np.clip((bend - POLE_BEND[0]) / (POLE_BEND[1] - POLE_BEND[0]), 0, 1))
+        w = 3 * w * w - 2 * w ** 3
+        if np.linalg.norm(q) > 1e-6:
+            p = w * _unit(p) + (1 - w) * _unit(q) if np.linalg.norm(p) > 1e-9 else q
     if np.linalg.norm(p) < 1e-6:
         p = np.cross(u, [1.0, 0, 0])
     p /= np.linalg.norm(p)
@@ -660,11 +675,17 @@ def two_bone(H, K0, A0, A, L1, L2):
     return H + a * u + h * p, H + d * u
 
 
-def _solve_leg(wr, pose, s, A_move, L):
-    """Two-bone solve putting side `s`'s ankle at its posed place + A_move. Returns the gap left."""
+def _unit(v):
+    n = float(np.linalg.norm(v))
+    return v / n if n > 1e-12 else v
+
+
+def _solve_leg(wr, pose, s, A_move, L, ahead=None):
+    """Two-bone solve putting side `s`'s ankle at its posed place + A_move. Returns the gap
+    left. `ahead`: the thigh's front at rest (armature space), turned with the thigh here."""
     H, K0, A0 = (pose[s + x][:3, 3] for x in ("UpLeg", "Leg", "Foot"))
     A = A0 + A_move
-    K, Ar = two_bone(H, K0, A0, A, *L)
+    K, Ar = two_bone(H, K0, A0, A, *L, ahead=None if ahead is None else wr[s + "UpLeg"] @ ahead[s])
     wr[s + "UpLeg"] = rotation_between(K0 - H, K - H) @ wr[s + "UpLeg"]
     wr[s + "Leg"] = rotation_between(A0 - K0, Ar - K) @ wr[s + "Leg"]
     return float(np.linalg.norm(A - Ar))
@@ -715,6 +736,8 @@ def lock_feet(rig: Rig, frames, fps, contacts, cyclic=False, tread=None, iterati
     tv = np.zeros(3) if tread is None else np.asarray(tread, float)
     tv = tv - (tv @ up) * up
     contact = {s: _clean(np.asarray(contacts[s], bool), cyclic) for s in SIDES}
+    fwd = character_frame(rig.heads, up)[:, 2]
+    ahead = {s: rig.rest[s + "UpLeg"][:3, :3].T @ fwd for s in SIDES}
     pose_of = lambda w: [posed(rig.rest, rig.parents, rig.order, wr, root)[0] for wr, root in w]
     report = {}
     drop = np.zeros(n)
@@ -751,7 +774,7 @@ def lock_feet(rig: Rig, frames, fps, contacts, cyclic=False, tread=None, iterati
                 want = floor + FLOOR_MARGIN + (0.0 if c[t] else lift)
                 if low < want:
                     delta[t] += (want - low) * up
-                gap = _solve_leg(work[t][0], poses[t], s, delta[t], L[s])
+                gap = _solve_leg(work[t][0], poses[t], s, delta[t], L[s], ahead)
                 if c[t]:
                     short[t] = max(short[t], gap)
             report[s] = dict(contact_frames=int(c.sum()), contacts=len(runs),
@@ -767,7 +790,7 @@ def lock_feet(rig: Rig, frames, fps, contacts, cyclic=False, tread=None, iterati
                 want = floor + FLOOR_MARGIN + (0.0 if contact[s][t] else lift)
                 dz = want - low if contact[s][t] else max(0.0, want - low)
                 if abs(dz) > 1e-5:
-                    _solve_leg(work[t][0], poses[t], s, dz * up, L[s])
+                    _solve_leg(work[t][0], poses[t], s, dz * up, L[s], ahead)
         if short.max() <= 0.001 or it == iterations - 1:
             break
         need = np.zeros(n)
