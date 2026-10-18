@@ -45,7 +45,7 @@ def out(ev):
 def result(text="", **kw):
     out({"type": "result", "subtype": "success", "is_error": False, "result": text, "session_id": sid,
          "total_cost_usd": 0.01, "num_turns": 1, "duration_ms": 1200, "stop_reason": "end_turn", **kw})
-out({"type": "system", "subtype": "init", "session_id": sid, "apiKeySource": "ANTHROPIC_API_KEY" if "apikey" in prompt else "none"})
+out({"type": "system", "subtype": "init", "session_id": sid, "apiKeySource": "ANTHROPIC_API_KEY" if "apikey" in prompt or os.environ.get("ANTHROPIC_API_KEY") else "none"})
 out({"type": "rate_limit_event", "rate_limit_info": {"status": "allowed", "utilization": 0.4, "rateLimitType": "seven_day"}})
 if "apikey" in prompt:
     time.sleep(5); result("billed!"); sys.exit(0)
@@ -118,10 +118,14 @@ class Base(unittest.TestCase):
         os.environ["FAKE_LOG"] = str(self.log)
         os.environ.pop("FAKE_AUTH", None)
         self.events: list[dict] = []
+        # Never the user's ~/.kiln-studio, never their keychain.
+        self._user_dir, self._keychain = wk.USER_DIR, wk.USE_KEYCHAIN
+        wk.USER_DIR, wk.USE_KEYCHAIN = self.tmp / "home", False
         self.w = wk.Worker(self.p, self.events.append, claude=str(self.fake), blender=FakeBlender())
 
     def tearDown(self) -> None:
         self.w.shutdown()
+        wk.USER_DIR, wk.USE_KEYCHAIN = self._user_dir, self._keychain
         os.environ.pop("ANTHROPIC_API_KEY", None)
         shutil.rmtree(self.tmp, ignore_errors=True)
 
@@ -205,11 +209,54 @@ class Runs(Base):
         a = self.calls()[-1]["args"]
         self.assertEqual((k["key"], a[a.index("--resume") + 1]), (f"request:{r['id']}", sid))
 
+    def test_an_api_key_account(self) -> None:
+        with self.assertRaises(ValueError):
+            wk.set_api_key("not-a-key")
+        wk.save_user_settings(account="api_key")
+        j = self.wait(self.w.submit("chat", asset="a", text="hello")["id"])
+        self.assertEqual(j["state"], "failed")   # no key yet
+        self.assertIn("no API key", j["error"])
+        wk.set_api_key("sk-ant-test-0123456789")
+        self.assertEqual((wk._key_file().stat().st_mode & 0o777), 0o600)
+        sl.save_config(self.p, {"claude_budget_usd": 0.5, "claude_model": "sonnet"})
+        j = self.wait(self.w.submit("chat", asset="a", text="hello")["id"])
+        self.assertEqual(j["state"], "done", j.get("error"))
+        c = self.calls()[-1]
+        a = c["args"]
+        self.assertEqual((a[a.index("--max-budget-usd") + 1], a[a.index("--model") + 1]), ("0.5", "sonnet"))
+        self.assertIn("ANTHROPIC_API_KEY", c["env"])
+        self.assertIn("CLAUDE_CONFIG_DIR", c["env"])
+        self.assertIn("…6789", self.w.status()["auth"]["message"])
+        # Back to the subscription: that conversation cannot resume a session of another account.
+        wk.save_user_settings(account="subscription")
+        j = self.wait(self.w.submit("chat", asset="a", text="again")["id"])
+        c = self.calls()[-1]
+        self.assertNotIn("ANTHROPIC_API_KEY", c["env"])
+        self.assertIn("--session-id", c["args"])
+        self.assertTrue(any(m["role"] == "system" and "account changed" in m["text"] for m in self.w.thread("asset:a")["messages"]))
+
+    def test_another_claude_account_and_auto_approvals(self) -> None:
+        wk.save_user_settings(account="account")
+        sl.save_config(self.p, {"claude_approvals": "auto"})
+        j = self.wait(self.w.submit("chat", asset="a", text="hello")["id"])
+        self.assertEqual(j["state"], "done", j.get("error"))
+        c = self.calls()[-1]
+        self.assertEqual(c["args"][c["args"].index("--permission-mode") + 1], "auto")
+        self.assertNotIn("--max-budget-usd", c["args"])
+        self.assertIn("CLAUDE_CONFIG_DIR", c["env"])
+        self.assertEqual(wk.account_env("account")["CLAUDE_CONFIG_DIR"], str(wk.account_dir()))
+        ev = {"tool_name": "Bash", "tool_input": {"command": "brew install x"}, "tool_use_id": "t1"}
+        self.assertEqual(hook.decide(ev, {"KILN_APPROVALS": "auto"})[0], None)          # auto mode decides
+        self.assertEqual(hook.decide(ev, {})[0], "defer")                                # ask: waits
+        paid = {"tool_name": "mcp__blender__generate_hyper3d_model_via_text", "tool_input": {}, "tool_use_id": "t2"}
+        self.assertEqual(hook.decide(paid, {"KILN_APPROVALS": "auto"})[0], "defer")     # money: always asks
+        self.assertGreaterEqual(wk.machine()["max_parallel"], 1)
+
     def test_refuses_without_the_subscription(self) -> None:
         os.environ["FAKE_AUTH"] = json.dumps({"loggedIn": True, "authMethod": "api-key", "apiProvider": "firstParty"})
         j = self.wait(self.w.submit("chat", asset="a", text="hi")["id"])
         self.assertEqual(j["state"], "failed")
-        self.assertIn("not your Claude subscription", j["error"])
+        self.assertIn("not a Claude subscription", j["error"])
         self.assertEqual(self.calls(), [])   # claude -p never started
         os.environ["FAKE_AUTH"] = json.dumps({"loggedIn": False})
         self.w._auth = None
@@ -243,6 +290,41 @@ class Runs(Base):
         self.w.stop(a["id"])   # SIGINT: the turn ends, the session stays
         self.assertEqual(self.wait(a["id"])["state"], "stopped")
         self.assertEqual(self.wait(b["id"])["state"], "done")
+
+    def test_two_at_a_time_never_on_one_model(self) -> None:
+        sl.save_config(self.p, {"claude_parallel": 2})
+        r = sl.add_request(self.p, "a lamp")
+        a = self.w.submit("chat", asset="a", text="sleep")
+        b = self.w.submit("chat", asset="b", text="sleep")
+        time.sleep(0.8)
+        self.assertEqual({self.w.jobs[x["id"]]["state"] for x in (a, b)}, {"running"})
+        self.assertEqual(len(self.w.status()["running_all"]), 2)
+        # The project's conversation waits for a free slot, not for a model.
+        c = self.w.submit("chat", key="project", text="hello")
+        time.sleep(0.3)
+        self.assertEqual(self.w.jobs[c["id"]]["state"], "queued")
+        self.w.stop(a["id"])
+        self.assertEqual(self.wait(c["id"])["state"], "done")
+        self.w.stop(b["id"])
+        self.wait(b["id"])
+        # A model made from a Create request is that request's conversation: while the
+        # request runs, a message on the model is refused, even with a slot free.
+        sl.close_request(self.p, r["id"], asset="z")
+        d = self.w.submit("create", request=r["id"])
+        self.assertEqual(self.w.thread("asset:z")["key"], f"request:{r['id']}")
+        with self.assertRaises(ValueError):
+            self.w.submit("notes", asset="z")
+        self.assertEqual(self.wait(d["id"])["state"], "done")
+        # And a slot never takes a model another slot holds: a Create run on z, a chat on z
+        # queued behind it under its own key (a model not made from the request).
+        busy = {"id": "j_x", "key": "request:other", "asset": None, "request": r["id"], "state": "running"}
+        queued = {"id": "j_y", "key": "asset:y", "asset": "z", "request": None, "state": "queued"}
+        with self.w.cv:
+            self.w.running[1], self.w.jobs["j_y"] = busy, queued
+            self.w.queue.append("j_y")
+            self.assertIsNone(self.w._next(0))
+            self.w.running.pop(1)
+            self.assertIs(self.w._next(0), queued)
 
     def test_stop_a_queued_run(self) -> None:
         a = self.w.submit("chat", asset="a", text="sleep")

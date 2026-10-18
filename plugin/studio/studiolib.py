@@ -212,7 +212,24 @@ RESERVED_PORT = 9876   # the usual Blender MCP port: the user's own Blender, nev
 CONFIG_DEFAULTS = {"live_view": True, "auto_open": True, "exclude": [], "target": "web",
                    # The Claude worker (worker.py): off until the user turns it on; its own
                    # Blender's port, and which Blender MCP server drives it.
-                   "claude_worker": False, "blender_port": 9877, "blender_mcp": "ahujasid"}
+                   "claude_worker": False, "blender_port": 9877, "blender_mcp": "ahujasid",
+                   # How Claude's tool calls are approved (ask: the safe list passes, the rest
+                   # waits for the user; auto: Claude Code's auto mode decides, paid generation
+                   # still asks), how many runs at once (each its own Blender, ports from
+                   # blender_port up), the model ("" = Claude Code's default), and the cap per
+                   # request when running on an API key.
+                   "claude_approvals": "ask", "claude_parallel": 1, "claude_model": "", "claude_budget_usd": 2.0}
+CLAUDE_APPROVALS = ("ask", "auto")
+MAX_PARALLEL = 4
+MODEL_RE = re.compile(r"^[a-z0-9][a-z0-9.\-\[\]]{0,63}$")
+
+
+def _parallel_ok(v) -> bool:
+    return isinstance(v, int) and not isinstance(v, bool) and 1 <= v <= MAX_PARALLEL
+
+
+def _budget_ok(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and 0.1 <= v <= 100
 
 
 def _port_ok(v) -> bool:
@@ -229,6 +246,14 @@ def clean_config(data: dict) -> dict:
         out["blender_port"] = data["blender_port"]
     if data.get("blender_mcp") in BLENDER_MCPS:
         out["blender_mcp"] = data["blender_mcp"]
+    if data.get("claude_approvals") in CLAUDE_APPROVALS:
+        out["claude_approvals"] = data["claude_approvals"]
+    if _parallel_ok(data.get("claude_parallel")):
+        out["claude_parallel"] = data["claude_parallel"]
+    if isinstance(data.get("claude_model"), str) and (data["claude_model"] == "" or MODEL_RE.match(data["claude_model"])):
+        out["claude_model"] = data["claude_model"]
+    if _budget_ok(data.get("claude_budget_usd")):
+        out["claude_budget_usd"] = float(data["claude_budget_usd"])
     ex = data.get("exclude")
     if isinstance(ex, list):
         out["exclude"] = [str(x).strip() for x in ex if str(x).strip()][:200]
@@ -250,6 +275,14 @@ def save_config(project: "Project", updates: dict) -> dict:
                              "(the usual Blender MCP port, kept for your own Blender)")
         if k == "blender_mcp" and v not in BLENDER_MCPS:
             raise ValueError(f"blender_mcp must be one of {', '.join(BLENDER_MCPS)}")
+        if k == "claude_approvals" and v not in CLAUDE_APPROVALS:
+            raise ValueError("claude_approvals must be ask or auto")
+        if k == "claude_parallel" and not _parallel_ok(v):
+            raise ValueError(f"claude_parallel must be 1 to {MAX_PARALLEL}")
+        if k == "claude_model" and not (isinstance(v, str) and (v == "" or MODEL_RE.match(v))):
+            raise ValueError("claude_model is an alias (opus, sonnet…) or a model's full name, or empty for the default")
+        if k == "claude_budget_usd" and not _budget_ok(v):
+            raise ValueError("claude_budget_usd must be 0.1 to 100 (dollars per request)")
         if k == "exclude" and not (isinstance(v, list) and all(isinstance(x, str) for x in v)):
             raise ValueError("exclude must be a list of glob patterns")
         if k == "target" and v not in TARGETS:

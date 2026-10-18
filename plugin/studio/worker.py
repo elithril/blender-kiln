@@ -2,10 +2,15 @@
 user's own Claude login — one run at a time.
 
 A PROTOTYPE. What it holds to:
-- **The subscription, never an API key.** Before each run `claude auth status` must say
-  `authMethod: claude.ai` with the first-party provider; the child process gets no
-  ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN, never `--bare`; and a run whose init event
-  reports an API key source other than "none" is stopped at once.
+- **The account the user chose, and only it** (Settings → Claude, kept per user in
+  ~/.kiln-studio/claude.json, never in the project): their Claude subscription as Claude
+  Code is logged in (default); another Claude account, logged in once into a config folder
+  of Studio's own (CLAUDE_CONFIG_DIR), so the terminal's Claude Code keeps its own; or an
+  Anthropic API key, kept in the macOS keychain (elsewhere a 0600 file), billed per token
+  and capped per request (--max-budget-usd). Before each run the account is checked
+  (`claude auth status` must say claude.ai and the first-party provider for the first two);
+  the child never inherits this session's keys, never `--bare`; and a run whose init event
+  reports another source of credentials than the one chosen is stopped at once.
 - **One run at a time**: a queue. The subscription's quota is shared by every session, and
   there is one Blender.
 - **Its own Blender**: a GUI Blender on the project's `blender_port` (default 9877, never
@@ -60,6 +65,10 @@ DROP_ENV = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDECODE", "CLAUDE_C
 PROVIDER_ENV = ("CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX", "CLAUDE_CODE_USE_FOUNDRY")
 PROPOSAL = "KILN-PROPOSAL:"
 MAX_RUN_S = 3600
+ACCOUNTS = ("subscription", "account", "api_key")
+USER_DIR = Path(os.environ.get("KILN_STUDIO_HOME") or "~/.kiln-studio").expanduser()
+KEYCHAIN = ("kiln-studio", "anthropic-api-key")   # service, account
+USE_KEYCHAIN = sys.platform == "darwin"            # tests turn it off: never the real keychain
 
 
 class WorkerError(Exception):
@@ -73,10 +82,94 @@ def clean_env(base: dict | None = None) -> dict:
     return env
 
 
-def auth_status(claude: str = "claude", env: dict | None = None, timeout: float = 20) -> dict:
-    """What `claude auth status` says, and whether the worker may run on it."""
-    e = clean_env(env)
-    out = {"ok": False, "method": None, "provider": None, "subscription": None, "message": ""}
+# ── the account: per user, not per project ──────────────────────────────────
+
+
+def user_settings() -> dict:
+    d = sl.read_json(USER_DIR / "claude.json", {}) or {}
+    return {"account": d.get("account") if d.get("account") in ACCOUNTS else "subscription"}
+
+
+def save_user_settings(**kw) -> dict:
+    if "account" in kw and kw["account"] not in ACCOUNTS:
+        raise ValueError(f"account must be one of {', '.join(ACCOUNTS)}")
+    cur = {**user_settings(), **kw}
+    USER_DIR.mkdir(parents=True, exist_ok=True)
+    sl.write_json(USER_DIR / "claude.json", cur)
+    return cur
+
+
+def account_dir() -> Path:
+    """Studio's own Claude Code config folder, for another Claude account."""
+    return USER_DIR / "claude-account"
+
+
+def api_key_dir() -> Path:
+    """The API key's runs keep their sessions apart from the subscription's."""
+    return USER_DIR / "claude-api"
+
+
+def _key_file() -> Path:
+    return USER_DIR / "api_key"
+
+
+def get_api_key() -> str | None:
+    if USE_KEYCHAIN and shutil.which("security"):
+        r = subprocess.run(["security", "find-generic-password", "-s", KEYCHAIN[0], "-a", KEYCHAIN[1], "-w"],
+                           capture_output=True, text=True)
+        return r.stdout.strip() or None if r.returncode == 0 else None
+    f = _key_file()
+    return f.read_text().strip() or None if f.is_file() else None
+
+
+def set_api_key(key: str | None) -> None:
+    """Keep the key (None forgets it): the macOS keychain, else a file only the user reads."""
+    if key is not None:
+        key = key.strip()
+        if not key.startswith("sk-ant-") or len(key) > 300 or any(c.isspace() for c in key):
+            raise ValueError("that does not look like an Anthropic API key (sk-ant-…)")
+    if USE_KEYCHAIN and shutil.which("security"):
+        subprocess.run(["security", "delete-generic-password", "-s", KEYCHAIN[0], "-a", KEYCHAIN[1]], capture_output=True)
+        if key:
+            r = subprocess.run(["security", "add-generic-password", "-s", KEYCHAIN[0], "-a", KEYCHAIN[1], "-w", key, "-U"],
+                               capture_output=True, text=True)
+            if r.returncode != 0:
+                raise ValueError("the keychain refused the key: " + r.stderr.strip()[:200])
+        return
+    f = _key_file()
+    if not key:
+        f.unlink(missing_ok=True)
+        return
+    USER_DIR.mkdir(parents=True, exist_ok=True)
+    f.write_text(key)
+    f.chmod(0o600)
+
+
+def account_env(account: str, base: dict | None = None) -> dict:
+    """The child's environment for that account: never this session's credentials."""
+    e = clean_env(base)
+    if account == "account":
+        e["CLAUDE_CONFIG_DIR"] = str(account_dir())
+    elif account == "api_key":
+        e["CLAUDE_CONFIG_DIR"] = str(api_key_dir())
+        key = get_api_key()
+        if key:
+            e["ANTHROPIC_API_KEY"] = key
+    else:
+        e.pop("CLAUDE_CONFIG_DIR", None)
+    return e
+
+
+def auth_status(claude: str = "claude", env: dict | None = None, timeout: float = 20, account: str = "subscription") -> dict:
+    """Whether the worker may run on the chosen account, and what to tell the user."""
+    out = {"ok": False, "account": account, "method": None, "provider": None, "subscription": None, "message": ""}
+    if account == "api_key":
+        key = get_api_key()
+        out.update(method="api_key", ok=bool(key),
+                   message=f"your Anthropic API key (…{key[-4:]})" if key else "no API key yet: add one in Settings → Claude")
+        return out
+    e = account_env(account, env)
+    out["message"] = ""
     on = [k for k in PROVIDER_ENV if e.get(k) not in (None, "", "0", "false")]
     if on:
         out["message"] = f"{on[0]} is set: Claude Code would bill that provider, not your subscription"
@@ -98,16 +191,43 @@ def auth_status(claude: str = "claude", env: dict | None = None, timeout: float 
     out.update(method=st.get("authMethod"), provider=st.get("apiProvider"),
                subscription=st.get("subscriptionType"), email=st.get("email"))
     if not st.get("loggedIn"):
-        out["message"] = "Claude Code is not logged in: run `claude` once in a terminal and log in"
+        out["message"] = ("this Claude account is not logged in yet: Settings → Claude → Log in" if account == "account"
+                          else "Claude Code is not logged in: run `claude` once in a terminal and log in")
     elif st.get("authMethod") != "claude.ai":
-        out["message"] = (f"Claude Code is logged in with {st.get('authMethod')!r}, not your Claude subscription "
-                          "(claude.ai): the worker refuses to run on an API key")
+        out["message"] = (f"Claude Code is logged in with {st.get('authMethod')!r}, not a Claude subscription "
+                          "(claude.ai): to run on an API key, choose API key in Settings → Claude")
     elif st.get("apiProvider") not in (None, "firstParty"):
         out["message"] = f"Claude Code uses the {st.get('apiProvider')} provider, not your Claude subscription"
     else:
         out["ok"] = True
-        out["message"] = f"your Claude subscription ({st.get('subscriptionType') or 'claude.ai'})"
+        who = st.get("subscriptionType") or "claude.ai"
+        out["message"] = f"another Claude account ({st.get('email') or who})" if account == "account" else f"your Claude subscription ({who})"
     return out
+
+
+def login_account(claude: str = "claude") -> subprocess.Popen:
+    """Start `claude auth login` for Studio's own account folder: it opens the browser."""
+    account_dir().mkdir(parents=True, exist_ok=True)
+    return subprocess.Popen([claude, "auth", "login", "--claudeai"], env=account_env("account"),
+                            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                            start_new_session=True)
+
+
+def machine() -> dict:
+    """RAM and cores, and how many Blenders in parallel this machine takes: about 1 GB each
+    beyond 4 GB kept for the rest, at most one per two cores, 1 to 4."""
+    ram = None
+    try:
+        if sys.platform == "darwin":
+            ram = int(subprocess.run(["sysctl", "-n", "hw.memsize"], capture_output=True, text=True, timeout=5).stdout.strip())
+        elif hasattr(os, "sysconf"):
+            ram = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
+    except (OSError, ValueError, subprocess.SubprocessError):
+        ram = None
+    cores = os.cpu_count() or 2
+    gb = ram / 2**30 if ram else None
+    ceiling = max(1, min(4, cores // 2, int(gb - 4) if gb else 1))
+    return {"ram_gb": round(gb, 1) if gb else None, "cores": cores, "max_parallel": ceiling}
 
 
 # ── the worker's Blender ─────────────────────────────────────────────────────
@@ -154,10 +274,12 @@ def mcp_config(project: sl.Project, port: int, kind: str) -> dict:
 
 
 class Blender:
-    """The worker's GUI Blender: started on demand, reused, stopped with Studio."""
+    """One of the worker's GUI Blenders: started on demand, reused, stopped with Studio.
+    Blender `index` serves on blender_port + index, with a profile of its own."""
 
-    def __init__(self, project: sl.Project):
+    def __init__(self, project: sl.Project, index: int = 0):
         self.project = project
+        self.index = index
         self.proc: subprocess.Popen | None = None
         self.state = "stopped"   # stopped | starting | running | failed
         self.message = ""
@@ -166,10 +288,14 @@ class Blender:
 
     @property
     def dir(self) -> Path:
-        return self.project.data / "cache" / "worker"
+        d = self.project.data / "cache" / "worker"
+        return d if self.index == 0 else d / f"blender-{self.index + 1}"
+
+    def port_now(self) -> int:
+        return self.project.settings()["blender_port"] + self.index
 
     def status(self) -> dict:
-        port = self.project.settings()["blender_port"]
+        port = self.port_now()
         alive = self.proc is not None and self.proc.poll() is None
         try:
             up = port_open(port)
@@ -194,7 +320,7 @@ class Blender:
     def ensure(self) -> str:
         """Blender serving the MCP add-on on the project's port: "reused" or "started"."""
         st = self.project.settings()
-        port, kind = st["blender_port"], st["blender_mcp"]
+        port, kind = self.port_now(), st["blender_mcp"]
         with self.lock:
             if port_open(port):
                 self.state, self.port, self.message = "running", port, ""
@@ -322,7 +448,7 @@ class Store:
             return key
         asset = key.split(":", 1)[1]
         r = next((x for x in sl.load_requests(self.project) if x.get("asset") == asset), None)
-        if r and self.session(f"request:{r['id']}"):
+        if r:
             self.set_session(key, alias=f"request:{r['id']}")
             return f"request:{r['id']}"
         return key
@@ -390,23 +516,36 @@ class Worker:
         self.project = project
         self.emit = emit
         self.claude = claude or os.environ.get("KILN_STUDIO_CLAUDE") or "claude"
-        self.blender = blender or Blender(project)
+        # One Blender per slot (claude_parallel); a test passes one fake for all.
+        self._fake_blender = blender
+        self.blenders: dict[int, Blender] = {}
         self.store = Store(project)
         self.jobs: dict[str, dict] = {}
         self.queue: deque[str] = deque()
         self.cv = threading.Condition()
-        self.current: dict | None = None
-        self.proc: subprocess.Popen | None = None
+        self.running: dict[int, dict] = {}      # slot -> its job
         self.rate: dict | None = None
         self._auth: tuple[float, dict] | None = None
         self.auth_ttl = auth_ttl
-        self._thread: threading.Thread | None = None
+        self._threads: dict[int, threading.Thread] = {}
         self._stopping = False
+
+    def blender_for(self, slot: int) -> Blender:
+        if self._fake_blender is not None:
+            return self._fake_blender
+        if slot not in self.blenders:
+            self.blenders[slot] = Blender(self.project, slot)
+        return self.blenders[slot]
+
+    @property
+    def blender(self) -> Blender:
+        return self.blender_for(0)
 
     # status
     def auth(self, force: bool = False) -> dict:
-        if force or not self._auth or time.time() - self._auth[0] > self.auth_ttl:
-            self._auth = (time.time(), auth_status(self.claude))
+        account = user_settings()["account"]
+        if force or not self._auth or time.time() - self._auth[0] > self.auth_ttl or self._auth[1].get("account") != account:
+            self._auth = (time.time(), auth_status(self.claude, account=account))
         return self._auth[1]
 
     def view(self, job: dict) -> dict:
@@ -425,11 +564,16 @@ class Worker:
         with self.cv:
             jobs = [self.view(self.jobs[j]) for j in list(self.jobs)[-30:]]
             queued = list(self.queue)
+            running = [j["id"] for _, j in sorted(self.running.items())]
         for j in jobs:
             j["position"] = queued.index(j["id"]) + 1 if j["id"] in queued else None
         return {"enabled": st["claude_worker"], "port": st["blender_port"], "mcp": st["blender_mcp"],
+                "approvals": st["claude_approvals"], "model": st["claude_model"], "budget_usd": st["claude_budget_usd"],
+                "parallel": st["claude_parallel"], "machine": machine(), "account": user_settings()["account"],
+                "account_dir": str(account_dir()),
                 "auth": self.auth(force_auth), "blender": self.blender.status(),
-                "running": self.current["id"] if self.current else None,
+                "blenders": [self.blender_for(i).status() for i in sorted({0, *self.blenders})],
+                "running": next(iter(running), None), "running_all": running,
                 "jobs": jobs, "rate": self.rate, "usage": self.store.usage(),
                 "api_key_in_env": bool(os.environ.get("ANTHROPIC_API_KEY"))}
 
@@ -479,9 +623,7 @@ class Worker:
             self.jobs[job["id"]] = job
             self.queue.append(job["id"])
             self.cv.notify_all()
-            if not self._thread or not self._thread.is_alive():
-                self._thread = threading.Thread(target=self._loop, daemon=True, name="claude-worker")
-                self._thread.start()
+            self._start_slots()
         if kind != "resume":
             entry = self.store.append(job["key"], {"job": job["id"], "role": "user", "kind": kind, "text": text})
         else:
@@ -522,7 +664,7 @@ class Worker:
             if job["state"] != "running":
                 raise ValueError(f"this run is {job['state']}")
             job["stop_requested"] = True
-            proc = self.proc
+            proc = job.get("_proc")
         if proc and proc.poll() is None:
             # SIGINT ends the turn the way Ctrl-C does; the session stays resumable.
             proc.send_signal(signal.SIGINT)
@@ -533,9 +675,13 @@ class Worker:
         self._stopping = True
         with self.cv:
             self.cv.notify_all()
-        if self.proc and self.proc.poll() is None:
-            self.proc.send_signal(signal.SIGINT)
-        self.blender.stop()
+        with self.cv:
+            procs = [j.get("_proc") for j in self.running.values()]
+        for proc in procs:
+            if proc and proc.poll() is None:
+                proc.send_signal(signal.SIGINT)
+        for b in ({self._fake_blender} if self._fake_blender is not None else set(self.blenders.values())):
+            b.stop()
 
     def decisions_dir(self) -> Path:
         d = self.store.dir / "decisions"
@@ -543,49 +689,84 @@ class Worker:
         return d
 
     # running
-    def _loop(self) -> None:
+    def _start_slots(self) -> None:
+        """A thread per slot, up to claude_parallel (called with self.cv held)."""
+        for slot in range(self.project.settings()["claude_parallel"]):
+            t = self._threads.get(slot)
+            if not t or not t.is_alive():
+                self._threads[slot] = threading.Thread(target=self._loop, args=(slot,), daemon=True, name=f"claude-worker-{slot + 1}")
+                self._threads[slot].start()
+
+    def _next(self, slot: int) -> dict | None:
+        """The first queued job this slot may take: never two runs on one conversation or one
+        model at a time; a slot beyond claude_parallel (lowered since) takes nothing."""
+        if slot >= self.project.settings()["claude_parallel"]:
+            return None
+        model = lambda j: j.get("asset") or (self.view(j)["asset"] if j.get("request") else None)
+        busy_keys = {j["key"] for j in self.running.values()}
+        busy_assets = {model(j) for j in self.running.values()} - {None}
+        for jid in self.queue:
+            j = self.jobs[jid]
+            if j["key"] not in busy_keys and model(j) not in busy_assets:
+                self.queue.remove(jid)
+                return j
+        return None
+
+    def _loop(self, slot: int = 0) -> None:
         while not self._stopping:
             with self.cv:
-                while not self.queue and not self._stopping:
+                job = None
+                while not self._stopping and (job := self._next(slot)) is None:
                     self.cv.wait(timeout=5)
-                if self._stopping:
+                    if slot >= self.project.settings()["claude_parallel"] and not self.queue:
+                        return
+                if self._stopping or job is None:
                     return
-                job = self.jobs[self.queue.popleft()]
-                self.current = job
+                self.running[slot] = job
             try:
-                self._run(job)
+                self._run(job, slot)
             except WorkerError as e:
                 self._fail(job, str(e))
             except Exception as e:  # never let the worker die
                 self._fail(job, f"worker error: {e!r}")
             finally:
                 with self.cv:
-                    self.current, self.proc = None, None
+                    self.running.pop(slot, None)
+                    job.pop("_proc", None)
+                    self.cv.notify_all()
 
     def _fail(self, job: dict, msg: str) -> None:
         job["state"], job["error"], job["ended"] = "failed", msg, sl.now()
         self._changed(job, self.store.append(job["key"], {"job": job["id"], "role": "error", "text": msg}))
 
-    def command(self, job: dict, session: dict | None) -> list[str]:
+    def command(self, job: dict, session: dict | None, port: int | None = None) -> list[str]:
         st = self.project.settings()
+        port = port or st["blender_port"]
         work = self.store.dir.parent / "cache" / "worker"
         work.mkdir(parents=True, exist_ok=True)
-        mcp = work / "mcp.json"
-        sl.write_json(mcp, mcp_config(self.project, st["blender_port"], st["blender_mcp"]))
+        mcp = work / f"mcp-{port}.json"
+        sl.write_json(mcp, mcp_config(self.project, port, st["blender_mcp"]))
         settings = work / "settings.json"
         hook_cmd = f"{_q(sys.executable)} {_q(str(HOOK))}"
         sl.write_json(settings, {"hooks": {"PreToolUse": [{"matcher": "*", "hooks": [
             {"type": "command", "command": hook_cmd, "timeout": 30}]}]}})
+        # Ask: the safe list passes, the rest waits for the user. Auto: Claude Code's auto mode
+        # decides; the hook still holds back what can spend money (paid generation).
+        mode = "auto" if st["claude_approvals"] == "auto" else "dontAsk"
         cmd = [self.claude, "-p"]
         cmd += ["--resume", session["id"]] if session and session.get("started") else ["--session-id", job["session"]]
         cmd += ["--plugin-dir", str(PLUGIN), "--mcp-config", str(mcp), "--strict-mcp-config",
                 "--setting-sources", "project", "--settings", str(settings),
-                "--permission-mode", "dontAsk", "--allowedTools", ",".join(ALLOWED),
-                "--append-system-prompt", system_context(self.project, job, st["blender_port"], job.get("lang", "en")),
+                "--permission-mode", mode, "--allowedTools", ",".join(ALLOWED),
+                "--append-system-prompt", system_context(self.project, job, port, job.get("lang", "en")),
                 "--output-format", "stream-json", "--verbose", "--include-partial-messages"]
+        if st["claude_model"]:
+            cmd += ["--model", st["claude_model"]]
+        if job.get("account") == "api_key":
+            cmd += ["--max-budget-usd", str(st["claude_budget_usd"])]
         return cmd
 
-    def _run(self, job: dict) -> None:
+    def _run(self, job: dict, slot: int = 0) -> None:
         if not self.project.settings()["claude_worker"]:
             raise WorkerError("the Claude worker is off: turn it on in Settings → Claude")
         job["state"], job["started"] = "running", sl.now()
@@ -593,25 +774,35 @@ class Worker:
         auth = self.auth(force=True)
         if not auth["ok"]:
             raise WorkerError(f"Not running: {auth['message']}.")
-        how = self.blender.ensure()
+        job["account"] = auth["account"]
+        blender = self.blender_for(slot)
+        how = blender.ensure()
         if how == "started":
             self._changed(job, self.store.append(job["key"], {"job": job["id"], "role": "system",
-                                                              "text": f"Started Studio's Blender on port {self.blender.port}"}))
+                                                              "text": f"Started Studio's Blender on port {blender.port}"}))
         session = self.store.session(job["key"])
+        if session and session.get("started") and session.get("account", "subscription") != job["account"]:
+            # Sessions live in the account's own Claude Code folder: another account cannot resume one.
+            if job["kind"] == "resume":
+                raise WorkerError("the account changed since Claude asked: send your answer as a message")
+            self._changed(job, self.store.append(job["key"], {"job": job["id"], "role": "system",
+                                                              "text": "New session: the Claude account changed since the last message"}))
+            session = None
         if job["kind"] == "resume" and not (session and session.get("started")):
             raise WorkerError("no conversation to resume")
         job["session"] = session["id"] if session and session.get("started") else str(uuid.uuid4())
         if not (session and session.get("started")):
-            self.store.set_session(job["key"], id=job["session"], started=False)
-        cmd = self.command(job, session)
-        env = dict(clean_env(), KILN_STUDIO_ROOT=str(self.project.root), KILN_PLUGIN_DIR=str(PLUGIN),
-                   KILN_DECISIONS=str(self.decisions_dir()))
+            self.store.set_session(job["key"], id=job["session"], started=False, account=job["account"])
+        cmd = self.command(job, session, blender.port or self.project.settings()["blender_port"] + slot)
+        env = dict(account_env(job["account"]), KILN_STUDIO_ROOT=str(self.project.root), KILN_PLUGIN_DIR=str(PLUGIN),
+                   KILN_DECISIONS=str(self.decisions_dir()),
+                   KILN_APPROVALS="auto" if self.project.settings()["claude_approvals"] == "auto" else "ask")
         err = (self.project.data / "cache" / "worker" / "claude.err").open("ab")
         t0 = time.time()
         proc = subprocess.Popen(cmd, cwd=str(self.project.root), env=env, stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE, stderr=err, text=True, bufsize=1, start_new_session=True)
         with self.cv:
-            self.proc = proc
+            job["_proc"] = proc
             # Stopped while it was starting (auth, Blender): stop() had no process to signal.
             if job.get("stop_requested"):
                 proc.send_signal(signal.SIGINT)
@@ -635,12 +826,16 @@ class Worker:
                 t = ev.get("type")
                 if t == "system" and ev.get("subtype") == "init":
                     src = ev.get("apiKeySource")
-                    if src not in (None, "none"):
+                    want_key = job["account"] == "api_key"
+                    if want_key and src != "ANTHROPIC_API_KEY":
+                        proc.terminate()
+                        raise WorkerError(f"Stopped: Claude Code was about to run on {src or 'another login'}, not your API key.")
+                    if not want_key and src not in (None, "none"):
                         proc.terminate()
                         raise WorkerError(f"Stopped: Claude Code was about to use an API key ({src}), not your subscription.")
                     if ev.get("session_id"):
                         job["session"] = ev["session_id"]
-                        self.store.set_session(job["key"], id=ev["session_id"], started=True)
+                        self.store.set_session(job["key"], id=ev["session_id"], started=True, account=job["account"])
                 elif t == "stream_event":
                     e = ev.get("event") or {}
                     if e.get("type") == "content_block_delta" and (e.get("delta") or {}).get("type") == "text_delta":
@@ -682,12 +877,12 @@ class Worker:
             err.close()
         job.update(ended=sl.now(), cost_usd=result.get("total_cost_usd"), turns=result.get("num_turns"),
                    duration_ms=result.get("duration_ms"), stop_reason=result.get("stop_reason"))
-        self.store.usage({"at": sl.now(), "job": job["id"], "kind": job["kind"], "key": job["key"],
+        self.store.usage({"at": sl.now(), "job": job["id"], "kind": job["kind"], "key": job["key"], "account": job["account"],
                           "cost_usd": result.get("total_cost_usd"), "turns": result.get("num_turns"),
                           "duration_ms": result.get("duration_ms"), "wall_s": round(time.time() - t0, 1),
                           "stop_reason": result.get("stop_reason")})
         if result.get("session_id"):
-            self.store.set_session(job["key"], id=result["session_id"], started=True)
+            self.store.set_session(job["key"], id=result["session_id"], started=True, account=job["account"])
         summary = {"job": job["id"], "role": "result", "cost_usd": result.get("total_cost_usd"),
                    "turns": result.get("num_turns"), "duration_ms": result.get("duration_ms"),
                    "stop_reason": result.get("stop_reason")}

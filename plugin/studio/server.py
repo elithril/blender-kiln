@@ -549,8 +549,20 @@ def make_handler(studio: Studio, port_ref: list[int]):
                         return self._json(studio.worker.stop(parts[3]))
                     if parts[4] == "answer":
                         return self._json(studio.worker.answer(parts[3], str(body.get("decision", "")), str(body.get("reason", ""))))
+                if method == "PUT" and parts == ["api", "claude", "account"]:
+                    # Per user (~/.kiln-studio/claude.json), not per project: which account runs.
+                    wk.save_user_settings(account=str(body.get("account", "")))
+                    return self._json(studio.worker.status(force_auth=True))
+                if method == "POST" and parts == ["api", "claude", "key"]:
+                    # The API key goes to the keychain; it never comes back out through here.
+                    wk.set_api_key(str(body["key"]) if body.get("key") else None)
+                    return self._json(studio.worker.status(force_auth=True))
+                if method == "POST" and parts == ["api", "claude", "login"]:
+                    wk.login_account(studio.worker.claude)
+                    return self._json({"started": True, "folder": str(wk.account_dir())})
                 if method == "POST" and parts == ["api", "claude", "blender", "stop"]:
-                    studio.worker.blender.stop()
+                    for i in sorted({0, *studio.worker.blenders}):
+                        studio.worker.blender_for(i).stop()
                     return self._json(studio.worker.blender.status())
                 if method == "POST" and parts == ["api", "example"]:
                     aid = sl.add_example(project)

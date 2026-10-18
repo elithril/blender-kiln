@@ -15,8 +15,9 @@ Safe, allowed at once:
 - the kiln-studio MCP tools;
 - Edit / Write / NotebookEdit inside the project folder;
 - Bash commands made only of the skill's own Python scripts and read-only commands.
-Anything else is deferred. AskUserQuestion is denied with a reason: nobody can answer it
-mid-run, the question goes in the message instead.
+Anything else is deferred (with KILN_APPROVALS=auto: left to Claude Code's auto mode, but
+paid generation, which still waits for the user). AskUserQuestion is denied with a reason:
+nobody can answer it mid-run, the question goes in the message instead.
 
 Standard library only. Also importable: classify() is what the tests exercise.
 """
@@ -119,6 +120,9 @@ def decide(event: dict, env: dict) -> tuple[str, str]:
     plugin = Path(env.get("KILN_PLUGIN_DIR") or Path(__file__).resolve().parent.parent).resolve()
     tool, tool_input = str(event.get("tool_name", "")), event.get("tool_input") or {}
     decision, reason = classify(tool, tool_input if isinstance(tool_input, dict) else {}, root, plugin)
+    if decision == "defer" and env.get("KILN_APPROVALS") == "auto" and not PAID.match(tool):
+        # Auto: Claude Code's auto mode decides the rest; only what can spend money waits here.
+        return None, "auto mode decides"
     if decision == "defer" and env.get("KILN_DECISIONS"):
         tid = str(event.get("tool_use_id", ""))
         if re.fullmatch(r"[A-Za-z0-9_-]{1,100}", tid):
@@ -141,6 +145,8 @@ def main() -> None:
     except ValueError:
         sys.exit(0)   # no decision: dontAsk refuses whatever is not on --allowedTools
     decision, reason = decide(event, dict(os.environ))
+    if decision is None:
+        sys.exit(0)   # no decision: the permission mode's own
     log = os.environ.get("KILN_DECISIONS")
     if log:
         try:
