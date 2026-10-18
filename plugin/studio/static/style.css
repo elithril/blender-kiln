@@ -1103,3 +1103,23 @@ input.num { width: 84px; }
 .ctx-body textarea:focus { outline: none; border-color: var(--accent); }
 .ctx-body .row { display: flex; align-items: center; gap: 8px; }
 .srow.wide #set-context { width: 100%; border-radius: 7px; border: 1px solid var(--line-2); background: var(--bg); padding: 8px 10px; font: 12.5px/1.5 var(--font); color: var(--text); resize: vertical; }
+/* the tour */
+.tour { position: fixed; inset: 0; z-index: 80; pointer-events: none; }
+.tour-ring { position: fixed; border-radius: 10px; box-shadow: 0 0 0 2px var(--accent), 0 0 0 9999px rgba(5, 7, 10, .45); transition: all .25s ease; pointer-events: none; }
+.tour-card { position: fixed; width: 330px; padding: 14px 16px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line-3); box-shadow: var(--shadow); pointer-events: auto; transition: left .25s ease, top .25s ease, border-color .2s; }
+.tour-card.ok { border-color: var(--ok); }
+.tour-step { font: 600 10.5px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.tour-card h4 { margin: 6px 0 6px; font-size: 14px; }
+.tour-card p { margin: 0 0 12px; font-size: 12.5px; line-height: 1.5; color: var(--text-2); }
+.tour-acts { display: flex; align-items: center; gap: 6px; }
+.tour-acts .sp { flex: 1; }
+.tour-offer { position: fixed; right: 16px; bottom: 16px; z-index: 70; width: 320px; padding: 14px 16px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line-3); box-shadow: var(--shadow); }
+.tour-offer b { font-size: 13.5px; }
+.tour-offer p { margin: 6px 0 12px; font-size: 12.5px; line-height: 1.5; color: var(--text-2); }
+.tour-offer .tour-acts { justify-content: flex-end; }
+@media (prefers-reduced-motion: reduce) { .tour-ring, .tour-card { transition: none; } }
+/* tabs with badges: a smaller badge, tighter tabs, so five fit with two counts */
+.tabs { gap: 0; padding-left: 4px; padding-right: 4px; }
+.tabs [role=tab] { padding-left: 4px; padding-right: 4px; gap: 3px; }
+.tabs .tc { min-width: 14px; height: 14px; font-size: 9.5px; line-height: 14px; padding: 0 3px; border-radius: 7px; }
+.tabs .collapse { width: 24px; }

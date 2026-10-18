@@ -2330,6 +2330,97 @@ async function onClaude(ev) {
     claudeWaits(ev.job);
 }
 
+// ── the tour: a playable first walk through Studio, on kiln's example barrel ──
+// Each step lights one thing up and moves on by itself once the user has done it (or skips).
+// Offered once, the first time; ⌘K → Take the tour starts it again.
+
+const EXAMPLE = 'kiln-example/barrel';
+const tour = { i: -1, timer: 0, base: null };
+const TOUR = [
+  { target: '#view', title: N_('Turn around the model'), text: N_('Drag on the view to orbit, scroll to zoom, right-drag to pan. 1 to 6 jump to the front, back, sides, top and three-quarter views.'),
+    start: () => { tour.cam = viewer.camera.position.clone(); }, done: () => tour.cam && viewer.camera.position.distanceTo(tour.cam) > 0.05 },
+  { target: '#tb-shade', title: N_('Look at it in clay'), text: N_('Clay shows the shape without its colours: dents, seams and lumps stand out. S goes through the shadings.'),
+    done: () => viewer.opts.shade === 'clay' },
+  { target: '#t-pin', title: N_('Pin a note'), text: N_('Pin a note, click the barrel where something should change, write what (for instance “the hoops are too thin”), then Save. Claude reads it with a screenshot of what you saw.'),
+    start: () => { ensureRight('notes'); tour.notes = state.detail?.notes.length || 0; }, done: () => (state.detail?.notes.length || 0) > tour.notes },
+  { target: '#tb-claude', title: N_('Ask Claude'), optional: true,
+    text: () => claude.status?.enabled ? t('The ✦ tab talks to Claude about this model: “work on my note”, or anything else. It uses your Claude quota — skip this step to keep it.') : t('With Claude in Studio on (Settings → Claude), the ✦ tab asks Claude to change the model from here. Off, run /kiln studio in your terminal: Claude reads the same notes.'),
+    start: () => { tour.jobs = claude.status?.usage?.runs || 0; }, done: () => (claude.status?.jobs || []).some((j) => j.asset === EXAMPLE) },
+  { target: '#t-compare', title: N_('Compare before and after'), text: N_('Studio kept the version you noted. Compare shows it beside the current one — split with a divider, or side by side — with the triangles and size each.'),
+    done: () => !!state.compare },
+];
+N_('Next'); N_('Done');
+
+function tourStep(i) {
+  tour.i = i;
+  clearInterval(tour.timer);
+  if (i >= TOUR.length) return tourEnd(true);
+  const st = TOUR[i];
+  st.start?.();
+  $('#tour').hidden = false;
+  $('#tour-step').textContent = t('Step {n} of {m}', { n: i + 1, m: TOUR.length });
+  $('#tour-title').textContent = t(st.title);
+  $('#tour-text').textContent = typeof st.text === 'function' ? st.text() : t(st.text);
+  $('#tour-skip').textContent = st.optional ? t('Skip this one') : t('Skip this step');
+  $('#tour-next').hidden = true;
+  $('#tour-skip').hidden = false;
+  tourPlace();
+  tour.timer = setInterval(() => {
+    tourPlace();
+    if (st.done()) {
+      clearInterval(tour.timer);
+      $('#tour-next').hidden = false;
+      $('#tour-skip').hidden = true;
+      $('#tour-next').textContent = i + 1 < TOUR.length ? t('Next') : t('Done');
+      $('#tour-card').classList.add('ok');
+      setTimeout(() => $('#tour-card').classList.remove('ok'), 600);
+    }
+  }, 350);
+}
+// The ring around the step's target, the card beside it, kept on screen.
+function tourPlace() {
+  const st = TOUR[tour.i];
+  const el = st && $(st.target);
+  const ring = $('#tour-ring'), card = $('#tour-card');
+  if (!el || !el.getClientRects().length) { ring.hidden = true; card.style.left = '50%'; card.style.top = '50%'; card.style.transform = 'translate(-50%, -50%)'; return; }
+  const r = el.getBoundingClientRect(), pad = 6;
+  ring.hidden = false;
+  Object.assign(ring.style, { left: `${r.left - pad}px`, top: `${r.top - pad}px`, width: `${r.width + 2 * pad}px`, height: `${r.height + 2 * pad}px` });
+  const cw = card.offsetWidth || 320, ch = card.offsetHeight || 160, vw = innerWidth, vh = innerHeight;
+  let x = r.left + r.width / 2 - cw / 2, y = r.bottom + 14;
+  if (r.height > vh * 0.5) { x = r.left + r.width / 2 - cw / 2; y = r.top + 24; }       // the big view: inside, at the top
+  else if (y + ch > vh - 12) y = r.top - ch - 14;                                       // no room below: above
+  x = Math.max(12, Math.min(vw - cw - 12, x)); y = Math.max(12, Math.min(vh - ch - 12, y));
+  Object.assign(card.style, { left: `${x}px`, top: `${y}px`, transform: 'none' });
+}
+async function tourStart() {
+  $('#tour-offer').hidden = true;
+  prefs.tourSeen = true; savePrefs();
+  document.querySelector('dialog[open]')?.close();
+  try {
+    if (!state.byId.has(EXAMPLE)) { await api('/api/example', { method: 'POST', body: {} }); await fetchAssets(); }
+    if (state.id !== EXAMPLE) await openAndWait(EXAMPLE);
+  } catch (e) { toast(esc(e.message), 'warn'); return; }
+  if (state.compare) await setCompare(null);
+  if (viewer.opts.shade === 'clay') setOpt('shade', 'lit');
+  tourStep(0);
+}
+function tourEnd(finished = false) {
+  clearInterval(tour.timer);
+  tour.i = -1;
+  $('#tour').hidden = true;
+  if (finished) toast(esc(t('That is Studio. ⌘K finds every command, ? lists the keys. The example stays in kiln-example/: delete the folder when you are done with it.')), 'ok', 9000);
+}
+$('#tour-next').onclick = () => tourStep(tour.i + 1);
+$('#tour-skip').onclick = () => tourStep(tour.i + 1);
+$('#tour-quit').onclick = () => tourEnd();
+$('#tour-start').onclick = tourStart;
+$('#tour-later').onclick = () => { $('#tour-offer').hidden = true; prefs.tourSeen = true; savePrefs(); };
+addEventListener('resize', () => tour.i >= 0 && tourPlace());
+paletteExtras.push((add) => add('Help', 'Take the tour', [], tourStart));
+// Offered once, a few seconds after the first opening.
+setTimeout(() => { if (!prefs.tourSeen && tour.i < 0 && !document.querySelector('dialog[open]')) $('#tour-offer').hidden = false; }, 2500);
+
 // ── keys ─────────────────────────────────────────────────────────────────────
 
 const KEYS = [

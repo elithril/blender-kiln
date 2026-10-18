@@ -339,6 +339,20 @@
     <div class="row"><button class="btn accent" type="submit" data-i18n>Save</button><button class="btn ghost" type="button" id="ctx-clear" data-i18n>Remove</button><span class="dim small" id="ctx-status" aria-live="polite"></span></div>
   </form>
 </dialog>
+<div id="tour" class="tour" hidden aria-live="polite">
+  <div class="tour-ring" id="tour-ring"></div>
+  <div class="tour-card" id="tour-card" role="dialog" aria-labelledby="tour-title">
+    <div class="tour-step" id="tour-step"></div>
+    <h4 id="tour-title"></h4>
+    <p id="tour-text"></p>
+    <div class="tour-acts"><button class="btn sm ghost" id="tour-quit" data-i18n>Leave the tour</button><span class="sp"></span><button class="btn sm" id="tour-skip" data-i18n>Skip this step</button><button class="btn sm accent" id="tour-next" hidden></button></div>
+  </div>
+</div>
+<div id="tour-offer" class="tour-offer" hidden>
+  <b data-i18n>First time in Studio?</b>
+  <p data-i18n>A two-minute tour on kiln's example barrel: turn it, note it, ask Claude, compare.</p>
+  <div class="tour-acts"><button class="btn sm ghost" id="tour-later" data-i18n>Not now</button><button class="btn sm accent" id="tour-start" data-i18n>Take the tour</button></div>
+</div>
 <dialog id="confirm"><p></p><form method="dialog"><button class="btn" value="cancel" data-i18n>Cancel</button><button class="btn accent" value="ok">OK</button></form></dialog>
 
 <script type="module" src="/static/app.js"></script>
