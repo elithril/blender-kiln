@@ -56,7 +56,7 @@ TOOLS = [
     },
     {
         "name": "get_notes",
-        "description": ("The user's notes on one model: number, text, status, the pinned point in Blender "
+        "description": ("The user's notes on one model, and their context for the project and its folder (keep to it): number, text, status, the pinned point in Blender "
                         "coordinates with the object, material and bone hit, the camera, the pictures (absolute "
                         "paths: read them) and the thread. Without an asset: the models with notes, and their counts."),
         "inputSchema": {"type": "object", "properties": {
@@ -268,8 +268,16 @@ def get_selection(args: dict) -> dict:
             "camera_blender": {"position": cam.get("position_blender"), "target": cam.get("target_blender"),
                                "fov_deg": cam.get("fov")} if cam else None,
             "comparing_with": sel.get("compare"), "shading": sel.get("shading"),
-            "project": str(project.root),
+            "project": str(project.root), "context": _context(project, sel.get("asset")),
             **({} if fresh else {"note": f"The page has not confirmed this for {sel.get('age_s'):.0f} s: it may be asleep or frozen."})}
+
+
+def _context(project: sl.Project, asset: str | None) -> dict:
+    """The user's context for the project and the model's folder (Studio's Context)."""
+    try:
+        return sl.context_for(project, project.find(asset) if asset else None)
+    except KeyError:
+        return sl.context_for(project, None)
 
 
 def _pictures(project: sl.Project, n: dict) -> dict:
@@ -314,7 +322,7 @@ def get_notes(args: dict) -> dict:
                         **({"after_pictures": _pictures(project, r)} if r.get("shot") else {})} for r in n.get("thread", [])],
         })
     return {"asset": a.id, "files": [v.rel for v in a.variants], "log": a.log_file(), "blend": a.blend_file(),
-            "counts": sl.counts(notes), "notes": out}
+            "context": sl.context_for(project, a), "counts": sl.counts(notes), "notes": out}
 
 
 def reply_to_note(args: dict) -> dict:

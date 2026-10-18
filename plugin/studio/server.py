@@ -388,6 +388,8 @@ def make_handler(studio: Studio, port_ref: list[int]):
                 if parts[:2] == ["api", "hello"]:
                     return self._json({"app": "kiln-studio", "version": VERSION,
                                        "root": str(project.root), "pid": os.getpid()})
+                if parts == ["api", "context"]:
+                    return self._json(sl.load_context(project))
                 if parts[:2] == ["api", "config"]:
                     # The project's settings, shared with Claude (references/studio.md § 9).
                     return self._json({"settings": project.settings(), "defaults": sl.CONFIG_DEFAULTS,
@@ -575,6 +577,12 @@ def make_handler(studio: Studio, port_ref: list[int]):
                     studio.refresh()   # exclude: the list changes now, not at the next tick
                     return self._json({"settings": settings, "target_source": project.target_source(),
                                        "user_defaults": sl.user_defaults()})
+                if method == "PUT" and parts == ["api", "context"]:
+                    # The project's context ("folder" absent or null) or a folder's.
+                    folder = body.get("folder")
+                    ctx = sl.save_context(project, str(body.get("text", "")), None if folder in (None, "") else str(folder))
+                    studio.emit({"type": "context"})
+                    return self._json(ctx)
                 if method == "PUT" and parts == ["api", "defaults"]:
                     # The user's defaults for every project on this computer (~/.kiln-studio).
                     sl.save_user_defaults(**{k: v for k, v in body.items() if k == "target"})

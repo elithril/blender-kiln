@@ -258,6 +258,49 @@ async function copy(text) {
   catch { toast(t('Copy this: {x}', { x: `<span class="mono">${esc(text)}</span>` })); }
 }
 
+// ── context: what Claude keeps to, for the project and for each folder ───────
+// .kiln-studio/context.json; Claude reads it for every model there (worker.py, studio.py
+// show, the kiln-studio MCP), whether asked from Studio or from the terminal.
+
+async function fetchContext() {
+  try { state.context = await api('/api/context'); } catch { state.context = state.context || { project: '', folders: {} }; }
+}
+function ctxButton(key) {
+  if (state.group !== 'folders' || key === '') return '';
+  const text = state.context?.folders?.[key];
+  const label = text ? t('Context for {f}: {text}', { f: key, text: text.length > 140 ? `${text.slice(0, 139)}…` : text }) : t('Give Claude a context for {f}', { f: key });
+  return `<button class="gctx${text ? ' on' : ''}" data-ctx="${esc(key)}" title="${esc(label)}" aria-label="${esc(label)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v12H9l-4 4z"/>${text ? '<path d="M9 9h6M9 12h4"/>' : '<path d="M12 7v6M9 10h6"/>'}</svg></button>`;
+}
+let ctxFolder = null;
+function openContext(folder) {
+  ctxFolder = folder;
+  $('#ctx-title').textContent = t('Context for {f}', { f: folder });
+  $('#ctx-what').textContent = t('Claude keeps to this on every model in {f}, on top of the project\'s context. Studio and the terminal alike.', { f: folder });
+  $('#ctx-eg').textContent = t('“Props for the tavern: dark oak and wrought iron, worn edges, 1–3K triangles, one 1K texture each.”');
+  $('#ctx-text').value = state.context?.folders?.[folder] || '';
+  $('#ctx-status').textContent = '';
+  $('#ctx-clear').hidden = !state.context?.folders?.[folder];
+  $('#ctxdlg').showModal();
+  $('#ctx-text').focus();
+}
+async function saveContext(folder, text) {
+  state.context = await api('/api/context', { method: 'PUT', body: { folder, text } });
+  renderList();
+}
+$('#ctx-form').onsubmit = async (e) => {
+  e.preventDefault();
+  try { await saveContext(ctxFolder, $('#ctx-text').value); $('#ctxdlg').close(); toast(esc(t('Context saved: Claude keeps to it in {f}', { f: ctxFolder })), 'ok'); }
+  catch (err) { $('#ctx-status').textContent = t('Not saved: {e}', { e: err.message }); }
+};
+$('#ctx-text').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); $('#ctx-form').requestSubmit(); } });
+$('#ctx-clear').onclick = async () => { try { await saveContext(ctxFolder, ''); $('#ctxdlg').close(); } catch (err) { $('#ctx-status').textContent = err.message; } };
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-ctx]');
+  if (!b) return;
+  e.stopPropagation();
+  if (!b.dataset.ctx) openSettings('project'); else openContext(b.dataset.ctx);
+});
+
 // ── the model list ───────────────────────────────────────────────────────────
 
 const counts = (a) => a.counts || { open: 0, addressed: 0, resolved: 0, wontfix: 0 };
@@ -268,7 +311,7 @@ const isNew = (a) => !!(seen[a.id] && seen[a.id] !== a.variants[0]?.hash && a.id
 const catOf = (a) => a.category || '';
 
 async function fetchAssets() {
-  const data = await api('/api/assets');
+  const [data] = await Promise.all([api('/api/assets'), fetchContext()]);
   const before = new Map(state.byId);
   state.root = data.root;
   state.name = data.name;
@@ -381,7 +424,7 @@ function renderList() {
     const closed = !filtering && state.closedGroups.has(key) && !g.items.some((a) => a.id === state.id);
     sec.className = 'group' + (closed ? ' closed' : '');
     sec.dataset.key = key;
-    sec.innerHTML = `<button class="ghead" aria-expanded="${!closed}">${groupHead(key, g)}</button><div class="gbody"></div>`;
+    sec.innerHTML = `<div class="ghrow"><button class="ghead" aria-expanded="${!closed}">${groupHead(key, g)}</button>${ctxButton(key)}</div><div class="gbody"></div>`;
     $('.ghead', sec).onclick = () => {
       const isClosed = sec.classList.toggle('closed');
       isClosed ? state.closedGroups.add(key) : state.closedGroups.delete(key);
@@ -1903,6 +1946,7 @@ async function onCapture(ev) {
 }
 
 async function onEvent(ev) {
+  if (ev.type === 'context') { await fetchContext(); renderList(); return; }
   if (ev.type === 'claude' || ev.type === 'claude-text') return onClaude(ev);
   if (ev.type === 'control') return onControl(ev);
   if (ev.type === 'capture') return onCapture(ev);
@@ -2089,7 +2133,11 @@ function renderClaude() {
   const back = claude.view && state.id ? `<button class="btn sm ghost" data-cl="back" title="${esc(t('Back to the conversation on {name}', { name: state.detail?.name || state.id }))}">↩ ${esc(state.detail?.name || '')}</button>` : '';
   const stateLine = !job ? (msgs.length ? t('{n} messages', { n: msgs.filter((m) => m.role === 'user' || m.role === 'assistant').length }) : t('new conversation'))
     : job.state === 'running' ? t('Claude is working') : job.state === 'queued' ? t('waiting in line ({n})', { n: job.position || 1 }) : t('waiting for your answer');
-  head.innerHTML = `<div class="ttl"><b>${esc(title)}</b><span>${esc(stateLine)}</span></div>${back}${job && ['running', 'queued'].includes(job.state) ? `<button class="btn sm" data-cl="stop">■ ${esc(t('Stop'))}</button>` : ''}`;
+  // The context Claude keeps to here, said and one click from its editor.
+  const folder = !claude.view && state.detail ? (state.detail.category || '') : '';
+  const ctxBits = [state.context?.project && t('project'), folder && state.context?.folders?.[folder] && folder].filter(Boolean);
+  const ctxLine = ctxBits.length ? ` · <button class="linkish" data-ctx="${esc(folder || '')}" ${folder ? '' : 'data-ctx-project'}>${esc(t('context: {what}', { what: ctxBits.join(' + ') }))}</button>` : '';
+  head.innerHTML = `<div class="ttl"><b>${esc(title)}</b><span>${esc(stateLine)}${ctxLine}</span></div>${back}${job && ['running', 'queued'].includes(job.state) ? `<button class="btn sm" data-cl="stop">■ ${esc(t('Stop'))}</button>` : ''}`;
   const results = new Map(msgs.filter((m) => m.role === 'tool-result').map((m) => [m.id, m]));
   // Tool calls in a row are one block.
   let html = '', inTools = false;
@@ -2558,6 +2606,7 @@ function syncPersonal() {
 }
 function syncProject() {
   if (!project) return;
+  if (document.activeElement !== $('#set-context')) $('#set-context').value = state.context?.project || '';
   switchSet('#set-live', project.live_view);
   switchSet('#set-autoopen', project.auto_open);
   // "Default (Web)": the project follows the computer's default until it chooses.
@@ -2595,6 +2644,10 @@ $$('#set-target-default button').forEach((b) => (b.onclick = async () => {
     if (state.id) await fetchDetail();
   } catch (e) { $('#set-status').textContent = t('Not saved: {e}', { e: e.message }); }
 }));
+$('#set-context').onchange = async (e) => {
+  try { await saveContext(null, e.target.value); $('#set-status').textContent = t('Saved in .kiln-studio/context.json: {what}', { what: t('Context for Claude') }); }
+  catch (err) { $('#set-status').textContent = t('Not saved: {e}', { e: err.message }); }
+};
 $('#set-exclude').onchange = (e) => saveProject({ exclude: e.target.value.split('\n').map((x) => x.trim()).filter(Boolean) }, t('Left out of the list'));
 $('#t-settings').onclick = () => openSettings();
 

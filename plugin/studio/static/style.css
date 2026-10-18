@@ -1085,3 +1085,21 @@ input.num { width: 84px; }
 .sbox[hidden] { display: none; }
 .sbox { border-bottom: 1px solid var(--line); padding-bottom: 8px; }
 @media (max-width: 640px) { .srow .themes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* a folder's context, from its header */
+.ghrow { display: flex; align-items: center; }
+.ghrow .ghead { flex: 1; min-width: 0; }
+.gctx { flex: none; width: 24px; height: 22px; margin-right: 6px; border: 0; border-radius: 5px; background: none; color: var(--text-3); display: grid; place-items: center; opacity: .55; }
+.gctx svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.ghrow:hover .gctx, .gctx:focus-visible { opacity: 1; }
+.gctx:hover { background: var(--panel-3); color: var(--text); }
+.gctx.on { opacity: 1; color: var(--new); }
+#ctxdlg { width: min(560px, calc(100vw - 24px)); padding: 0; }
+#ctxdlg .set-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+#ctxdlg .set-head h3 { margin: 0; font-size: 15px; }
+#ctxdlg .set-head form { margin: 0; }
+.ctx-body { padding: 14px 18px 16px; display: flex; flex-direction: column; gap: 10px; }
+.ctx-body p { margin: 0; }
+.ctx-body textarea { width: 100%; border-radius: 8px; border: 1px solid var(--line-3); background: var(--bg); color: var(--text); padding: 9px 11px; font: 13px/1.5 var(--font); resize: vertical; }
+.ctx-body textarea:focus { outline: none; border-color: var(--accent); }
+.ctx-body .row { display: flex; align-items: center; gap: 8px; }
+.srow.wide #set-context { width: 100%; border-radius: 7px; border: 1px solid var(--line-2); background: var(--bg); padding: 8px 10px; font: 12.5px/1.5 var(--font); color: var(--text); resize: vertical; }

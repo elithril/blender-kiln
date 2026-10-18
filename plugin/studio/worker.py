@@ -589,7 +589,25 @@ def system_context(project: sl.Project, job: dict, port: int, lang: str) -> str:
         "project, waits for the user's approval in the page: make such a call alone in its message, never in "
         "parallel with other calls.",
         f"Reply in {'French' if lang == 'fr' else 'English'} unless the user writes in another language.",
+        *context_lines(project, job),
     ])
+
+
+def context_lines(project: sl.Project, job: dict) -> list[str]:
+    """What the user wrote in Studio about the project and the model's folder: Claude keeps to it."""
+    asset = None
+    if job.get("asset"):
+        try:
+            asset = project.find(job["asset"])
+        except KeyError:
+            asset = None
+    ctx = sl.context_for(project, asset)
+    out = []
+    if ctx.get("project"):
+        out.append(f"The user's context for this project (keep to it unless they say otherwise): {ctx['project']}")
+    if ctx.get("folder_context"):
+        out.append(f"The user's context for the folder {ctx['folder']}: {ctx['folder_context']}")
+    return out
 
 
 class Worker:

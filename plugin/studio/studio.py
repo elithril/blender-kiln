@@ -255,11 +255,17 @@ def cmd_show(args) -> None:
              or (not args.status and (args.all or n["status"] in sl.ACTIVE))]
     if args.json:
         detail["notes"] = notes
+        detail["context"] = sl.context_for(project, a)
         print(json.dumps(detail, indent=2))
         return
     hashes = {v.label: v.hash for v in a.variants}
     print(f"# {a.id}   ({detail['category'] or 'uncategorised'}"
           + (f"; tags {', '.join(detail['tags'])}" if detail["tags"] else "") + ")")
+    ctx = sl.context_for(project, a)
+    if ctx.get("project"):
+        print(f"project context: {ctx['project']}")
+    if ctx.get("folder_context"):
+        print(f"folder context ({ctx['folder']}): {ctx['folder_context']}")
     for v in detail["variants"]:
         st = v.get("stats") or {}
         dims = st.get("dimensions_blender")

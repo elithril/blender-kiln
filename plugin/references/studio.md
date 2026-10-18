@@ -323,13 +323,11 @@ Statuses: `open` → `addressed` (you) → `resolved` (the user) or `wontfix`.
 
 ## 9. Settings — the project's, and the user's
 
-The page's **Settings** (the gear under the list, or ⌘K → Settings) has two parts.
-
-**Personal** — this browser only, never in the project: the language (English or French;
-the browser's by default), the theme (Dark, Light, High contrast, Forge, Neon, Studio, Minimal) and an accent colour
-(Forge, Neon and Studio have their own), rows Normal or Compact, the shading and the view a model
-opens in, lengths in metres or centimetres, whether fixed pins start hidden. Nothing for
-you to read.
+The page's **Settings** (the gear under the list, or ⌘K → Settings) has five panes: Display
+(this browser only: language, theme, accent, rows, the shading and view a model opens in,
+units, closed notes' pins — nothing for you to read), Project, Claude (Studio's own Claude
+runs), Account (this computer: which Claude account Studio's runs use, the default target)
+and Setup (what kiln uses, found or not).
 
 **Project** — `.kiln-studio/config.json`, committed with the notes. Read it at CONFIG
 (`studio.py config`, or the file): a key **set in the file** is the session's default
@@ -340,8 +338,16 @@ answer in the session wins.
 |---|---|---|
 | `live_view` | `true` / `false` (`true`) | CONFIG's **Live view**: false, do not export after each phase; start Studio at EXPORT |
 | `auto_open` | `true` / `false` (`true`) | CONFIG's **Auto-open links**; `studio.py open` does not open the browser when false |
-| `target` | `"web"`, `"desktop"` (Unity/Unreal), `"print"` (`"web"`) | CONFIG's **Target** when the brief names none; the checks' limits for a model whose log gives no target |
+| `target` | `"web"`, `"desktop"` (Unity/Unreal), `"print"` (the user's default in `~/.kiln-studio/defaults.json`, else `"web"`) | CONFIG's **Target** when the brief names none; the checks' limits for a model whose log gives no target |
 | `exclude` | glob patterns from the project folder (`[]`) | folders and files Studio leaves out of the list |
+
+**Context** — `.kiln-studio/context.json`, committed with the notes: the user's words on the
+project (Settings → Project → Context for Claude) and on each folder of the list (the speech
+mark on its header): the world, the style, the scale, the budgets. **Keep to it** on every
+model there, as you keep to the brief, unless the user says otherwise; the brief of the day
+wins where they differ, and say so. `studio.py show <asset>` prints both (`project context:`,
+`folder context (<folder>):`), `--json` and the MCP's `get_notes` / `get_selection` give
+`context`; Studio's own Claude runs get them in their instructions.
 
 Studio refuses an unknown key or a bad value from the page, and keeps any other key the
 file has as it is.
