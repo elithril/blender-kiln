@@ -2529,11 +2529,23 @@ let projectInfo = null;
 const targetName = (v) => ({ web: t('Web'), desktop: t('Unity / Unreal'), print: t('3D print') }[v] || v);
 function segSet(id, value) { $$(`${id} button`).forEach((b) => b.classList.toggle('on', b.dataset.v === value)); }
 function switchSet(id, on) { $(id).setAttribute('aria-checked', String(!!on)); }
-// Language: English or French; the page reloads in it, so every word follows.
+// Language: English or French, switched in place — every word drawn again.
 function syncLang() {
   $('#set-lang').innerHTML = Object.entries(LANGS).map(([k, name]) => `<button data-v="${k}" lang="${k}">${esc(name)}</button>`).join('');
   segSet('#set-lang', getLang());
-  $$('#set-lang button').forEach((b) => (b.onclick = () => { if (b.dataset.v === getLang()) return; prefs.lang = b.dataset.v; savePrefs(); location.reload(); }));
+  $$('#set-lang button').forEach((b) => (b.onclick = () => switchLang(b.dataset.v)));
+}
+async function switchLang(v) {
+  if (v === getLang()) return;
+  try { await loadLanguage(v); } catch (e) { $('#set-status').textContent = t('Not saved: {e}', { e: e.message }); return; }
+  setLang(v);
+  prefs.lang = v; savePrefs();
+  document.documentElement.lang = v;
+  refreshWords();
+  syncPersonal(); syncProject();
+  claudeChanged(); renderClaude(); syncClaudeSettings(false);
+  if (!$('#settings .set-pane[data-pane="setup"]').hidden && setup) $('#set-setup').innerHTML = setup.rows.map(setupRow).join('');
+  if (!state.assets.length && !state.id) renderWelcome();
 }
 function syncPersonal() {
   syncLang();
