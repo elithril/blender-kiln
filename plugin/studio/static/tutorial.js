@@ -252,144 +252,196 @@ async function playCreate(job) {
 async function playAnswer(job) { await sleep(300); finish(job); }
 
 // ── the steps ────────────────────────────────────────────────────────────────
+// `do`: the user does it, and the step moves on at once; `next`: it explains, Next moves on
+// (`ready`: Next waits for something, as Claude finishing). ‹ › go back and forth any time.
 
 const shadeTarget = () => ($('#tb-shade')?.offsetParent ? '#tb-shade [data-shade="clay"]' : '#tb-shade-select');
 const lit = () => ($('#tb-shade')?.offsetParent ? '#tb-shade [data-shade="lit"]' : '#tb-shade-select');
 const note = () => X.state.detail?.notes?.[X.state.detail.notes.length - 1];
+const folded = () => !$('#tb-shade')?.offsetParent;
 
 const STEPS = [
-  { center: true, title: N_('Welcome to the Kiln Studio tutorial'), next: true,
-    text: N_('This is a demonstration: no Claude runs, no quota is used, nothing is written to your project. Every answer from Claude is played by the tutorial, to show how it goes. About five minutes; Leave at any time.') },
-  { target: '#left .full', title: N_('Your models'), next: true,
-    text: N_('Studio shows every 3D file of the project, by folder. The counters on top: notes to check, notes open, what Claude is working on, what is being built.') },
-  { target: () => `#list .item[data-id="${BARREL}"]`, title: N_('Open a model'), text: N_('Click the barrel.'),
+  { center: true, next: true, title: N_('Welcome to the Kiln Studio tutorial'),
+    text: N_('This is a demonstration: no Claude runs, no quota is used, nothing is written to your project. Every answer from Claude is played by the tutorial, to show how it goes. About five minutes; ‹ › move back and forth, Leave at any time.') },
+  { target: '#left .full', next: true, title: N_('Your models'),
+    text: N_('Studio shows every 3D file of the folder it was opened on, by subfolder. The counters on top: notes to check, notes open, what Claude is working on, what is being built.') },
+  { target: '.lfoot', next: true, title: N_('Add a model, or open another folder'),
+    text: N_('+ asks Claude for a new model; the arrow imports a file you have (GLB, glTF, FBX, OBJ — or drop it anywhere on the page). Studio shows one folder: for another, run /kiln studio in it, or studio.py open <folder>.') },
+  { target: '#t-create', do: true, title: N_('Make a new model'), text: N_('Click + to ask Claude for a model.'),
+    done: () => $('#create')?.open },
+  { target: '#cr-form', do: true, title: N_('Describe it'),
+    enter: () => { const b = $('#cr-brief'); if (b) b.value = fr() ? 'Une lanterne de fiacre en fer forgé et verre, avec une bougie, environ 40 cm' : 'A carriage lantern in wrought iron and glass, with a candle, about 40 cm'; },
+    text: N_('Say what it is, its style and its size, in your words; Made for sets the budgets and the file format; a photo helps. We wrote a lantern. Click Make it with Claude.'),
+    done: () => !!run.createKey },
+  { target: '#view', do: true, title: N_('Watch it being built'),
+    text: N_('The lantern appears in the list as it is built, and the view follows each stage: block-out, details, materials. The strip on top says where kiln is.'),
+    done: () => run.jobs.some((j) => j.state === 'waiting') },
+  { target: () => '[data-cl="allow"]', do: true, title: N_('An approval'),
+    enter: () => X.openClaudeView(`asset:${LANTERN}`),
+    text: N_('Claude wants to run a command outside the safe list: it stops and asks. The ✦ tab, the pill and the page title say so, wherever you are. Click Allow once.'),
+    done: () => run.flags.approved },
+  { target: '#view', next: true, ready: () => run.flags.made, title: N_('Made'),
+    text: N_('The lantern is exported: a model like the others now, with its checks and its conversation. Next, the barrel: everything you can do with a model.') },
+  { target: () => `#list .item[data-id="${BARREL}"]`, do: true, title: N_('Open a model'), text: N_('Click the barrel.'),
     done: () => X.state.id === BARREL && X.viewer.a.model },
-  { target: '#view', title: N_('Turn around it'), text: N_('Drag on the model to turn around it, scroll to zoom, right-drag to move.'),
-    enter: () => { run.cam = X.viewer.camera.position.clone(); }, done: () => X.viewer.camera.position.distanceTo(run.cam) > 0.05 },
-  { target: '#views', title: N_('The set views'), text: N_('These frame it from the front, the back, each side, the top or three-quarters (keys 1 to 6). Click one.'),
-    enter: () => { run.cam = X.viewer.camera.position.clone(); }, done: () => X.viewer.camera.position.distanceTo(run.cam) > 0.05 },
-  { target: shadeTarget, title: N_('Clay: the shape alone'), text: () => ($('#tb-shade')?.offsetParent ? t('Clay is a grey render without colours or textures: you judge the shape alone — dents, bumps, seams. Click Clay.') : t('Clay is a grey render without colours or textures: you judge the shape alone — dents, bumps, seams. Pick Clay in this list of renders.')),
+  { target: '#view', do: true, title: N_('Turn around it'), text: N_('Drag on the model to turn around it, scroll to zoom, right-drag to move.'),
+    done: () => run.flags.orbited },
+  { target: '#views', do: true, title: N_('The set views'), text: N_('These frame it from the front, the back, each side, the top or three-quarters (keys 1 to 6). Click one.'),
+    enter: () => { run.flags.view = false; }, done: () => run.flags.view },
+  { target: shadeTarget, do: true, title: N_('Clay: the shape alone'),
+    text: () => (folded() ? t('Clay is a grey render without colours or textures: you judge the shape alone — dents, bumps, seams. Pick Clay in this list of renders.') : t('Clay is a grey render without colours or textures: you judge the shape alone — dents, bumps, seams. Click Clay.')),
     done: () => X.viewer.opts.shade === 'clay' },
-  { target: lit, title: N_('Back to Lit'), text: () => t('Lit shows the materials under a studio light, as in a game. The other renders: Unlit (colours only), Normals (the faces\' direction), UV (how textures are laid), Faces (the polygons).') + ' ' + ($('#tb-shade')?.offsetParent ? t('Click Lit.') : t('Pick Lit in the list.')),
+  { target: lit, do: true, title: N_('Back to Lit'),
+    text: () => t('Lit shows the materials under a studio light, as in a game. The other renders: Unlit (colours only), Normals (the faces\' direction), UV (how textures are laid), Faces (the polygons).') + ' ' + (folded() ? t('Pick Lit in the list.') : t('Click Lit.')),
     done: () => X.viewer.opts.shade === 'lit' },
-  { target: '#t-pin', title: N_('Pin a note'), text: N_('Something to change? Pin a note to the place. Click Pin a note.'),
+  { target: '#t-pin', do: true, title: N_('Pin a note'), text: N_('Something to change? Pin a note to the place. Click Pin a note.'),
     enter: () => X.ensureRight('notes'), done: () => X.state.pinning },
-  { target: '#view', title: N_('Click where it is'), text: N_('Now click on one of the iron hoops of the barrel.'),
+  { target: '#view', do: true, title: N_('Click where it is'), text: N_('Now click on one of the iron hoops of the barrel.'),
     done: () => !$('#composer').hidden },
-  { target: '#composer-text', title: N_('Say what should change'), next: true,
+  { target: '#composer', next: true, title: N_('Say what should change'),
     enter: () => { const ta = $('#composer-text'); if (ta && !ta.value) ta.value = fr() ? 'Les cercles en fer sont trop fins : les épaissir.' : 'The iron hoops are too thin: make them thicker.'; },
     text: N_('We wrote it for you. Studio keeps the note with a picture of what you see and where you pinned it.') },
-  { target: '#composer-save', title: N_('Save the note'), text: N_('Click Save note.'),
+  { target: '#composer-save', do: true, title: N_('Save the note'), text: N_('Click Save note.'),
     enter: () => { run.notes = X.state.detail?.notes.length || 0; }, done: () => (X.state.detail?.notes.length || 0) > run.notes },
-  { target: '#tb-claude', title: N_('Ask Claude'), text: N_('The ✦ tab talks to Claude about this model. Open it.'),
+  { target: '#tb-claude', do: true, title: N_('Ask Claude'), text: N_('The ✦ tab talks to Claude about this model. Open it.'),
     done: () => !$('#tab-claude').hidden },
-  { target: '#cl-send', title: N_('Send the request'), text: N_('We wrote the request. Send it — in this tutorial, the answer is played, not asked of Claude.'),
+  { target: '#tab-claude', next: true, title: N_('The conversation'),
+    text: N_('One conversation per model, kept between sessions. Claude\'s answers come as it writes them; each action it takes is one line you can open. The highlighted note and your view go with a message as tags; Stop interrupts. Another conversation covers the whole project.') },
+  { target: '#cl-composer', do: true, title: N_('Send the request'),
     enter: () => { const ta = $('#cl-text'); if (ta) ta.value = fr() ? 'Traite ma note sur les cercles.' : 'Work on my note about the hoops.'; },
-    done: () => run.jobs.length > 0 },
-  { target: '#tab-claude', title: N_('Claude works'), text: N_('The answer comes as Claude writes it. Each action is one line — open one to see what went in and out. Claude works in a Blender of its own, never yours.'),
-    done: () => run.flags.noteDone },
-  { target: '#note-list .note', title: N_('The note, addressed'), next: true,
+    text: N_('We wrote the request, with note 1 tagged. Send it — in this tutorial, the answer is played, not asked of Claude.'),
+    done: () => run.jobs.some((j) => j.asset === BARREL) },
+  { target: '#tab-claude', next: true, ready: () => run.flags.noteDone, title: N_('Claude works'),
+    text: N_('It reads the note, looks at the model, changes it in its own Blender — never yours — and exports. Open a line to see what went in and out. Next once it is done.') },
+  { target: '#note-list .note', next: true, title: N_('The note, addressed'),
     enter: () => X.ensureRight('notes'),
     text: N_('Claude marked it addressed: Studio rendered the same view of the new version beside the old one. Before and after, side by side.') },
-  { target: '#t-compare', title: N_('Compare'), text: N_('Compare shows both versions in the 3D view, split by a divider or side by side, with their triangles and file size. Click Compare.'),
+  { target: '#t-compare', do: true, title: N_('Compare'), text: N_('Compare shows both versions in the 3D view. Click Compare.'),
     done: () => !!X.state.compare },
-  { target: () => '#note-list [data-act="resolve"]', title: N_('Say it is right'), text: N_('Right? Mark the note Looks right: it closes. Not yet sends it back to Claude with a word.'),
-    enter: async () => { if (X.state.compare) await X.setCompare(null); X.ensureRight('notes'); }, done: () => note()?.status === 'resolved' },
-  { target: '#tb-checks', title: N_('The checks'), text: N_('Checks reads the file against kiln\'s rules: triangles, size, ground, compression, licences. Open the tab.'),
+  { target: '#split', do: true, title: N_('Drag the divider'),
+    enter: () => { run.split = X.viewer.split; },
+    text: N_('Left, the version you noted; right, the current one. Drag the divider across the barrel.'),
+    done: () => Math.abs((X.viewer.split ?? 0.5) - run.split) > 0.08 },
+  { target: '#cmp-mode', do: true, title: N_('Side by side'), text: N_('Or both whole, side by side, turning together. Click Side by side.'),
+    done: () => X.state.compare?.mode === 'side' },
+  { target: '#cmpbar', next: true, title: N_('What changed'),
+    text: N_('The bar gives the difference in triangles, file size and height. Close it with × or Esc.') },
+  { target: () => '#note-list [data-act="resolve"]', do: true, title: N_('Say it is right'),
+    enter: async () => { if (X.state.compare) await X.setCompare(null); X.ensureRight('notes'); },
+    text: N_('Right? Mark the note Looks right: it closes. Not yet sends it back to Claude with a word.'),
+    done: () => note()?.status === 'resolved' },
+  { target: '#tb-checks', do: true, title: N_('The checks'), text: N_('Checks reads the file against kiln\'s rules: triangles, size, ground, compression, licences. Open the tab.'),
     done: () => !$('#tab-checks').hidden },
-  { target: '#tab-checks', title: N_('What it says'), next: true,
+  { target: '#tab-checks', next: true, title: N_('What it says'),
     text: N_('Green is fine, amber is worth a look, with what to do. A check Claude can fix comes with the words to ask for it.') },
-  { target: '#t-create', title: N_('Make a new model'), text: N_('Click + to ask Claude for a new model.'),
-    done: () => $('#create')?.open },
-  { target: '#cr-launch', title: N_('Describe it'), text: N_('Say what it is, its style and its size, in your words; Made for sets the budgets. We wrote a lantern. Click Make it with Claude.'),
-    enter: () => { const b = $('#cr-brief'); if (b) b.value = fr() ? 'Une lanterne de fiacre en fer forgé et verre, avec une bougie, environ 40 cm' : 'A carriage lantern in wrought iron and glass, with a candle, about 40 cm'; },
-    done: () => !!run.createKey },
-  { target: '#view', title: N_('Watch it being built'), text: N_('The lantern appears in the list as it is built, and the view follows each stage: block-out, details, materials. The strip on top says where kiln is.'),
-    enter: () => { if (X.state.id !== LANTERN && run.assets.has(LANTERN)) X.go(LANTERN); },
-    done: () => run.jobs.some((j) => j.state === 'waiting') },
-  { target: () => '[data-cl="allow"]', title: N_('An approval'), text: N_('Claude wants to run a command outside the safe list: it stops and asks. The ✦ tab, the pill and the page title say so, wherever you are. Click Allow once.'),
-    enter: () => X.openClaudeView(run.createKey), done: () => run.flags.approved },
-  { target: '#view', title: N_('Done'), text: N_('The lantern is exported: it is a model like the others now, with its checks and its conversation.'),
-    done: () => run.flags.made },
-  { target: '#cl-pill-btn', title: N_('Claude, at a glance'), text: N_('The pill says what Claude does, what waits for you and how much of your quota is used. Open it.'),
+  { target: '#cl-pill-btn', do: true, title: N_('Claude, at a glance'), text: N_('The pill says what Claude does, what waits for you and how much of your quota is used. Open it.'),
     done: () => !$('#cl-act').hidden },
-  { target: '#t-settings', title: N_('Settings'), next: true,
+  { target: '#t-settings', next: true, title: N_('Settings'),
     enter: () => { if (!$('#cl-act').hidden) $('#cl-pill-btn').click(); },
     text: N_('In Settings: the display, the project (what models are made for, its CLAUDE.md), how Claude works (approvals, paid generation, how many at once) and which account pays. Setup lists what kiln uses and installs what is missing.') },
-  { center: true, title: N_('That is Studio'), next: true, last: true,
+  { center: true, next: true, last: true, title: N_('That is Studio'),
     text: N_('⌘K finds every command, ? lists the keys. From the terminal, Claude can drive this page too (/kiln studio, present mode for a second screen). Finish to go back to your project: the tutorial wrote nothing in it.') },
 ];
 
 // ── the spotlight ────────────────────────────────────────────────────────────
+// The overlay is a popover: it sits in the top layer, above the page's own dialogs (it is
+// raised again whenever one opens).
 
 function ui() {
   if ($('#tuto')) return;
   document.body.insertAdjacentHTML('beforeend', `
-    <div id="tuto" class="tuto"><div class="tuto-dim" id="tuto-dim"></div><div class="tuto-ring" id="tuto-ring"></div>
+    <div id="tuto" class="tuto" popover="manual"><div class="tuto-dim" id="tuto-dim"></div><div class="tuto-ring" id="tuto-ring"></div>
       <div class="tuto-card" id="tuto-card" role="dialog" aria-live="polite" aria-labelledby="tuto-title">
         <div class="tuto-head"><span class="tuto-step" id="tuto-step"></span><span class="tuto-sim" title="${esc(t('A simulation: no Claude runs, no quota is used, nothing is written to your project.'))}">${esc(t('Simulation'))}</span></div>
         <h4 id="tuto-title"></h4><p id="tuto-text"></p>
-        <div class="tuto-acts"><button class="btn sm ghost" id="tuto-quit">${esc(t('Leave'))}</button><span class="tuto-hint" id="tuto-hint"></span><span class="sp"></span><button class="btn sm accent" id="tuto-next"></button></div>
+        <div class="tuto-acts"><button class="btn sm ghost" id="tuto-quit">${esc(t('Leave'))}</button><span class="tuto-hint" id="tuto-hint"></span><span class="sp"></span>
+          <button class="btn sm icon" id="tuto-prev" aria-label="${esc(t('Previous step'))}" title="${esc(t('Previous step'))}">‹</button>
+          <button class="btn sm icon" id="tuto-skip" aria-label="${esc(t('Next step'))}" title="${esc(t('Next step'))}">›</button>
+          <button class="btn sm accent" id="tuto-next"></button></div>
       </div></div>`);
   $('#tuto-quit').onclick = () => stop();
   $('#tuto-next').onclick = () => go(run.i + 1);
+  $('#tuto-skip').onclick = () => go(run.i + 1);
+  $('#tuto-prev').onclick = () => go(Math.max(0, run.i - 1));
+  $('#tuto').showPopover?.();
 }
 function target(st) {
   const sel = typeof st.target === 'function' ? st.target() : st.target;
   const el = sel && $(sel);
   return el && el.getClientRects().length ? el : null;
 }
+function raise() {
+  // A dialog opened since: show the overlay again, so it is above it in the top layer.
+  const dlg = document.querySelector('dialog[open]');
+  if (dlg !== run.dialog) {
+    run.dialog = dlg;
+    const o = $('#tuto');
+    if (o?.hidePopover) { o.hidePopover(); o.showPopover(); }
+  }
+}
 function place() {
   if (!run) return;
+  raise();
   const st = STEPS[run.i], el = !st.center && target(st);
   const ring = $('#tuto-ring'), card = $('#tuto-card'), dim = $('#tuto-dim');
-  const vw0 = innerWidth, vh0 = innerHeight;
+  const vw = innerWidth, vh = innerHeight;
   if (!el) {
-    // Nothing to point at: the whole page dimmed, the card in the middle.
     ring.style.opacity = '0';
     dim.style.clipPath = 'none';
+    dim.style.opacity = '1';
     Object.assign(card.style, { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' });
     return;
   }
   const r = el.getBoundingClientRect(), pad = 6;
   const hx = r.left - pad, hy = r.top - pad, hw = r.width + 2 * pad, hh = r.height + 2 * pad;
   Object.assign(ring.style, { opacity: '1', left: `${hx}px`, top: `${hy}px`, width: `${hw}px`, height: `${hh}px` });
-  // The page dimmed but for a hole where the user acts (a box-shadow that wide does not draw).
-  dim.style.clipPath = `path(evenodd, "M0 0H${vw0}V${vh0}H0Z M${hx} ${hy}h${hw}v${hh}h${-hw}Z")`;
-  const cw = card.offsetWidth, ch = card.offsetHeight, vw = innerWidth, vh = innerHeight, gap = 14;
+  // The page dimmed but for a hole on what to do; inside a dialog, its own backdrop does it.
+  dim.style.opacity = el.closest('dialog') ? '0' : '1';
+  dim.style.clipPath = `path(evenodd, "M0 0H${vw}V${vh}H0Z M${hx} ${hy}h${hw}v${hh}h${-hw}Z")`;
+  const cw = card.offsetWidth, ch = card.offsetHeight, gap = 14;
   let x, y;
-  if (r.width > vw * 0.4 && r.height > vh * 0.4) { x = r.left + 24; y = r.bottom - ch - 84; }   // a big area: inside, bottom-left (its top shows the build)
-  else if (r.right + gap + cw < vw - 12) { x = r.right + gap; y = r.top; }                        // right of it
-  else if (r.left - gap - cw > 12) { x = r.left - gap - cw; y = r.top; }                           // left of it
-  else if (r.bottom + gap + ch < vh - 12) { x = r.left + r.width / 2 - cw / 2; y = r.bottom + gap; } // below
-  else { x = r.left + r.width / 2 - cw / 2; y = r.top - gap - ch; }                                 // above
+  if (r.width > vw * 0.4 && r.height > vh * 0.4) { x = r.left + 24; y = r.bottom - ch - 84; }   // a big area: inside, low (its top shows the build)
+  else if (r.right + gap + cw < vw - 12) { x = r.right + gap; y = r.top; }
+  else if (r.left - gap - cw > 12) { x = r.left - gap - cw; y = r.top; }
+  else if (r.bottom + gap + ch < vh - 12) { x = r.left + r.width / 2 - cw / 2; y = r.bottom + gap; }
+  else { x = r.left + r.width / 2 - cw / 2; y = r.top - gap - ch; }
   x = Math.max(12, Math.min(vw - cw - 12, x)); y = Math.max(12, Math.min(vh - ch - 12, y));
   Object.assign(card.style, { left: `${x}px`, top: `${y}px`, transform: 'none' });
 }
+function check() {
+  if (!run) return;
+  const st = STEPS[run.i], i = run.i;
+  place();
+  if (st.do && st.done?.() && !run.moving) {
+    run.moving = true;
+    $('#tuto-card').classList.add('ok');
+    $('#tuto-hint').textContent = '✓';
+    setTimeout(() => { run.moving = false; if (run && run.i === i) go(i + 1); }, 150);
+  }
+  if (st.next && st.ready) {
+    const ok = !!st.ready();
+    $('#tuto-next').disabled = !ok;
+    $('#tuto-hint').textContent = ok ? '' : t('Wait for Claude…');
+  }
+}
 async function go(i) {
   if (!run) return;
-  clearInterval(run.timer);
   if (i >= STEPS.length) return stop(true);
   run.i = i;
+  run.moving = false;
   const st = STEPS[i];
   $('#tuto-step').textContent = t('Step {n} of {m}', { n: i + 1, m: STEPS.length });
   $('#tuto-title').textContent = t(st.title);
   $('#tuto-text').textContent = typeof st.text === 'function' ? st.text() : t(st.text);
   $('#tuto-next').hidden = !st.next;
+  $('#tuto-next').disabled = false;
   $('#tuto-next').textContent = st.last ? t('Finish') : t('Next');
-  $('#tuto-hint').textContent = st.next ? '' : t('Do it to go on');
+  $('#tuto-skip').hidden = !!st.next;
+  $('#tuto-prev').disabled = i === 0;
+  $('#tuto-hint').textContent = st.do ? t('Do it to go on') : '';
   $('#tuto-card').classList.remove('ok');
   await st.enter?.();
-  place();
-  run.timer = setInterval(() => {
-    place();
-    if (!st.next && st.done?.()) {
-      clearInterval(run.timer);
-      $('#tuto-card').classList.add('ok');
-      $('#tuto-hint').textContent = '✓';
-      setTimeout(() => run && run.i === i && go(i + 1), 700);
-    }
-  }, 250);
+  check();
 }
 
 export async function start(ctx) {
@@ -413,17 +465,32 @@ export async function start(ctx) {
   await X.fetchAssets();
   await X.claudeStatus();
   X.renderEmpty();
+  // What the user does, as it happens: a click is checked at once, not at the next tick.
+  run.onClick = (e) => { if (e.target.closest?.('#views [data-view]')) run.flags.view = true; setTimeout(check, 0); };
+  run.onEnd = () => { if (run.cam0 && X.viewer.camera.position.distanceTo(run.cam0) > 0.05) run.flags.orbited = true; };
+  run.onStart = () => { run.cam0 = X.viewer.camera.position.clone(); };
+  document.addEventListener('click', run.onClick, true);
+  document.addEventListener('input', run.onClick, true);
+  document.addEventListener('change', run.onClick, true);
+  X.viewer.controls.addEventListener('start', run.onStart);
+  X.viewer.controls.addEventListener('end', run.onEnd);
+  run.timer = setInterval(check, 120);
   go(0);
 }
 
 export async function stop(finished = false) {
   if (!run) return;
   clearInterval(run.timer);
+  document.removeEventListener('click', run.onClick, true);
+  document.removeEventListener('input', run.onClick, true);
+  document.removeEventListener('change', run.onClick, true);
+  X.viewer.controls.removeEventListener('start', run.onStart);
+  X.viewer.controls.removeEventListener('end', run.onEnd);
   run.answer?.('deny');
   const back = run.back;
   run = null;
   removeEventListener('resize', place);
-  $('#tuto')?.remove();
+  $('#tuto')?.hidePopover?.(); $('#tuto')?.remove();
   document.body.classList.remove('tutorial');
   document.querySelector('dialog[open]')?.close();
   X.hooks.api = null;

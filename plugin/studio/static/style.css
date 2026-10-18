@@ -1111,3 +1111,11 @@ input.num { width: 84px; }
 .cl-tags span { font-size: 10.5px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line-3); color: var(--text-2); }
 .tuto-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .tuto-sim { font: 600 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--new); border: 1px solid color-mix(in srgb, var(--new) 50%, transparent); border-radius: 4px; padding: 1px 6px; cursor: help; }
+/* every list: a drawn chevron with room around it (the native one sat on the edge) */
+select:not([multiple]) { -webkit-appearance: none; appearance: none; padding-right: 28px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%238a93a3' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important; background-position: right 10px center !important; background-size: 10px 7px !important; }
+/* the tutorial's overlay is a popover (top layer, above dialogs): none of a popover's own look */
+#tuto[popover] { position: fixed; inset: 0; width: auto; height: auto; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: transparent; color: inherit; overflow: visible; }
+#tuto[popover]::backdrop { display: none; }
+.tuto-acts .btn.icon { min-width: 28px; justify-content: center; font-size: 15px; line-height: 1; }
