@@ -765,8 +765,8 @@ function renderWelcome() {
 }
 function setupRow(r) {
   const d = r.data || {};
-  const mark = { ok: '✓', missing: '✕', unknown: '?' }[r.state];
-  const word = { ok: t('found'), missing: t('not found'), unknown: t('unknown') }[r.state];
+  const mark = { ok: '✓', missing: '✕', partial: '!', unknown: '?' }[r.state];
+  const word = { ok: t('found'), missing: t('not found'), partial: t('in part'), unknown: t('unknown') }[r.state];
   let name = r.key, detail = r.detail;
   if (r.key === 'blender') {
     name = 'Blender';
@@ -777,11 +777,35 @@ function setupRow(r) {
       d.listening ? t('the add-on answers on port {p}', { p: d.port }) : t('nothing answers on port {p} (Blender closed, or the add-on off)', { p: d.port }),
       t('whether Claude is connected, only Claude can say')].join(' · ');
   } else if (r.key === 'skintokens') {
-    name = t('SkinTokens (learned auto-rig, optional)');
+    name = t('SkinTokens (learned auto-rig)');
     detail = d.reason === 'no-tool' ? t('this version of kiln has no auto-rig tool to ask') : r.state === 'ok' ? t('installed') : r.state === 'missing' ? t('not installed') : (d.output || r.detail);
+  } else if (r.key === 'claude') {
+    name = 'Claude Code';
+    detail = r.state === 'ok' ? `${d.version || ''} · ${d.path}` : t('Install it from claude.com/claude-code, then log in once in a terminal.');
+  } else if (r.key === 'optimizers') {
+    name = t('Optimisers (gltf-transform, gltfpack)');
+    detail = r.state === 'ok' ? t('both found: kiln compresses meshes and textures with them') : t('found: {list} — without them kiln still exports, uncompressed', { list: (d.found || []).join(', ') || t('neither') });
+  } else if (r.key === 'unimate') {
+    name = t('UniMate (text to motion)');
+    detail = d.reason === 'no-tool' ? t('this version of kiln has no UniMate tool') : r.state === 'ok' ? t('installed') : t('not installed: animates non-human bipeds and winged creatures from a sentence');
   }
-  return `<li class="${r.state}"><span class="mk" role="img" aria-label="${esc(word)}">${mark}</span><div><b>${esc(name)}</b> <span class="st">${esc(word)}</span><div class="dim small">${esc(detail)}</div></div></li>`;
+  if (r.key === 'mcp' && claude.status?.enabled) detail = `${t('Studio\'s own Blender installs its add-on by itself.')} ${t('For your terminal:')} ${detail}`;
+  const need = { required: t('required'), recommended: t('recommended'), optional: t('optional') }[r.need] || '';
+  const meta = [need, r.size, r.licence].filter(Boolean).join(' · ');
+  const canInstall = r.install && ['missing', 'partial'].includes(r.state) && claude.status?.enabled;
+  return `<li class="${r.state}"><span class="mk" role="img" aria-label="${esc(word)}">${mark}</span><div><b>${esc(name)}</b> <span class="st">${esc(word)}</span>${meta ? `<div class="meta">${esc(meta)}</div>` : ''}<div class="dim small">${esc(detail)}</div></div>${canInstall ? `<button class="btn sm" data-install="${esc(r.key)}">${esc(t('Install with Claude'))}</button>` : ''}</li>`;
 }
+// Install with Claude: /kiln setup <part>, in the setup conversation, sizes and licences said first.
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-install]');
+  if (!b) return;
+  try {
+    await api('/api/claude/jobs', { method: 'POST', body: { kind: 'setup', text: b.dataset.install, lang: getLang() } });
+    document.querySelector('dialog[open]')?.close();
+    await claudeStatus();
+    openClaudeView('setup');
+  } catch (err) { toast(esc(err.message), 'warn', 6000); }
+});
 welcomeCards.push({
   key: 'example', title: N_('See an example'),
   text: N_("Adds kiln's barrel to this project, in kiln-example/, to try pins, checks and compare on. Delete the folder to remove it."),
@@ -1988,6 +2012,7 @@ function claudeEntry(e, results, job) {
   const live = job && e.job === job.id && job.state === 'waiting';
   switch (e.role) {
     case 'user':
+      if (e.kind === 'setup') return `<div class="cl-msg me"><span class="dim small">${esc(t('Install'))}</span><br>${esc(partName(e.text.replace(/^\/\S+\s+setup\s+/, '')))}</div>`;
       if (e.kind === 'create') return `<div class="cl-msg me"><span class="dim small">${esc(t('New model'))}</span><br>${mdLite(createBrief(e.text))}</div>`;
       return `<div class="cl-msg me">${e.kind === 'notes' ? `<span class="dim">${esc(t('Work on the open notes'))}</span>` : mdLite(e.text)}</div>`;
     case 'assistant':
@@ -1999,7 +2024,7 @@ function claudeEntry(e, results, job) {
       return `<div class="cl-tool${open ? ' open' : ''}" data-tool="${esc(e.id)}"><button class="cl-tl"><span class="car">${open ? '▾' : '▸'}</span><b>${esc(name)}</b><span class="in">${esc(e.input)}</span><span class="r ${r ? (r.error ? 'err' : 'ok') : 'run'}">${r ? (r.error ? '✕' : '✓') : '…'}</span></button>${open ? `<pre class="cl-io">${esc(e.input)}${r ? `\n— \n${esc(r.text)}` : ''}</pre>` : ''}</div>`;
     }
     case 'system':
-      return `<div class="cl-sys">${esc(e.text)}</div>`;
+      return `<div class="cl-sys">${esc(systemWords(e.text))}</div>`;
     case 'error':
       return `<div class="cl-card err"><div class="k">${esc(t('Claude could not go on'))}</div><p>${esc(e.text)}</p></div>`;
     case 'result': {
@@ -2031,6 +2056,14 @@ function approvalText(e) {
 }
 // A Create request's prompt, as the user wrote it: the brief, without kiln's command around it.
 const createBrief = (text) => String(text || '').replace(/^\/\S+\s+/, '').replace(/\s*\(Studio request q_\w+\)\s*$/, '');
+// The worker's own notes, in the page's language.
+function systemWords(text) {
+  const m = /^Started Studio's Blender on port (\d+)/.exec(text || '');
+  if (m) return t('Studio\'s Blender started, on port {p}', { p: m[1] });
+  if (/^New session: the Claude account changed/.test(text || '')) return t('New session: the Claude account changed since the last message');
+  return text;
+}
+const partName = (k) => ({ blender: 'Blender', optimizers: t('Optimisers (gltf-transform, gltfpack)'), skintokens: t('SkinTokens (learned auto-rig)'), unimate: t('UniMate (text to motion)') }[k] || k);
 const fmtSecs = (s) => (s < 90 ? t('{s} s', { s: Math.round(s) }) : t('{m} min {s}', { m: Math.floor(s / 60), s: String(Math.round(s % 60)).padStart(2, '0') }));
 
 function renderClaude() {
@@ -2051,8 +2084,8 @@ function renderClaude() {
   const job = claudeJob();
   const msgs = claude.thread?.messages || [];
   const req = claude.view?.startsWith('request:') ? (st.jobs || []).find((j) => `request:${j.request}` === claude.view) : null;
-  const name = claude.view === 'project' ? t('the project') : req ? (req.brief || t('the new model')) : state.detail?.name || state.id;
-  const title = claude.view === 'project' ? t('Project conversation') : req ? t('Making: {brief}', { brief: req.brief || '' }) : t('Conversation on {name}', { name });
+  const name = claude.view === 'project' ? t('the project') : claude.view === 'setup' ? t('the setup') : req ? (req.brief || t('the new model')) : state.detail?.name || state.id;
+  const title = claude.view === 'project' ? t('Project conversation') : claude.view === 'setup' ? t('Setup') : req ? t('Making: {brief}', { brief: req.brief || '' }) : t('Conversation on {name}', { name });
   const back = claude.view && state.id ? `<button class="btn sm ghost" data-cl="back" title="${esc(t('Back to the conversation on {name}', { name: state.detail?.name || state.id }))}">↩ ${esc(state.detail?.name || '')}</button>` : '';
   const stateLine = !job ? (msgs.length ? t('{n} messages', { n: msgs.filter((m) => m.role === 'user' || m.role === 'assistant').length }) : t('new conversation'))
     : job.state === 'running' ? t('Claude is working') : job.state === 'queued' ? t('waiting in line ({n})', { n: job.position || 1 }) : t('waiting for your answer');
@@ -2145,7 +2178,7 @@ $('#tab-claude').addEventListener('click', async (e) => {
 });
 
 // ── what Claude is doing, at a glance: the pill over the view and its menu ──
-const jobLabel = (j) => j.key === 'project' ? t('Project conversation')
+const jobLabel = (j) => j.key === 'project' ? t('Project conversation') : j.key === 'setup' ? t('Setup')
   : j.asset ? (state.byId.get(j.asset)?.name || j.asset.split('/').pop())
   : j.request ? t('New: {brief}', { brief: j.brief || '' }) : '?';
 // Where a job's conversation is shown: on its model when there is one.
@@ -2460,7 +2493,15 @@ async function openSettings(pane) {
   } catch (e) { $('#set-status').textContent = t('Could not read the project settings: {e}', { e: e.message }); }
 }
 // Display (this browser), Project, Claude, Account (this computer): one pane at a time.
+async function syncSetup(fresh = false) {
+  const ul = $('#set-setup');
+  if (!ul.children.length) ul.innerHTML = `<li class="dim">${esc(t('Looking…'))}</li>`;
+  try { setup = await api(`/api/status${fresh ? '?fresh=1' : ''}`); ul.innerHTML = setup.rows.map(setupRow).join(''); }
+  catch (e) { ul.innerHTML = `<li class="dim">${esc(e.message)}</li>`; }
+}
+$('#set-setup-again').onclick = () => syncSetup(true);
 function setPane(name) {
+  if (name === 'setup') syncSetup();
   $$('#settings .set-nav [data-pane]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.pane === name)));
   $$('#settings .set-pane').forEach((x) => (x.hidden = x.dataset.pane !== name));
   prefs.setPane = name; savePrefs();

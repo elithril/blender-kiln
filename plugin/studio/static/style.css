@@ -1063,3 +1063,8 @@ input.num { width: 84px; }
   .srow { grid-template-columns: 1fr; }
   .srow .sc { justify-self: start; }
 }
+.setup li .meta { font: 10.5px var(--mono); color: var(--text-3); margin: 1px 0 2px; }
+.setup li { grid-template-columns: 22px 1fr auto; }
+.setup li > .btn { align-self: center; }
+.setup li.partial .mk { background: var(--warn); }
+#set-setup { padding: 0; margin: 8px 0 12px; }

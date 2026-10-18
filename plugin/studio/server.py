@@ -395,7 +395,8 @@ def make_handler(studio: Studio, port_ref: list[int]):
                                        "target_source": project.target_source(), "user_defaults": sl.user_defaults()})
                 if parts[:2] == ["api", "status"]:
                     # The welcome screen's setup line: Blender, the MCP add-on, SkinTokens.
-                    return self._json(setup_status.install_status(project.root))
+                    fresh = parse_qs(urlparse(self.path).query).get("fresh", [""])[0] == "1"
+                    return self._json(setup_status.install_status(project.root, max_age=0 if fresh else 60))
                 if parts[:2] == ["api", "requests"]:
                     return self._json({"requests": sl.load_requests(project)})
                 if parts[:2] == ["api", "selection"]:
@@ -413,8 +414,8 @@ def make_handler(studio: Studio, port_ref: list[int]):
                     return self._json(studio.worker.status(force_auth=q.get("auth", [""])[0] == "1"))
                 if parts == ["api", "claude", "thread"]:
                     key = parse_qs(urlparse(self.path).query).get("key", [""])[0]
-                    if not (key.startswith(("asset:", "request:")) or key == wk.PROJECT_KEY):
-                        raise ValueError("key is asset:<id>, request:<id> or project")
+                    if not (key.startswith(("asset:", "request:")) or key in (wk.PROJECT_KEY, wk.SETUP_KEY)):
+                        raise ValueError("key is asset:<id>, request:<id>, project or setup")
                     return self._json(studio.worker.thread(key))
                 if parts[:2] == ["api", "assets"]:
                     cat = sl.load_catalog(project)

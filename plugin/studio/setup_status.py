@@ -110,6 +110,49 @@ def skintokens() -> dict:
     return _row("skintokens", state, detail[0], how, reason=f"exit {r.returncode}", output=detail[0])
 
 
+def claude_code() -> dict:
+    how = "claude --version"
+    exe = shutil.which("claude")
+    if not exe:
+        return _row("claude", "missing", "Claude Code is not on PATH", how)
+    try:
+        r = subprocess.run([exe, "--version"], capture_output=True, text=True, timeout=10)
+        version = (r.stdout or "").strip().split()[0] if r.returncode == 0 and r.stdout.strip() else None
+    except (OSError, subprocess.TimeoutExpired):
+        version = None
+    return _row("claude", "ok", f"Claude Code {version or ''} · {exe}".strip(), how, version=version, path=exe)
+
+
+def optimizers() -> dict:
+    """gltf-transform and gltfpack: kiln's OPTIMIZE phase compresses with them when present."""
+    found = {n: shutil.which(n) for n in ("gltf-transform", "gltfpack")}
+    have = [n for n, x in found.items() if x]
+    state = "ok" if len(have) == 2 else "missing" if not have else "partial"
+    return _row("optimizers", state, ", ".join(have) or "neither", "command -v gltf-transform gltfpack", found=have)
+
+
+def unimate() -> dict:
+    """UniMate (text to motion): installed when its venv is there (tools/unimate.py setup)."""
+    home = Path(os.environ.get("UNIMATE_HOME") or "~/.cache/blender-kiln/unimate").expanduser()
+    venv = home / "venv" / "bin" / "python"
+    tool = PLUGIN / "tools" / "unimate.py"
+    if not tool.is_file():
+        return _row("unimate", "unknown", "this kiln has no tools/unimate.py", "tools/unimate.py status", reason="no-tool")
+    return _row("unimate", "ok" if venv.is_file() else "missing", str(home), "tools/unimate.py status", home=str(home))
+
+
+# What each part is for, how much it matters, what it weighs and under which licence: the
+# page shows these beside the state, and Install with Claude runs /kiln setup <key>.
+COMPONENTS = {
+    "blender": {"need": "required", "size": "≈ 1 GB", "licence": "GPL", "install": True},
+    "claude": {"need": "required", "size": "≈ 200 MB", "licence": "Anthropic", "install": False},
+    "mcp": {"need": "required", "size": "", "licence": "MIT", "install": False},
+    "optimizers": {"need": "recommended", "size": "≈ 60 MB", "licence": "MIT", "install": True},
+    "skintokens": {"need": "optional", "size": "≈ 2 GB", "licence": "MIT", "install": True},
+    "unimate": {"need": "optional", "size": "≈ 3.2 GB", "licence": "CC BY-NC 4.0 (non-commercial)", "install": True},
+}
+
+
 def install_status(project_root: Path, max_age: float = 60.0) -> dict:
     key = str(project_root)
     hit = _cache.get(key)
@@ -120,6 +163,9 @@ def install_status(project_root: Path, max_age: float = 60.0) -> dict:
         manifest = json.loads((PLUGIN / ".claude-plugin" / "plugin.json").read_text())
     except (OSError, ValueError):
         pass
-    out = {"kiln": manifest.get("version"), "rows": [blender(), blender_mcp(project_root), skintokens()]}
+    rows = [blender(), claude_code(), blender_mcp(project_root), optimizers(), skintokens(), unimate()]
+    for r in rows:
+        r.update(COMPONENTS.get(r["key"], {}))
+    out = {"kiln": manifest.get("version"), "rows": rows}
     _cache[key] = (time.monotonic(), out)
     return out

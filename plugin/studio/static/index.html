@@ -275,6 +275,7 @@
       <button role="tab" data-pane="project"><b data-i18n>Project</b><span data-i18n>shared with Claude</span></button>
       <button role="tab" data-pane="claude"><b><span class="spark" aria-hidden="true">✦</span> Claude</b><span data-i18n>in Studio</span></button>
       <button role="tab" data-pane="account"><b data-i18n>Account</b><span data-i18n>this computer</span></button>
+      <button role="tab" data-pane="setup"><b data-i18n>Setup</b><span data-i18n>what kiln uses</span></button>
     </nav>
     <div class="set-panes">
       <section class="set-pane" data-pane="display" role="tabpanel">
@@ -312,6 +313,11 @@
         <div class="sbox" id="set-acc"></div>
         <div class="srow"><div class="st"><b data-i18n>Made for, by default</b><span data-i18n>For every project that does not choose.</span></div><div class="sc"><div class="seg small" id="set-target-default"><button data-v="web" data-i18n>Web</button><button data-v="desktop" data-i18n>Unity / Unreal</button><button data-v="print" data-i18n>3D print</button></div></div></div>
         <div class="srow"><div class="st"><b data-i18n>Usage</b><span id="set-usage"></span></div><div class="sc"></div></div>
+      </section>
+      <section class="set-pane" data-pane="setup" role="tabpanel" hidden>
+        <p class="set-where" data-i18n>This computer: what kiln uses, found or not. Install with Claude runs kiln's setup for that part, and says its size and licence before downloading anything.</p>
+        <ul class="setup" id="set-setup"></ul>
+        <p class="small"><button class="btn sm" id="set-setup-again" data-i18n>Check again</button></p>
       </section>
       <p class="set-status dim small" id="set-status" aria-live="polite"></p>
     </div>

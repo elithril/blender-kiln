@@ -821,7 +821,12 @@ class Api(Base):
         code, st = self.req("GET", "/api/status")
         self.assertEqual(code, 200)
         rows = {r["key"]: r for r in st["rows"]}
-        self.assertEqual(set(rows), {"blender", "mcp", "skintokens"})
+        self.assertEqual(set(rows), {"blender", "claude", "mcp", "optimizers", "skintokens", "unimate"})
+        for r in rows.values():   # what it is for, what it weighs, under which licence
+            self.assertIn(r["need"], ("required", "recommended", "optional"))
+            self.assertIn("licence", r)
+        self.assertEqual(rows["unimate"]["licence"], "CC BY-NC 4.0 (non-commercial)")
+        self.assertIn(rows["optimizers"]["state"], ("ok", "partial", "missing"))
         self.assertIn(rows["blender"]["state"], ("ok", "missing"))
         self.assertEqual(rows["mcp"]["state"], "unknown")   # Studio cannot see Claude's connections
         self.assertIn("listening", rows["mcp"]["data"])

@@ -49,7 +49,8 @@ HOOK = HERE / "approval_hook.py"
 BLENDER_START = HERE / "worker_blender.py"
 RESERVED_PORT = 9876
 MCP_VERSION = "2.0.0"   # ahujasid's blender-mcp, the server and its bundled add-on together
-JOB_KINDS = ("chat", "notes", "create", "answer", "resume")
+JOB_KINDS = ("chat", "notes", "create", "answer", "resume", "setup")
+SETUP_KEY = "setup"
 STATES = ("queued", "running", "waiting", "done", "failed", "stopped")
 # Read-only tools Claude may use with no hook at all (belt and braces: if the hook ever
 # fails, dontAsk refuses everything not listed here).
@@ -380,11 +381,14 @@ class Blender:
 
 
 PROJECT_KEY = "project"
+SETUP_PARTS = ("blender", "optimizers", "skintokens", "unimate")
 
 
 def thread_key(kind: str, asset: str | None, request: str | None) -> str:
     """A conversation per model (asset:<id>), per Create request (request:<id>), and one for
     the whole project (project): what concerns several models at once."""
+    if kind == "setup":
+        return SETUP_KEY
     if kind == "create" or (request and not asset):
         return f"request:{request}"
     return f"asset:{asset}" if asset else PROJECT_KEY
@@ -493,6 +497,10 @@ def system_context(project: sl.Project, job: dict, port: int, lang: str) -> str:
               else "This conversation is about the whole project, not one model: the user may ask about "
                    "several models at once. `studio.py list` and the kiln-studio list_models tool name them."
               if job.get("key") == PROJECT_KEY
+              else "This conversation installs what kiln needs on this computer, asked from Studio's setup list. "
+                   "Before any download, say its size and licence and end with a KILN-PROPOSAL line asking to go "
+                   "ahead; a licence that limits use (non-commercial, not in the EU) is said plainly."
+              if job.get("key") == SETUP_KEY
               else "This conversation is about a model the user asked for in Studio's Create form. When it "
                    "exists, close the request with its asset (`studio.py request <id> --asset <asset>`).")
     return "\n".join([
@@ -612,6 +620,11 @@ class Worker:
             text = r["command"].replace("/kiln ", "/blender-kiln:kiln ", 1)
         if kind == "notes":
             text = f"/blender-kiln:kiln studio {asset}"
+        if kind == "setup":
+            # Only a known part, never free text: the page names what to install.
+            if text not in SETUP_PARTS:
+                raise ValueError(f"which part? one of {', '.join(SETUP_PARTS)}")
+            text = f"/blender-kiln:kiln setup {text}"
         job = {"id": sl.new_id("j"), "kind": kind, "asset": asset, "request": request,
                "key": self.store.canonical(key or thread_key(kind, asset, request)), "text": text, "lang": lang if lang in ("en", "fr") else "en",
                "state": "queued", "created": sl.now(), "deferred": deferred}

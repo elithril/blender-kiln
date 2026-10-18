@@ -195,6 +195,15 @@ class Runs(Base):
         with self.assertRaises(ValueError):
             self.w.submit("notes")   # the open notes are a model's
 
+    def test_setup_installs_a_named_part_only(self) -> None:
+        with self.assertRaises(ValueError):
+            self.w.submit("setup", text="rm -rf ~")   # never free text
+        j = self.wait(self.w.submit("setup", text="unimate")["id"])
+        self.assertEqual((j["state"], j["key"]), ("done", "setup"))
+        c = self.calls()[-1]
+        self.assertEqual(c["prompt"], "/blender-kiln:kiln setup unimate")
+        self.assertIn("size and licence", c["args"][c["args"].index("--append-system-prompt") + 1])
+
     def test_a_created_model_keeps_its_request_conversation(self) -> None:
         r = sl.add_request(self.p, "a sturdy oak barrel")
         j = self.wait(self.w.submit("create", request=r["id"])["id"])
