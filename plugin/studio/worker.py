@@ -592,6 +592,30 @@ def system_context(project: sl.Project, job: dict, port: int, lang: str) -> str:
     ])
 
 
+def clean_context(c) -> dict | None:
+    """{"note": {"id", "number", "text"}, "view": true}: what the page sends with a message."""
+    if not isinstance(c, dict):
+        return None
+    out = {}
+    n = c.get("note")
+    if isinstance(n, dict) and sl.NOTE_ID_RE.match(str(n.get("id", ""))):
+        out["note"] = {"id": str(n["id"]), "number": n.get("number") if isinstance(n.get("number"), int) else None,
+                       "text": str(n.get("text", ""))[:1000]}
+    if c.get("view") is True:
+        out["view"] = True
+    return out or None
+
+
+def context_lines(ctx: dict) -> list[str]:
+    out = []
+    if ctx.get("note"):
+        n = ctx["note"]
+        out.append(f"(About note {n.get('number') or ''} {n['id']}: \u201c{n['text']}\u201d.)")
+    if ctx.get("view"):
+        out.append("(Look at my current Studio view first: kiln-studio get_view_image.)")
+    return out
+
+
 class Worker:
     def __init__(self, project: sl.Project, emit=lambda ev: None, *, claude: str | None = None,
                  blender: Blender | None = None, auth_ttl: float = 60.0):
@@ -671,7 +695,7 @@ class Worker:
 
     # submitting
     def submit(self, kind: str, *, asset: str | None = None, text: str = "", request: str | None = None,
-               lang: str = "en", key: str | None = None, deferred: dict | None = None) -> dict:
+               lang: str = "en", key: str | None = None, deferred: dict | None = None, context: dict | None = None) -> dict:
         if kind not in JOB_KINDS:
             raise ValueError(f"kind must be one of {', '.join(JOB_KINDS)}")
         if not self.project.settings()["claude_worker"]:
@@ -695,7 +719,11 @@ class Worker:
             if text not in SETUP_PARTS:
                 raise ValueError(f"which part? one of {', '.join(SETUP_PARTS)}")
             text = f"/blender-kiln:kiln setup {text}"
-        job = {"id": sl.new_id("j"), "kind": kind, "asset": asset, "request": request,
+        # What goes with the words: the note the user picked, their view. Claude reads it ahead
+        # of the message; the conversation shows it as tags, the user's words as they wrote them.
+        ctx = clean_context(context)
+        prompt = "\n".join([*context_lines(ctx), text]) if ctx else text
+        job = {"prompt": prompt, "context": ctx, "id": sl.new_id("j"), "kind": kind, "asset": asset, "request": request,
                "key": self.store.canonical(key or thread_key(kind, asset, request)), "text": text, "lang": lang if lang in ("en", "fr") else "en",
                "state": "queued", "created": sl.now(), "deferred": deferred}
         with self.cv:
@@ -712,7 +740,8 @@ class Worker:
             self.cv.notify_all()
             self._start_slots()
         if kind != "resume":
-            entry = self.store.append(job["key"], {"job": job["id"], "role": "user", "kind": kind, "text": text})
+            entry = self.store.append(job["key"], {"job": job["id"], "role": "user", "kind": kind, "text": text,
+                                                   **({"context": ctx} if ctx else {})})
         else:
             entry = None
         self._changed(job, entry)
@@ -897,7 +926,7 @@ class Worker:
         # The prompt goes on stdin; a resumed deferred call needs none.
         try:
             if job["kind"] != "resume":
-                proc.stdin.write(job["text"])
+                proc.stdin.write(job.get("prompt") or job["text"])
             proc.stdin.close()
         except BrokenPipeError:
             pass

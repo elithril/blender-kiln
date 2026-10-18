@@ -548,6 +548,7 @@ def make_handler(studio: Studio, port_ref: list[int]):
                     return self._json(studio.worker.submit(
                         str(body.get("kind", "")), asset=str(body["asset"])[:500] if body.get("asset") else None,
                         text=str(body.get("text", "")), request=str(body["request"])[:40] if body.get("request") else None,
+                        context=body.get("context") if isinstance(body.get("context"), dict) else None,
                         lang=str(body.get("lang", "en")),
                         key=str(body["key"])[:600] if str(body.get("key", "")).startswith("request:") or body.get("key") == wk.PROJECT_KEY else None))
                 if method == "POST" and parts[:3] == ["api", "claude", "jobs"] and len(parts) == 5:

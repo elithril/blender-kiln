@@ -606,6 +606,25 @@ class Checks(Base):
         self.assertEqual(checks.fmt_range(est["range"]), "~150K–255K tokens")
 
 
+class Tutorial(unittest.TestCase):
+    """The tutorial's models and their stats ship together: fixtures.json was made from these
+    files (static/tutorial/make_tutorial.py, then Studio's own stats and checks)."""
+
+    def test_fixtures_match_the_files(self) -> None:
+        d = STATIC / "tutorial"
+        fx = json.loads((d / "fixtures.json").read_text())
+        self.assertEqual(set(fx), {"barrel_before", "barrel_after", "lantern_1_blockout", "lantern_2_details",
+                                   "lantern_3_materials", "lantern_4_final"})
+        for key, f in fx.items():
+            glb_file = d / f"{key}.glb"
+            self.assertEqual(glb_file.stat().st_size, f["size"], key)
+            self.assertEqual(sl.file_hash(glb_file), f["hash"], key)
+            self.assertIn("final", f["checks"]["health"])
+        src = (STATIC / "tutorial.js").read_text()
+        for key in fx:
+            self.assertIn(f"'{key}'", src)   # every model is used
+
+
 class Settings(Base):
     def test_target_default_for_every_project_and_override(self) -> None:
         self.assertEqual((self.p.settings()["target"], self.p.target_source()), ("web", "default"))
@@ -695,7 +714,7 @@ def ui_strings() -> set[str]:
     def un(a, b):
         return (a if a is not None else b).replace("\\'", "'").replace('\\"', '"').replace("\\\\", "\\")
     keys: set[str] = set()
-    for f in ("app.js", "i18n.js"):
+    for f in ("app.js", "i18n.js", "tutorial.js"):
         src = (STATIC / f).read_text()
         keys |= {un(m.group(1), m.group(2)) for m in re.finditer(r"\b(?:t|N_)\(\s*" + q, src)}
         for m in re.finditer(r"\btp\([^'\"]*?,\s*" + q + r"\s*,\s*" + q, src):

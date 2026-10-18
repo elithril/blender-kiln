@@ -1090,3 +1090,24 @@ input.num { width: 84px; }
 .tabs [role=tab] { padding-left: 4px; padding-right: 4px; gap: 3px; }
 .tabs .tc { min-width: 14px; height: 14px; font-size: 9.5px; line-height: 14px; padding: 0 3px; border-radius: 7px; }
 .tabs .collapse { width: 24px; }
+/* the tutorial: a banner saying it is a simulation, a ring on what to do, a card */
+.tuto { position: fixed; inset: 0; z-index: 85; pointer-events: none; }
+.tuto-dim { position: fixed; inset: 0; background: rgba(5, 7, 10, .55); }
+.tuto-ring { position: fixed; border-radius: 10px; box-shadow: 0 0 0 2px var(--accent), 0 0 18px 2px color-mix(in srgb, var(--accent) 45%, transparent); transition: left .3s ease, top .3s ease, width .3s ease, height .3s ease, opacity .2s; }
+.tuto-card { position: fixed; width: 340px; padding: 14px 16px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line-3); box-shadow: var(--shadow); pointer-events: auto; transition: left .3s ease, top .3s ease, border-color .2s; }
+.tuto-card.ok { border-color: var(--ok); }
+.tuto-step { font: 600 10.5px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.tuto-card h4 { margin: 6px 0; font-size: 14.5px; }
+.tuto-card p { margin: 0 0 12px; font-size: 12.5px; line-height: 1.55; color: var(--text-2); }
+.tuto-acts { display: flex; align-items: center; gap: 6px; }
+.tuto-acts .sp { flex: 1; }
+.tuto-hint { font-size: 11.5px; color: var(--text-3); }
+.tuto-card.ok .tuto-hint { color: var(--ok); font-weight: 700; }
+.tuto-offer { position: fixed; right: 16px; bottom: 16px; z-index: 70; width: 330px; padding: 14px 16px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line-3); box-shadow: var(--shadow); }
+.tuto-offer b { font-size: 13.5px; }
+.tuto-offer p { margin: 6px 0 12px; font-size: 12.5px; line-height: 1.5; color: var(--text-2); }
+@media (prefers-reduced-motion: reduce) { .tuto-ring, .tuto-card { transition: none; } }
+.cl-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+.cl-tags span { font-size: 10.5px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line-3); color: var(--text-2); }
+.tuto-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tuto-sim { font: 600 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--new); border: 1px solid color-mix(in srgb, var(--new) 50%, transparent); border-radius: 4px; padding: 1px 6px; cursor: help; }

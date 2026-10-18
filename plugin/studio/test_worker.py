@@ -195,6 +195,17 @@ class Runs(Base):
         with self.assertRaises(ValueError):
             self.w.submit("notes")   # the open notes are a model's
 
+    def test_the_note_and_view_go_to_claude_not_into_the_words(self) -> None:
+        ctx = {"note": {"id": "n_abc123", "number": 2, "text": "the lid is thin"}, "view": True, "evil": "x"}
+        self.wait(self.w.submit("chat", asset="a", text="fix it", context=ctx)["id"])
+        prompt = self.calls()[-1]["prompt"]
+        self.assertIn("About note 2 n_abc123", prompt)
+        self.assertIn("get_view_image", prompt)
+        self.assertTrue(prompt.endswith("fix it"))
+        [u] = [m for m in self.w.thread("asset:a")["messages"] if m["role"] == "user"]
+        self.assertEqual((u["text"], u["context"]["note"]["number"], u["context"]["view"]), ("fix it", 2, True))
+        self.assertNotIn("evil", u["context"])
+
     def test_setup_installs_a_named_part_only(self) -> None:
         with self.assertRaises(ValueError):
             self.w.submit("setup", text="rm -rf ~")   # never free text

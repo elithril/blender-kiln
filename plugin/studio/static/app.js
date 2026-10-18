@@ -15,7 +15,8 @@ const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const enc = encodeURIComponent;
-const fileUrl = (rel, h) => '/files/' + rel.split('/').map(enc).join('/') + (h ? `?h=${h}` : '');
+const fileUrl = (rel, h) => rel.startsWith('data:') ? rel : rel.startsWith('@tuto/') ? `/static/tutorial/${rel.slice(6)}`
+  : '/files/' + rel.split('/').map(enc).join('/') + (h ? `?h=${h}` : '');
 // Same as studiolib.asset_key.
 const keyOf = (id) => id.replaceAll('%', '%25').replaceAll('~', '%7E').replaceAll('/', '~');
 const frac = (a, b) => (b ? (a - b) / b : 0);
@@ -62,7 +63,10 @@ const paletteExtras = [];
 
 // ── api ──────────────────────────────────────────────────────────────────────
 
+// The tutorial answers in place of the server while it runs (tutorial.js: nothing is written).
+const hooks = { api: null };
 async function api(path, { method = 'GET', body } = {}) {
+  if (hooks.api) return hooks.api(path, { method, body });
   const res = await fetch(path, {
     method, headers: body ? { 'Content-Type': 'application/json' } : {},
     body: body ? JSON.stringify(body) : undefined,
@@ -1750,8 +1754,11 @@ function liveEvents() {
   const es = new EventSource('/api/events');
   es.onopen = () => { if (lost) { lost = false; toast(t('Reconnected to Studio'), 'ok'); fetchAssets(); if (state.id) fetchDetail(); } };
   es.onerror = () => { if (!lost) { lost = true; toast(t('Lost the Studio server. Restart it with /kiln studio; this page reconnects on its own.'), 'warn', 12000); } };
-  es.onmessage = async (msg) => {
-    const ev = JSON.parse(msg.data);
+  // The tutorial plays its own events: the server's wait until it ends.
+  es.onmessage = (msg) => { if (!hooks.api) handleEvent(JSON.parse(msg.data)); };
+}
+async function handleEvent(ev) {
+  {
     if (ev.type === 'assets') {
       clearTimeout(assetsTimer);
       assetsTimer = setTimeout(async () => {
@@ -1813,7 +1820,7 @@ function liveEvents() {
       }, 120);
     }
     onEvent(ev);
-  };
+  }
 }
 // ── what the page shows, for Claude (the kiln-studio MCP server) ─────────────
 // The page tells the server which model, stage, camera and note it shows (get_selection),
@@ -2014,7 +2021,8 @@ function claudeEntry(e, results, job) {
     case 'user':
       if (e.kind === 'setup') return `<div class="cl-msg me"><span class="dim small">${esc(t('Install'))}</span><br>${esc(partName(e.text.replace(/^\/\S+\s+setup\s+/, '')))}</div>`;
       if (e.kind === 'create') return `<div class="cl-msg me"><span class="dim small">${esc(t('New model'))}</span><br>${mdLite(createBrief(e.text))}</div>`;
-      return `<div class="cl-msg me">${e.kind === 'notes' ? `<span class="dim">${esc(t('Work on the open notes'))}</span>` : mdLite(e.text)}</div>`;
+      const tags = [e.context?.note && `● ${t('note {n}', { n: e.context.note.number || '' })}`, e.context?.view && t('my view')].filter(Boolean);
+      return `<div class="cl-msg me">${e.kind === 'notes' ? `<span class="dim">${esc(t('Work on the open notes'))}</span>` : mdLite(e.text)}${tags.length ? `<div class="cl-tags">${tags.map((x) => `<span>${esc(x)}</span>`).join('')}</div>` : ''}</div>`;
     case 'assistant':
       return `<div class="cl-msg cl"><div class="who"><b>Claude</b> · <span title="${esc(stamp(e.at))}">${esc(ago(e.at))}</span></div>${mdLite(e.text)}</div>`;
     case 'tool': {
@@ -2124,17 +2132,20 @@ function renderClaude() {
     : esc(t('On {who} · Blender of Studio, port {p}', { who: accountWords(a), p: st.port }));
 }
 
-function claudeCompose(text) {
-  const parts = [];
+// What goes with the words: the highlighted note, the view. The worker puts it ahead of
+// the message for Claude; the conversation shows it as tags.
+function claudeContext() {
   const hl = !claude.view && state.hl && state.detail?.notes.find((n) => n.id === state.hl);
-  if (hl && claude.ctxNote) parts.push(`(About note ${noteNumber(hl)}, ${hl.id}: “${hl.text}”.)`);
-  if (claude.ctxView) parts.push('(Look at my current Studio view first: kiln-studio get_view_image.)');
-  return [...parts, text].join('\n');
+  const c = {};
+  if (hl && claude.ctxNote) c.note = { id: hl.id, number: noteNumber(hl), text: hl.text };
+  if (claude.ctxView) c.view = true;
+  return Object.keys(c).length ? c : null;
 }
 
-async function claudeSend(kind, text = '') {
+async function claudeSend(kind, text = '', context = null) {
   try {
     const body = claude.view ? { kind, key: claude.view, text, lang: getLang() } : { kind, asset: state.id, text, lang: getLang() };
+    if (context) body.context = context;
     await api('/api/claude/jobs', { method: 'POST', body });
     claude.stick = true;
     await claudeStatus();
@@ -2148,7 +2159,7 @@ $('#cl-send').onclick = async () => {
   if (!text) return;
   const job = claudeJob();
   const kind = job?.state === 'waiting' ? 'answer' : 'chat';
-  if (await claudeSend(kind, claudeCompose(text))) ta.value = '';
+  if (await claudeSend(kind, text, claudeContext())) ta.value = '';
 };
 $('#cl-text').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); $('#cl-send').click(); } });
 $('#tab-claude').addEventListener('click', async (e) => {
@@ -2281,6 +2292,23 @@ async function onClaude(ev) {
   if (ev.job?.state === 'waiting' && ev.entry && ['proposal', 'approval'].includes(ev.entry.role) && (ev.job.key !== threadKey() || $('#tab-claude').hidden || !isOpen(right) || document.hidden))
     claudeWaits(ev.job);
 }
+
+// ── the tutorial (tutorial.js): a scripted, simulated walk through Studio ─────
+// Offered once, the first time; ⌘K → Take the tutorial starts it again.
+async function startTutorial() {
+  $('#tuto-offer')?.remove();
+  prefs.tutorialSeen = true; savePrefs();
+  const m = await import('./tutorial.js');
+  m.start({ state, viewer, claude, hooks, toast, go, openAsset, ensureRight, setCompare, handleEvent, onClaude, claudeStatus,
+    fetchAssets, renderEmpty, openClaudeView });
+}
+paletteExtras.push((add) => add('Help', 'Take the tutorial', [], startTutorial));
+setTimeout(() => {
+  if (prefs.tutorialSeen || hooks.api || document.querySelector('dialog[open]')) return;
+  document.body.insertAdjacentHTML('beforeend', `<div id="tuto-offer" class="tuto-offer"><b>${esc(t('First time in Studio?'))}</b><p>${esc(t('A five-minute tutorial shows everything: notes, Claude at work, a model made step by step. It is a simulation: no Claude runs and nothing is written to your project.'))}</p><div class="tuto-acts"><button class="btn sm ghost" id="tuto-later">${esc(t('Not now'))}</button><span class="sp"></span><button class="btn sm accent" id="tuto-go">${esc(t('Take the tutorial'))}</button></div></div>`);
+  $('#tuto-go').onclick = startTutorial;
+  $('#tuto-later').onclick = () => { $('#tuto-offer').remove(); prefs.tutorialSeen = true; savePrefs(); };
+}, 2500);
 
 // ── keys ─────────────────────────────────────────────────────────────────────
 
@@ -2922,5 +2950,5 @@ window.addEventListener('hashchange', fromHash);
   fromHash();
   // The fonts change the bar's width once they load.
   document.fonts?.ready.then(fitSoon);
-  window.__studio = { state, viewer, openAsset, setCompare, startPin, startGeneral, get detail() { return state.detail; } };
+  window.__studio = { state, viewer, openAsset, setCompare, startPin, startGeneral, startTutorial, get detail() { return state.detail; } };
 })();
