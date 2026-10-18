@@ -572,7 +572,7 @@ class Worker:
         for j in jobs:
             j["position"] = queued.index(j["id"]) + 1 if j["id"] in queued else None
         return {"enabled": st["claude_worker"], "port": st["blender_port"], "mcp": st["blender_mcp"],
-                "approvals": st["claude_approvals"], "model": st["claude_model"], "budget_usd": st["claude_budget_usd"],
+                "approvals": st["claude_approvals"], "paid": st["claude_paid"], "model": st["claude_model"], "budget_usd": st["claude_budget_usd"],
                 "parallel": st["claude_parallel"], "machine": machine(), "account": user_settings()["account"],
                 "account_dir": str(account_dir()),
                 "auth": self.auth(force_auth), "blender": self.blender.status(),
@@ -800,7 +800,8 @@ class Worker:
         cmd = self.command(job, session, blender.port or self.project.settings()["blender_port"] + slot)
         env = dict(account_env(job["account"]), KILN_STUDIO_ROOT=str(self.project.root), KILN_PLUGIN_DIR=str(PLUGIN),
                    KILN_DECISIONS=str(self.decisions_dir()),
-                   KILN_APPROVALS="auto" if self.project.settings()["claude_approvals"] == "auto" else "ask")
+                   KILN_APPROVALS="auto" if self.project.settings()["claude_approvals"] == "auto" else "ask",
+                   KILN_PAID="auto" if self.project.settings()["claude_paid"] == "auto" else "ask")
         err = (self.project.data / "cache" / "worker" / "claude.err").open("ab")
         t0 = time.time()
         proc = subprocess.Popen(cmd, cwd=str(self.project.root), env=env, stdin=subprocess.PIPE,

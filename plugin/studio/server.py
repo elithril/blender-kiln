@@ -391,7 +391,8 @@ def make_handler(studio: Studio, port_ref: list[int]):
                 if parts[:2] == ["api", "config"]:
                     # The project's settings, shared with Claude (references/studio.md § 9).
                     return self._json({"settings": project.settings(), "defaults": sl.CONFIG_DEFAULTS,
-                                       "targets": list(sl.TARGETS), "file": f"{sl.DATA_DIR}/config.json"})
+                                       "targets": list(sl.TARGETS), "file": f"{sl.DATA_DIR}/config.json",
+                                       "target_source": project.target_source(), "user_defaults": sl.user_defaults()})
                 if parts[:2] == ["api", "status"]:
                     # The welcome screen's setup line: Blender, the MCP add-on, SkinTokens.
                     return self._json(setup_status.install_status(project.root))
@@ -571,7 +572,13 @@ def make_handler(studio: Studio, port_ref: list[int]):
                 if method == "PUT" and parts == ["api", "config"]:
                     settings = sl.save_config(project, body)
                     studio.refresh()   # exclude: the list changes now, not at the next tick
-                    return self._json({"settings": settings})
+                    return self._json({"settings": settings, "target_source": project.target_source(),
+                                       "user_defaults": sl.user_defaults()})
+                if method == "PUT" and parts == ["api", "defaults"]:
+                    # The user's defaults for every project on this computer (~/.kiln-studio).
+                    sl.save_user_defaults(**{k: v for k, v in body.items() if k == "target"})
+                    return self._json({"settings": project.settings(), "target_source": project.target_source(),
+                                       "user_defaults": sl.user_defaults()})
                 if parts[:2] != ["api", "asset"] or len(parts) < 4:
                     return self._err(404, "not found")
                 a = studio.asset(parts[2])

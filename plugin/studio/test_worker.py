@@ -249,7 +249,8 @@ class Runs(Base):
         self.assertEqual(hook.decide(ev, {"KILN_APPROVALS": "auto"})[0], None)          # auto mode decides
         self.assertEqual(hook.decide(ev, {})[0], "defer")                                # ask: waits
         paid = {"tool_name": "mcp__blender__generate_hyper3d_model_via_text", "tool_input": {}, "tool_use_id": "t2"}
-        self.assertEqual(hook.decide(paid, {"KILN_APPROVALS": "auto"})[0], "defer")     # money: always asks
+        self.assertEqual(hook.decide(paid, {"KILN_APPROVALS": "auto"})[0], "defer")     # money: asks…
+        self.assertEqual(hook.decide(paid, {"KILN_PAID": "auto"})[0], "allow")           # …unless set to auto
         self.assertGreaterEqual(wk.machine()["max_parallel"], 1)
 
     def test_refuses_without_the_subscription(self) -> None:

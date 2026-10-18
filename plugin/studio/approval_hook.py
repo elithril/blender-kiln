@@ -16,7 +16,7 @@ Safe, allowed at once:
 - Edit / Write / NotebookEdit inside the project folder;
 - Bash commands made only of the skill's own Python scripts and read-only commands.
 Anything else is deferred (with KILN_APPROVALS=auto: left to Claude Code's auto mode, but
-paid generation, which still waits for the user). AskUserQuestion is denied with a reason:
+paid generation, which waits for the user unless KILN_PAID=auto). AskUserQuestion is denied with a reason:
 nobody can answer it mid-run, the question goes in the message instead.
 
 Standard library only. Also importable: classify() is what the tests exercise.
@@ -120,6 +120,8 @@ def decide(event: dict, env: dict) -> tuple[str, str]:
     plugin = Path(env.get("KILN_PLUGIN_DIR") or Path(__file__).resolve().parent.parent).resolve()
     tool, tool_input = str(event.get("tool_name", "")), event.get("tool_input") or {}
     decision, reason = classify(tool, tool_input if isinstance(tool_input, dict) else {}, root, plugin)
+    if decision == "defer" and PAID.match(tool) and env.get("KILN_PAID") == "auto":
+        return "allow", "paid generation is set to auto in Kiln Studio"
     if decision == "defer" and env.get("KILN_APPROVALS") == "auto" and not PAID.match(tool):
         # Auto: Claude Code's auto mode decides the rest; only what can spend money waits here.
         return None, "auto mode decides"

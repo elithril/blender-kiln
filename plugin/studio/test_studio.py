@@ -82,8 +82,15 @@ class Base(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = Path(tempfile.mkdtemp(prefix="kiln-studio-test-"))
         self.p = sl.Project(self.tmp)
+        # Never the user's own ~/.kiln-studio.
+        self._home = os.environ.get("KILN_STUDIO_HOME")
+        os.environ["KILN_STUDIO_HOME"] = str(self.tmp / ".home")
 
     def tearDown(self) -> None:
+        if self._home is None:
+            os.environ.pop("KILN_STUDIO_HOME", None)
+        else:
+            os.environ["KILN_STUDIO_HOME"] = self._home
         shutil.rmtree(self.tmp, ignore_errors=True)
 
 
@@ -600,6 +607,22 @@ class Checks(Base):
 
 
 class Settings(Base):
+    def test_target_default_for_every_project_and_override(self) -> None:
+        self.assertEqual((self.p.settings()["target"], self.p.target_source()), ("web", "default"))
+        sl.save_user_defaults(target="print")   # every project on this computer
+        self.assertEqual((self.p.settings()["target"], self.p.target_source()), ("print", "default"))
+        self.assertTrue((self.tmp / ".home" / "defaults.json").is_file())
+        sl.save_config(self.p, {"target": "desktop"})   # this one says otherwise
+        self.assertEqual((self.p.settings()["target"], self.p.target_source()), ("desktop", "project"))
+        sl.save_config(self.p, {"target": ""})          # back to the default
+        self.assertEqual((self.p.settings()["target"], self.p.target_source()), ("print", "default"))
+        with self.assertRaises(ValueError):
+            sl.save_user_defaults(target="moon")
+        sl.save_config(self.p, {"claude_paid": "auto"})
+        self.assertEqual(self.p.settings()["claude_paid"], "auto")
+        with self.assertRaises(ValueError):
+            sl.save_config(self.p, {"claude_paid": "always"})
+
     def test_defaults_validation_and_unknown_keys_kept(self) -> None:
         self.assertEqual(self.p.settings(), sl.CONFIG_DEFAULTS)
         self.p.ensure()

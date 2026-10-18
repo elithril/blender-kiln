@@ -270,70 +270,51 @@
 <dialog id="settings" aria-labelledby="set-title">
   <header class="set-head"><h3 id="set-title" data-i18n>Settings</h3><form method="dialog"><button class="btn sm" data-i18n>Close</button></form></header>
   <div class="set-body">
-    <section class="set-sec" aria-labelledby="set-personal">
-      <h4 id="set-personal"><span data-i18n>Personal</span> <small data-i18n>this browser only</small></h4>
-      <div class="set-grid" id="set-personal-rows">
-        <span class="lab" data-i18n>Language</span>
-        <div class="seg small" id="set-lang"></div>
-        <span class="lab" data-i18n>Theme</span>
-        <div class="themes" id="set-theme" role="radiogroup" aria-label="Theme" data-i18n-attr="aria-label"></div>
-        <span class="lab" data-i18n>Accent</span>
-        <div class="swatches" id="set-accent" role="radiogroup" aria-label="Accent colour" data-i18n-attr="aria-label"></div>
-        <span class="lab" data-i18n>Rows in the list</span>
-        <div class="seg small" id="set-density"><button data-v="normal" data-i18n>Normal</button><button data-v="compact" data-i18n>Compact</button></div>
-        <label class="lab" for="set-shade" data-i18n>A model opens in</label>
-        <select id="set-shade"><option value="" data-i18n>The last shading used</option><option value="lit" data-i18n>Lit</option><option value="unlit" data-i18n>Unlit</option><option value="clay" data-i18n>Clay</option><option value="normals" data-i18n>Normals</option><option value="uv" data-i18n>UV checker</option><option value="faces" data-i18n>Faces</option></select>
-        <label class="lab" for="set-view" data-i18n>Seen from</label>
-        <select id="set-view"><option value="iso" data-i18n>Three-quarter</option><option value="front" data-i18n>Front</option><option value="back" data-i18n>Back</option><option value="left" data-i18n>Left</option><option value="right" data-i18n>Right</option><option value="top" data-i18n>Top</option></select>
-        <span class="lab" data-i18n>Lengths in</span>
-        <div class="seg small" id="set-units"><button data-v="m" data-i18n>metres</button><button data-v="cm" data-i18n>centimetres</button></div>
-        <span class="lab" data-i18n>Fixed pins</span>
-        <button class="switch" id="set-hidefixed" role="switch" aria-checked="false"><i class="sw"></i><span data-i18n>Hidden by default</span></button>
-      </div>
-    </section>
-    <section class="set-sec project" aria-labelledby="set-project">
-      <h4 id="set-project"><span data-i18n>Project</span> <small><span data-i18n>shared with Claude, in</span> <code>.kiln-studio/config.json</code></small></h4>
-      <div class="set-grid">
-        <span class="lab" data-i18n>Live view</span>
-        <button class="switch" id="set-live" role="switch" aria-checked="true"><i class="sw"></i><span data-i18n>Claude shows a model here while it builds it</span></button>
-        <span class="lab" data-i18n>Opening Studio</span>
-        <button class="switch" id="set-autoopen" role="switch" aria-checked="true"><i class="sw"></i><span data-i18n>Opens the browser on its own</span></button>
-        <span class="lab" data-i18n>Made for</span>
-        <div><div class="seg small" id="set-target"><button data-v="web" data-i18n>Web</button><button data-v="desktop" data-i18n>Unity / Unreal</button><button data-v="print" data-i18n>3D print</button></div>
-          <p class="dim small" data-i18n>Sets the limits the checks use, when a model's production log names no target.</p></div>
-        <label class="lab" for="set-exclude" data-i18n>Left out of the list</label>
-        <div><textarea id="set-exclude" rows="3" spellcheck="false" placeholder="site/public/*" aria-describedby="set-exclude-help"></textarea>
-          <p class="dim small" id="set-exclude-help" data-i18n>One folder or file pattern per line, from the project folder.</p></div>
-      </div>
+    <nav class="set-nav" role="tablist" aria-label="Settings" data-i18n-attr="aria-label">
+      <button role="tab" data-pane="display"><b data-i18n>Display</b><span data-i18n>this browser</span></button>
+      <button role="tab" data-pane="project"><b data-i18n>Project</b><span data-i18n>shared with Claude</span></button>
+      <button role="tab" data-pane="claude"><b><span class="spark" aria-hidden="true">✦</span> Claude</b><span data-i18n>in Studio</span></button>
+      <button role="tab" data-pane="account"><b data-i18n>Account</b><span data-i18n>this computer</span></button>
+    </nav>
+    <div class="set-panes">
+      <section class="set-pane" data-pane="display" role="tabpanel">
+        <p class="set-where" data-i18n>Only in this browser: how the page looks to you.</p>
+        <div class="srow"><div class="st"><b data-i18n>Language</b></div><div class="sc"><div class="seg small" id="set-lang"></div></div></div>
+        <div class="srow wide"><div class="st"><b data-i18n>Theme</b></div><div class="sc"><div class="themes" id="set-theme" role="radiogroup" aria-label="Theme" data-i18n-attr="aria-label"></div></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Accent</b></div><div class="sc"><div class="swatches" id="set-accent" role="radiogroup" aria-label="Accent colour" data-i18n-attr="aria-label"></div></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Rows in the list</b></div><div class="sc"><div class="seg small" id="set-density"><button data-v="normal" data-i18n>Normal</button><button data-v="compact" data-i18n>Compact</button></div></div></div>
+        <div class="srow"><div class="st"><label for="set-shade"><b data-i18n>A model opens in</b></label></div><div class="sc"><select id="set-shade"><option value="" data-i18n>The last shading used</option><option value="lit" data-i18n>Lit</option><option value="unlit" data-i18n>Unlit</option><option value="clay" data-i18n>Clay</option><option value="normals" data-i18n>Normals</option><option value="uv" data-i18n>UV checker</option><option value="faces" data-i18n>Faces</option></select></div></div>
+        <div class="srow"><div class="st"><label for="set-view"><b data-i18n>Seen from</b></label></div><div class="sc"><select id="set-view"><option value="iso" data-i18n>Three-quarter</option><option value="front" data-i18n>Front</option><option value="back" data-i18n>Back</option><option value="left" data-i18n>Left</option><option value="right" data-i18n>Right</option><option value="top" data-i18n>Top</option></select></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Lengths in</b></div><div class="sc"><div class="seg small" id="set-units"><button data-v="m" data-i18n>metres</button><button data-v="cm" data-i18n>centimetres</button></div></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Hide closed notes' pins</b><span data-i18n>Resolved and won't-fix notes keep their pin, hidden until you show them.</span></div><div class="sc"><button class="switch" id="set-hidefixed" role="switch" aria-checked="false" aria-label="Hide closed notes' pins" data-i18n-attr="aria-label"><i class="sw"></i></button></div></div>
+      </section>
+      <section class="set-pane" data-pane="project" role="tabpanel" hidden>
+        <p class="set-where"><span data-i18n>This project, shared with Claude in</span> <code>.kiln-studio/config.json</code></p>
+        <div class="srow"><div class="st"><b data-i18n>Made for</b><span data-i18n>Sets the budgets (triangles, textures), the file format and the checks.</span></div><div class="sc"><select id="set-target" aria-label="Made for" data-i18n-attr="aria-label"><option value="" id="set-target-inherit"></option><option value="web" data-i18n>Web</option><option value="desktop" data-i18n>Unity / Unreal</option><option value="print" data-i18n>3D print</option></select></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Live view</b><span data-i18n>Watch a model take shape while Claude builds it.</span></div><div class="sc"><button class="switch" id="set-live" role="switch" aria-checked="true" aria-label="Live view" data-i18n-attr="aria-label"><i class="sw"></i></button></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Open the browser</b><span data-i18n>When Studio starts, it opens this page by itself.</span></div><div class="sc"><button class="switch" id="set-autoopen" role="switch" aria-checked="true" aria-label="Open the browser" data-i18n-attr="aria-label"><i class="sw"></i></button></div></div>
+        <div class="srow wide"><div class="st"><label for="set-exclude"><b data-i18n>Left out of the list</b></label><span id="set-exclude-help" data-i18n>One folder or file pattern per line, from the project folder.</span></div><div class="sc"><textarea id="set-exclude" rows="3" spellcheck="false" placeholder="site/public/*" aria-describedby="set-exclude-help"></textarea></div></div>
+      </section>
+      <section class="set-pane" data-pane="claude" role="tabpanel" hidden>
+        <p class="set-where" data-i18n>This project: how Claude works from the page.</p>
+        <div class="srow"><div class="st"><b data-i18n>Ask Claude from Studio</b><span data-i18n>The ✦ tab, New model and the project conversation. Off, Studio is for looking and noting; Claude is used from the terminal.</span></div><div class="sc"><button class="switch" id="set-claude" role="switch" aria-checked="false" aria-label="Ask Claude from Studio" data-i18n-attr="aria-label"><i class="sw"></i></button></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Approvals</b><span id="set-approvals-help"></span></div><div class="sc"><div class="seg small" id="set-approvals"><button data-v="ask" data-i18n>Ask me</button><button data-v="auto" data-i18n>Auto</button></div></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Paid generation</b><span id="set-paid-help"></span></div><div class="sc"><div class="seg small" id="set-paid"><button data-v="ask" data-i18n>Ask me</button><button data-v="auto" data-i18n>Auto</button></div></div></div>
+        <div class="srow"><div class="st"><b data-i18n>At once</b><span id="set-parallel-help"></span></div><div class="sc"><div class="seg small" id="set-parallel"></div></div></div>
+        <div class="srow"><div class="st"><label for="set-model"><b data-i18n>Model</b></label><span data-i18n>Claude Code's default follows your plan.</span></div><div class="sc"><select id="set-model"><option value="" data-i18n>Claude Code's default</option><option value="opus">Opus</option><option value="sonnet">Sonnet</option><option value="haiku">Haiku</option></select></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Blender MCP server</b><span data-i18n>What drives Studio's own Blender.</span></div><div class="sc"><div class="seg small" id="set-mcp"><button data-v="ahujasid">ahujasid</button><button data-v="lab">Blender Lab</button></div></div></div>
+        <div class="srow"><div class="st"><label for="set-port"><b data-i18n>Studio's Blender port</b></label><span data-i18n>The next ones follow when several run at once. 9876 stays your own Blender's.</span></div><div class="sc"><input id="set-port" type="number" min="1024" max="65535" class="num"></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Studio's Blender</b><span id="set-blender-state"></span></div><div class="sc"><button class="btn sm" id="set-stop-blender" data-i18n>Stop it</button></div></div>
+      </section>
+      <section class="set-pane" data-pane="account" role="tabpanel" hidden>
+        <p class="set-where" data-i18n>This computer, for every project: who pays for Claude's work.</p>
+        <div class="srow"><div class="st"><b data-i18n>Claude account</b><span id="set-acc-help"></span></div><div class="sc"><div class="seg small" id="set-account"><button data-v="subscription" data-i18n>My subscription</button><button data-v="account" data-i18n>Another account</button><button data-v="api_key" data-i18n>API key</button></div></div></div>
+        <div class="sbox" id="set-acc"></div>
+        <div class="srow"><div class="st"><b data-i18n>Made for, by default</b><span data-i18n>For every project that does not choose.</span></div><div class="sc"><div class="seg small" id="set-target-default"><button data-v="web" data-i18n>Web</button><button data-v="desktop" data-i18n>Unity / Unreal</button><button data-v="print" data-i18n>3D print</button></div></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Usage</b><span id="set-usage"></span></div><div class="sc"></div></div>
+      </section>
       <p class="set-status dim small" id="set-status" aria-live="polite"></p>
-    </section>
-    <section class="set-sec claude" aria-labelledby="set-claude-h" id="set-claude-sec">
-      <h4 id="set-claude-h"><span class="spark" aria-hidden="true">✦</span> <span data-i18n>Claude in Studio</span> <small data-i18n>the account is this computer's; the rest is the project's</small></h4>
-      <div class="set-grid">
-        <span class="lab" data-i18n>Claude in Studio</span>
-        <button class="switch" id="set-claude" role="switch" aria-checked="false"><i class="sw"></i><span data-i18n>Claude works on your models from this page</span></button>
-        <span class="lab" data-i18n>Account</span>
-        <div><div class="seg small" id="set-account"><button data-v="subscription" data-i18n>My subscription</button><button data-v="account" data-i18n>Another Claude account</button><button data-v="api_key" data-i18n>API key</button></div>
-          <div class="set-acc" id="set-acc"></div></div>
-        <span class="lab" data-i18n>Approvals</span>
-        <div><div class="seg small" id="set-approvals"><button data-v="ask" data-i18n>Ask me</button><button data-v="auto" data-i18n>Auto</button></div>
-          <p class="dim small" id="set-approvals-help"></p></div>
-        <span class="lab" data-i18n>Paid generation</span>
-        <p class="dim small" style="margin:0">🔒 <span data-i18n>Always asks: Hyper3D Rodin, Hunyuan3D and any tool that spends credits, whatever the mode.</span></p>
-        <span class="lab" data-i18n>At once</span>
-        <div><div class="seg small" id="set-parallel"></div>
-          <p class="dim small" id="set-parallel-help"></p></div>
-        <span class="lab" data-i18n>Blender MCP server</span>
-        <div><div class="seg small" id="set-mcp"><button data-v="ahujasid">ahujasid</button><button data-v="lab">Blender Lab</button></div>
-          <p class="dim small"><span data-i18n>Studio's Blender listens on port</span> <input id="set-port" type="number" min="1024" max="65535" class="num" aria-label="Port"> <span data-i18n>(9876 stays your own Blender's)</span></p></div>
-        <label class="lab" for="set-model" data-i18n>Model</label>
-        <select id="set-model"><option value="" data-i18n>Claude Code's default</option><option value="opus">Opus</option><option value="sonnet">Sonnet</option><option value="haiku">Haiku</option></select>
-        <span class="lab" data-i18n>Usage</span>
-        <div><p class="small" id="set-usage" style="margin:0"></p>
-          <p class="dim small"><button class="linkish" id="set-stop-blender" data-i18n>Stop Studio's Blender</button></p></div>
-      </div>
-      <p class="set-status dim small" id="set-claude-status" aria-live="polite"></p>
-    </section>
+    </div>
   </div>
 </dialog>
 <dialog id="palette" aria-label="Commands" data-i18n-attr="aria-label">

@@ -2446,18 +2446,28 @@ paletteExtras.push((add) => {
 
 const settingsRows = []; // further personal rows (theme, language) register here
 let project = null;
-async function openSettings() {
+async function openSettings(pane) {
   document.querySelector('dialog[open]')?.close();
   syncPersonal();
   $('#set-status').textContent = '';
-  claudeNote('');
+  setPane(pane || prefs.setPane || 'display');
   syncClaudeSettings();
   $('#settings').showModal();
   try {
-    project = (await api('/api/config')).settings;
+    projectInfo = await api('/api/config');
+    project = projectInfo.settings;
     syncProject();
   } catch (e) { $('#set-status').textContent = t('Could not read the project settings: {e}', { e: e.message }); }
 }
+// Display (this browser), Project, Claude, Account (this computer): one pane at a time.
+function setPane(name) {
+  $$('#settings .set-nav [data-pane]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.pane === name)));
+  $$('#settings .set-pane').forEach((x) => (x.hidden = x.dataset.pane !== name));
+  prefs.setPane = name; savePrefs();
+}
+$$('#settings .set-nav [data-pane]').forEach((b) => (b.onclick = () => { $('#set-status').textContent = ''; setPane(b.dataset.pane); }));
+let projectInfo = null;
+const targetName = (v) => ({ web: t('Web'), desktop: t('Unity / Unreal'), print: t('3D print') }[v] || v);
 function segSet(id, value) { $$(`${id} button`).forEach((b) => b.classList.toggle('on', b.dataset.v === value)); }
 function switchSet(id, on) { $(id).setAttribute('aria-checked', String(!!on)); }
 function syncPersonal() {
@@ -2472,13 +2482,18 @@ function syncProject() {
   if (!project) return;
   switchSet('#set-live', project.live_view);
   switchSet('#set-autoopen', project.auto_open);
-  segSet('#set-target', project.target);
+  // "Default (Web)": the project follows the computer's default until it chooses.
+  const def = projectInfo?.user_defaults?.target || 'web';
+  $('#set-target-inherit').textContent = t('Default ({t})', { t: targetName(def) });
+  $('#set-target').value = projectInfo?.target_source === 'project' ? project.target : '';
+  segSet('#set-target-default', def);
   if (document.activeElement !== $('#set-exclude')) $('#set-exclude').value = project.exclude.join('\n');
 }
 async function saveProject(updates, what) {
   $('#set-status').textContent = t('Saving…');
   try {
-    project = (await api('/api/config', { method: 'PUT', body: updates })).settings;
+    projectInfo = { ...projectInfo, ...(await api('/api/config', { method: 'PUT', body: updates })) };
+    project = projectInfo.settings;
     syncProject();
     $('#set-status').textContent = t('Saved in .kiln-studio/config.json: {what}', { what });
     if ('target' in updates && state.id) await fetchDetail();
@@ -2492,9 +2507,18 @@ $$('#set-units button').forEach((b) => (b.onclick = () => { prefs.units = b.data
 $('#set-hidefixed').onclick = () => { setPinFilter('hideFixed', !state.hideFixed); syncPersonal(); };
 $('#set-live').onclick = () => project && saveProject({ live_view: !project.live_view }, t('Live view'));
 $('#set-autoopen').onclick = () => project && saveProject({ auto_open: !project.auto_open }, t('Opening Studio'));
-$$('#set-target button').forEach((b) => (b.onclick = () => project && project.target !== b.dataset.v && saveProject({ target: b.dataset.v }, t('Made for'))));
+$('#set-target').onchange = (e) => project && saveProject({ target: e.target.value }, t('Made for'));
+$$('#set-target-default button').forEach((b) => (b.onclick = async () => {
+  try {
+    projectInfo = { ...projectInfo, ...(await api('/api/defaults', { method: 'PUT', body: { target: b.dataset.v } })) };
+    project = projectInfo.settings;
+    syncProject();
+    $('#set-status').textContent = t('Saved for every project on this computer: {what}', { what: t('Made for, by default') });
+    if (state.id) await fetchDetail();
+  } catch (e) { $('#set-status').textContent = t('Not saved: {e}', { e: e.message }); }
+}));
 $('#set-exclude').onchange = (e) => saveProject({ exclude: e.target.value.split('\n').map((x) => x.trim()).filter(Boolean) }, t('Left out of the list'));
-$('#t-settings').onclick = openSettings;
+$('#t-settings').onclick = () => openSettings();
 
 // ── Settings → Claude in Studio ──────────────────────────────────────────────
 // The account is this computer's (worker.py: ~/.kiln-studio/claude.json, the key in the
@@ -2502,36 +2526,43 @@ $('#t-settings').onclick = openSettings;
 
 async function syncClaudeSettings(fresh = true) {
   const st = fresh ? await claudeStatus() : claude.status;
-  const sec = $('#set-claude-sec');
-  sec.hidden = !st;
+  $('#settings .set-nav [data-pane="claude"]').hidden = $('#settings .set-nav [data-pane="account"]').hidden = !st;
   if (!st) return;
   switchSet('#set-claude', st.enabled);
+  segSet('#set-paid', st.paid);
+  $('#set-paid-help').textContent = st.paid === 'auto'
+    ? t('⚠ Started without asking: Hyper3D Rodin, Hunyuan3D… spend your credits with those services.')
+    : t('Hyper3D Rodin, Hunyuan3D… wait for your OK each time: they spend credits.');
+  const b = st.blender || {};
+  $('#set-blender-state').textContent = b.state === 'running' ? t('Running on port {p}', { p: b.port }) : t('Starts with Claude\'s first request, closes with Studio.');
+  $('#set-stop-blender').disabled = b.state !== 'running';
   segSet('#set-account', st.account);
   segSet('#set-approvals', st.approvals);
   segSet('#set-mcp', st.mcp);
   if (document.activeElement !== $('#set-port')) $('#set-port').value = st.port;
   $('#set-model').value = ['', 'opus', 'sonnet', 'haiku'].includes(st.model) ? st.model : '';
   const a = st.auth || {};
-  const line = `<p class="small ${a.ok ? 'ok-t' : 'warn-t'}" style="margin:6px 0 0">${a.ok ? '✓' : '✕'} ${esc(accountWords(a))}</p>`;
-  let extra = '';
-  if (st.account === 'subscription') extra = `<p class="dim small">${esc(t('Claude Code as it is logged in on this computer: the usage counts in that subscription.'))}</p>`;
-  else if (st.account === 'account') extra = `<p class="dim small">${esc(t('A second Claude login, kept in a folder of Studio\'s own: your terminal\'s Claude Code keeps its own account.'))}</p>
-      <p class="small"><button class="btn sm" id="set-login">${esc(a.ok ? t('Log in again') : t('Log in…'))}</button> <span class="dim">${esc(t('opens claude.ai in your browser'))}</span></p>`;
-  else extra = `<p class="dim small">${esc(t('Billed per token to your Anthropic account, in real dollars — not a subscription. Kept in the macOS keychain; Studio never shows it again.'))}</p>
-      <p class="small set-key"><input id="set-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…" aria-label="${esc(t('API key'))}"> <button class="btn sm" id="set-key-save">${esc(a.ok ? t('Replace') : t('Save'))}</button>${a.ok ? ` <button class="btn sm ghost" id="set-key-forget">${esc(t('Forget it'))}</button>` : ''}</p>
-      <p class="small">${esc(t('At most'))} <input id="set-budget" type="number" min="0.1" max="100" step="0.5" class="num" value="${esc(st.budget_usd)}" aria-label="${esc(t('Dollars per request'))}"> ${esc(t('$ per request'))}</p>`;
-  $('#set-acc').innerHTML = line + extra;
+  $('#set-acc-help').textContent = { subscription: t('Claude Code as it is logged in on this computer.'),
+    account: t('A second Claude login of Studio\'s own: your terminal keeps its account.'),
+    api_key: t('Billed per token, in real dollars, to your Anthropic account.') }[st.account];
+  // The account's state, once, and what that kind of account needs.
+  const state1 = `<div class="sline ${a.ok ? 'ok' : 'bad'}"><span>${a.ok ? '✓' : '!'}</span><b>${esc(accountWords(a))}</b></div>`;
+  let more = '';
+  if (st.account === 'account') more = `<div class="srow in"><div class="st"><b>${esc(a.ok ? t('Log in again') : t('Log in'))}</b><span>${esc(t('Opens claude.ai in your browser.'))}</span></div><div class="sc"><button class="btn sm" id="set-login">${esc(t('Log in…'))}</button></div></div>`;
+  else if (st.account === 'api_key') more = `<div class="srow in"><div class="st"><b>${esc(t('API key'))}</b><span>${esc(t('Kept in the macOS keychain; never shown again.'))}</span></div><div class="sc set-key"><input id="set-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…" aria-label="${esc(t('API key'))}"><button class="btn sm" id="set-key-save">${esc(a.ok ? t('Replace') : t('Save'))}</button>${a.ok ? `<button class="btn sm ghost" id="set-key-forget">${esc(t('Forget it'))}</button>` : ''}</div></div>
+      <div class="srow in"><div class="st"><label for="set-budget"><b>${esc(t('Cap per request'))}</b></label><span>${esc(t('A request stops when it has spent this much.'))}</span></div><div class="sc"><input id="set-budget" type="number" min="0.1" max="100" step="0.5" class="num" value="${esc(st.budget_usd)}"> <span class="dim small">$</span></div></div>`;
+  $('#set-acc').innerHTML = state1 + more;
   $('#set-approvals-help').textContent = st.approvals === 'auto'
-    ? t('Claude Code\'s auto mode decides each tool call; what it judges risky is refused and Claude works around it, without asking you.')
-    : t('Reading, Studio\'s Blender, the project\'s files and kiln\'s scripts go through; anything else waits for you in the page.');
+    ? t('Claude Code decides alone; what it judges risky is refused, without asking you.')
+    : t('Reading, the project\'s files and kiln\'s scripts go through; anything else waits for your OK.');
   const m = st.machine || {}, max = Math.max(1, m.max_parallel || 1);
   $('#set-parallel').innerHTML = [1, 2, 3, 4].map((n) => `<button data-v="${n}"${n > max ? ` title="${esc(t('More than this computer takes comfortably'))}" class="over"` : ''}>${n}</button>`).join('');
   segSet('#set-parallel', String(st.parallel));
   $$('#set-parallel button').forEach((b) => (b.onclick = () => saveClaude({ claude_parallel: +b.dataset.v }, t('At once'))));
-  $('#set-parallel-help').textContent = t('Each run has its own Blender (about 0.5–1 GB of memory, ports {p} and up), never two on one model. Two at once use the quota twice as fast. This computer: {ram} GB, {cores} cores — up to {max} is comfortable.', { p: st.port, ram: m.ram_gb ?? '?', cores: m.cores ?? '?', max });
+  $('#set-parallel-help').textContent = t('Each its own Blender, never two on one model; the quota goes faster. This computer ({ram} GB, {cores} cores): up to {max}.', { ram: m.ram_gb ?? '?', cores: m.cores ?? '?', max });
   // This account's runs: an API key's are billed, a subscription's are API-equivalent.
   const u = (st.usage?.by_account || {})[st.account] || { runs: 0, cost_usd: 0 };
-  $('#set-usage').textContent = [tp(u.runs || 0, '{n} request', '{n} requests'), u.cost_usd ? (st.account === 'api_key' ? t('≈ ${c} on your API key', { c: fmtD(u.cost_usd, 2) }) : t('≈ ${c} API-equivalent, included in your subscription', { c: fmtD(u.cost_usd, 2) })) : ''].filter(Boolean).join(' · ');
+  $('#set-usage').textContent = [tp(u.runs || 0, '{n} request', '{n} requests'), u.cost_usd ? (st.account === 'api_key' ? t('≈ ${c} billed', { c: fmtD(u.cost_usd, 2) }) : t('≈ ${c} API-equivalent', { c: fmtD(u.cost_usd, 2) })) : ''].filter(Boolean).join(' · ');
   // the per-mode controls
   $('#set-login')?.addEventListener('click', async () => {
     try { await api('/api/claude/login', { method: 'POST', body: {} }); claudeNote(t('Finish logging in in the browser, then come back: Studio checks again in a few seconds.')); setTimeout(() => syncClaudeSettings(), 8000); } catch (e) { claudeNote(t('Not started: {e}', { e: e.message })); }
@@ -2547,7 +2578,7 @@ async function syncClaudeSettings(fresh = true) {
   $('#set-key')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#set-key-save').click(); });
   $('#set-budget')?.addEventListener('change', (e) => saveClaude({ claude_budget_usd: +e.target.value }, t('Cap per request')));
 }
-const claudeNote = (msg) => { $('#set-claude-status').textContent = msg; };
+const claudeNote = (msg) => { $('#set-status').textContent = msg; };
 // The account as the page words it; the server's English stands for the rarer failures.
 function accountWords(a) {
   const plan = a.subscription ? a.subscription[0].toUpperCase() + a.subscription.slice(1) : '';
@@ -2567,7 +2598,7 @@ async function saveClaude(updates, what) {
     renderClaude();
   } catch (e) { claudeNote(t('Not saved: {e}', { e: e.message })); syncClaudeSettings(false); }
 }
-$('#set-claude').onclick = () => claude.status && saveClaude({ claude_worker: !claude.status.enabled }, t('Claude in Studio'));
+$('#set-claude').onclick = () => claude.status && saveClaude({ claude_worker: !claude.status.enabled }, t('Ask Claude from Studio'));
 $$('#set-account button').forEach((b) => (b.onclick = async () => {
   if (claude.status?.account === b.dataset.v) return;
   claudeNote(t('Checking the account…'));
@@ -2575,10 +2606,11 @@ $$('#set-account button').forEach((b) => (b.onclick = async () => {
   catch (e) { claudeNote(t('Not saved: {e}', { e: e.message })); }
 }));
 $$('#set-approvals button').forEach((b) => (b.onclick = () => claude.status?.approvals !== b.dataset.v && saveClaude({ claude_approvals: b.dataset.v }, t('Approvals'))));
+$$('#set-paid button').forEach((b) => (b.onclick = () => claude.status?.paid !== b.dataset.v && saveClaude({ claude_paid: b.dataset.v }, t('Paid generation'))));
 $$('#set-mcp button').forEach((b) => (b.onclick = () => claude.status?.mcp !== b.dataset.v && saveClaude({ blender_mcp: b.dataset.v }, t('Blender MCP server'))));
 $('#set-port').onchange = (e) => saveClaude({ blender_port: +e.target.value }, t('Port'));
 $('#set-model').onchange = (e) => saveClaude({ claude_model: e.target.value }, t('Model'));
-$('#set-stop-blender').onclick = async () => { try { await api('/api/claude/blender/stop', { method: 'POST', body: {} }); claudeNote(t('Studio\'s Blender stopped')); } catch (e) { claudeNote(e.message); } };
+$('#set-stop-blender').onclick = async () => { try { await api('/api/claude/blender/stop', { method: 'POST', body: {} }); claudeNote(t('Studio\'s Blender stopped')); syncClaudeSettings(); } catch (e) { claudeNote(e.message); } };
 
 // ── themes: Dark (the approved design), Light, High contrast; an accent colour ──
 
@@ -2702,7 +2734,7 @@ function commands() {
   add('Notes', 'Show all notes, closed ones too', [], () => { setNoteFilter('all'); renderNotes(); renderPins(); ensureRight('notes'); }, () => hasModel() && state.noteFilter !== 'all');
   add('Notes', 'Show the active notes only', [], () => { setNoteFilter('active'); renderNotes(); renderPins(); }, () => hasModel() && state.noteFilter !== 'active');
   add('Help', 'Keyboard shortcuts', ['?'], showKeys);
-  add('Help', 'Settings', [], openSettings);
+  add('Help', 'Settings', [], () => openSettings());
   for (const [th, label] of [['dark', N_('Theme: Dark')], ['light', N_('Theme: Light')], ['contrast', N_('Theme: High contrast')], ['forge', N_('Theme: Forge')], ['neon', N_('Theme: Neon')], ['studio', N_('Theme: Studio')], ['minimal', N_('Theme: Minimal')]]) add('Help', label, [], () => { prefs.theme = th; savePrefs(); applyTheme(); }, () => themeOf().key !== th);
   for (const run of paletteExtras) run(add);
   for (const a of state.assets) add('Model', { text: t('Open {name}', { name: a.name }) }, [], () => go(a.id), () => a.id !== state.id);

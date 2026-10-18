@@ -132,8 +132,13 @@ class Project:
         return data if isinstance(data, dict) else {}
 
     def settings(self) -> dict:
-        """The project's settings (CONFIG_KEYS) with their defaults filled in."""
-        return {**CONFIG_DEFAULTS, **clean_config(self.config())}
+        """The project's settings (CONFIG_KEYS) with their defaults filled in. What a model is
+        for comes from the project when it says, else from the user's default for every
+        project (~/.kiln-studio/defaults.json), else the web."""
+        return {**CONFIG_DEFAULTS, "target": user_defaults()["target"], **clean_config(self.config())}
+
+    def target_source(self) -> str:
+        return "project" if "target" in clean_config(self.config()) else "default"
 
     # scanning
     def scan(self) -> list["Asset"]:
@@ -218,8 +223,29 @@ CONFIG_DEFAULTS = {"live_view": True, "auto_open": True, "exclude": [], "target"
                    # still asks), how many runs at once (each its own Blender, ports from
                    # blender_port up), the model ("" = Claude Code's default), and the cap per
                    # request when running on an API key.
-                   "claude_approvals": "ask", "claude_parallel": 1, "claude_model": "", "claude_budget_usd": 2.0}
+                   "claude_approvals": "ask", "claude_parallel": 1, "claude_model": "", "claude_budget_usd": 2.0,
+                   # Paid generation (Hyper3D Rodin, Hunyuan3D…): ask each time, or let it through.
+                   "claude_paid": "ask"}
 CLAUDE_APPROVALS = ("ask", "auto")
+
+
+def user_dir() -> Path:
+    """The user's own Studio folder, for every project on this computer."""
+    return Path(os.environ.get("KILN_STUDIO_HOME") or "~/.kiln-studio").expanduser()
+
+
+def user_defaults() -> dict:
+    d = read_json(user_dir() / "defaults.json", {}) or {}
+    return {"target": d.get("target") if d.get("target") in TARGETS else "web"}
+
+
+def save_user_defaults(**kw) -> dict:
+    if "target" in kw and kw["target"] not in TARGETS:
+        raise ValueError(f"target must be one of {', '.join(TARGETS)}")
+    cur = {**user_defaults(), **kw}
+    user_dir().mkdir(parents=True, exist_ok=True)
+    write_json(user_dir() / "defaults.json", cur)
+    return cur
 MAX_PARALLEL = 4
 MODEL_RE = re.compile(r"^[a-z0-9][a-z0-9.\-\[\]]{0,63}$")
 
@@ -248,6 +274,8 @@ def clean_config(data: dict) -> dict:
         out["blender_mcp"] = data["blender_mcp"]
     if data.get("claude_approvals") in CLAUDE_APPROVALS:
         out["claude_approvals"] = data["claude_approvals"]
+    if data.get("claude_paid") in CLAUDE_APPROVALS:
+        out["claude_paid"] = data["claude_paid"]
     if _parallel_ok(data.get("claude_parallel")):
         out["claude_parallel"] = data["claude_parallel"]
     if isinstance(data.get("claude_model"), str) and (data["claude_model"] == "" or MODEL_RE.match(data["claude_model"])):
@@ -275,8 +303,8 @@ def save_config(project: "Project", updates: dict) -> dict:
                              "(the usual Blender MCP port, kept for your own Blender)")
         if k == "blender_mcp" and v not in BLENDER_MCPS:
             raise ValueError(f"blender_mcp must be one of {', '.join(BLENDER_MCPS)}")
-        if k == "claude_approvals" and v not in CLAUDE_APPROVALS:
-            raise ValueError("claude_approvals must be ask or auto")
+        if k in ("claude_approvals", "claude_paid") and v not in CLAUDE_APPROVALS:
+            raise ValueError(f"{k} must be ask or auto")
         if k == "claude_parallel" and not _parallel_ok(v):
             raise ValueError(f"claude_parallel must be 1 to {MAX_PARALLEL}")
         if k == "claude_model" and not (isinstance(v, str) and (v == "" or MODEL_RE.match(v))):
@@ -285,12 +313,14 @@ def save_config(project: "Project", updates: dict) -> dict:
             raise ValueError("claude_budget_usd must be 0.1 to 100 (dollars per request)")
         if k == "exclude" and not (isinstance(v, list) and all(isinstance(x, str) for x in v)):
             raise ValueError("exclude must be a list of glob patterns")
-        if k == "target" and v not in TARGETS:
-            raise ValueError(f"target must be one of {', '.join(TARGETS)}")
+        if k == "target" and v not in (*TARGETS, ""):
+            raise ValueError(f"target must be one of {', '.join(TARGETS)}, or empty for your default")
     project.ensure()
     with Lock(project):
         data = project.config()
         data.update(updates)
+        if data.get("target") == "":
+            data.pop("target")   # back to the user's default
         if "exclude" in updates:
             data["exclude"] = clean_config(data)["exclude"]
         write_json(project.data / "config.json", data)
