@@ -68,7 +68,7 @@ MAX_RUN_S = 3600
 ACCOUNTS = ("subscription", "account", "api_key")
 USER_DIR = Path(os.environ.get("KILN_STUDIO_HOME") or "~/.kiln-studio").expanduser()
 KEYCHAIN = ("kiln-studio", "anthropic-api-key")   # service, account
-USE_KEYCHAIN = sys.platform == "darwin"            # tests turn it off: never the real keychain
+USE_KEYCHAIN = sys.platform == "darwin" and os.environ.get("KILN_STUDIO_KEYCHAIN") != "0"   # off in tests
 
 
 class WorkerError(Exception):
@@ -469,7 +469,7 @@ class Store:
         if entry:
             with self.lock, p.open("a") as f:
                 f.write(json.dumps(entry) + "\n")
-        runs, cost = 0, 0.0
+        runs, cost, by = 0, 0.0, {}
         if p.is_file():
             for line in p.read_text().splitlines():
                 try:
@@ -478,7 +478,11 @@ class Store:
                     continue
                 runs += 1
                 cost += e.get("cost_usd") or 0
-        return {"runs": runs, "cost_usd_equiv": round(cost, 4)}
+                a = by.setdefault(e.get("account") or "subscription", {"runs": 0, "cost_usd": 0.0})
+                a["runs"] += 1
+                a["cost_usd"] = round(a["cost_usd"] + (e.get("cost_usd") or 0), 4)
+        # A subscription's runs cost nothing more (API-equivalent, for scale); an API key's are billed.
+        return {"runs": runs, "cost_usd_equiv": round(cost, 4), "by_account": by}
 
 
 # ── the worker ───────────────────────────────────────────────────────────────

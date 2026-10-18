@@ -1021,3 +1021,12 @@ body.present .cl-pill { display: none; }
 #tb-claude { position: relative; padding-right: 9px; }
 #tc-claude { position: absolute; top: 3px; right: -1px; min-width: 14px; height: 14px; padding: 0 3px; font-size: 9px; line-height: 14px; }
 .whero select { height: 30px; border-radius: 7px; border: 1px solid var(--line-2); background: var(--bg); color: var(--text); padding: 0 8px; font-size: 12.5px; max-width: 240px; }
+/* Settings → Claude in Studio */
+.set-sec.claude { box-shadow: inset 3px 0 0 var(--new); }
+.set-sec.claude h4 .spark { color: var(--new); }
+.set-acc p { margin: 6px 0 0; }
+.ok-t { color: var(--ok); }
+input.num, .set-key input { height: 26px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--bg); color: var(--text); padding: 0 8px; font: 12px var(--mono); }
+input.num { width: 76px; }
+.set-key input { width: 230px; }
+#set-parallel button.over { color: var(--warn); }

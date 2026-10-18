@@ -307,6 +307,33 @@
       </div>
       <p class="set-status dim small" id="set-status" aria-live="polite"></p>
     </section>
+    <section class="set-sec claude" aria-labelledby="set-claude-h" id="set-claude-sec">
+      <h4 id="set-claude-h"><span class="spark" aria-hidden="true">✦</span> <span data-i18n>Claude in Studio</span> <small data-i18n>the account is this computer's; the rest is the project's</small></h4>
+      <div class="set-grid">
+        <span class="lab" data-i18n>Claude in Studio</span>
+        <button class="switch" id="set-claude" role="switch" aria-checked="false"><i class="sw"></i><span data-i18n>Claude works on your models from this page</span></button>
+        <span class="lab" data-i18n>Account</span>
+        <div><div class="seg small" id="set-account"><button data-v="subscription" data-i18n>My subscription</button><button data-v="account" data-i18n>Another Claude account</button><button data-v="api_key" data-i18n>API key</button></div>
+          <div class="set-acc" id="set-acc"></div></div>
+        <span class="lab" data-i18n>Approvals</span>
+        <div><div class="seg small" id="set-approvals"><button data-v="ask" data-i18n>Ask me</button><button data-v="auto" data-i18n>Auto</button></div>
+          <p class="dim small" id="set-approvals-help"></p></div>
+        <span class="lab" data-i18n>Paid generation</span>
+        <p class="dim small" style="margin:0">🔒 <span data-i18n>Always asks: Hyper3D Rodin, Hunyuan3D and any tool that spends credits, whatever the mode.</span></p>
+        <span class="lab" data-i18n>At once</span>
+        <div><div class="seg small" id="set-parallel"></div>
+          <p class="dim small" id="set-parallel-help"></p></div>
+        <span class="lab" data-i18n>Blender MCP server</span>
+        <div><div class="seg small" id="set-mcp"><button data-v="ahujasid">ahujasid</button><button data-v="lab">Blender Lab</button></div>
+          <p class="dim small"><span data-i18n>Studio's Blender listens on port</span> <input id="set-port" type="number" min="1024" max="65535" class="num" aria-label="Port"> <span data-i18n>(9876 stays your own Blender's)</span></p></div>
+        <label class="lab" for="set-model" data-i18n>Model</label>
+        <select id="set-model"><option value="" data-i18n>Claude Code's default</option><option value="opus">Opus</option><option value="sonnet">Sonnet</option><option value="haiku">Haiku</option></select>
+        <span class="lab" data-i18n>Usage</span>
+        <div><p class="small" id="set-usage" style="margin:0"></p>
+          <p class="dim small"><button class="linkish" id="set-stop-blender" data-i18n>Stop Studio's Blender</button></p></div>
+      </div>
+      <p class="set-status dim small" id="set-claude-status" aria-live="polite"></p>
+    </section>
   </div>
 </dialog>
 <dialog id="palette" aria-label="Commands" data-i18n-attr="aria-label">

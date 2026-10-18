@@ -2087,8 +2087,8 @@ function renderClaude() {
   ].join('');
   const a = st.auth || {};
   $('#cl-hint').innerHTML = busy ? esc(t('Claude is working: send when it is done, or stop it.'))
-    : a.ok === false ? `<span class="warn-t">${esc(a.message || t('Claude Code is not ready'))}</span>`
-    : esc(t('On {who} · Blender of Studio, port {p}', { who: a.subscription ? t('your Claude {plan} subscription', { plan: a.subscription[0].toUpperCase() + a.subscription.slice(1) }) : t('your Claude subscription'), p: st.port }));
+    : a.ok === false ? `<span class="warn-t">${esc(accountWords(a))}</span>`
+    : esc(t('On {who} · Blender of Studio, port {p}', { who: accountWords(a), p: st.port }));
 }
 
 function claudeCompose(text) {
@@ -2169,12 +2169,12 @@ function renderClaudePill() {
   const group = (title, js) => js.length ? `<div class="g">${esc(title)}</div>${js.map(row).join('')}` : '';
   const rl = st.rate || {};
   const quota = util != null ? `<div class="g">${esc(t('Quota'))}</div><div class="qrow"><span>${esc({ five_hour: t('Session (5 h)'), seven_day: t('Week') }[rl.rateLimitType] || t('Usage'))}</span><span class="bar"><i style="width:${Math.round(util * 100)}%"></i></span><span>${Math.round(util * 100)} %${rl.resetsAt ? ` · ${esc(t('resets {at}', { at: new Date(rl.resetsAt * 1000).toLocaleTimeString(getLang(), { hour: '2-digit', minute: '2-digit' }) }))}` : ''}</span></div>` : '';
-  const u = st.usage || {};
-  $('#cl-act').innerHTML = `<div class="h"><b>${esc(t("Claude's activity"))}</b><span>${esc(st.auth?.subscription ? t('your Claude {plan} subscription', { plan: st.auth.subscription[0].toUpperCase() + st.auth.subscription.slice(1) }) : '')}</span></div>
+  const u = (st.usage?.by_account || {})[st.account] || { runs: 0, cost_usd: 0 };
+  $('#cl-act').innerHTML = `<div class="h"><b>${esc(t("Claude's activity"))}</b><span>${esc(st.auth ? accountWords(st.auth) : '')}</span></div>
     ${group(t('Waits for your answer'), wait)}${group(t('Running'), run ? [run] : [])}${group(t('In line'), queue)}
     ${live.length ? '' : `<div class="none">${esc(t('Nothing running. Ask from a model\'s ✦ tab, the project conversation, or New model.'))}</div>`}
     <button class="it proj" data-key="project"><span class="t"><b>${esc(t('Project conversation'))}</b><span>${esc(t('What concerns several models at once'))}</span></span></button>
-    ${quota}<div class="foot">${esc(tp(u.runs || 0, '{n} request', '{n} requests'))}${u.cost_usd_equiv ? ` · ${esc(t('≈ ${c} API-equivalent, included in your subscription', { c: fmtD(u.cost_usd_equiv, 2) }))}` : ''}${'Notification' in window && Notification.permission === 'default' ? ` · <button class="linkish" data-notify>${esc(t('Notify me when Claude waits'))}</button>` : ''}</div>`;
+    ${quota}<div class="foot">${esc(tp(u.runs || 0, '{n} request', '{n} requests'))}${u.cost_usd ? ` · ${esc(st.account === 'api_key' ? t('≈ ${c} on your API key', { c: fmtD(u.cost_usd, 2) }) : t('≈ ${c} API-equivalent, included in your subscription', { c: fmtD(u.cost_usd, 2) }))}` : ''}${'Notification' in window && Notification.permission === 'default' ? ` · <button class="linkish" data-notify>${esc(t('Notify me when Claude waits'))}</button>` : ''}</div>`;
 }
 $('#cl-pill-btn').onclick = (e) => { e.stopPropagation(); claude.menu = !claude.menu; renderClaudePill(); };
 $('#cl-act').addEventListener('click', (e) => {
@@ -2450,6 +2450,8 @@ async function openSettings() {
   document.querySelector('dialog[open]')?.close();
   syncPersonal();
   $('#set-status').textContent = '';
+  claudeNote('');
+  syncClaudeSettings();
   $('#settings').showModal();
   try {
     project = (await api('/api/config')).settings;
@@ -2493,6 +2495,90 @@ $('#set-autoopen').onclick = () => project && saveProject({ auto_open: !project.
 $$('#set-target button').forEach((b) => (b.onclick = () => project && project.target !== b.dataset.v && saveProject({ target: b.dataset.v }, t('Made for'))));
 $('#set-exclude').onchange = (e) => saveProject({ exclude: e.target.value.split('\n').map((x) => x.trim()).filter(Boolean) }, t('Left out of the list'));
 $('#t-settings').onclick = openSettings;
+
+// ── Settings → Claude in Studio ──────────────────────────────────────────────
+// The account is this computer's (worker.py: ~/.kiln-studio/claude.json, the key in the
+// keychain); the rest is the project's, beside the other project settings.
+
+async function syncClaudeSettings(fresh = true) {
+  const st = fresh ? await claudeStatus() : claude.status;
+  const sec = $('#set-claude-sec');
+  sec.hidden = !st;
+  if (!st) return;
+  switchSet('#set-claude', st.enabled);
+  segSet('#set-account', st.account);
+  segSet('#set-approvals', st.approvals);
+  segSet('#set-mcp', st.mcp);
+  if (document.activeElement !== $('#set-port')) $('#set-port').value = st.port;
+  $('#set-model').value = ['', 'opus', 'sonnet', 'haiku'].includes(st.model) ? st.model : '';
+  const a = st.auth || {};
+  const line = `<p class="small ${a.ok ? 'ok-t' : 'warn-t'}" style="margin:6px 0 0">${a.ok ? '✓' : '✕'} ${esc(accountWords(a))}</p>`;
+  let extra = '';
+  if (st.account === 'subscription') extra = `<p class="dim small">${esc(t('Claude Code as it is logged in on this computer: the usage counts in that subscription.'))}</p>`;
+  else if (st.account === 'account') extra = `<p class="dim small">${esc(t('A second Claude login, kept in a folder of Studio\'s own: your terminal\'s Claude Code keeps its own account.'))}</p>
+      <p class="small"><button class="btn sm" id="set-login">${esc(a.ok ? t('Log in again') : t('Log in…'))}</button> <span class="dim">${esc(t('opens claude.ai in your browser'))}</span></p>`;
+  else extra = `<p class="dim small">${esc(t('Billed per token to your Anthropic account, in real dollars — not a subscription. Kept in the macOS keychain; Studio never shows it again.'))}</p>
+      <p class="small set-key"><input id="set-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…" aria-label="${esc(t('API key'))}"> <button class="btn sm" id="set-key-save">${esc(a.ok ? t('Replace') : t('Save'))}</button>${a.ok ? ` <button class="btn sm ghost" id="set-key-forget">${esc(t('Forget it'))}</button>` : ''}</p>
+      <p class="small">${esc(t('At most'))} <input id="set-budget" type="number" min="0.1" max="100" step="0.5" class="num" value="${esc(st.budget_usd)}" aria-label="${esc(t('Dollars per request'))}"> ${esc(t('$ per request'))}</p>`;
+  $('#set-acc').innerHTML = line + extra;
+  $('#set-approvals-help').textContent = st.approvals === 'auto'
+    ? t('Claude Code\'s auto mode decides each tool call; what it judges risky is refused and Claude works around it, without asking you.')
+    : t('Reading, Studio\'s Blender, the project\'s files and kiln\'s scripts go through; anything else waits for you in the page.');
+  const m = st.machine || {}, max = Math.max(1, m.max_parallel || 1);
+  $('#set-parallel').innerHTML = [1, 2, 3, 4].map((n) => `<button data-v="${n}"${n > max ? ` title="${esc(t('More than this computer takes comfortably'))}" class="over"` : ''}>${n}</button>`).join('');
+  segSet('#set-parallel', String(st.parallel));
+  $$('#set-parallel button').forEach((b) => (b.onclick = () => saveClaude({ claude_parallel: +b.dataset.v }, t('At once'))));
+  $('#set-parallel-help').textContent = t('Each run has its own Blender (about 0.5–1 GB of memory, ports {p} and up), never two on one model. Two at once use the quota twice as fast. This computer: {ram} GB, {cores} cores — up to {max} is comfortable.', { p: st.port, ram: m.ram_gb ?? '?', cores: m.cores ?? '?', max });
+  // This account's runs: an API key's are billed, a subscription's are API-equivalent.
+  const u = (st.usage?.by_account || {})[st.account] || { runs: 0, cost_usd: 0 };
+  $('#set-usage').textContent = [tp(u.runs || 0, '{n} request', '{n} requests'), u.cost_usd ? (st.account === 'api_key' ? t('≈ ${c} on your API key', { c: fmtD(u.cost_usd, 2) }) : t('≈ ${c} API-equivalent, included in your subscription', { c: fmtD(u.cost_usd, 2) })) : ''].filter(Boolean).join(' · ');
+  // the per-mode controls
+  $('#set-login')?.addEventListener('click', async () => {
+    try { await api('/api/claude/login', { method: 'POST', body: {} }); claudeNote(t('Finish logging in in the browser, then come back: Studio checks again in a few seconds.')); setTimeout(() => syncClaudeSettings(), 8000); } catch (e) { claudeNote(t('Not started: {e}', { e: e.message })); }
+  });
+  $('#set-key-save')?.addEventListener('click', async () => {
+    const key = $('#set-key').value.trim();
+    if (!key) { $('#set-key').focus(); return; }
+    try { claude.status = await api('/api/claude/key', { method: 'POST', body: { key } }); claudeNote(t('API key saved in the keychain')); syncClaudeSettings(false); claudeChanged(); } catch (e) { claudeNote(t('Not saved: {e}', { e: e.message })); }
+  });
+  $('#set-key-forget')?.addEventListener('click', async () => {
+    try { claude.status = await api('/api/claude/key', { method: 'POST', body: { key: null } }); claudeNote(t('API key forgotten')); syncClaudeSettings(false); claudeChanged(); } catch (e) { claudeNote(t('Not saved: {e}', { e: e.message })); }
+  });
+  $('#set-key')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#set-key-save').click(); });
+  $('#set-budget')?.addEventListener('change', (e) => saveClaude({ claude_budget_usd: +e.target.value }, t('Cap per request')));
+}
+const claudeNote = (msg) => { $('#set-claude-status').textContent = msg; };
+// The account as the page words it; the server's English stands for the rarer failures.
+function accountWords(a) {
+  const plan = a.subscription ? a.subscription[0].toUpperCase() + a.subscription.slice(1) : '';
+  if (a.ok && a.account === 'api_key') return t('your Anthropic API key (…{end})', { end: (a.message.match(/…(\S{4})/) || [])[1] || '' });
+  if (a.ok && a.account === 'account') return t('another Claude account ({who})', { who: a.email || plan });
+  if (a.ok) return plan ? t('your Claude {plan} subscription', { plan }) : t('your Claude subscription');
+  if (a.account === 'api_key') return t('No API key yet: paste one below.');
+  if (a.account === 'account' && /not logged in/.test(a.message)) return t('This account is not logged in yet: Log in…');
+  return a.message || t('Claude Code is not ready');
+}
+async function saveClaude(updates, what) {
+  claudeNote(t('Saving…'));
+  try {
+    await api('/api/config', { method: 'PUT', body: updates });
+    claudeNote(t('Saved in .kiln-studio/config.json: {what}', { what }));
+    await syncClaudeSettings();
+    renderClaude();
+  } catch (e) { claudeNote(t('Not saved: {e}', { e: e.message })); syncClaudeSettings(false); }
+}
+$('#set-claude').onclick = () => claude.status && saveClaude({ claude_worker: !claude.status.enabled }, t('Claude in Studio'));
+$$('#set-account button').forEach((b) => (b.onclick = async () => {
+  if (claude.status?.account === b.dataset.v) return;
+  claudeNote(t('Checking the account…'));
+  try { claude.status = await api('/api/claude/account', { method: 'PUT', body: { account: b.dataset.v } }); claudeNote(t('Account: {a}', { a: b.textContent })); syncClaudeSettings(false); claudeChanged(); renderClaude(); }
+  catch (e) { claudeNote(t('Not saved: {e}', { e: e.message })); }
+}));
+$$('#set-approvals button').forEach((b) => (b.onclick = () => claude.status?.approvals !== b.dataset.v && saveClaude({ claude_approvals: b.dataset.v }, t('Approvals'))));
+$$('#set-mcp button').forEach((b) => (b.onclick = () => claude.status?.mcp !== b.dataset.v && saveClaude({ blender_mcp: b.dataset.v }, t('Blender MCP server'))));
+$('#set-port').onchange = (e) => saveClaude({ blender_port: +e.target.value }, t('Port'));
+$('#set-model').onchange = (e) => saveClaude({ claude_model: e.target.value }, t('Model'));
+$('#set-stop-blender').onclick = async () => { try { await api('/api/claude/blender/stop', { method: 'POST', body: {} }); claudeNote(t('Studio\'s Blender stopped')); } catch (e) { claudeNote(e.message); } };
 
 // ── themes: Dark (the approved design), Light, High contrast; an accent colour ──
 
