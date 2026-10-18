@@ -12,6 +12,7 @@ import json
 import mimetypes
 import os
 import queue
+import subprocess
 import sys
 import threading
 import time
@@ -388,12 +389,13 @@ def make_handler(studio: Studio, port_ref: list[int]):
                 if parts[:2] == ["api", "hello"]:
                     return self._json({"app": "kiln-studio", "version": VERSION,
                                        "root": str(project.root), "pid": os.getpid()})
-                if parts == ["api", "context"]:
-                    return self._json(sl.load_context(project))
                 if parts[:2] == ["api", "config"]:
                     # The project's settings, shared with Claude (references/studio.md § 9).
+                    md = project.root / "CLAUDE.md"
                     return self._json({"settings": project.settings(), "defaults": sl.CONFIG_DEFAULTS,
                                        "targets": list(sl.TARGETS), "file": f"{sl.DATA_DIR}/config.json",
+                                       "claude_md": {"path": str(md), "exists": md.is_file(),
+                                                     "lines": len(md.read_text(errors="ignore").splitlines()) if md.is_file() else 0},
                                        "target_source": project.target_source(), "user_defaults": sl.user_defaults()})
                 if parts[:2] == ["api", "status"]:
                     # The welcome screen's setup line: Blender, the MCP add-on, SkinTokens.
@@ -577,12 +579,28 @@ def make_handler(studio: Studio, port_ref: list[int]):
                     studio.refresh()   # exclude: the list changes now, not at the next tick
                     return self._json({"settings": settings, "target_source": project.target_source(),
                                        "user_defaults": sl.user_defaults()})
-                if method == "PUT" and parts == ["api", "context"]:
-                    # The project's context ("folder" absent or null) or a folder's.
-                    folder = body.get("folder")
-                    ctx = sl.save_context(project, str(body.get("text", "")), None if folder in (None, "") else str(folder))
-                    studio.emit({"type": "context"})
-                    return self._json(ctx)
+                if method == "POST" and parts == ["api", "claude-md"]:
+                    # The project's CLAUDE.md, which Claude Code reads in every session here (the
+                    # terminal's and Studio's): created on request with a short head, then opened
+                    # in the user's own editor.
+                    md = project.root / "CLAUDE.md"
+                    created = False
+                    if not md.exists():
+                        fr = body.get("lang") == "fr"
+                        md.write_text(("# Instructions pour Claude\n\n"
+                                       "Claude Code lit ce fichier à chaque session dans ce dossier, depuis le terminal comme depuis Kiln Studio.\n"
+                                       "Décrivez ce qui vaut pour tout le projet : l'univers, le style, l'échelle, les budgets.\n\n")
+                                      if fr else
+                                      ("# Instructions for Claude\n\n"
+                                       "Claude Code reads this file in every session in this folder, from the terminal and from Kiln Studio.\n"
+                                       "Say what holds for the whole project: the world, the style, the scale, the budgets.\n\n"))
+                        created = True
+                    opener = "open" if sys.platform == "darwin" else "xdg-open" if sys.platform.startswith("linux") else None
+                    if opener:
+                        subprocess.Popen([opener, str(md)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    elif os.name == "nt":
+                        os.startfile(str(md))  # noqa: S606 - the user's own file, on their request
+                    return self._json({"path": str(md), "created": created})
                 if method == "PUT" and parts == ["api", "defaults"]:
                     # The user's defaults for every project on this computer (~/.kiln-studio).
                     sl.save_user_defaults(**{k: v for k, v in body.items() if k == "target"})

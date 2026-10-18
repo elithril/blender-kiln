@@ -1293,56 +1293,6 @@ TARGET_WORDS = {"web": "for the web (glTF)", "desktop": "for Unity/Unreal (FBX)"
                 "print": "for 3D printing"}
 
 
-# ── context: what the user tells Claude about the project and each folder ──────
-# .kiln-studio/context.json, committed with the notes: {"project": "...", "folders":
-# {"batch-tavern": "..."}}. A folder is the list's group (the asset's category). Claude reads
-# them before working on a model there — from Studio and from the terminal alike.
-CONTEXT_MAX = 4000
-
-
-def context_path(project: Project) -> Path:
-    return project.data / "context.json"
-
-
-def load_context(project: Project) -> dict:
-    d = read_json(context_path(project), {}) or {}
-    folders = d.get("folders") if isinstance(d.get("folders"), dict) else {}
-    return {"project": str(d.get("project") or ""),
-            "folders": {str(k): str(v) for k, v in folders.items() if str(v).strip()}}
-
-
-def save_context(project: Project, text: str, folder: str | None = None) -> dict:
-    """Set the project's context (folder None) or a folder's; empty text removes it."""
-    text = str(text or "").strip()
-    if len(text) > CONTEXT_MAX:
-        raise ValueError(f"a context is {CONTEXT_MAX:,} characters at most")
-    if folder is not None and (not str(folder).strip() or len(str(folder)) > 300):
-        raise ValueError("which folder?")
-    project.ensure()
-    with Lock(project):
-        ctx = load_context(project)
-        if folder is None:
-            ctx["project"] = text
-        elif text:
-            ctx["folders"][str(folder)] = text
-        else:
-            ctx["folders"].pop(str(folder), None)
-        write_json(context_path(project), ctx)
-    return ctx
-
-
-def context_for(project: Project, asset: "Asset | None", catalog: dict | None = None) -> dict:
-    """The context Claude reads for a model: the project's, and its folder's."""
-    ctx = load_context(project)
-    folder = None
-    if asset is not None:
-        meta = (catalog if catalog is not None else load_catalog(project)).get("assets", {}).get(asset.id, {})
-        folder = meta.get("category", asset.default_category) or ""
-    out = {"project": ctx["project"] or None, "folder": folder or None,
-           "folder_context": ctx["folders"].get(folder) if folder else None}
-    return {k: v for k, v in out.items() if v}
-
-
 def requests_path(project: Project) -> Path:
     return project.data / "requests.json"
 

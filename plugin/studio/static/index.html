@@ -294,7 +294,7 @@
         <div class="srow"><div class="st"><b data-i18n>Made for</b><span data-i18n>Sets the budgets (triangles, textures), the file format and the checks.</span></div><div class="sc"><select id="set-target" aria-label="Made for" data-i18n-attr="aria-label"><option value="" id="set-target-inherit"></option><option value="web" data-i18n>Web</option><option value="desktop" data-i18n>Unity / Unreal</option><option value="print" data-i18n>3D print</option></select></div></div>
         <div class="srow"><div class="st"><b data-i18n>Live view</b><span data-i18n>Watch a model take shape while Claude builds it.</span></div><div class="sc"><button class="switch" id="set-live" role="switch" aria-checked="true" aria-label="Live view" data-i18n-attr="aria-label"><i class="sw"></i></button></div></div>
         <div class="srow"><div class="st"><b data-i18n>Open the browser</b><span data-i18n>When Studio starts, it opens this page by itself.</span></div><div class="sc"><button class="switch" id="set-autoopen" role="switch" aria-checked="true" aria-label="Open the browser" data-i18n-attr="aria-label"><i class="sw"></i></button></div></div>
-        <div class="srow wide"><div class="st"><label for="set-context"><b data-i18n>Context for Claude</b></label><span data-i18n>What Claude keeps to on every model of this project: the world, the style, the scale, the budgets. Each folder can add its own, from its header in the list.</span></div><div class="sc"><textarea id="set-context" rows="4" placeholder="A medieval tavern for a web game: stylised, warm palette, 1 unit = 1 m, props under 3K triangles." data-i18n-attr="placeholder"></textarea></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Instructions for Claude</b><span id="set-md-help"></span></div><div class="sc"><button class="btn sm" id="set-md"></button></div></div>
         <div class="srow wide"><div class="st"><label for="set-exclude"><b data-i18n>Left out of the list</b></label><span id="set-exclude-help" data-i18n>One folder or file pattern per line, from the project folder.</span></div><div class="sc"><textarea id="set-exclude" rows="3" spellcheck="false" placeholder="site/public/*" aria-describedby="set-exclude-help"></textarea></div></div>
       </section>
       <section class="set-pane" data-pane="claude" role="tabpanel" hidden>
@@ -330,29 +330,6 @@
   <ul id="pal-list" role="listbox" aria-label="Commands" data-i18n-attr="aria-label"></ul>
   <div class="pal-foot dim"><span><kbd>↑</kbd> <kbd>↓</kbd> <span data-i18n>to move</span></span><span><kbd>↵</kbd> <span data-i18n>to run</span></span><span><kbd>?</kbd> <span data-i18n>all the keys</span></span></div>
 </dialog>
-<dialog id="ctxdlg" aria-labelledby="ctx-title">
-  <header class="set-head"><h3 id="ctx-title"></h3><form method="dialog"><button class="btn sm" data-i18n>Close</button></form></header>
-  <form class="ctx-body" id="ctx-form">
-    <p class="dim small" id="ctx-what"></p>
-    <textarea id="ctx-text" rows="7" spellcheck="true" aria-labelledby="ctx-title"></textarea>
-    <p class="dim small"><span data-i18n>For instance:</span> <span id="ctx-eg"></span></p>
-    <div class="row"><button class="btn accent" type="submit" data-i18n>Save</button><button class="btn ghost" type="button" id="ctx-clear" data-i18n>Remove</button><span class="dim small" id="ctx-status" aria-live="polite"></span></div>
-  </form>
-</dialog>
-<div id="tour" class="tour" hidden aria-live="polite">
-  <div class="tour-ring" id="tour-ring"></div>
-  <div class="tour-card" id="tour-card" role="dialog" aria-labelledby="tour-title">
-    <div class="tour-step" id="tour-step"></div>
-    <h4 id="tour-title"></h4>
-    <p id="tour-text"></p>
-    <div class="tour-acts"><button class="btn sm ghost" id="tour-quit" data-i18n>Leave the tour</button><span class="sp"></span><button class="btn sm" id="tour-skip" data-i18n>Skip this step</button><button class="btn sm accent" id="tour-next" hidden></button></div>
-  </div>
-</div>
-<div id="tour-offer" class="tour-offer" hidden>
-  <b data-i18n>First time in Studio?</b>
-  <p data-i18n>A two-minute tour on kiln's example barrel: turn it, note it, ask Claude, compare.</p>
-  <div class="tour-acts"><button class="btn sm ghost" id="tour-later" data-i18n>Not now</button><button class="btn sm accent" id="tour-start" data-i18n>Take the tour</button></div>
-</div>
 <dialog id="confirm"><p></p><form method="dialog"><button class="btn" value="cancel" data-i18n>Cancel</button><button class="btn accent" value="ok">OK</button></form></dialog>
 
 <script type="module" src="/static/app.js"></script>

@@ -195,12 +195,6 @@ class Runs(Base):
         with self.assertRaises(ValueError):
             self.w.submit("notes")   # the open notes are a model's
 
-    def test_the_users_context_goes_with_every_run(self) -> None:
-        sl.save_context(self.p, "Stylised, warm palette")
-        j = self.wait(self.w.submit("chat", key="project", text="hello")["id"])
-        a = self.calls()[-1]["args"]
-        self.assertIn("Stylised, warm palette", a[a.index("--append-system-prompt") + 1])
-
     def test_setup_installs_a_named_part_only(self) -> None:
         with self.assertRaises(ValueError):
             self.w.submit("setup", text="rm -rf ~")   # never free text

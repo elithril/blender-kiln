@@ -606,28 +606,6 @@ class Checks(Base):
         self.assertEqual(checks.fmt_range(est["range"]), "~150K–255K tokens")
 
 
-class Context(Base):
-    def test_project_and_folder_context(self) -> None:
-        glb(self.tmp / "tavern" / "barrel" / "barrel_final.glb")
-        glb(self.tmp / "props" / "lamp.glb")
-        barrel, lamp = self.p.find("barrel"), self.p.find("lamp")
-        self.assertEqual(sl.context_for(self.p, barrel), {"folder": barrel.default_category})
-        sl.save_context(self.p, "Medieval tavern, low-poly, for the web")
-        sl.save_context(self.p, "Dark oak, iron hoops", folder=barrel.default_category)
-        c = sl.context_for(self.p, barrel)
-        self.assertEqual((c["project"], c["folder_context"]), ("Medieval tavern, low-poly, for the web", "Dark oak, iron hoops"))
-        self.assertNotIn("folder_context", sl.context_for(self.p, lamp))   # another folder
-        sl.save_context(self.p, "", folder=barrel.default_category)          # empty: removed
-        self.assertEqual(sl.load_context(self.p)["folders"], {})
-        with self.assertRaises(ValueError):
-            sl.save_context(self.p, "x" * (sl.CONTEXT_MAX + 1))
-        sl.save_context(self.p, "Dark oak", folder=barrel.default_category)
-        out = subprocess.run([sys.executable, str(Path(studio.__file__)), "show", "barrel", "--root", str(self.tmp)],
-                             capture_output=True, text=True)
-        self.assertIn("project context: Medieval tavern", out.stdout)
-        self.assertIn("folder context", out.stdout)
-
-
 class Settings(Base):
     def test_target_default_for_every_project_and_override(self) -> None:
         self.assertEqual((self.p.settings()["target"], self.p.target_source()), ("web", "default"))
