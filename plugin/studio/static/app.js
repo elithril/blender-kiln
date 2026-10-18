@@ -2178,6 +2178,21 @@ $('#tab-claude').addEventListener('click', async (e) => {
 });
 
 // ── what Claude is doing, at a glance: the pill over the view and its menu ──
+// The quota as Claude Code last said it: the 5-hour session and the week (unifiedWindows),
+// each used 0–1 and when it resets; an older event has only the window it hit.
+function quotaWindows(rate) {
+  if (!rate) return [];
+  const w = rate.unifiedWindows || {};
+  const out = ['five_hour', 'seven_day'].filter((k) => w[k]?.utilization != null).map((k) => ({ key: k, used: w[k].utilization, resets: w[k].resetsAt }));
+  if (!out.length && rate.utilization != null) out.push({ key: rate.rateLimitType, used: rate.utilization, resets: rate.resetsAt });
+  return out;
+}
+const quotaName = (k) => ({ five_hour: t('Session (5 h)'), seven_day: t('Week') }[k] || t('Usage'));
+const resetWords = (ts) => {
+  if (!ts) return '';
+  const d = new Date(ts * 1000), today = new Date().toDateString() === d.toDateString();
+  return t('resets {at}', { at: today ? d.toLocaleTimeString(getLang(), { hour: '2-digit', minute: '2-digit' }) : d.toLocaleDateString(getLang(), { weekday: 'short', hour: '2-digit', minute: '2-digit' }) });
+};
 const jobLabel = (j) => j.key === 'project' ? t('Project conversation') : j.key === 'setup' ? t('Setup')
   : j.asset ? (state.byId.get(j.asset)?.name || j.asset.split('/').pop())
   : j.request ? t('New: {brief}', { brief: j.brief || '' }) : '?';
@@ -2190,18 +2205,21 @@ function renderClaudePill() {
   if (pill.hidden) return;
   const live = claudeLive();
   const run = live.find((j) => j.state === 'running'), wait = live.filter((j) => j.state === 'waiting'), queue = live.filter((j) => j.state === 'queued');
-  const util = st.rate?.utilization;
+  // The pill shows the fuller window: a week at 91 % matters more than a session at 42 %.
+  const wins = quotaWindows(st.rate), session = wins.reduce((a, x) => (!a || x.used > a.used ? x : a), null);
+  const util = st.account === 'api_key' ? null : session?.used;
   const btn = $('#cl-pill-btn');
   btn.className = `cl-pill-btn${wait.length ? ' wait' : run ? ' run' : ''}`;
   btn.innerHTML = `<span class="dot${run && !wait.length ? ' pulse' : ''}"></span><b>Claude</b><span>${esc(
-    wait.length ? tp(wait.length, 'waits for you', '{n} wait for you') : run ? t('on {name}', { name: jobLabel(run) }) : t('ready'))}</span>${queue.length ? `<span class="sep"></span><span>${esc(t('{n} in line', { n: queue.length }))}</span>` : ''}${util != null ? `<span class="sep"></span><span class="q"><i style="width:${Math.round(util * 100)}%"></i></span><span>${Math.round(util * 100)} %</span>` : ''}`;
+    wait.length ? tp(wait.length, 'waits for you', '{n} wait for you') : run ? t('on {name}', { name: jobLabel(run) }) : t('ready'))}</span>${queue.length ? `<span class="sep"></span><span>${esc(t('{n} in line', { n: queue.length }))}</span>` : ''}${util != null ? `<span class="sep"></span><span class="qbar" title="${esc(quotaName(session.key))}"><i class="${util >= 0.9 ? 'hot' : ''}" style="width:${Math.round(util * 100)}%"></i></span><span>${Math.round(util * 100)} %</span>` : ''}`;
   btn.setAttribute('aria-expanded', String(claude.menu));
   $('#cl-act').hidden = !claude.menu;
   if (!claude.menu) return;
   const row = (j) => `<button class="it" data-key="${esc(jobKey(j))}"><span class="t"><b>${esc(jobLabel(j))}</b><span>${esc(j.state === 'waiting' ? (j.waiting?.type === 'tool' ? t('approval: {tool}', { tool: approvalShort(j.waiting) }) : t('a proposal to answer')) : j.state === 'running' ? t('working · since {ago}', { ago: ago(j.started) }) : t('in line · {n}', { n: j.position || 1 }))}</span></span><span class="state ${j.state}">${esc({ running: t('running'), waiting: t('waits for you'), queued: t('in line') }[j.state])}</span></button>`;
   const group = (title, js) => js.length ? `<div class="g">${esc(title)}</div>${js.map(row).join('')}` : '';
-  const rl = st.rate || {};
-  const quota = util != null ? `<div class="g">${esc(t('Quota'))}</div><div class="qrow"><span>${esc({ five_hour: t('Session (5 h)'), seven_day: t('Week') }[rl.rateLimitType] || t('Usage'))}</span><span class="bar"><i style="width:${Math.round(util * 100)}%"></i></span><span>${Math.round(util * 100)} %${rl.resetsAt ? ` · ${esc(t('resets {at}', { at: new Date(rl.resetsAt * 1000).toLocaleTimeString(getLang(), { hour: '2-digit', minute: '2-digit' }) }))}` : ''}</span></div>` : '';
+  const quota = st.account === 'api_key' ? '' : wins.length
+    ? `<div class="g">${esc(t('Quota'))} <span class="when">${esc(t('updated {ago}', { ago: ago(st.rate.at) }))}</span></div>${wins.map((x) => `<div class="qrow"><span class="qn">${esc(quotaName(x.key))}</span><span class="qbar"><i class="${x.used >= 0.9 ? 'hot' : ''}" style="width:${Math.max(2, Math.round(x.used * 100))}%"></i></span><span class="qv">${Math.round(x.used * 100)} %</span><span class="qr">${esc(resetWords(x.resets))}</span></div>`).join('')}`
+    : `<div class="g">${esc(t('Quota'))}</div><div class="none">${esc(t('Known after Claude\'s first request: Claude Code tells it during each run.'))}</div>`;
   const u = (st.usage?.by_account || {})[st.account] || { runs: 0, cost_usd: 0 };
   $('#cl-act').innerHTML = `<div class="h"><b>${esc(t("Claude's activity"))}</b><span>${esc(st.auth ? accountWords(st.auth) : '')}</span></div>
     ${group(t('Waits for your answer'), wait)}${group(t('Running'), run ? [run] : [])}${group(t('In line'), queue)}
@@ -2511,7 +2529,14 @@ let projectInfo = null;
 const targetName = (v) => ({ web: t('Web'), desktop: t('Unity / Unreal'), print: t('3D print') }[v] || v);
 function segSet(id, value) { $$(`${id} button`).forEach((b) => b.classList.toggle('on', b.dataset.v === value)); }
 function switchSet(id, on) { $(id).setAttribute('aria-checked', String(!!on)); }
+// Language: English or French; the page reloads in it, so every word follows.
+function syncLang() {
+  $('#set-lang').innerHTML = Object.entries(LANGS).map(([k, name]) => `<button data-v="${k}" lang="${k}">${esc(name)}</button>`).join('');
+  segSet('#set-lang', getLang());
+  $$('#set-lang button').forEach((b) => (b.onclick = () => { if (b.dataset.v === getLang()) return; prefs.lang = b.dataset.v; savePrefs(); location.reload(); }));
+}
 function syncPersonal() {
+  syncLang();
   segSet('#set-density', state.density);
   $('#set-shade').value = prefs.defaultShade || '';
   $('#set-view').value = prefs.view || 'iso';
@@ -2570,6 +2595,7 @@ async function syncClaudeSettings(fresh = true) {
   $('#settings .set-nav [data-pane="claude"]').hidden = $('#settings .set-nav [data-pane="account"]').hidden = !st;
   if (!st) return;
   switchSet('#set-claude', st.enabled);
+  switchSet('#set-behind', st.blender_behind);
   segSet('#set-paid', st.paid);
   $('#set-paid-help').textContent = st.paid === 'auto'
     ? t('⚠ Started without asking: Hyper3D Rodin, Hunyuan3D… spend your credits with those services.')
@@ -2587,12 +2613,14 @@ async function syncClaudeSettings(fresh = true) {
     account: t('A second Claude login of Studio\'s own: your terminal keeps its account.'),
     api_key: t('Billed per token, in real dollars, to your Anthropic account.') }[st.account];
   // The account's state, once, and what that kind of account needs.
-  const state1 = `<div class="sline ${a.ok ? 'ok' : 'bad'}"><span>${a.ok ? '✓' : '!'}</span><b>${esc(accountWords(a))}</b></div>`;
+  $('#set-acc-state').className = `sstate ${a.ok ? 'ok' : 'bad'}`;
+  $('#set-acc-state').innerHTML = `<i>${a.ok ? '✓' : '!'}</i>${esc(accountWords(a))}`;
   let more = '';
   if (st.account === 'account') more = `<div class="srow in"><div class="st"><b>${esc(a.ok ? t('Log in again') : t('Log in'))}</b><span>${esc(t('Opens claude.ai in your browser.'))}</span></div><div class="sc"><button class="btn sm" id="set-login">${esc(t('Log in…'))}</button></div></div>`;
   else if (st.account === 'api_key') more = `<div class="srow in"><div class="st"><b>${esc(t('API key'))}</b><span>${esc(t('Kept in the macOS keychain; never shown again.'))}</span></div><div class="sc set-key"><input id="set-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…" aria-label="${esc(t('API key'))}"><button class="btn sm" id="set-key-save">${esc(a.ok ? t('Replace') : t('Save'))}</button>${a.ok ? `<button class="btn sm ghost" id="set-key-forget">${esc(t('Forget it'))}</button>` : ''}</div></div>
       <div class="srow in"><div class="st"><label for="set-budget"><b>${esc(t('Cap per request'))}</b></label><span>${esc(t('A request stops when it has spent this much.'))}</span></div><div class="sc"><input id="set-budget" type="number" min="0.1" max="100" step="0.5" class="num" value="${esc(st.budget_usd)}"> <span class="dim small">$</span></div></div>`;
-  $('#set-acc').innerHTML = state1 + more;
+  $('#set-acc').innerHTML = more;
+  $('#set-acc').hidden = !more;
   $('#set-approvals-help').textContent = st.approvals === 'auto'
     ? t('Claude Code decides alone; what it judges risky is refused, without asking you.')
     : t('Reading, the project\'s files and kiln\'s scripts go through; anything else waits for your OK.');
@@ -2647,6 +2675,7 @@ $$('#set-account button').forEach((b) => (b.onclick = async () => {
   catch (e) { claudeNote(t('Not saved: {e}', { e: e.message })); }
 }));
 $$('#set-approvals button').forEach((b) => (b.onclick = () => claude.status?.approvals !== b.dataset.v && saveClaude({ claude_approvals: b.dataset.v }, t('Approvals'))));
+$('#set-behind').onclick = () => claude.status && saveClaude({ blender_behind: !claude.status.blender_behind }, t('Open Blender behind'));
 $$('#set-paid button').forEach((b) => (b.onclick = () => claude.status?.paid !== b.dataset.v && saveClaude({ claude_paid: b.dataset.v }, t('Paid generation'))));
 $$('#set-mcp button').forEach((b) => (b.onclick = () => claude.status?.mcp !== b.dataset.v && saveClaude({ blender_mcp: b.dataset.v }, t('Blender MCP server'))));
 $('#set-port').onchange = (e) => saveClaude({ blender_port: +e.target.value }, t('Port'));

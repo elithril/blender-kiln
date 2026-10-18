@@ -13,6 +13,11 @@ import addon_utils
 import bpy
 
 PORT = int(os.environ["KILN_BLENDER_PORT"])
+if os.environ.get("KILN_BLENDER_PIDFILE"):
+    # Opened through macOS's `open -g` (behind the other windows), Studio has no process
+    # of its own to stop: it reads this one.
+    with open(os.environ["KILN_BLENDER_PIDFILE"], "w") as f:
+        f.write(str(os.getpid()))
 KIND = os.environ.get("KILN_BLENDER_MCP", "ahujasid")
 if PORT == 9876:
     raise SystemExit("KILN worker: refusing port 9876, the usual Blender MCP port")

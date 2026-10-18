@@ -1,6 +1,10 @@
 {
  "_": "Kiln Studio in French. ui: the page's words, keyed by their English; checks: checks.py MESSAGES, same codes and placeholders.",
  "ui": {
+  "Open Blender behind": "Ouvrir Blender en arrière-plan",
+  "Studio's Blender opens behind your windows and never takes the focus. Off, it comes to the front, to watch it work.": "Le Blender de Studio s'ouvre derrière vos fenêtres et ne prend jamais le focus. Désactivé, il passe au premier plan, pour le regarder travailler.",
+  "updated {ago}": "mis à jour {ago}",
+  "Known after Claude's first request: Claude Code tells it during each run.": "Connu après la première demande à Claude : Claude Code l'indique à chaque demande.",
   "Studio's Blender started, on port {p}": "Blender de Studio démarré, sur le port {p}",
   "New session: the Claude account changed since the last message": "Nouvelle session : le compte Claude a changé depuis le dernier message",
   "Check again": "Vérifier à nouveau",

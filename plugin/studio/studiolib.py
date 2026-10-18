@@ -225,7 +225,9 @@ CONFIG_DEFAULTS = {"live_view": True, "auto_open": True, "exclude": [], "target"
                    # request when running on an API key.
                    "claude_approvals": "ask", "claude_parallel": 1, "claude_model": "", "claude_budget_usd": 2.0,
                    # Paid generation (Hyper3D Rodin, Hunyuan3D…): ask each time, or let it through.
-                   "claude_paid": "ask"}
+                   "claude_paid": "ask",
+                   # Studio's Blender opens behind the other windows, without taking focus.
+                   "blender_behind": True}
 CLAUDE_APPROVALS = ("ask", "auto")
 
 
@@ -265,7 +267,7 @@ def _port_ok(v) -> bool:
 def clean_config(data: dict) -> dict:
     """The known keys, of the right type; anything else is left out (but kept on disk)."""
     out: dict = {}
-    for k in ("live_view", "auto_open", "claude_worker"):
+    for k in ("live_view", "auto_open", "claude_worker", "blender_behind"):
         if isinstance(data.get(k), bool):
             out[k] = data[k]
     if _port_ok(data.get("blender_port")):
@@ -296,7 +298,7 @@ def save_config(project: "Project", updates: dict) -> dict:
     for k, v in updates.items():
         if k not in CONFIG_DEFAULTS:
             raise ValueError(f"unknown setting {k!r} (known: {', '.join(CONFIG_DEFAULTS)})")
-        if k in ("live_view", "auto_open", "claude_worker") and not isinstance(v, bool):
+        if k in ("live_view", "auto_open", "claude_worker", "blender_behind") and not isinstance(v, bool):
             raise ValueError(f"{k} must be true or false")
         if k == "blender_port" and not _port_ok(v):
             raise ValueError(f"blender_port must be a port from 1024 to 65535, not {RESERVED_PORT} "

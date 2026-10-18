@@ -274,6 +274,49 @@ def mcp_config(project: sl.Project, port: int, kind: str) -> dict:
     return {"mcpServers": {"blender": blender, "kiln-studio": studio}}
 
 
+class _PidProc:
+    """A process Studio did not start itself (macOS `open -g`): poll, stop and wait on its pid."""
+
+    def __init__(self, pid: int):
+        self.pid, self.returncode = pid, None
+
+    def poll(self):
+        try:
+            os.kill(self.pid, 0)
+            return None
+        except ProcessLookupError:
+            self.returncode = self.returncode if self.returncode is not None else 0
+            return self.returncode
+        except PermissionError:
+            return None
+
+    def terminate(self) -> None:
+        try:
+            os.kill(self.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+
+    def kill(self) -> None:
+        try:
+            os.kill(self.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+
+    def wait(self, timeout: float | None = None):
+        t0 = time.time()
+        while self.poll() is None:
+            if timeout is not None and time.time() - t0 > timeout:
+                raise subprocess.TimeoutExpired(str(self.pid), timeout)
+            time.sleep(0.2)
+        return self.returncode
+
+
+def app_bundle(exe: str) -> Path | None:
+    """The .app a macOS Blender binary lives in (…/Blender.app/Contents/MacOS/Blender)."""
+    p = Path(exe).resolve()
+    return p.parents[2] if sys.platform == "darwin" and len(p.parents) > 2 and p.parents[2].suffix == ".app" else None
+
+
 class Blender:
     """One of the worker's GUI Blenders: started on demand, reused, stopped with Studio.
     Blender `index` serves on blender_port + index, with a profile of its own."""
@@ -349,18 +392,38 @@ class Blender:
                            BLENDER_USER_EXTENSIONS=str(profile / "extensions"), BLENDER_USER_DATAFILES=str(profile / "datafiles"))
                 log = (self.dir / "blender.log").open("ab")
                 # GUI, not --background: rule 2's viewport screenshots need a viewport.
-                self.proc = subprocess.Popen([exe, "--factory-startup", *extra, "--python-exit-code", "1",
-                                              "--python", str(BLENDER_START)],
-                                             env=env, stdout=log, stderr=subprocess.STDOUT,
-                                             stdin=subprocess.DEVNULL, start_new_session=True)
+                args = ["--factory-startup", *extra, "--python-exit-code", "1", "--python", str(BLENDER_START)]
+                app = app_bundle(exe) if st["blender_behind"] else None
+                pidfile = self.dir / "blender.pid"
+                if app:
+                    # Behind the other windows, focus left where it is: Blender's own
+                    # --no-window-focus does not hold on macOS, `open -g` does.
+                    pidfile.unlink(missing_ok=True)
+                    envs = [a for k, v in env.items() if k.startswith(("KILN_", "BLENDER_USER_")) for a in ("--env", f"{k}={v}")]
+                    envs += ["--env", f"KILN_BLENDER_PIDFILE={pidfile}"]
+                    subprocess.run(["open", "-g", "-n", "-a", str(app), *envs, "--stdout", str(self.dir / "blender.log"),
+                                    "--stderr", str(self.dir / "blender.log"), "--args", *args], check=True, timeout=30,
+                                   capture_output=True)
+                    self.proc = None
+                else:
+                    if st["blender_behind"]:
+                        args.insert(1, "--no-window-focus")   # honoured outside macOS
+                    self.proc = subprocess.Popen([exe, *args], env=env, stdout=log, stderr=subprocess.STDOUT,
+                                                 stdin=subprocess.DEVNULL, start_new_session=True)
                 for _ in range(240):
+                    if self.proc is None and pidfile.is_file():
+                        try:
+                            self.proc = _PidProc(int(pidfile.read_text().strip()))
+                        except ValueError:
+                            pass
                     if port_open(port):
                         self.state, self.port = "running", port
                         return "started"
-                    if self.proc.poll() is not None:
+                    if self.proc is not None and self.proc.poll() is not None:
                         raise WorkerError(f"Blender exited ({self.proc.returncode}) before serving; see {self.dir / 'blender.log'}")
                     time.sleep(0.5)
-                self.proc.kill()
+                if self.proc is not None:
+                    self.proc.kill()
                 raise WorkerError(f"Blender never opened port {port}; see {self.dir / 'blender.log'}")
             except WorkerError as e:
                 self.state, self.message = "failed", str(e)
@@ -368,6 +431,13 @@ class Blender:
 
     def stop(self) -> None:
         with self.lock:
+            pidfile = self.dir / "blender.pid"
+            if self.proc is None and pidfile.is_file():
+                # One opened behind (open -g) by an earlier Studio, still serving.
+                try:
+                    self.proc = _PidProc(int(pidfile.read_text().strip()))
+                except ValueError:
+                    pass
             if self.proc and self.proc.poll() is None:
                 self.proc.terminate()
                 try:
@@ -580,7 +650,7 @@ class Worker:
         for j in jobs:
             j["position"] = queued.index(j["id"]) + 1 if j["id"] in queued else None
         return {"enabled": st["claude_worker"], "port": st["blender_port"], "mcp": st["blender_mcp"],
-                "approvals": st["claude_approvals"], "paid": st["claude_paid"], "model": st["claude_model"], "budget_usd": st["claude_budget_usd"],
+                "approvals": st["claude_approvals"], "paid": st["claude_paid"], "blender_behind": st["blender_behind"], "model": st["claude_model"], "budget_usd": st["claude_budget_usd"],
                 "parallel": st["claude_parallel"], "machine": machine(), "account": user_settings()["account"],
                 "account_dir": str(account_dir()),
                 "auth": self.auth(force_auth), "blender": self.blender.status(),
@@ -882,7 +952,9 @@ class Worker:
                                 "job": job["id"], "role": "tool-result", "id": b.get("tool_use_id"),
                                 "error": bool(b.get("is_error")), "text": short(text, 300)}))
                 elif t == "rate_limit_event":
-                    self.rate = ev.get("rate_limit_info")
+                    # Claude Code says it during each run: the 5-hour session and the week, in
+                    # unifiedWindows; the page shows the last word, and when it came.
+                    self.rate = {**(ev.get("rate_limit_info") or {}), "at": sl.now()}
                 elif t == "result":
                     result = ev
         finally:
