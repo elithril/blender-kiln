@@ -1130,7 +1130,9 @@ async function saveNote() {
     state.hl = note.id;
     renderNotes(); renderPins();
     const n = state.detail.notes.findIndex((x) => x.id === note.id) + 1;
-    toast(t('Note {n} saved with its screenshot{cu}. Claude picks it up on {cmd}', { n, cu: draft.anchor ? t(' and close-up') : '', cmd: `<span class="mono">/kiln studio ${esc(state.detail.name)}</span>` }), 'ok', 4200);
+    toast(claude.status?.enabled
+      ? `${esc(t('Note {n} saved with its screenshot{cu}.', { n, cu: draft.anchor ? t(' and close-up') : '' }))} <button class="linkish" data-ask-notes>${esc(t('Ask Claude in the ✦ tab'))}</button>`
+      : t('Note {n} saved with its screenshot{cu}. Claude picks it up on {cmd}', { n, cu: draft.anchor ? t(' and close-up') : '', cmd: `<span class="mono">/kiln studio ${esc(state.detail.name)}</span>` }), 'ok', 5000);
     requestAnimationFrame(() => $(`#note-list .note[data-id="${CSS.escape(note.id)}"]`)?.classList.add('flash'));
   } catch (e) {
     toast(t('Could not save the note: {e}', { e: esc(e.message) }), 'warn', 8000);
@@ -1355,7 +1357,8 @@ function renderNotesNow() {
   const cmd = `/kiln studio ${d.id}`;
   $('#handoff').innerHTML = [
     c.addressed ? `<div>${tp(c.addressed, '<b>{n} note to check</b>: Claude changed the model. Look, then mark it <b>Looks right</b> or <b>Not yet</b>.', '<b>{n} notes to check</b>: Claude changed the model. Look, then mark each one <b>Looks right</b> or <b>Not yet</b>.')}</div>` : '',
-    c.open ? `<div${c.addressed ? ' style="margin-top:8px"' : ''}>${esc(tp(c.open, '{n} open note. In Claude Code, run:', '{n} open notes. In Claude Code, run:'))}<div class="cmd"><code>${esc(cmd)}</code><button class="btn sm" data-copy="${esc(cmd)}">${esc(t('Copy'))}</button></div></div>` : '',
+    c.open && claude.status?.enabled ? `<div${c.addressed ? ' style="margin-top:8px"' : ''}>${esc(tp(c.open, '{n} open note.', '{n} open notes.'))} <button class="btn sm accent" data-ask-notes>${esc(tp(c.open, 'Work on it with Claude', 'Work on them with Claude'))}</button><div class="dim small" style="margin-top:6px">${esc(t('Or in Claude Code:'))} <code>${esc(cmd)}</code></div></div>` : '',
+    c.open && !claude.status?.enabled ? `<div${c.addressed ? ' style="margin-top:8px"' : ''}>${esc(tp(c.open, '{n} open note. In Claude Code, run:', '{n} open notes. In Claude Code, run:'))}<div class="cmd"><code>${esc(cmd)}</code><button class="btn sm" data-copy="${esc(cmd)}">${esc(t('Copy'))}</button></div></div>` : '',
   ].join('');
   $$('#handoff [data-copy]').forEach((b) => (b.onclick = () => copy(b.dataset.copy)));
   renderCounts();
@@ -2293,10 +2296,19 @@ async function onClaude(ev) {
     claudeWaits(ev.job);
 }
 
+// "Work on it with Claude": the ✦ tab, the model's open notes sent.
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('[data-ask-notes]')) return;
+  openClaudeView(null);
+  claudeSend('notes');
+});
+
 // ── the tutorial (tutorial.js): a scripted, simulated walk through Studio ─────
 // Offered once, the first time; ⌘K → Take the tutorial starts it again.
 async function startTutorial() {
   $('#tuto-offer')?.remove();
+  // Its models are new every time: render their thumbnails again.
+  for (const k of [...queued]) if (k.startsWith('thumb:tavern/')) queued.delete(k);
   prefs.tutorialSeen = true; savePrefs();
   const m = await import('./tutorial.js');
   m.start({ state, viewer, claude, hooks, toast, go, openAsset, ensureRight, setCompare, handleEvent, onClaude, claudeStatus,

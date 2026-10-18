@@ -1,6 +1,13 @@
 {
  "_": "Kiln Studio in French. ui: the page's words, keyed by their English; checks: checks.py MESSAGES, same codes and placeholders.",
  "ui": {
+  "Note {n} saved with its screenshot{cu}.": "Note {n} enregistrée avec sa capture{cu}.",
+  "Ask Claude in the ✦ tab": "Demander à Claude dans l'onglet ✦",
+  "{n} open note.": "{n} note ouverte.",
+  "{n} open notes.": "{n} notes ouvertes.",
+  "Work on it with Claude": "La traiter avec Claude",
+  "Work on them with Claude": "Les traiter avec Claude",
+  "Or in Claude Code:": "Ou dans Claude Code :",
   "+ asks Claude for a new model; the arrow imports a file you have (GLB, glTF, FBX, OBJ — or drop it anywhere on the page). Studio shows one folder: for another, run /kiln studio in it, or studio.py open <folder>.": "+ demande un nouveau modèle à Claude ; la flèche importe un fichier que vous avez (GLB, glTF, FBX, OBJ — ou déposez-le n'importe où sur la page). Studio montre un dossier : pour un autre, lancez /kiln studio dedans, ou studio.py open <dossier>.",
   "Add a model, or open another folder": "Ajouter un modèle, ou ouvrir un autre dossier",
   "Click + to ask Claude for a model.": "Cliquez sur + pour demander un modèle à Claude.",
