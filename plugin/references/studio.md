@@ -402,7 +402,7 @@ notes. It never touches a model file.
 | `set_view` | `shading` (lit, unlit, clay, normals, uv, faces), `background`, `wire`, `grid`, `bounds` (size), `skeleton` (bones), a preset `view`, `frame` |
 | `compare` | `mode` split or side with a `target` stage or `baseline` (the previous version); `off` |
 | `play_clip` | An animation `clip` (`walk`, `run_loop`…), `playing`, `speed` (0.25, 0.5, 1, 2), `time` |
-| `present` | Present mode: the model alone, full window, no panels — for a second screen; `on: false` leaves it (so do Esc and the page's button; `?present` in the URL opens in it) |
+| `present` | Present mode: the model alone, full window, no panels — for a second screen; `on: false` leaves it (so do Esc and the page's button — tell the user; `?present` in the URL opens in it) |
 
 Their full names, as Claude Code calls a plugin's MCP tools (`mcp__plugin_<plugin>_<server>__<tool>`):
 `mcp__plugin_blender-kiln_kiln-studio__get_selection`, `…__open_model` and so on — the skill's

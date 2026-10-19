@@ -74,8 +74,14 @@ nothing and the user gets no response.
     (SOURCE/IMPORT, CLEANUP, TEXTURING, OPTIMIZE if it re-imports), framed per
     rule 22, and from TWO opposite angles after TEXTURING. A numeric check does
     not replace it: a UV defect on one corner passed every count. When the MCP
-    does not answer (Blender closed) or the open Blender is the user's (rule 16):
-    build headless and render the same views headless — never skip the look:
+    does not answer (Blender closed), ask first — "Blender is closed: shall I open
+    it?" — and on yes run `python3 <skill>/tools/open_blender.py`: the user's own
+    Blender, behind their windows, its MCP add-on serving on 9876, exit 0 once it
+    answers. (Inside Kiln
+    Studio the worker's Blender is always open: never run it there.) On no, when it
+    fails, or when the open Blender is the user's (rule 16): build headless, say so
+    in the report — never "in your Blender" —, and render the same views headless —
+    never skip the look:
     `tools/review_renders.py MODEL... --out DIR` (Workbench, matcap and colour,
     two opposite three-quarters, top and under, framed on the vertices;
     `--close-from` the check's thin spots). Every print session of 2026-10-13
@@ -275,7 +281,8 @@ angle too. A single-asset run therefore takes **at least four** captures.
 ## Dependencies
 
 **Required:**
-- `blender-mcp` — Blender must be open with MCP server started (port 9876).
+- `blender-mcp` — Blender must be open with MCP server started (port 9876);
+  `tools/open_blender.py` opens it with the server started, once the user agrees.
   Install the addon with `uvx blender-mcp install-addon`; `addon_utils.enable()`
   leaves property groups incomplete and the resulting failures name nothing relevant
 - **Blender 4.4 or newer.** Layered actions arrived in 4.4 and the animation paths
@@ -929,7 +936,7 @@ say how far down it holds (`print.md` rule 9).
 
 Save in output folder per **storage mode** (compact or full). See `references/naming-conventions.md` for folder structure details. The .blend file always contains the full history — compact mode is safe.
 
-Save the .blend file via `execute_blender_code`: `bpy.ops.wm.save_as_mainfile(filepath=...)`. Only when the open file is yours alone — otherwise from the headless Blender that built it (rule 16).
+Save the .blend file via `execute_blender_code`: `bpy.ops.wm.save_as_mainfile(filepath=...)`. Only when the open file is yours alone — otherwise from the headless Blender that built it (rule 16). Set `bpy.context.preferences.filepaths.save_version = 0` first: no `.blend1` backup is left beside it to ask about (Blender 5.2.2: saved twice, none).
 
 **Output format:**
 ```
