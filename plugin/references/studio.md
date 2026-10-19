@@ -467,7 +467,7 @@ quota Claude Code reports; on an API key, what the key is billed. A resumed run 
 own share, not the session's total again.
 
 **Browsers:** Chrome, and Safari 26.6 through WebDriver (2026-10-19): the whole
-tutorial, ⌘K and the keys, a pinned note with its screenshot, compare and choose. **Not
-tested yet:** a trackpad pinch in Safari (it may zoom the page instead of the view), the
+tutorial, ⌘K and the keys, a pinned note with its screenshot, compare and choose; a
+trackpad pinch zooms the 3D view, not the page (by hand). **Not tested yet:** the
 notification permission prompt, Firefox, Linux and Windows (Blender is opened behind the
 user's windows with macOS's `open -g`; elsewhere it opens in front).
