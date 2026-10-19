@@ -23,6 +23,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
 import checks
+import handoff
 import setup_status
 import studiolib as sl
 import worker as wk
@@ -455,6 +456,13 @@ def make_handler(studio: Studio, port_ref: list[int]):
                     return self._json({"root": str(project.root), "name": project.root.name,
                                        "assets": rows, "batches": batches,
                                        "work": sl.work_view(sl.load_work(project))})
+                if parts[:2] == ["api", "asset"] and parts[3:] == ["package"]:
+                    # Everything to hand over: the outputs and a sheet, in one zip.
+                    lang = parse_qs(urlparse(self.path).query).get("lang", ["en"])[0]
+                    name, data = handoff.make_package(project, studio.asset(parts[2]), lang)
+                    return self._send(200, data, "application/zip",
+                                      {"Content-Disposition": f"attachment; filename*=UTF-8''{quote(name)}",
+                                       "Cache-Control": "no-store"})
                 if parts[:2] == ["api", "asset"] and len(parts) == 3:
                     a = studio.asset(parts[2])
                     sl.observe(project, a)

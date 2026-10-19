@@ -1208,3 +1208,5 @@ svg.spark { width: 14px; height: 14px; fill: var(--new); stroke: none; flex: non
 .outputs .out.add:disabled { opacity: .45; cursor: progress; }
 .outputs .out-sep { width: 1px; height: 16px; background: var(--line-2); margin: 0 4px; }
 .outputs .btn.icon svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.outputs .out-all { gap: 5px; margin-left: 2px; }
+.outputs .out-all svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }

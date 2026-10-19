@@ -256,7 +256,10 @@ model's folder, found by name (`naming-conventions.md` § Outputs). ✓: up to d
 before `_original.glb` last changed, to redo ("Redo it"). One there opens in the view (an STL or a 3MF in
 millimetres, as on the printer's bed); one missing has "+": Studio asks Claude to prepare
 it (with Claude off in Studio, the request is copied for Claude Code). The file shown
-downloads (a print or AR output: its folder, zipped), or shows in the Finder.
+downloads (a print or AR output: its folder, zipped), or shows in the Finder. "Download all"
+(`/api/asset/<id>/package`, `studio/handoff.py`): every output in its folder and a sheet —
+LISEZ-MOI.md or README.md — with the size, each file's use and triangles, the outputs to
+redo, and the licences of the log; never the source nor kiln's working files.
 
 The two side panels resize the view, and fold into 60 px rails (`[` the list, `]` the
 notes, `\` both); the view fits the model again once they have moved. On a narrow

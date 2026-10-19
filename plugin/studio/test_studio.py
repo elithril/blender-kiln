@@ -891,6 +891,38 @@ class Api(Base):
         code, _ = self.req("GET", "/files/generated-assets?zip=1")   # only an output folder zips
         self.assertNotEqual(code, 200)
 
+    def test_the_package_holds_every_output_and_a_sheet(self) -> None:
+        d = self.tmp / "generated-assets" / "crate"
+        glb(d / "crate_original.glb")
+        glb(d / "web" / "crate_final.glb")
+        (d / "game").mkdir()
+        (d / "game" / "crate_game.fbx").write_bytes(b"Kaydara FBX Binary")
+        stl(d / "print" / "crate_print_lid.stl")
+        threemf(d / "print" / "crate_print.3mf")
+        (d / "print" / "crate_lid_parts.blend").write_bytes(b"BLENDER")
+        (d / "crate_log.md").write_text("# crate\n\n## Licenses\n- Wood texture: Poly Haven, CC0\n")
+        old = time.time() - 3600
+        os.utime(d / "game" / "crate_game.fbx", (old, old))   # made before the model last changed
+        self.studio.refresh()
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        c.request("GET", "/api/asset/generated-assets%2Fcrate/package?lang=fr", headers={"Host": f"127.0.0.1:{self.port}"})
+        r = c.getresponse()
+        self.assertEqual(r.status, 200)
+        self.assertIn("crate.zip", r.getheader("Content-Disposition"))
+        z = zipfile.ZipFile(io.BytesIO(r.read()))
+        c.close()
+        names = sorted(z.namelist())
+        self.assertIn("crate/web/crate_final.glb", names)
+        self.assertIn("crate/game/crate_game.fbx", names)
+        self.assertIn("crate/print/crate_print.3mf", names)
+        self.assertIn("crate/print/crate_print_lid.stl", names)
+        self.assertNotIn("crate/print/crate_lid_parts.blend", names)   # a working file stays
+        self.assertFalse(any("original" in n for n in names))          # the source stays
+        sheet = z.read("crate/LISEZ-MOI.md").decode()
+        self.assertIn("Unity, Unreal", sheet)
+        self.assertIn("**À refaire :** Jeu", sheet)
+        self.assertIn("Poly Haven, CC0 — libre d'usage", sheet)
+
     def test_assets_and_detail(self) -> None:
         code, data = self.req("GET", "/api/assets")
         self.assertEqual(code, 200)

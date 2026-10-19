@@ -917,7 +917,8 @@ function renderOutputs(d, v) {
   const dl = dir ? { href: `${fileUrl(dir)}?zip=1`, what: dir.split('/').slice(-2).join('_') + '.zip' } : { href: `${fileUrl(v.file)}?download=1`, what: v.file.split('/').pop() };
   const file = `<span class="out-sep" aria-hidden="true"></span>
     <a class="btn icon sm ghost" href="${esc(dl.href)}" download title="${esc(t('Download {f}', { f: dl.what }))}" aria-label="${esc(t('Download'))}"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"/></svg></a>
-    <button class="btn icon sm ghost" data-out-reveal="${esc(v.file)}" title="${esc(t('Show in the Finder'))}" aria-label="${esc(t('Show in the Finder'))}"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></svg></button>`;
+    <button class="btn icon sm ghost" data-out-reveal="${esc(v.file)}" title="${esc(t('Show in the Finder'))}" aria-label="${esc(t('Show in the Finder'))}"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></svg></button>
+    ${have.size ? `<a class="btn sm ghost out-all" href="/api/asset/${enc(d.id)}/package?lang=${getLang()}" download title="${esc(t('Every output in one zip, with a sheet saying what each file is for, its size and its licences: ready to send.'))}"><svg viewBox="0 0 24 24"><path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/></svg>${esc(t('Download all'))}</a>` : ''}`;
   el.innerHTML = `<span class="out-label">${esc(t('Outputs'))}</span>${chips}${file}`;
   // Another file can be another layout (a print's parts on the bed): framed anew.
   $$('[data-out-v]', el).forEach((b) => (b.onclick = async () => {

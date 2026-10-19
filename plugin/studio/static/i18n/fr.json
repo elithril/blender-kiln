@@ -1078,7 +1078,10 @@
   "This output was made before the model last changed.": "Cette sortie date d'avant la dernière modification du modèle.",
   "Redo it": "La refaire",
   "Ask Claude to make the {out} output of {name} again, from the model as it is now? {what}.": "Demander à Claude de refaire la sortie {out} de {name}, à partir du modèle tel qu'il est maintenant ? {what}.",
-  "**✓** up to date; **↻** made before the model changed: to redo": "**✓** à jour ; **↻** faite avant une modification du modèle : à refaire"
+  "**✓** up to date; **↻** made before the model changed: to redo": "**✓** à jour ; **↻** faite avant une modification du modèle : à refaire",
+  "Download all": "Tout télécharger",
+  "Every output in one zip, with a sheet saying what each file is for, its size and its licences: ready to send.": "Toutes les sorties dans un zip, avec une fiche qui dit à quoi sert chaque fichier, sa taille et ses licences : prêt à envoyer.",
+  "**Download all**: every output in one zip, with a sheet to send": "**Tout télécharger** : toutes les sorties dans un zip, avec une fiche, prêt à envoyer"
  },
  "checks": {
   "what": "un {cat:w} de niveau {tier:w}",
