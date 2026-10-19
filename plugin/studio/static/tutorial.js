@@ -457,6 +457,7 @@ const STEPS = [
   { ch: C_CMP, target: '#cmpbar', do: true, title: N_('What changed'),
     enter: () => compareOn(),
     lead: N_('The bar gives the difference in triangles, file size and height.'),
+    points: [N_('Prefer the old one? Details → **Compare and choose** keeps one or the other')],
     act: N_('Close it with **×** or **Esc**.'), allow: '#cmp-close',
     done: () => !X.state.compare, skip: () => X.setCompare(null), undo: () => compareOn('side') },
   { ch: C_CMP, target: () => '#note-list [data-act="resolve"]', do: true, title: N_('Say it is right'),

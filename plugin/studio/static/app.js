@@ -909,6 +909,7 @@ async function setCompare(mode, target) {
   $('#split').hidden = mode !== 'split';
   $('#sidediv').hidden = mode !== 'side';
   $('#lab-prev').hidden = $('#lab-cur').hidden = !mode;
+  syncChoose();
   syncToolbar();
   placeSplit();
   if (mode && (!was || target)) await loadCompareTarget();
@@ -953,8 +954,10 @@ function renderDelta() {
 
 function placeSplit() {
   const w = stage.clientWidth;
-  const lp = $('#lab-prev'), lc = $('#lab-cur');
+  const lp = $('#lab-prev'), lc = $('#lab-cur'), cp = $('#cho-prev'), cc = $('#cho-cur');
+  const at = (el, left, right) => { el.style.left = left; el.style.right = right; };
   if (state.compare?.mode === 'split') {
+    at(cp, '14px', 'auto'); at(cc, 'auto', '70px');
     $('#split').style.left = `${viewer.split * w}px`;
     $('#split').setAttribute('aria-valuenow', String(Math.round(viewer.split * 100)));
     lp.style.left = '14px'; lp.style.right = 'auto';
@@ -963,6 +966,7 @@ function placeSplit() {
     $('#sidediv').style.left = `${w / 2}px`;
     lp.style.left = '14px'; lp.style.right = 'auto';
     lc.style.left = `${w / 2 + 14}px`; lc.style.right = 'auto';
+    at(cp, '14px', 'auto'); at(cc, `${w / 2 + 14}px`, 'auto');
   }
 }
 new ResizeObserver(placeSplit).observe(stage);
@@ -1582,8 +1586,8 @@ function renderDetailsNow() {
     <label>${esc(t('Tags'))}<div class="tags-edit">${d.tags.map((x) => `<span class="tg">#${esc(x)}<button data-untag="${esc(x)}" aria-label="${esc(t('Remove tag {t}', { t: x }))}">×</button></span>`).join('')}<input id="m-tag" placeholder="${esc(t('add a tag ↵'))}" aria-label="${esc(t('Add a tag'))}"></div></label>
   </div></div>`);
   blocks.push(`<div class="block"><h3>${esc(t('Previous version'))}</h3>${b
-    ? `<p class="small" style="margin:0;color:var(--text-2)">${esc(b.variant)} <span class="mono">${esc(b.hash.slice(0, 7))}</span> · ${fmtB(b.size)} · ${esc(t('kept {when} ({why})', { when: ago(b.at), why: b.reason }))}</p>
-       <div class="btns"><button class="btn sm" data-act="cmp-prev">${esc(t('Compare'))}</button><button class="btn sm" data-act="revert">${esc(t('Put it back'))}</button><button class="btn sm ghost" data-act="snapshot" title="${esc(t('Replace it with the version shown now'))}">${esc(t('Keep this one instead'))}</button></div>`
+    ? `<p class="small" style="margin:0;color:var(--text-2)">${esc(b.variant)} <span class="mono">${esc(b.hash.slice(0, 7))}</span> · ${fmtB(b.size)} · ${esc(t('kept {when} ({why})', { when: ago(b.at), why: baselineWhy(b.reason) }))}</p>
+       <div class="btns"><button class="btn sm accent" data-act="choose">${esc(t('Compare and choose'))}</button><button class="btn sm ghost" data-act="snapshot" title="${esc(t('Replace it with the version shown now'))}">${esc(t('Keep this one instead'))}</button></div>`
     : `<p class="small dim" style="margin:0">${esc(t('Studio keeps one previous copy: the version your first note on it was made on, so a review pass can be compared and undone.'))}</p>
        <div class="btns"><button class="btn sm" data-act="snapshot">${esc(t('Keep this version now'))}</button></div>`}</div>`);
   const files = d.files || [];
@@ -1623,9 +1627,40 @@ async function saveMeta(body) {
   } catch (e) { toast(esc(e.message), 'warn'); }
 }
 
+// Comparing with the kept previous version: keep it (put it back) or keep the current one.
+function syncChoose() {
+  const off = state.compare?.target !== 'baseline' || !state.detail?.baseline;
+  $('#cho-prev').hidden = $('#cho-cur').hidden = off;
+  placeSplit();
+}
+$$('.cmpchoose').forEach((b) => (b.onclick = async () => {
+  try {
+    if (b.dataset.choose === 'prev') {
+      await assetApi(state.id, '/revert', { method: 'POST', body: {} });
+      toast(t('The previous version is back. The one it replaced is kept as the previous one, to undo.'), 'ok', 6000);
+    } else {
+      toast(t('The current version stays.'), 'ok');
+    }
+    await setCompare(null);
+  } catch (e) { toast(esc(e.message), 'warn', 8000); }
+}));
+
+// Why the previous version was kept: the server writes it in English, the page says it.
+function baselineWhy(r) {
+  r = String(r || '');
+  let m;
+  if (r === 'snapshot before an edit') return t('before an edit');
+  if (r === 'snapshot from Studio') return t('kept from Studio');
+  if ((m = /^note (\S+)$/.exec(r))) { const n = state.detail?.notes.find((x) => x.id === m[1]); return n ? t('when note {n} was made', { n: noteNumber(n) }) : t('when a note was made'); }
+  if ((m = /^replaced by revert to (\w+)$/.exec(r))) return t('replaced when {h} was put back', { h: m[1].slice(0, 7) });
+  return r;
+}
+
 async function baselineAction(act) {
   try {
     if (act === 'cmp-prev') return setCompare('split', 'baseline');
+    // Both whole, side by side, with a button for each: which one stays.
+    if (act === 'choose') { await setCompare('side', 'baseline'); syncChoose(); return; }
     if (act === 'snapshot') {
       await assetApi(state.id, '/snapshot', { method: 'POST', body: { variant: state.variant } });
       toast(t('This version is now the previous one'), 'ok');

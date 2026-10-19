@@ -1038,7 +1038,18 @@
   "Cleaned up: merged, normals fixed.": "Nettoyé : soudé, normales corrigées.",
   "Kiln's latest step while it builds.": "La dernière étape de kiln pendant la fabrication.",
   "A copy for Quick Look.": "Une copie pour l'aperçu du Finder.",
-  "On {who} · in its own Blender, never yours (port {p})": "Sur {who} · dans son propre Blender, jamais le vôtre (port {p})"
+  "On {who} · in its own Blender, never yours (port {p})": "Sur {who} · dans son propre Blender, jamais le vôtre (port {p})",
+  "Keep the previous one": "Garder la précédente",
+  "Keep the current one": "Garder l'actuelle",
+  "Compare and choose": "Comparer et choisir",
+  "The previous version is back. The one it replaced is kept as the previous one, to undo.": "La version précédente est revenue. Celle qu'elle remplace est gardée comme précédente, pour annuler.",
+  "The current version stays.": "La version actuelle est gardée.",
+  "before an edit": "avant une retouche",
+  "kept from Studio": "gardée depuis le studio",
+  "when note {n} was made": "à la note {n}",
+  "when a note was made": "à une note",
+  "replaced when {h} was put back": "remplacée quand {h} est revenue",
+  "Prefer the old one? Details → **Compare and choose** keeps one or the other": "Vous préférez l'ancienne ? Détails → **Comparer et choisir** garde l'une ou l'autre"
  },
  "checks": {
   "what": "un {cat:w} de niveau {tier:w}",

@@ -1186,3 +1186,4 @@ select:not([multiple]) { -webkit-appearance: none; appearance: none; padding-rig
 
 /* the ✦ tab: its star in the middle (an older rule left it 6px left, 9px right) */
 .tabs [role=tab].icon-tab { padding-left: 8px; padding-right: 8px; }
+.cmpchoose { position: absolute; bottom: 152px; z-index: 6; box-shadow: var(--shadow); }   /* over its side's label */
