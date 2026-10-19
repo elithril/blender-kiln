@@ -423,3 +423,48 @@ It finds the project from `KILN_STUDIO_ROOT`, `CLAUDE_PROJECT_DIR` (the plugin p
 upwards (each tool takes `root`). Without a running Studio or an open page, the tools that
 drive the page say so; `get_notes`, `list_models`, `reply_to_note` and `add_note` work from
 the files alone.
+
+## 12. Claude in Studio — the page asks, a worker runs
+
+With Settings → Claude → "Ask Claude from Studio" on, the page asks Claude itself: the ✦ tab,
+New model, the project conversation and the Notes tab's "Work on them with Claude". The
+server runs a worker (`studio/worker.py`) that starts `claude -p` for each request; the user
+reads the answers in the page, not in a terminal.
+
+**When you run inside it** (the system prompt says "You are running inside Kiln Studio"):
+
+- **Its own Blender.** The `blender` MCP tools drive a GUI Blender the worker opened on
+  `blender_port` (default 9877), with a profile under `~/.kiln-studio/blenders/<project>/`.
+  The user's own Blender (9876) is never loaded: `--strict-mcp-config`.
+- **Conversations.** One per model (`asset:<id>`), one for the project, one for setup; a
+  Create request has its own (`request:<id>`). As soon as you name the model's folder, link
+  the request: `studio.py request <id> --status open --asset <asset>` — the page then shows
+  the conversation, and its approvals, on the model. Close it at the end (`--asset` alone).
+- **Approvals.** A PreToolUse hook (`studio/approval_hook.py`) lets the safe calls through:
+  reading, the project's files (Edit, Write), the skill's scripts (Python, Swift, a
+  background Blender running them), `cp` / `mv` / `ditto` into the project, `sed -n` and
+  `sed -i` on project files, `sips`, version checks. Anything else stops the run; the user
+  answers in the page and the worker resumes the session. **Each approval is a resume: change
+  files with Edit or Write, not a shell script.** Settings → Claude → Approvals: *Ask me*
+  (the above), *Auto* (Claude Code's auto mode decides), *Allow all* (everything but what
+  follows). Always asked whatever the setting: paid generation (unless "Paid generation" is
+  on Auto), a write outside the project, `sudo`, deleting outside the project.
+- **No questions mid-run.** `AskUserQuestion` is refused: end the message with one line
+  `KILN-PROPOSAL: <a yes / no question>`; the page shows Accept / Decline.
+- **Replies to notes** follow § 4: a sentence, then one `- ` line per change, before → after.
+- **In the user's language**, every message, including the skill's report blocks.
+
+**Accounts** (Settings → Account). Which one pays for the worker's runs, never the terminal's:
+
+| Choice | How it runs | Tested |
+|---|---|---|
+| The subscription | The terminal's Claude Code login, as is | Yes: a figurine made and touched up from the page (2026-10-19), quota shown live |
+| Another account | Its own Claude Code login in `~/.kiln-studio/claude-account` (`claude /login` from Settings) | **Not tested with a real second account** |
+| An API key | The key from the macOS keychain, runs kept in `~/.kiln-studio/claude-api`; a cap per request (Settings) | **Not tested with a real key**; outside macOS there is no keychain |
+
+On a subscription the page shows each run's API-equivalent cost and the 5-hour and weekly
+quota Claude Code reports; on an API key, what the key is billed. A resumed run counts its
+own share, not the session's total again.
+
+**Also not tested yet:** Safari and Firefox; Linux and Windows (Blender is opened behind
+the user's windows with macOS's `open -g`; elsewhere it opens in front).
