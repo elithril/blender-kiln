@@ -1072,7 +1072,13 @@
   "Prepare {name} for a game engine: export game/{name}_game.fbx in its folder, for Unity and Unreal, with kiln's settings for that target.": "Prépare {name} pour un moteur de jeu : exporte game/{name}_game.fbx dans son dossier, pour Unity et Unreal, avec les réglages de kiln pour cette cible.",
   "Prepare {name} for AR: export ar/{name}_ar.usdz (iPhone, Vision Pro) and ar/{name}_ar.glb (Android) in its folder, with kiln's settings for that target.": "Prépare {name} pour l'AR : exporte ar/{name}_ar.usdz (iPhone, Vision Pro) et ar/{name}_ar.glb (Android) dans son dossier, avec les réglages de kiln pour cette cible.",
   "Prepare {name} for 3D printing with kiln's print mode: check it and make it printable, then save in its folder print/ one STL per part ({name}_print_<part>.stl) and {name}_print.3mf gathering them, in millimetres.": "Prépare {name} pour l'impression 3D avec le mode impression de kiln : vérifie-le et rends-le imprimable, puis enregistre dans son dossier print/ un STL par pièce ({name}_print_<pièce>.stl) et {name}_print.3mf qui les rassemble, en millimètres.",
-  "USDZ for iPhone and Vision Pro, GLB for Android": "USDZ pour iPhone et Vision Pro, GLB pour Android"
+  "USDZ for iPhone and Vision Pro, GLB for Android": "USDZ pour iPhone et Vision Pro, GLB pour Android",
+  "Made before the model last changed: to redo.": "Faite avant la dernière modification du modèle : à refaire.",
+  "Up to date.": "À jour.",
+  "This output was made before the model last changed.": "Cette sortie date d'avant la dernière modification du modèle.",
+  "Redo it": "La refaire",
+  "Ask Claude to make the {out} output of {name} again, from the model as it is now? {what}.": "Demander à Claude de refaire la sortie {out} de {name}, à partir du modèle tel qu'il est maintenant ? {what}.",
+  "**✓** up to date; **↻** made before the model changed: to redo": "**✓** à jour ; **↻** faite avant une modification du modèle : à refaire"
  },
  "checks": {
   "what": "un {cat:w} de niveau {tier:w}",

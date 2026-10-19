@@ -895,6 +895,12 @@ function outputAsk(key, name) {
     print: t('Prepare {name} for 3D printing with kiln\'s print mode: check it and make it printable, then save in its folder print/ one STL per part ({name}_print_<part>.stl) and {name}_print.3mf gathering them, in millimetres.', { name }),
   }[key];
 }
+// An output made before the model last changed is out of date: older than _original.glb,
+// the source's export Claude makes again at every change (not the .blend, saved for less).
+function outputStale(d, x) {
+  const src = d.variants.find((y) => y.label === 'original');
+  return !!(src && x !== src && x.mtime + 1 < src.mtime);
+}
 function renderOutputs(d, v) {
   const el = $('#outputs');
   const have = new Map();
@@ -902,7 +908,8 @@ function renderOutputs(d, v) {
   const busy = modelBusy();
   const chips = OUTPUTS.map((o) => {
     const x = have.get(o.key);
-    if (x) return `<button class="out on${x.label === v.label ? ' cur' : ''}" data-out-v="${esc(x.label)}" title="${esc(`${t(o.what)} — ${x.file}`)}"><i aria-hidden="true">✓</i>${esc(t(o.name))}</button>`;
+    if (x && outputStale(d, x)) return `<button class="out on stale${x.label === v.label ? ' cur' : ''}" data-out-v="${esc(x.label)}" data-out-stale="${o.key}" title="${esc(`${t('Made before the model last changed: to redo.')} ${t(o.what)} — ${x.file}`)}"><i aria-hidden="true">↻</i>${esc(t(o.name))}</button>`;
+    if (x) return `<button class="out on${x.label === v.label ? ' cur' : ''}" data-out-v="${esc(x.label)}" title="${esc(`${t('Up to date.')} ${t(o.what)} — ${x.file}`)}"><i aria-hidden="true">✓</i>${esc(t(o.name))}</button>`;
     return `<button class="out add" data-out-make="${o.key}"${busy ? ' disabled' : ''} title="${esc(t('Prepare: {what}', { what: t(o.what) }))}"><i aria-hidden="true">+</i>${esc(t(o.name))}</button>`;
   }).join('');
   // An output with several files (print, AR) downloads as its folder, zipped.
@@ -913,11 +920,16 @@ function renderOutputs(d, v) {
     <button class="btn icon sm ghost" data-out-reveal="${esc(v.file)}" title="${esc(t('Show in the Finder'))}" aria-label="${esc(t('Show in the Finder'))}"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></svg></button>`;
   el.innerHTML = `<span class="out-label">${esc(t('Outputs'))}</span>${chips}${file}`;
   // Another file can be another layout (a print's parts on the bed): framed anew.
-  $$('[data-out-v]', el).forEach((b) => (b.onclick = () => b.dataset.outV !== state.variant && loadVariant(b.dataset.outV, { keepCamera: false })));
+  $$('[data-out-v]', el).forEach((b) => (b.onclick = async () => {
+    if (b.dataset.outV !== state.variant) await loadVariant(b.dataset.outV, { keepCamera: false });
+    // Out of date: it opens, and says so, with the way to make it again.
+    if (b.dataset.outStale) toast(`${esc(t('This output was made before the model last changed.'))} <button class="linkish" data-out-redo="${b.dataset.outStale}">${esc(t('Redo it'))}</button>`, 'warn', 9000);
+  }));
   $$('[data-out-make]', el).forEach((b) => (b.onclick = () => makeOutput(b.dataset.outMake)));
   $$('[data-out-reveal]', el).forEach((b) => (b.onclick = () => assetApi(state.id, '/reveal', { method: 'POST', body: { file: b.dataset.outReveal } }).catch((e) => toast(esc(e.message), 'warn'))));
 }
-async function makeOutput(key) {
+document.addEventListener('click', (e) => { const b = e.target.closest('[data-out-redo]'); if (b) makeOutput(b.dataset.outRedo, true); });
+async function makeOutput(key, redo = false) {
   const d = state.detail, o = OUTPUTS.find((x) => x.key === key);
   const ask = outputAsk(key, d.name);
   if (!claude.status?.enabled) {
@@ -926,7 +938,7 @@ async function makeOutput(key) {
     toast(esc(t('Copied: paste it in Claude Code, in this project. Claude in Studio is off (Settings → Claude).')), 'ok', 7000);
     return;
   }
-  if (!(await confirmDialog(t('Ask Claude to prepare the {out} output of {name}? {what}.', { out: t(o.name), name: d.name, what: t(o.what) }) + (key === 'print' ? ' ' + t('Printing is a real pass of kiln\'s print mode: it can change the shape (walls, parts), and takes longer.') : ''), t('Prepare')))) return;
+  if (!(await confirmDialog((redo ? t('Ask Claude to make the {out} output of {name} again, from the model as it is now? {what}.', { out: t(o.name), name: d.name, what: t(o.what) }) : t('Ask Claude to prepare the {out} output of {name}? {what}.', { out: t(o.name), name: d.name, what: t(o.what) })) + (key === 'print' ? ' ' + t('Printing is a real pass of kiln\'s print mode: it can change the shape (walls, parts), and takes longer.') : ''), t('Prepare')))) return;
   openClaudeView(null);
   await claudeSend('chat', ask);
 }

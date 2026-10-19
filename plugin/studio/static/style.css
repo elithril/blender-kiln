@@ -1198,6 +1198,9 @@ svg.spark { width: 14px; height: 14px; fill: var(--new); stroke: none; flex: non
   border: 1px solid var(--line-2); background: transparent; color: var(--text-2); transition: background-color .15s, border-color .15s, color .15s; }
 .outputs .out i { font-style: normal; font-weight: 700; font-size: 10px; }
 .outputs .out.on i { color: var(--ok); }
+.outputs .out.on:not(.stale) { border-color: color-mix(in srgb, var(--ok) 35%, var(--line-2)); }
+.outputs .out.stale i { color: var(--warn); }
+.outputs .out.stale { border-color: color-mix(in srgb, var(--warn) 45%, transparent); color: var(--text-2); }
 .outputs .out.on:hover { background: var(--panel-3); color: var(--text); }
 .outputs .out.cur { border-color: color-mix(in srgb, var(--accent) 50%, transparent); color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .outputs .out.add { border-style: dashed; color: var(--text-3); }

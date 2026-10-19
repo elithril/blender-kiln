@@ -386,6 +386,7 @@ const STEPS = [
     lead: N_('One model, a file per use.'),
     points: [N_('**Web** is there: the file for a website'),
       N_('**+ Game**, **+ AR**, **+ 3D print**: Claude prepares the one missing'),
+      N_('**✓** up to date; **↻** made before the model changed: to redo'),
       N_('The file shown: **download** it, or **show it in the Finder**')] },
   { id: 'pin', ch: C_NOTE, target: '#t-pin', do: true, title: N_('Pin a note'),
     enter: () => { if (X.viewer.opts.shade !== 'lit') shade('lit'); X.ensureRight('notes'); },
