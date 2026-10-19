@@ -137,6 +137,228 @@ session found by itself on a cartoon dragon, made from one flat drawing in four 
   museum photo (CC BY 4.0), and the before/after drawn from PrusaSlicer's G-code by
   `examples/print/flatten_demo.py`, which rebuilds it from the committed windmill.
 
+### Added — Kiln Studio: four more themes
+
+- Forge (warm charcoal, ember orange, a few embers drifting behind the model: CSS on the
+  compositor, none with reduced motion), Neon (deep violet, cyan, magenta), Studio (soft
+  light) and Minimal (greys and the accent picked in Settings), from the design boards.
+  "To check" has its own colour token, so it stays apart from the accent where a theme
+  wants it to. Every text pair in all seven themes reads at 4.5:1 or more (measured in the
+  browser; Dark's muted grey and Light's accent and chips were darkened to get there).
+
+### Fixed — Kiln Studio v1, after a first try
+
+- No blink when a side panel folds or unfolds: the view is drawn in the same callback as
+  the resize (screencast of six toggles: 43 of 118 frames blank before, 0 of 117 after).
+- The notes panel's fold chevron keeps its own 28 px; tab labels shrink first.
+- Sora and JetBrains Mono ship in `studio/static/fonts/` (78 kB, SIL OFL): the page's only
+  outside requests are three.js from jsDelivr.
+- The Create command is `/kiln …`, like every other command the page shows.
+- `SKILL.md`'s `allowed-tools` names the four kiln-studio MCP tools as Claude Code calls
+  them (`mcp__plugin_blender-kiln_kiln-studio__get_selection`, …), and says when to ask
+  `get_selection`.
+- The bottom bar fits the view: the shading buttons become one list, the display toggles
+  fold into Options, then the bar wraps; between 761 and 1100 px the side panels are 250 and
+  336 px. Measured at six widths, in English and French, in the three themes: 36 of 36 fit.
+
+### Added — kiln-studio, an MCP server: what the user is looking at
+
+- The plugin declares an MCP server, `kiln-studio` (`plugin/.mcp.json`, `studio/mcp_server.py`,
+  standard library, stdio). `get_selection`: the model, stage, camera (Blender frame) and
+  note the open Studio page shows, which the page now reports to the server. `get_notes`:
+  an asset's notes with the pinned point, the camera and the pictures' paths.
+  `reply_to_note`: answer a note, never "resolved". `set_camera`: turn the page's view to a
+  preset, a note's view or a Blender position and target, opening another model if asked.
+  Read-only otherwise. A seeded test drives it over stdio against a running Studio: 59 tests.
+
+### Added — Kiln Studio: Create and Import
+
+- **Import:** drop a GLB, glTF, FBX or OBJ anywhere on the page, or pick it: it is saved into
+  `imports/` (a glTF or OBJ with its buffer, materials or textures: `imports/<name>/`),
+  never over an existing file, and opens. `POST /api/import`, the file's bytes, 512 MB at most.
+- **Create:** a form (brief, type, target, style, optional reference photo, brought down to
+  2048 px) writes an open request into `.kiln-studio/requests.json` and gives the command to
+  paste: `/kiln <brief>, type …, for …, <style>, reference photo … (Studio
+  request q_…)`. `studio.py requests` lists them, `studio.py request ID --status done --asset
+  A` closes one. The welcome now offers Create, Import and See an example. 57 tests.
+
+### Added — Kiln Studio: a welcome for an empty project
+
+- An empty project opens on what to do first, and on what Studio can see of the setup:
+  Blender (found at PATH, `$BLENDER` or the usual folders, with its version), the Blender
+  MCP connection (always "unknown": Studio says whether Claude Code is set up for one and
+  whether the add-on answers on port 9876, and that only Claude can say it is connected),
+  and SkinTokens (`tools/autorig.py status --quick`, "unknown" in a kiln without it).
+  `GET /api/status`.
+- **See an example** copies kiln's own gallery barrel (2,202 triangles, 112 kB, MIT, built
+  by `examples/gallery/build.py`) into `kiln-example/barrel/` and opens it. 55 tests.
+
+### Added — Kiln Studio in French, numbers in the reader's format
+
+- Every word on the page goes through one dictionary: English, and French
+  (`static/i18n/fr.json`); Settings picks the language, the browser's by default. Numbers,
+  sizes and lengths follow it: `44 784 tris · 1,95 Mo · 0,40 m` in French. Note text and
+  Claude's replies are left as written.
+- `checks.py` now builds each finding from a code and its parameters (`MESSAGES`), so the
+  page writes the sentence in the user's language while `studio.py checks` keeps its
+  English, rendered from the same codes (unchanged on the seven test-project models and on
+  31 synthetic findings, but the dimensions line, now `0.21 m × 0.21 m × 0.43 m`).
+- `test_studio.py` fails when a string reaches the page without its French, or a check
+  code without its translation: 53 tests.
+
+### Added — Kiln Studio: themes, and states that do not rely on colour
+
+- Three themes in Settings: Dark (the approved design), Light and High contrast, and an
+  accent colour (cyan, blue, pink, lime) toned for each theme. Every colour on the page is
+  a custom property; the words over the 3D view follow its background, not the theme.
+- Each state reads by shape or word as well: a work dot is a ring, a disc with a halo or a
+  tick; a check is ✓, i or !; a pin is solid, ringed, hollow or dashed by status; counts to
+  check carry a ✓.
+
+### Added — Kiln Studio: settings, the user's and the project's
+
+- **Settings** (the gear under the list, or ⌘K), in two parts. *Personal*, kept in this
+  browser only: rows Normal or Compact, the shading and the view a model opens in,
+  lengths in metres or centimetres, fixed pins hidden or not. *Project*, in
+  `.kiln-studio/config.json`, shared with Claude: `live_view`, `auto_open`, `target`
+  (`web`, `desktop` for Unity/Unreal, `print`) and `exclude`. The skill reads them as
+  CONFIG's defaults (`references/studio.md` § 9); `studio.py open` leaves the browser
+  closed when `auto_open` is false; `studio.py config [KEY=VALUE ...]` prints or sets them.
+- The project's `target` sets the checks' limits for a model whose production log names
+  none: `desktop` raises the texture cap to 2048 and drops the compression warning,
+  `print` sets no triangle budget and makes textures and compression notes. A log's own
+  target still wins. Unknown keys and bad values are refused; keys Studio does not know
+  are kept. `test_studio.py`: 49 tests.
+
+### Added — Kiln Studio: every command by name (⌘K)
+
+- ⌘K (Ctrl+K), from anywhere on the page, even while typing: the commands that apply now,
+  each with its key (46 with a model open), filtered on every word typed; Enter runs the
+  one picked, ↑ ↓ move. Typing a model's name opens it. `?` still lists the keys.
+
+### Changed — Kiln Studio v1: the approved design
+
+- The page is the prototype approved for v1 (`kiln-3.0/studio-prototype`), on the real
+  project: side panels that resize the view and fold into 60 px rails (`[` `]` `\`), the
+  view fitted again after they move; on a narrow screen they lie over the view. The list
+  header holds in 90 px (measured, 1440 × 900): search, a View menu (Folders or State,
+  Normal or Compact), one row of tags, four counters that filter (To check, Open, Claude
+  works, Building), and the work line while a run shows. In Folders mode rows stay put and
+  flash when they change; in State mode they move (FLIP), deferred while the pointer is
+  over the list ("2 changes · re-sort").
+- **Compare** is a divider across one view (one camera) or side by side, with the change
+  in triangles, file size and height read from both files (cat, final against original:
+  +1.63 MB, +508%).
+- **Pins stick to the surface.** A pin on a skinned mesh is kept on the bone under it
+  (`anchor.node`, `anchor.local`, beside `point`) and follows the animation; on any other
+  mesh, on the mesh. Picking and "behind the model" ray-cast the mesh as posed (a posed
+  copy of each skinned mesh, refreshed a few times a second while it plays).
+- History is one feed, newest first; a note's **View** opens the before and after large
+  with a slider and both close-ups. Note pictures are widened to the card's 4:3.
+- Keys follow the prototype: `[` `]` fold the panels, so shading moves to `S` / `⇧S`;
+  `↑` `↓` change model (`J` / `K` are gone: `K` is the bones).
+
+### Changed — Kiln Studio: note pictures, a third of the size and sharper on the spot
+
+- A pinned note keeps two pictures instead of one: the view, cropped to the model and
+  the pin (1024 px at most), and a 640 px close-up rendered nearer the pin along the
+  line the user looked at it, so a detail pinned from far away is still readable. WebP,
+  JPEG where the browser cannot write WebP (Safari): 26 kB for both against 60 kB for the
+  old 1400 px JPEG, measured on the same view, and about half the image tokens when
+  Claude reads them. A whole-model note keeps the cropped view only (14 kB).
+- The pin is marked by four ticks around it, not a ringed dot on it: the spot stays visible.
+- The note stores the crop and the close-up's camera (`view`), so the "after" render
+  frames both pictures the same way. The card shows the close-ups; enlarged, each view
+  has its close-up in the corner, and a click swaps them. `studio.py show` prints the
+  close-up's path. Notes made before keep their single JPEG. `test_studio.py`: 44 tests.
+
+### Changed — Kiln Studio: Checks in plain words, with the fix
+
+- Every check says what it found and why it matters ("Floats 0.200 m above the ground:
+  it will hover when placed in a scene"), without kiln's rule numbers or phase names, then
+  **How to fix**: the command to run for that model (`/kiln optimize barrel`, copied on
+  click) or what to ask Claude. An **Ask Claude** button opens a note on the model with
+  the request written out; `/kiln studio` picks it up. `studio.py checks` prints the fix
+  under each line. Licence entries read "credit the author", "not for commercial use".
+- Compression is a note, not a warning, when the log's target is Unity, Unreal or PC:
+  the engine packs the file on import, and Draco and WebP are web formats.
+- `/kiln optimize` takes a Studio asset name and works on its `_final` file.
+  `test_studio.py`: 43 tests.
+
+### Added — Kiln Studio: what kiln is working on
+
+- **A dot per model while a command works on it.** `studio.py work start <asset>...
+  --label "…"` names the models a command will change, in order; `work next` moves on;
+  `work begin`, `work done` and `work end` cover out-of-order work and stopping early. The
+  run lives in `.kiln-studio/work.json`; the server streams it, and the page puts a dot
+  on each model in the list — a ring while it waits, breathing while kiln is on it, green
+  when done — with "Kiln · optimize · 1 of 3 · table" above the list and a toast at each
+  hand-over. A green dot goes once the user opens that model (or leaves the one they
+  watched finish); **Clear** takes them all; the run goes with the last one. A run with
+  no word for two hours stops showing work in progress. `/kiln studio` and the standalone
+  commands report their models when Studio is running; not in batch runs.
+  `test_studio.py`: 42 tests.
+
+### Added — Kiln Studio: watch it built, check it
+
+- **Live view.** While kiln builds, Kiln Studio opens the model and reloads it after each
+  phase. `studio/blender_live.py` runs inside Blender, appended to the phase's last
+  `execute_blender_code` call: it exports `<name>/<name>_live.glb` (hidden name, then moved
+  into place) and records the phase in `.kiln-studio/assets/<key>/live.json`.
+  `studio.py live <name> --end` closes the build and removes the export. The page shows
+  the phases above the model and a "building" mark in the list, follows the newest stage,
+  refits the view as the model grows, and files each live version in History under its
+  phase, with a render. Studio now starts once the brief is confirmed.
+- **Checks tab and `studio.py checks`**: triangles against the detail tier's soft range
+  (WARN only past twice the top, rule 4), size against the usual height of a chair, table,
+  door or character, ground contact and centring, texture sizes (read from the image
+  headers in the file) against the target's cap, Draco/meshopt and WebP/KTX2 on `_final`
+  only, and the licences in the production log (CC-BY: credit; NC: WARN). Without a log,
+  the tier and type are assumed and the check says so.
+- **Fidelity beside the model**: `tools/fidelity_check.py` also writes `fidelity.json`
+  (with the model's hash, the view, elevation and azimuth) and appends a line per run to
+  `fidelity_log.jsonl`. With `--out <name>/review/<view>/`, the Checks tab shows the IoU
+  and its rounds, whether the measured file is the current one, the overlay or the
+  side-by-side, the ranked gaps, the per-band widths, the joints, and a Photo's view
+  button. `test_fidelity_check.py`: 29/29.
+- **Batch token estimate**: in a batch folder, the wizard's formula read off
+  `batch-manifest.yaml`: the asset's, the batch's and what is left to run, ±50%; the
+  batch's range on its folder header in the list.
+- **Eye button for the pins**: the toolbar's Pins toggle is now an eye floating under the
+  model's name (crossed out while hidden, P still works), shown only when the model has at
+  least one pin in the notes being listed.
+- **Which pins**: hovering the eye unfurls two choices under it: *Hide fixed pins* hides
+  the blue pins Claude has addressed (and the grey ones when all notes are listed), *Hide
+  pins behind the model* hides those on its far side instead of fading them. A dot on the eye
+  while either is on; the note picked in the list keeps its pin.
+- `test_studio.py`: 36 tests (live stage order, build record, CLI target, image headers,
+  health on shipped and unshipped stages, fidelity by hash, manifest estimate, events).
+
+### Added — Kiln Studio
+
+- **`/kiln studio`: a local page to look at models, pin notes on them, and iterate with
+  Claude.** `studio/studio.py` starts it on the project's folder or reuses the one
+  already running, like `remotion studio`; Python standard library, three.js 0.186.1
+  from jsDelivr. Every `.glb .gltf .fbx .obj` under the folder shows up, and kiln's
+  `_original`…`_final` stages are one model with switchable stages; the output or batch
+  folder is the default category, and categories and tags can be set.
+- **Notes** pinned on a spot record the point and normal in glTF and Blender
+  coordinates, the object, mesh and material hit, a region in words, the camera and a
+  screenshot; whole-model notes record the view. `open` → `addressed` (Claude, through
+  `studio.py reply`) → `resolved` (the user only; the CLI refuses it) or `wontfix`.
+- **Before and after per note**: when a note is marked addressed, the page renders the
+  note's own view of the new version beside its screenshot. One previous copy of each
+  annotated model is kept (the version the review pass started from) for a side-by-side
+  Compare and an undoable revert — never a pile of copies. History lists every version
+  seen with its size and triangle count, the changelog, notes and replies.
+- **The page** follows the files live (server-sent events): a re-export reloads the
+  model in place, Claude's replies appear as they are written. Shading Lit, Unlit,
+  Clay, Normals, UV checker and Faces (back faces red); wireframe, grid with the front
+  marked, bounds in metres, bones, animation clips. Draco, meshopt and KTX2 decode.
+- `plugin/studio/test_studio.py` (20 tests: scan, stats, notes, history, baseline,
+  HTTP API including host and origin checks) runs in CI; `verify_docs.py` now checks
+  `studio/` paths too.
+
 ### Changed
 
 - `fidelity_check` refuses a reference with no transparent pixel: measured as it was, a

@@ -35,3 +35,9 @@ jobs:
 
       - name: Check the humanoid presets' catalogue and licence trail (no Blender)
         run: python3 plugin/tools/test_presets.py
+
+      - name: Kiln Studio — scan, stats, notes, history, HTTP API
+        run: python3 plugin/studio/test_studio.py
+
+      - name: Kiln Studio — the Claude worker (a fake claude, no Blender)
+        run: python3 plugin/studio/test_worker.py

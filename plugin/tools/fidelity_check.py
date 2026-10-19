@@ -23,14 +23,17 @@ render under a studio HDRI — scales it to the reference's height, and compares
 
 Prints one JSON line (`FIDELITY {...}`) and a ranked list of the largest gaps, and writes
 `overlay.png` (red: reference only, cyan: model only), `face_overlay.png` (the same for
-the face details, model slid to the photo's) and `side_by_side.png` into --out.
+the face details, model slid to the photo's) and `side_by_side.png` into --out, with the
+same JSON as `fidelity.json` (plus the view, the paths and the model's hash) and one line
+per run appended to `fidelity_log.jsonl` — Kiln Studio shows them beside the model when
+--out is a `review*/` folder in the asset's output folder.
 
 Why: reviewing by eye over-corrects — too bright and blotchy, then grey and flat. These
 numbers do not. They are only as good
 as the match between the two views: the reference's camera and light are unknown, so
 read differences of a few percent as noise, and large ones as the fix list.
 """
-import bpy, json, math, os, sys
+import bpy, hashlib, json, math, os, sys, time
 import numpy as np
 from mathutils import Matrix, Vector
 
@@ -666,8 +669,22 @@ def main():
 
     ends = contact_ends(meshes)
     joints = render_joints(sc, ends, os.path.join(o["out"], "joints"), (lo + hi) / 2) if ends else []
-    print("FIDELITY " + json.dumps(dict(tris=tris, meshes=nmesh, iou=iou, shape=shape, material=dict(reference=mref, model=mmod), metals=metals,
-                                        face=fc, joints=joints, gaps=[g[1] for g in gaps])))
+    result = dict(tris=tris, meshes=nmesh, iou=iou, shape=shape, material=dict(reference=mref, model=mmod), metals=metals,
+                  face=fc, joints=joints, gaps=[g[1] for g in gaps])
+    print("FIDELITY " + json.dumps(result))
+    # The same, kept beside the images: Kiln Studio reads it, and the log keeps every round
+    # (two correction rounds at most, reference-fidelity.md § 5), to show where they went.
+    with open(o["model"], "rb") as f:
+        model_hash = hashlib.sha1(f.read()).hexdigest()[:12]   # as Kiln Studio hashes a model
+    at = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime())
+    saved = dict(result, at=at, model=os.path.abspath(o["model"]), model_hash=model_hash,
+                 reference=os.path.abspath(o["reference"]), view=VIEW, elevation=ELEVATION, azimuth=AZIMUTH,
+                 max_tris=int(o["max-tris"]) if "max-tris" in o else None)
+    with open(os.path.join(o["out"], "fidelity.json"), "w") as f:
+        json.dump(saved, f, indent=1)
+    with open(os.path.join(o["out"], "fidelity_log.jsonl"), "a") as f:
+        f.write(json.dumps(dict(at=at, iou=round(iou, 4), gaps=len(gaps), model=os.path.basename(o["model"]),
+                                model_hash=model_hash, view=VIEW)) + "\n")
     print(f"\n{tris:,} tris in {nmesh} meshes · silhouette IoU {iou:.3f} (information, not a target: "
           f"a real object scores well under 1 against its own photo)"
           + (f" · face details IoU {fc['iou']:.2f} after sliding them {fc['offset'][0]:+.1%} / {fc['offset'][1]:+.1%} (unslid {fc['iou_unaligned']:.2f})"
