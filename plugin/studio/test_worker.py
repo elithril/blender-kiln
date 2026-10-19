@@ -377,7 +377,7 @@ class Runs(Base):
         self.assertIn("--resume", self.calls()[1]["args"])
 
     def test_a_deferred_call_is_allowed_or_denied_then_resumed(self) -> None:
-        j = self.wait(self.w.submit("chat", asset="a", text="please defer")["id"])
+        j = self.wait(self.w.submit("chat", asset="a", text="please defer", task="output.print")["id"])
         self.assertEqual((j["state"], j["waiting"]["tool"], j["waiting"]["id"]), ("waiting", "Bash", "toolu_t1"))
         with self.assertRaises(ValueError):   # the approval comes first
             self.w.submit("chat", asset="a", text="something else")
@@ -391,6 +391,9 @@ class Runs(Base):
         # The resumed run reported the session's 0.02 so far: it counts as 0.01, not 0.02.
         self.assertEqual((j["cost_usd"], r["cost_usd"]), (0.01, 0.01))
         self.assertEqual(self.w.store.usage()["cost_usd_equiv"], 0.02)
+        # What the run was for, on the run that starts it: the estimates sum the resume into it.
+        runs = [json.loads(x) for x in (self.w.store.dir / "usage.jsonl").read_text().splitlines()]
+        self.assertEqual([(e["kind"], e.get("task")) for e in runs], [("chat", "output.print"), ("resume", None)])
         # Denied, the next time.
         (self.w.decisions_dir() / "toolu_t1.json").unlink()
         j = self.wait(self.w.submit("chat", asset="b", text="please defer")["id"])

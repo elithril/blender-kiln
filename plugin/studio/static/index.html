@@ -263,6 +263,7 @@
       <label class="btn sm" for="cr-file"><span data-i18n>Choose a photo</span></label><input type="file" id="cr-file" accept="image/jpeg,image/png,image/webp" hidden>
       <img id="cr-thumb" alt="" hidden><button type="button" class="btn sm ghost" id="cr-nophoto" hidden data-i18n>Remove</button><span class="dim small" data-i18n>optional · JPEG, PNG or WebP</span></div>
     <p class="cr-queue" id="cr-queue" hidden></p>
+    <p class="cr-est dim small" id="cr-est" hidden></p>
     <div class="row"><button class="btn accent" id="cr-launch" type="submit" hidden data-i18n>Make it with Claude</button><button class="btn accent" id="cr-save" type="submit" data-i18n>Save the request</button><span class="dim small" id="cr-status" aria-live="polite"></span></div>
   </form>
   <div id="cr-done" class="cr-body" hidden>
@@ -343,7 +344,7 @@
   </div>
   <footer class="dl-foot"><span class="dim" id="dl-sum"></span><a class="btn accent" id="dl-go" download autofocus data-i18n>Download</a></footer>
 </dialog>
-<dialog id="confirm"><p></p><form method="dialog"><button class="btn" value="cancel" data-i18n>Cancel</button><button class="btn accent" value="ok">OK</button></form></dialog>
+<dialog id="confirm"><p></p><p class="cf-note dim small" hidden></p><form method="dialog"><button class="btn" value="cancel" data-i18n>Cancel</button><button class="btn accent" value="ok">OK</button></form></dialog>
 
 <script type="module" src="/static/app.js"></script>
 </body>

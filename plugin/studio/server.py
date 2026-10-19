@@ -23,6 +23,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
 import checks
+import estimate
 import handoff
 import setup_status
 import studiolib as sl
@@ -437,6 +438,10 @@ def make_handler(studio: Studio, port_ref: list[int]):
                 if parts == ["api", "claude"]:
                     q = parse_qs(urlparse(self.path).query)
                     return self._json(studio.worker.status(force_auth=q.get("auth", [""])[0] == "1"))
+                if parts == ["api", "claude", "estimate"]:
+                    # Before a request: how long and how much, from this project's runs or the bench.
+                    task = parse_qs(urlparse(self.path).query).get("task", [""])[0]
+                    return self._json(estimate.estimate(project, task, wk.user_settings()["account"]))
                 if parts == ["api", "claude", "thread"]:
                     key = parse_qs(urlparse(self.path).query).get("key", [""])[0]
                     if not (key.startswith(("asset:", "request:")) or key in (wk.PROJECT_KEY, wk.SETUP_KEY)):
@@ -583,7 +588,7 @@ def make_handler(studio: Studio, port_ref: list[int]):
                         str(body.get("kind", "")), asset=str(body["asset"])[:500] if body.get("asset") else None,
                         text=str(body.get("text", "")), request=str(body["request"])[:40] if body.get("request") else None,
                         context=body.get("context") if isinstance(body.get("context"), dict) else None,
-                        lang=str(body.get("lang", "en")),
+                        lang=str(body.get("lang", "en")), task=str(body["task"])[:40] if body.get("task") else None,
                         key=str(body["key"])[:600] if str(body.get("key", "")).startswith("request:") or body.get("key") == wk.PROJECT_KEY else None))
                 if method == "POST" and parts[:3] == ["api", "claude", "jobs"] and len(parts) == 5:
                     if parts[4] == "stop":

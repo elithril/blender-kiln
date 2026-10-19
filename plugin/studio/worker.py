@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import os
 import shutil
 import signal
@@ -710,7 +711,8 @@ class Worker:
 
     # submitting
     def submit(self, kind: str, *, asset: str | None = None, text: str = "", request: str | None = None,
-               lang: str = "en", key: str | None = None, deferred: dict | None = None, context: dict | None = None) -> dict:
+               lang: str = "en", key: str | None = None, deferred: dict | None = None, context: dict | None = None,
+               task: str | None = None) -> dict:
         if kind not in JOB_KINDS:
             raise ValueError(f"kind must be one of {', '.join(JOB_KINDS)}")
         if not self.project.settings()["claude_worker"]:
@@ -740,7 +742,9 @@ class Worker:
         prompt = "\n".join([*context_lines(ctx), text]) if ctx else text
         job = {"prompt": prompt, "context": ctx, "id": sl.new_id("j"), "kind": kind, "asset": asset, "request": request,
                "key": self.store.canonical(key or thread_key(kind, asset, request)), "text": text, "lang": lang if lang in ("en", "fr") else "en",
-               "state": "queued", "created": sl.now(), "deferred": deferred}
+               "state": "queued", "created": sl.now(), "deferred": deferred,
+               # What the run is for, when its kind does not say (an output is a chat): for the estimates.
+               "task": task if task and re.match(r"^output\.(web|game|ar|print)$", task) else None}
         with self.cv:
             busy = [j for j in self.jobs.values() if j["key"] == job["key"] and j["state"] in ("queued", "running")]
             if busy and kind != "resume":
@@ -780,7 +784,7 @@ class Worker:
                                                "tool": w.get("tool"), "id": w.get("id")})
         self._changed(job, entry)
         return self.submit("resume", asset=job["asset"], request=job["request"], key=job["key"],
-                           lang=job.get("lang", "en"), deferred=w)
+                           lang=job.get("lang", "en"), deferred=w, task=job.get("task"))
 
     def stop(self, job_id: str) -> dict:
         with self.cv:
@@ -1018,6 +1022,7 @@ class Worker:
         job.update(ended=sl.now(), cost_usd=cost, turns=result.get("num_turns"),
                    duration_ms=result.get("duration_ms"), stop_reason=result.get("stop_reason"))
         self.store.usage({"at": sl.now(), "job": job["id"], "kind": job["kind"], "key": job["key"], "account": job["account"],
+                          **({"task": job["task"]} if job.get("task") and job["kind"] != "resume" else {}),
                           "cost_usd": cost, "session_total": total, "turns": result.get("num_turns"),
                           "duration_ms": result.get("duration_ms"), "wall_s": round(time.time() - t0, 1),
                           "stop_reason": result.get("stop_reason")})

@@ -28,6 +28,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import checks  # noqa: E402
+import estimate  # noqa: E402
 import server  # noqa: E402
 import studio  # noqa: E402
 import studiolib as sl  # noqa: E402
@@ -535,6 +536,36 @@ assets:
 """
 
 
+class Estimate(Base):
+    def usage(self, *entries: dict) -> None:
+        d = self.tmp / ".kiln-studio" / "claude"
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "usage.jsonl").write_text("".join(json.dumps(e) + "\n" for e in entries))
+
+    def test_a_task_sums_its_resumes_and_this_project_wins_from_three(self) -> None:
+        sl.write_json(self.tmp / ".kiln-studio" / "requests.json", {"requests": [
+            {"id": "q1", "reference": ".kiln-studio/requests/q1.jpg"}, {"id": "q2", "reference": None}]})
+        run = lambda kind, key, s, c, **kw: {"kind": kind, "key": key, "duration_ms": s * 1000, "cost_usd": c, **kw}
+        self.usage(run("create", "request:q1", 60, 1.0), run("resume", "request:q1", 120, 2.0),   # a photo: 3 min, $3
+                   run("create", "request:q2", 60, 0.5),
+                   *[run("chat", "asset:a", 60 * m, 0.1 * m) for m in (1, 2, 3, 4)],
+                   run("chat", "asset:a", 240, 0.8, task="output.print"), run("resume", "asset:a", 60, 0.2))
+        t = estimate.tasks(self.p)
+        self.assertEqual(t["create.photo"], [(180.0, 3.0)])
+        self.assertEqual(t["output.print"], [(300.0, 1.0)])
+        self.assertEqual(len(t["chat"]), 4)
+        chat = estimate.estimate(self.p, "chat")
+        self.assertEqual((chat["source"], chat["n"]), ("project", 4))
+        self.assertEqual(chat["minutes"], [1.8, 3.2])   # the middle half of 1, 2, 3, 4 min
+        # Under three in the project: the bench; none in either: no figure, never a made-up one.
+        photo = estimate.estimate(self.p, "create.photo", "api_key")
+        self.assertEqual((photo["source"], photo["billed"]), ("bench", True))
+        self.assertEqual(photo["minutes"], [16.1, 20.5])
+        self.assertEqual(estimate.estimate(self.p, "notes"), {"task": "notes", "source": None, "n": 0, "seen": 0, "needed": 3, "billed": False})
+        with self.assertRaises(ValueError):
+            estimate.estimate(self.p, "anything")
+
+
 class Checks(Base):
     def test_image_sizes_from_headers(self) -> None:
         self.assertEqual(checks.image_size(png(2048, 1024)), (2048, 1024, "png"))
@@ -933,6 +964,12 @@ class Api(Base):
         z = zipfile.ZipFile(io.BytesIO(c.getresponse().read()))
         c.close()
         self.assertEqual(sorted(z.namelist()), ["crate/print/crate_print.3mf", "crate/print/crate_print_lid.stl"])
+
+    def test_the_estimate_route(self) -> None:
+        code, e = self.req("GET", "/api/claude/estimate?task=create.text")
+        self.assertEqual((code, e["source"], e["n"]), (200, "bench", 7))
+        code, _ = self.req("GET", "/api/claude/estimate?task=rm%20-rf")
+        self.assertEqual(code, 400)
 
     def test_assets_and_detail(self) -> None:
         code, data = self.req("GET", "/api/assets")

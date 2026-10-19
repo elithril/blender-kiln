@@ -233,9 +233,11 @@ function toast(msg, kind = '', ms = 3800) {
 }
 function hint(msg) { $('#hint').hidden = !msg; $('#hint').textContent = msg || ''; }
 
-function confirmDialog(text, ok = t('OK')) {
+function confirmDialog(text, ok = t('OK'), note = '') {
   const d = $('#confirm');
   $('p', d).textContent = text;
+  $('.cf-note', d).hidden = !note;
+  $('.cf-note', d).textContent = note;
   $('button[value=ok]', d).textContent = ok;
   d.returnValue = '';
   d.showModal();
@@ -962,6 +964,25 @@ async function openDownload() {
   sync();
   dlg.showModal();
 }
+// What a request takes, said before it is sent (estimate.py): from this project's runs of
+// the same kind, else kiln's bench. Kept until a run ends (it changes the figures).
+const estimates = new Map();
+async function estimateOf(task) {
+  if (!estimates.has(task)) estimates.set(task, api(`/api/claude/estimate?task=${task}`).catch(() => null));
+  return estimates.get(task);
+}
+function estimateText(e) {
+  if (!e) return '';
+  if (!e.source) return e.seen ? tp(e.seen, 'No estimate yet: {n} like it so far, it takes {m}.', 'No estimate yet: {n} like these so far, it takes {m}.', { m: e.needed }) : t('No estimate yet: this first one will be the measure.');
+  const fr = getLang() === 'fr';
+  const [a, b] = e.minutes, lo = Math.max(1, Math.round(a)), hi = Math.max(1, Math.round(b));
+  const time = b < 1 ? t('Under a minute') : `${t('About')} ${lo === hi ? t('{n} min', { n: lo }) : t('{a} to {b} min', { a: lo, b: hi })}`;
+  const money = (x) => (fr ? `${x.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $` : `$${x.toFixed(2)}`);
+  const [c, d] = e.cost_usd, cost = c === d ? money(c) : t('{a} to {b}', { a: money(c), b: money(d) });
+  const from = e.source === 'project' ? t('from {n} like it in this project', { n: e.n }) : t('from kiln\'s bench');
+  return `${time} · ${cost} ${e.billed ? t('billed to your API key') : t('at the API price, included in your subscription')} — ${from}`;
+}
+const ESTIMATE_WHY = () => t('Claude\'s working time, not the time it waits for your approvals. The cost is what the API charges: a subscription pays nothing more, it counts against its quota.');
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-out-redo]'); if (b) makeOutput(b.dataset.outRedo, true); });
 async function makeOutput(key, redo = false) {
   const d = state.detail, o = OUTPUTS.find((x) => x.key === key);
@@ -972,9 +993,9 @@ async function makeOutput(key, redo = false) {
     toast(esc(t('Copied: paste it in Claude Code, in this project. Claude in Studio is off (Settings → Claude).')), 'ok', 7000);
     return;
   }
-  if (!(await confirmDialog((redo ? t('Ask Claude to make the {out} output of {name} again, from the model as it is now? {what}.', { out: t(o.name), name: d.name, what: t(o.what) }) : t('Ask Claude to prepare the {out} output of {name}? {what}.', { out: t(o.name), name: d.name, what: t(o.what) })) + (key === 'print' ? ' ' + t('Printing is a real pass of kiln\'s print mode: it can change the shape (walls, parts), and takes longer.') : ''), t('Prepare')))) return;
+  if (!(await confirmDialog((redo ? t('Ask Claude to make the {out} output of {name} again, from the model as it is now? {what}.', { out: t(o.name), name: d.name, what: t(o.what) }) : t('Ask Claude to prepare the {out} output of {name}? {what}.', { out: t(o.name), name: d.name, what: t(o.what) })) + (key === 'print' ? ' ' + t('Printing is a real pass of kiln\'s print mode: it can change the shape (walls, parts), and takes longer.') : ''), t('Prepare'), estimateText(await estimateOf(`output.${key}`))))) return;
   openClaudeView(null);
-  await claudeSend('chat', ask);
+  await claudeSend('chat', ask, null, `output.${key}`);
 }
 
 // ── build strip: the phases of the build kiln is running ─────────────────────
@@ -2339,6 +2360,7 @@ function modelBusy() {
 }
 // The open notes, on top of the Notes tab: hand them all to Claude in one click and stay
 // here (its progress shows in the block), or run the command in Claude Code.
+let notesEst;   // the notes' estimate, once fetched
 function renderNotesWork() {
   const el = $('#work'), d = state.detail;
   if (!el) return;
@@ -2357,16 +2379,18 @@ function renderNotesWork() {
     html = `<div class="work-row"><span class="spin" aria-hidden="true"></span><div class="work-what"><b>${esc(open ? tp(open, 'Claude is working on {n} note', 'Claude is working on {n} notes') : t('Claude is working on this model'))}</b><span class="work-line">${esc(line.replace(/\s+/g, ' ').slice(0, 140))}</span><button class="linkish work-link" data-open-claude>${esc(t('See the conversation'))}</button></div></div>`;
   } else {
     el.className = '';
-    html = `<div class="work-row"><div class="work-what"><b>${esc(tp(open, '{n} open note', '{n} open notes'))}</b><span>${esc(on ? t('Claude handles them all in one go.') : t('Turn Claude on in Settings to handle them from here.'))}</span></div>${on ? `<button class="btn sm accent" data-ask-notes>${esc(tp(open, 'Work on it with Claude', 'Work on them with Claude'))}</button>` : ''}</div>${term}`;
+    html = `<div class="work-row"><div class="work-what"><b>${esc(tp(open, '{n} open note', '{n} open notes'))}</b><span>${esc(on ? t('Claude handles them all in one go.') : t('Turn Claude on in Settings to handle them from here.'))}</span>${on && notesEst?.source ? `<span class="work-est" title="${esc(ESTIMATE_WHY())}">${esc(estimateText(notesEst))}</span>` : ''}</div>${on ? `<button class="btn sm accent" data-ask-notes>${esc(tp(open, 'Work on it with Claude', 'Work on them with Claude'))}</button>` : ''}</div>${term}`;
   }
   el.innerHTML = html;
+  if (on && open && !busy && notesEst === undefined) estimateOf('notes').then((e) => { notesEst = e; renderNotesWork(); });
   $$('#work [data-copy]').forEach((b) => (b.onclick = () => copy(b.dataset.copy)));
 }
 
-async function claudeSend(kind, text = '', context = null) {
+async function claudeSend(kind, text = '', context = null, task = null) {
   try {
     const body = claude.view ? { kind, key: claude.view, text, lang: getLang() } : { kind, asset: state.id, text, lang: getLang() };
     if (context) body.context = context;
+    if (task) body.task = task;
     await api('/api/claude/jobs', { method: 'POST', body });
     claude.stick = true;
     await claudeStatus();
@@ -2509,6 +2533,7 @@ async function onClaude(ev) {
     if (i >= 0) jobs[i] = { ...jobs[i], ...ev.job }; else jobs.push(ev.job);
   }
   if (ev.job && !['queued', 'running'].includes(ev.job.state)) claudeStatus().then(renderClaude);
+  if (ev.entry?.role === 'result') { estimates.clear(); notesEst = undefined; }
   if (ev.job?.kind === 'create' && ev.job.state === 'done' && ev.job.asset && ev.entry?.role === 'result')
     setTimeout(() => toast(`${esc(t('Claude made {name}', { name: ev.job.asset.split('/').pop() }))} · <button class="linkish" data-open-key="asset:${esc(ev.job.asset)}">${esc(t('Open'))}</button>`, 'ok', 9000), 600);
   claudeChanged();
@@ -2630,6 +2655,9 @@ async function openCreate() {
 // whether it waits behind another run. Off, it is saved for a terminal, as before.
 function renderCreateMode() {
   const on = !!claude.status?.enabled;
+  const est = $('#cr-est');
+  est.hidden = !on;
+  if (on) { est.title = ESTIMATE_WHY(); estimateOf(crPhoto ? 'create.photo' : 'create.text').then((e) => (est.textContent = estimateText(e))); }
   $('#cr-launch').hidden = !on;
   $('#cr-save').classList.toggle('accent', !on);
   $('#cr-save').textContent = on ? t('Save without making it') : t('Save the request');
@@ -2668,9 +2696,10 @@ $('#cr-file').onchange = async (e) => {
   try {
     crPhoto = await readPhoto(f);
     $('#cr-thumb').src = crPhoto; $('#cr-thumb').hidden = $('#cr-nophoto').hidden = false;
+    renderCreateMode();
   } catch (err) { $('#cr-status').textContent = err.message; }
 };
-$('#cr-nophoto').onclick = () => { crPhoto = null; $('#cr-file').value = ''; $('#cr-thumb').hidden = $('#cr-nophoto').hidden = true; };
+$('#cr-nophoto').onclick = () => { crPhoto = null; $('#cr-file').value = ''; $('#cr-thumb').hidden = $('#cr-nophoto').hidden = true; renderCreateMode(); };
 $('#cr-form').onsubmit = async (e) => {
   e.preventDefault();
   const brief = $('#cr-brief').value.trim();

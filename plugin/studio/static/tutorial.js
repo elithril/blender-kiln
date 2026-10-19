@@ -106,6 +106,8 @@ async function fakeApi(path, { method = 'GET', body } = {}) {
   }
   if (p[1] === 'claude') {
     if (p.length === 2) return claudeState();
+    // The estimates are this project's real ones (read only): the tutorial plays the rest.
+    if (p[2] === 'estimate') return fetch(path).then((r) => r.json()).catch(() => null);
     if (p[2] === 'thread') {
       const key = u.searchParams.get('key');
       const k = key === `asset:${LANTERN}` && run.threads.has(run.createKey) ? run.createKey : key;
@@ -336,7 +338,8 @@ const STEPS = [
       const b = $('#cr-brief'); if (b) b.value = fr() ? 'Une lanterne de fiacre en fer forgé et verre, avec une bougie, environ 40 cm' : 'A carriage lantern in wrought iron and glass, with a candle, about 40 cm';
     },
     lead: N_('Say what it is, its style and its size, in your words.'),
-    points: [N_('**Made for** sets the budgets and the file format'), N_('A photo helps')],
+    points: [N_('**Made for** sets the budgets and the file format'), N_('A photo helps'),
+      N_('Under it, the time and cost to expect: from your past requests, or kiln\'s bench')],
     act: N_('The description is filled in: a carriage lantern. Click **Make it with Claude**.'),
     allow: '#cr-brief, #cr-target, #cr-launch',
     done: () => !!run.createKey, skip: () => $('#cr-form')?.requestSubmit(),
@@ -418,7 +421,8 @@ const STEPS = [
   { ch: C_CLAUDE, target: '#work', allow: '#work [data-ask-notes]', do: true, title: N_('Hand it to Claude'),
     enter: () => X.ensureRight('notes'),
     lead: N_('One click sends every open note to Claude: nothing to type, and you stay here.'),
-    points: [N_('Prefer the terminal? In Claude Code, the command below does the same')],
+    points: [N_('Under the count, the time and cost to expect, once this project has a few like it'),
+      N_('Prefer the terminal? In Claude Code, the command below does the same')],
     act: N_('Click **Work on it with Claude**.'),
     done: () => run.jobs.some((j) => j.asset === BARREL), skip: () => click('#work [data-ask-notes]') },
   { ch: C_CLAUDE, target: '#work', do: true, back: false, title: N_('Claude works'),

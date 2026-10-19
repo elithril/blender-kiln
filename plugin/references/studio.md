@@ -477,6 +477,15 @@ On a subscription the page shows each run's API-equivalent cost and the 5-hour a
 quota Claude Code reports; on an API key, what the key is billed. A resumed run counts its
 own share, not the session's total again.
 
+**Before a request** (`studio/estimate.py`, `/api/claude/estimate?task=`), the page says
+the time and the cost to expect: under Create (with or without a photo), in an output's
+"+" confirmation, under the open notes. A task is a run and its resumes, summed; the time is
+Claude's working time, not its waits for an approval. From this project's runs of the same
+kind once it has 3, the middle half of them (25th–75th percentile); before that, from
+kiln's bench (2.2.0 baseline: a create from a brief 3–5 min, $1.02–1.54; from a photo
+16–21 min, $4.17–5.18). Neither: "no estimate yet", never a made-up figure. Outputs are
+told apart from other chats by the task the page sends (`output.print`…).
+
 **Browsers:** Chrome, and Safari 26.6 through WebDriver (2026-10-19): the whole
 tutorial, ⌘K and the keys, a pinned note with its screenshot, compare and choose; a
 trackpad pinch zooms the 3D view, not the page (by hand); "Notify me when Claude waits"
