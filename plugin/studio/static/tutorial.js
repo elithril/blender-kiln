@@ -525,13 +525,27 @@ function target(st) {
   return el && el.getClientRects().length ? el : null;
 }
 function raise() {
-  // A dialog opened since: show the overlay again, so it is above it in the top layer.
+  // A modal dialog makes everything outside it inert, the card's buttons too (Chrome and
+  // Safari both): while one is open the overlay lives inside it, shown again on top. It goes
+  // back the moment the dialog closes (a closed dialog hides what it holds), before a frame.
   const dlg = document.querySelector('dialog[open]');
-  if (dlg !== run.dialog) {
-    run.dialog = dlg;
-    const o = $('#tuto');
-    if (o?.hidePopover) { o.hidePopover(); o.showPopover(); }
+  if (dlg === run.dialog) return;
+  run.dialog = dlg;
+  run.dialogWatch?.disconnect();
+  move(dlg || document.body);
+  if (dlg) {
+    run.dialogWatch = new MutationObserver(() => { if (!dlg.open && run?.dialog === dlg) { run.dialog = null; run.dialogWatch.disconnect(); move(document.body); } });
+    run.dialogWatch.observe(dlg, { attributes: true, attributeFilter: ['open'] });
   }
+}
+function move(parent) {
+  const o = $('#tuto');
+  if (!o) return;
+  if (o.parentElement !== parent) {
+    if (o.matches?.(':popover-open')) o.hidePopover();
+    parent.appendChild(o);
+  } else if (o.matches?.(':popover-open')) o.hidePopover();
+  o.showPopover?.();   // last in the top layer: above the dialog
 }
 function place() {
   if (!run || run.swapping) return;   // the card is fading to the next step: it stays put
@@ -717,6 +731,7 @@ export async function stop(finished = false) {
   X.viewer.controls.removeEventListener('start', run.onStart);
   X.viewer.controls.removeEventListener('end', run.onEnd);
   run.answer?.('deny');
+  run.dialogWatch?.disconnect();
   const back = run.back;
   run = null;
   removeEventListener('resize', place);
