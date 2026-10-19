@@ -5,9 +5,10 @@
     python3 tools/open_blender.py --port N   # another port (tests)
     python3 tools/open_blender.py --front    # in front (default: behind the user's windows)
 
-Run it only once the user said yes (SKILL.md rule 2): it opens their Blender, with their
-own preferences and add-ons, then starts the add-on's server (tools/blender_mcp_start.py)
-and waits until the port answers. Already answering: says so and opens nothing.
+kiln runs it on its own when the Blender MCP does not answer (SKILL.md rule 2): it opens the
+user's Blender, behind their windows, with their own preferences and add-ons, then starts
+the add-on's server (tools/blender_mcp_start.py) and waits until the port answers. Already
+answering: says so and opens nothing. On a failure, kiln stops and asks the user.
 
 Exit 0 when the port answers; 1 with the reason otherwise (no Blender found, the add-on
 not installed — `uvx blender-mcp install-addon` —, or no answer in time). Standard library.
