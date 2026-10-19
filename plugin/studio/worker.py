@@ -593,24 +593,24 @@ def system_context(project: sl.Project, job: dict, port: int, lang: str) -> str:
 
 
 def clean_context(c) -> dict | None:
-    """{"note": {"id", "number", "text"}, "view": true}: what the page sends with a message."""
+    """{"notes": [{"id", "number", "text"}, …], "view": true}: what the page sends with a
+    message (an older page sends one "note")."""
     if not isinstance(c, dict):
         return None
     out = {}
-    n = c.get("note")
-    if isinstance(n, dict) and sl.NOTE_ID_RE.match(str(n.get("id", ""))):
-        out["note"] = {"id": str(n["id"]), "number": n.get("number") if isinstance(n.get("number"), int) else None,
-                       "text": str(n.get("text", ""))[:1000]}
+    notes = c.get("notes") if isinstance(c.get("notes"), list) else [c["note"]] if isinstance(c.get("note"), dict) else []
+    clean = [{"id": str(n["id"]), "number": n.get("number") if isinstance(n.get("number"), int) else None,
+              "text": str(n.get("text", ""))[:1000]}
+             for n in notes[:30] if isinstance(n, dict) and sl.NOTE_ID_RE.match(str(n.get("id", "")))]
+    if clean:
+        out["notes"] = clean
     if c.get("view") is True:
         out["view"] = True
     return out or None
 
 
 def context_lines(ctx: dict) -> list[str]:
-    out = []
-    if ctx.get("note"):
-        n = ctx["note"]
-        out.append(f"(About note {n.get('number') or ''} {n['id']}: \u201c{n['text']}\u201d.)")
+    out = [f"(About note {n.get('number') or ''} {n['id']}: \u201c{n['text']}\u201d.)" for n in ctx.get("notes") or []]
     if ctx.get("view"):
         out.append("(Look at my current Studio view first: kiln-studio get_view_image.)")
     return out

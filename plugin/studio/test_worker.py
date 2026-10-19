@@ -195,16 +195,23 @@ class Runs(Base):
         with self.assertRaises(ValueError):
             self.w.submit("notes")   # the open notes are a model's
 
-    def test_the_note_and_view_go_to_claude_not_into_the_words(self) -> None:
-        ctx = {"note": {"id": "n_abc123", "number": 2, "text": "the lid is thin"}, "view": True, "evil": "x"}
+    def test_the_notes_and_view_go_to_claude_not_into_the_words(self) -> None:
+        ctx = {"notes": [{"id": "n_abc123", "number": 2, "text": "the lid is thin"}, {"id": "n_def456", "number": 3, "text": "darker wood"},
+                         {"id": "../etc", "number": 9, "text": "x"}], "view": True, "evil": "x"}
         self.wait(self.w.submit("chat", asset="a", text="fix it", context=ctx)["id"])
         prompt = self.calls()[-1]["prompt"]
         self.assertIn("About note 2 n_abc123", prompt)
+        self.assertIn("About note 3 n_def456", prompt)
         self.assertIn("get_view_image", prompt)
         self.assertTrue(prompt.endswith("fix it"))
         [u] = [m for m in self.w.thread("asset:a")["messages"] if m["role"] == "user"]
-        self.assertEqual((u["text"], u["context"]["note"]["number"], u["context"]["view"]), ("fix it", 2, True))
+        self.assertEqual((u["text"], [n["number"] for n in u["context"]["notes"]], u["context"]["view"]), ("fix it", [2, 3], True))
         self.assertNotIn("evil", u["context"])
+
+    def test_an_older_page_sends_one_note(self) -> None:
+        ctx = {"note": {"id": "n_abc123", "number": 2, "text": "the lid is thin"}}
+        self.wait(self.w.submit("chat", asset="a", text="fix it", context=ctx)["id"])
+        self.assertIn("About note 2 n_abc123", self.calls()[-1]["prompt"])
 
     def test_setup_installs_a_named_part_only(self) -> None:
         with self.assertRaises(ValueError):

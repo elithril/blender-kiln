@@ -528,6 +528,7 @@ kbd { font: 500 10px/1 var(--mono); padding: 2px 5px; border-radius: 4px; border
 @keyframes spin { to { transform: rotate(360deg); } }
 #hint { position: absolute; top: 120px; left: 50%; transform: translateX(-50%); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: 12px; padding: 7px 12px; border-radius: 16px; box-shadow: var(--shadow); white-space: nowrap; }
 #toast { position: absolute; top: 64px; left: 50%; transform: translate(-50%, -8px); opacity: 0; background: var(--panel-2); border: 1px solid var(--line-2); border-left: 3px solid var(--accent); padding: 9px 14px; border-radius: 8px; font-size: 12.5px; box-shadow: var(--shadow); transition: opacity .2s, transform .2s; pointer-events: none; z-index: 50; max-width: min(520px, calc(100% - 24px)); }
+#stage.building #toast { top: 150px; }   /* below the build bar, never over its steps */
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 #toast.warn { border-left-color: var(--warn); }
 #toast.ok { border-left-color: var(--ok); }
@@ -589,6 +590,20 @@ kbd { font: 500 10px/1 var(--mono); padding: 2px 5px; border-radius: 4px; border
 .reply .body { font-size: 12.5px; color: var(--text-2); }
 .actions { display: flex; gap: 5px; flex-wrap: wrap; }
 .reply-box { margin-bottom: 8px; }
+#work { margin: 0 12px 10px; padding: 10px 12px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line-2); font-size: 12px; color: var(--text-2); }
+#work:empty { display: none; }
+#work.busy { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+#work.wait { border-color: color-mix(in srgb, var(--warn) 55%, transparent); }
+.work-row { display: flex; align-items: center; gap: 10px; }
+.work-row .btn { flex: none; }
+.work-what { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.work-what b { color: var(--text); font-size: 12.5px; }
+.work-link { align-self: flex-start; font-size: 11.5px; }
+#work .spin { align-self: flex-start; margin-top: 2px; }
+.work-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-3); }
+.work-cmd { display: flex; align-items: center; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--text-3); font-size: 11.5px; }
+.work-cmd code { flex: 1; min-width: 0; overflow-wrap: anywhere; font: 11px var(--mono); color: var(--text-2); }
+.work-cmd .btn svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.8; }
 #handoff { margin: 0 12px 16px; padding: 10px 12px; border-radius: 10px; background: var(--panel-2); border: 1px dashed var(--line-2); font-size: 12px; color: var(--text-2); }
 #handoff:empty { display: none; }
 #handoff b { color: var(--text); }
@@ -813,7 +828,7 @@ dialog::backdrop { background: var(--backdrop); backdrop-filter: blur(2px); }
 .welcome .big { font-size: 20px; margin: 8px 0 6px; }
 .welcome > p, #empty .welcome p { color: var(--text-2); margin: 0 0 16px; max-width: none; }
 #empty .welcome .setup p, #empty .welcome > p.small { margin: 0; }
-body.no-model #right .notes-head, body.no-model #right #handoff { display: none; }
+body.no-model #right .notes-head, body.no-model #right #handoff, body.no-model #right #work { display: none; }
 .wcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 22px; }
 .wcard { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; padding: 14px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--text-2); font-size: 12px; line-height: 1.4; }
 .wcard:hover { border-color: var(--accent); background: var(--panel-3); color: var(--text); }
@@ -964,9 +979,13 @@ body.present .topbar { pointer-events: none; opacity: .85; }
 .cl-box { border: 1px solid var(--line-3); border-radius: 10px; background: var(--panel-2); padding: 6px 8px; }
 .cl-box:focus-within { border-color: var(--accent); }
 .cl-box textarea { width: 100%; border: 0; background: none; color: var(--text); font: inherit; font-size: 12.5px; resize: none; outline: none; min-height: 38px; }
-.cl-bar { display: flex; align-items: center; gap: 6px; }
+.cl-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; row-gap: 8px; }
+.cl-ctx .chip { white-space: nowrap; }
+
 .cl-bar .sp { flex: 1; }
 .cl-ctx { display: flex; gap: 4px; flex-wrap: wrap; }
+.btn.busy { gap: 7px; opacity: .85; cursor: progress; }
+.btn.busy .spin { width: 11px; height: 11px; border-width: 1.5px; }
 .chip { font: 11px var(--font); padding: 2px 7px; border-radius: 5px; border: 1px solid var(--line-2); background: none; color: var(--text-3); cursor: pointer; }
 .chip.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 .cl-hint { font-size: 10.5px; color: var(--text-3); }
@@ -1092,13 +1111,28 @@ input.num { width: 84px; }
 .tabs .collapse { width: 24px; }
 /* the tutorial: a banner saying it is a simulation, a ring on what to do, a card */
 .tuto { position: fixed; inset: 0; z-index: 85; pointer-events: none; }
-.tuto-dim { position: fixed; inset: 0; background: rgba(5, 7, 10, .55); }
+.tuto-dim { position: fixed; inset: 0; background: rgba(5, 7, 10, .55); pointer-events: auto; }   /* catches clicks but in its hole */
 .tuto-ring { position: fixed; border-radius: 10px; box-shadow: 0 0 0 2px var(--accent), 0 0 18px 2px color-mix(in srgb, var(--accent) 45%, transparent); transition: left .3s ease, top .3s ease, width .3s ease, height .3s ease, opacity .2s; }
-.tuto-card { position: fixed; width: 340px; padding: 14px 16px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line-3); box-shadow: var(--shadow); pointer-events: auto; transition: left .3s ease, top .3s ease, border-color .2s; }
+.tuto-card { position: fixed; width: 360px; padding: 14px 16px 12px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line-3); box-shadow: var(--shadow); pointer-events: auto; transition: opacity .12s ease, translate .12s ease, border-color .2s; }
+.tuto-card.out { opacity: 0; translate: 0 4px; pointer-events: none; }
 .tuto-card.ok { border-color: var(--ok); }
+.tuto-ring.jump { transition: opacity .12s ease; }   /* between steps: fades, never slides */
 .tuto-step { font: 600 10.5px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
-.tuto-card h4 { margin: 6px 0; font-size: 14.5px; }
-.tuto-card p { margin: 0 0 12px; font-size: 12.5px; line-height: 1.55; color: var(--text-2); }
+.tuto-card h4 { margin: 10px 0 6px; font-size: 15px; line-height: 1.3; }
+.tuto-count { margin-left: auto; font: 500 10.5px var(--mono); color: var(--text-3); }
+.tuto-bar { height: 2px; margin-top: 8px; border-radius: 2px; background: var(--line-2); overflow: hidden; }
+.tuto-bar i { display: block; height: 100%; background: var(--accent); transition: width .3s ease; }
+.tuto-body { font-size: 12.5px; line-height: 1.5; color: var(--text-2); }
+.tuto-body p { margin: 0 0 6px; }
+.tuto-body ul { margin: 0 0 6px; padding: 0; list-style: none; display: grid; gap: 5px; }
+.tuto-body li { position: relative; padding-left: 14px; }
+.tuto-body li::before { content: ""; position: absolute; left: 2px; top: .6em; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); opacity: .7; }
+.tuto-body b, .tuto-act b { color: var(--text); font-weight: 650; }
+.tuto-act { display: flex; gap: 8px; align-items: baseline; margin: 10px 0 2px; padding: 8px 10px; border-radius: 8px; font-size: 12.5px; line-height: 1.45; color: var(--text);
+  background: color-mix(in srgb, var(--accent) 10%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+.tuto-act-ico { color: var(--accent); font-weight: 700; }
+.tuto-card.ok .tuto-act { background: color-mix(in srgb, var(--ok) 12%, transparent); border-color: color-mix(in srgb, var(--ok) 45%, transparent); }
+.tuto-acts { margin-top: 12px; }
 .tuto-acts { display: flex; align-items: center; gap: 6px; }
 .tuto-acts .sp { flex: 1; }
 .tuto-hint { font-size: 11.5px; color: var(--text-3); }

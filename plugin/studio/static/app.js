@@ -1130,9 +1130,8 @@ async function saveNote() {
     state.hl = note.id;
     renderNotes(); renderPins();
     const n = state.detail.notes.findIndex((x) => x.id === note.id) + 1;
-    toast(claude.status?.enabled
-      ? `${esc(t('Note {n} saved with its screenshot{cu}.', { n, cu: draft.anchor ? t(' and close-up') : '' }))} <button class="linkish" data-ask-notes>${esc(t('Ask Claude in the ✦ tab'))}</button>`
-      : t('Note {n} saved with its screenshot{cu}. Claude picks it up on {cmd}', { n, cu: draft.anchor ? t(' and close-up') : '', cmd: `<span class="mono">/kiln studio ${esc(state.detail.name)}</span>` }), 'ok', 5000);
+    // What to do next is on top of the notes (hand them to Claude, or the command): the toast only confirms.
+    toast(esc(t('Note {n} saved with its screenshot{cu}.', { n, cu: draft.anchor ? t(' and close-up') : '' })), 'ok', 4000);
     requestAnimationFrame(() => $(`#note-list .note[data-id="${CSS.escape(note.id)}"]`)?.classList.add('flash'));
   } catch (e) {
     toast(t('Could not save the note: {e}', { e: esc(e.message) }), 'warn', 8000);
@@ -1268,7 +1267,8 @@ function noteEl(n) {
   el.onclick = (e) => {
     const act = e.target.closest('[data-act]')?.dataset.act;
     if (act) { e.stopPropagation(); noteAction(n, act, el); return; }
-    if (!e.target.closest('textarea, button')) highlight(n.id);
+    if (e.target.closest('textarea, button')) return;
+    highlight(n.id);
   };
   el.ondblclick = (e) => { if (!e.target.closest('textarea, button') && n.camera) viewer.setCamera(n.camera); };
   return el;
@@ -1355,11 +1355,8 @@ function renderNotesNow() {
   }
   const c = d.counts;
   const cmd = `/kiln studio ${d.id}`;
-  $('#handoff').innerHTML = [
-    c.addressed ? `<div>${tp(c.addressed, '<b>{n} note to check</b>: Claude changed the model. Look, then mark it <b>Looks right</b> or <b>Not yet</b>.', '<b>{n} notes to check</b>: Claude changed the model. Look, then mark each one <b>Looks right</b> or <b>Not yet</b>.')}</div>` : '',
-    c.open && claude.status?.enabled ? `<div${c.addressed ? ' style="margin-top:8px"' : ''}>${esc(tp(c.open, '{n} open note.', '{n} open notes.'))} <button class="btn sm accent" data-ask-notes>${esc(tp(c.open, 'Work on it with Claude', 'Work on them with Claude'))}</button><div class="dim small" style="margin-top:6px">${esc(t('Or in Claude Code:'))} <code>${esc(cmd)}</code></div></div>` : '',
-    c.open && !claude.status?.enabled ? `<div${c.addressed ? ' style="margin-top:8px"' : ''}>${esc(tp(c.open, '{n} open note. In Claude Code, run:', '{n} open notes. In Claude Code, run:'))}<div class="cmd"><code>${esc(cmd)}</code><button class="btn sm" data-copy="${esc(cmd)}">${esc(t('Copy'))}</button></div></div>` : '',
-  ].join('');
+  $('#handoff').innerHTML = c.addressed ? `<div>${tp(c.addressed, '<b>{n} note to check</b>: Claude changed the model. Look, then mark it <b>Looks right</b> or <b>Not yet</b>.', '<b>{n} notes to check</b>: Claude changed the model. Look, then mark each one <b>Looks right</b> or <b>Not yet</b>.')}</div>` : '';
+  renderNotesWork();
   $$('#handoff [data-copy]').forEach((b) => (b.onclick = () => copy(b.dataset.copy)));
   renderCounts();
 }
@@ -1937,7 +1934,7 @@ async function onEvent(ev) {
 // things Claude waits on — a proposal (Accept / Decline) and a tool call outside the safe
 // list (Allow once / Deny). What Claude writes streams in as it comes.
 
-const claude = { status: null, thread: null, key: null, view: null, partial: null, open: new Set(), ctxNote: true, ctxView: false, menu: false };
+const claude = { status: null, thread: null, key: null, view: null, partial: null, open: new Set(), ctxView: false, sending: false, activity: new Map(), menu: false };
 // The conversation the tab shows: the project's or a Create request's when picked
 // (claude.view), else the open model's.
 const claudeKey = () => claude.view || (state.id ? `asset:${state.id}` : null);
@@ -1975,6 +1972,8 @@ function claudeChanged() {
   renderStrip();
   renderClaudeBadge();
   renderClaudePill();
+  // The open notes' block follows Claude on the open model (off, free, working, waiting).
+  renderNotesWork();
   const waiting = claudeLive().filter((j) => j.state === 'waiting').length;
   const base = state.name ? `${state.name} · Kiln Studio` : 'Kiln Studio';
   document.title = waiting ? `(${waiting}) ${base}` : base;
@@ -2024,7 +2023,8 @@ function claudeEntry(e, results, job) {
     case 'user':
       if (e.kind === 'setup') return `<div class="cl-msg me"><span class="dim small">${esc(t('Install'))}</span><br>${esc(partName(e.text.replace(/^\/\S+\s+setup\s+/, '')))}</div>`;
       if (e.kind === 'create') return `<div class="cl-msg me"><span class="dim small">${esc(t('New model'))}</span><br>${mdLite(createBrief(e.text))}</div>`;
-      const tags = [e.context?.note && `● ${t('note {n}', { n: e.context.note.number || '' })}`, e.context?.view && t('my view')].filter(Boolean);
+      const cn = e.context?.notes || (e.context?.note ? [e.context.note] : []);
+      const tags = [cn.length && `● ${notesTag(cn.map((n) => n.number || ''))}`, e.context?.view && t('view capture')].filter(Boolean);
       return `<div class="cl-msg me">${e.kind === 'notes' ? `<span class="dim">${esc(t('Work on the open notes'))}</span>` : mdLite(e.text)}${tags.length ? `<div class="cl-tags">${tags.map((x) => `<span>${esc(x)}</span>`).join('')}</div>` : ''}</div>`;
     case 'assistant':
       return `<div class="cl-msg cl"><div class="who"><b>Claude</b> · <span title="${esc(stamp(e.at))}">${esc(ago(e.at))}</span></div>${mdLite(e.text)}</div>`;
@@ -2114,7 +2114,7 @@ function renderClaude() {
   if (inTools) html += '</div>';
   if (claude.partial && job && claude.partial.job === job.id && job.state === 'running') html += `<div class="cl-msg cl"><div class="who"><b>Claude</b> · ${esc(t('now'))}</div>${mdLite(claude.partial.text)}<span class="caret"></span></div>`;
   else if (job?.state === 'running') html += `<div class="cl-sys"><span class="dot pulse"></span> ${esc(t('Claude is working…'))}</div>`;
-  if (!msgs.length && !job) html = `<div class="empty-notes"><b>${esc(t('Ask Claude about {name}', { name }))}</b>${esc(t('It sees the model you have open, your notes and your view, and changes the model in its own Blender. Studio shows each new version here.'))}${!claude.view && (state.detail?.counts?.open || 0) ? `<div style="margin-top:12px"><button class="btn sm" data-cl="notes">${esc(tp(state.detail.counts.open, 'Work on the open note', 'Work on the {n} open notes'))}</button></div>` : ''}</div>`;
+  if (!msgs.length && !job) html = `<div class="empty-notes"><b>${esc(t('Ask Claude about {name}', { name }))}</b>${esc(t('It sees the model you have open, your notes and your view, and changes the model in its own Blender. Studio shows each new version here.'))}</div>`;
   const atEnd = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 40;
   thread.innerHTML = html;
   if (atEnd || claude.stick) { thread.scrollTop = thread.scrollHeight; claude.stick = false; }
@@ -2124,25 +2124,52 @@ function renderClaude() {
   $('#cl-text').placeholder = tool ? t('Answer the approval first') : t('Ask Claude about {name}…', { name });
   $('#cl-text').disabled = !!tool;
   $('#cl-send').disabled = !!tool || !!busy;
-  const hl = !claude.view && state.hl && state.detail?.notes.find((n) => n.id === state.hl);
   $('#cl-ctx').innerHTML = [
-    hl ? `<button class="chip${claude.ctxNote ? ' on' : ''}" data-cl="ctx-note" title="${esc(t('Send the highlighted note with the message'))}">● ${esc(t('note {n}', { n: noteNumber(hl) }))}</button>` : '',
-    `<button class="chip${claude.ctxView ? ' on' : ''}" data-cl="ctx-view" title="${esc(t('Claude looks at your view first'))}">${esc(t('my view'))}</button>`,
+    `<button class="chip${claude.ctxView ? ' on' : ''}" data-cl="ctx-view" title="${esc(t('Claude looks at the 3D view as you see it (angle, render) before answering.'))}">${esc(t('view capture'))}</button>`,
   ].join('');
+
   const a = st.auth || {};
   $('#cl-hint').innerHTML = busy ? esc(t('Claude is working: send when it is done, or stop it.'))
     : a.ok === false ? `<span class="warn-t">${esc(accountWords(a))}</span>`
     : esc(t('On {who} · Blender of Studio, port {p}', { who: accountWords(a), p: st.port }));
 }
 
-// What goes with the words: the highlighted note, the view. The worker puts it ahead of
-// the message for Claude; the conversation shows it as tags.
+// What goes with the words: a capture of the view, when asked. The worker puts it ahead of
+// the message for Claude; the conversation shows it as a tag. (Claude reads the notes itself.)
+const notesTag = (nums) => (nums.length === 1 ? t('note {n}', { n: nums[0] }) : nums.length <= 4 ? t('notes {list}', { list: nums.join(', ') }) : tp(nums.length, '{n} note', '{n} notes'));
 function claudeContext() {
-  const hl = !claude.view && state.hl && state.detail?.notes.find((n) => n.id === state.hl);
-  const c = {};
-  if (hl && claude.ctxNote) c.note = { id: hl.id, number: noteNumber(hl), text: hl.text };
-  if (claude.ctxView) c.view = true;
-  return Object.keys(c).length ? c : null;
+  return claude.ctxView ? { view: true } : null;
+}
+// Claude on this model's conversation (or just asked to): the buttons that start a run wait.
+function modelBusy() {
+  if (claude.sending) return 'sending';
+  const j = claudeLive().find((x) => x.asset === state.id);
+  return j ? (j.state === 'waiting' ? 'waiting' : 'running') : null;
+}
+// The open notes, on top of the Notes tab: hand them all to Claude in one click and stay
+// here (its progress shows in the block), or run the command in Claude Code.
+function renderNotesWork() {
+  const el = $('#work'), d = state.detail;
+  if (!el) return;
+  const open = d?.counts?.open || 0, on = !!claude.status?.enabled, busy = d ? modelBusy() : null;
+  if (!d || (!open && !busy)) { el.innerHTML = ''; el.className = ''; return; }
+  const cmd = `/kiln studio ${d.id}`;
+  const term = `<div class="work-cmd"><span>${esc(on ? t('Or in Claude Code:') : t('In Claude Code:'))}</span><code>${esc(cmd)}</code><button class="btn icon sm ghost" data-copy="${esc(cmd)}" title="${esc(t('Copy'))}" aria-label="${esc(t('Copy'))}"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>`;
+  let html;
+  if (busy === 'waiting') {
+    el.className = 'wait';
+    html = `<div class="work-row"><div class="work-what"><b>${esc(t('Claude waits for your answer'))}</b><span>${esc(t('It asks something before going on.'))}</span></div><button class="btn sm warn" data-open-claude>${esc(t('Answer'))}</button></div>`;
+  } else if (busy) {
+    el.className = 'busy';
+    const j = claudeLive().find((x) => x.asset === d.id);
+    const line = (j && claude.activity.get(j.id)) || t('Starting…');
+    html = `<div class="work-row"><span class="spin" aria-hidden="true"></span><div class="work-what"><b>${esc(open ? tp(open, 'Claude is working on {n} note', 'Claude is working on {n} notes') : t('Claude is working on this model'))}</b><span class="work-line">${esc(line.replace(/\s+/g, ' ').slice(0, 140))}</span><button class="linkish work-link" data-open-claude>${esc(t('See the conversation'))}</button></div></div>`;
+  } else {
+    el.className = '';
+    html = `<div class="work-row"><div class="work-what"><b>${esc(tp(open, '{n} open note', '{n} open notes'))}</b><span>${esc(on ? t('Claude handles them all in one go.') : t('Turn Claude on in Settings to handle them from here.'))}</span></div>${on ? `<button class="btn sm accent" data-ask-notes>${esc(tp(open, 'Work on it with Claude', 'Work on them with Claude'))}</button>` : ''}</div>${term}`;
+  }
+  el.innerHTML = html;
+  $$('#work [data-copy]').forEach((b) => (b.onclick = () => copy(b.dataset.copy)));
 }
 
 async function claudeSend(kind, text = '', context = null) {
@@ -2175,8 +2202,6 @@ $('#tab-claude').addEventListener('click', async (e) => {
     try { await api('/api/config', { method: 'PUT', body: { claude_worker: true } }); await claudeStatus(); renderClaude(); } catch (err) { toast(esc(err.message), 'warn'); }
   } else if (act === 'stop' && job) {
     try { await api(`/api/claude/jobs/${enc(job.id)}/stop`, { method: 'POST', body: {} }); } catch (err) { toast(esc(err.message), 'warn'); }
-  } else if (act === 'notes') {
-    claudeSend('notes');
   } else if (act === 'accept') {
     claudeSend('answer', 'Yes, go ahead.');
   } else if (act === 'decline') {
@@ -2187,7 +2212,6 @@ $('#tab-claude').addEventListener('click', async (e) => {
     try { await api(`/api/claude/jobs/${enc(job.id)}/answer`, { method: 'POST', body: { decision: act } }); claude.stick = true; await claudeStatus(); await claudeLoad(); } catch (err) { toast(esc(err.message), 'warn'); }
   } else if (act === 'project') { openClaudeView('project'); }
   else if (act === 'back') { openClaudeView(null); }
-  else if (act === 'ctx-note') { claude.ctxNote = !claude.ctxNote; renderClaude(); }
   else if (act === 'ctx-view') { claude.ctxView = !claude.ctxView; renderClaude(); }
 });
 
@@ -2250,7 +2274,7 @@ $('#cl-act').addEventListener('click', (e) => {
   claude.menu = false; renderClaudePill();
   openClaudeView(it.dataset.key);
 });
-document.addEventListener('click', (e) => { if (claude.menu && !e.target.closest('#cl-pill')) { claude.menu = false; renderClaudePill(); } });
+document.addEventListener('click', (e) => { if (claude.menu && !e.target.closest('#cl-pill, #tuto')) { claude.menu = false; renderClaudePill(); } });
 
 // Claude waits on a conversation you are not looking at: a toast you can follow, and a
 // system notification when the page is in the background (if allowed).
@@ -2267,6 +2291,10 @@ document.addEventListener('click', (e) => { const b = e.target.closest('[data-op
 
 let claudeTimer = 0;
 async function onClaude(ev) {
+  // What Claude did last, per run: one line in the Notes tab while it works.
+  const said = ev.type === 'claude-text' ? ev.text : ev.entry?.role === 'assistant' ? ev.entry.text
+    : ev.entry?.role === 'tool' ? String(ev.entry.tool || '').replace(/^mcp__(plugin_[^_]+(?:-[^_]+)*_)?/, '').replace(/__/g, ' · ') : null;
+  if (said) { claude.activity.set(ev.type === 'claude-text' ? ev.job : ev.job?.id, said); renderNotesWork(); }
   if (ev.type === 'claude-text') {
     if (ev.key !== threadKey()) return;
     claude.partial = { job: ev.job, text: ev.text };
@@ -2298,21 +2326,26 @@ async function onClaude(ev) {
 
 // "Work on it with Claude": the ✦ tab, the model's open notes sent.
 document.addEventListener('click', (e) => {
-  if (!e.target.closest('[data-ask-notes]')) return;
-  openClaudeView(null);
-  claudeSend('notes');
+  if (e.target.closest('[data-open-claude]')) { openClaudeView(null); return; }
+  const b = e.target.closest('[data-ask-notes]');
+  if (!b || b.disabled || modelBusy()) return;
+  // Stays where it was asked: the Notes tab shows Claude's progress.
+  if (b.closest('#toast')) ensureRight('notes');
+  claude.sending = true;
+  renderNotesWork();
+  claudeSend('notes').finally(() => { claude.sending = false; renderNotesWork(); });
 });
 
 // ── the tutorial (tutorial.js): a scripted, simulated walk through Studio ─────
 // Offered once, the first time; ⌘K → Take the tutorial starts it again.
 async function startTutorial() {
   $('#tuto-offer')?.remove();
-  // Its models are new every time: render their thumbnails again.
-  for (const k of [...queued]) if (k.startsWith('thumb:tavern/')) queued.delete(k);
+  // Its models are new every time: render their thumbnails and after views again.
+  for (const k of [...queued]) if (k.startsWith('thumb:tavern/') || k.startsWith('after:tavern/')) queued.delete(k);
   prefs.tutorialSeen = true; savePrefs();
   const m = await import('./tutorial.js');
   m.start({ state, viewer, claude, hooks, toast, go, openAsset, ensureRight, setCompare, handleEvent, onClaude, claudeStatus,
-    fetchAssets, renderEmpty, openClaudeView });
+    fetchAssets, renderEmpty, openClaudeView, cancelDraft });
 }
 paletteExtras.push((add) => add('Help', 'Take the tutorial', [], startTutorial));
 setTimeout(() => {
