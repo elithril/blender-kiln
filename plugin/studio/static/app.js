@@ -2359,7 +2359,9 @@ function claudeWaits(job) {
   const name = jobLabel(job);
   const what = job.waiting?.type === 'tool' ? t('Claude asks to run {tool} on {name}', { tool: approvalShort(job.waiting), name }) : t('Claude waits for your answer on {name}', { name });
   toast(`${esc(what)} · <button class="linkish" data-open-key="${esc(jobKey(job))}">${esc(t('Answer'))}</button>`, 'warn', 9000);
-  if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
+  // Not looking at the page: hidden (Safari, as soon as it is behind) or without the focus
+  // (Chrome keeps a window behind another app "visible").
+  if ('Notification' in window && Notification.permission === 'granted' && (document.hidden || !document.hasFocus())) {
     const n = new Notification('Kiln Studio', { body: what, tag: `claude-${job.id}` });
     n.onclick = () => { window.focus(); openClaudeView(jobKey(job)); n.close(); };
   }
@@ -2397,7 +2399,7 @@ async function onClaude(ev) {
     setTimeout(() => toast(`${esc(t('Claude made {name}', { name: ev.job.asset.split('/').pop() }))} · <button class="linkish" data-open-key="asset:${esc(ev.job.asset)}">${esc(t('Open'))}</button>`, 'ok', 9000), 600);
   claudeChanged();
   renderClaude();
-  if (ev.job?.state === 'waiting' && ev.entry && ['proposal', 'approval'].includes(ev.entry.role) && (ev.job.key !== threadKey() || $('#tab-claude').hidden || !isOpen(right) || document.hidden))
+  if (ev.job?.state === 'waiting' && ev.entry && ['proposal', 'approval'].includes(ev.entry.role) && (ev.job.key !== threadKey() || $('#tab-claude').hidden || !isOpen(right) || document.hidden || !document.hasFocus()))
     claudeWaits(ev.job);
 }
 

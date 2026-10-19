@@ -469,7 +469,8 @@ own share, not the session's total again.
 **Browsers:** Chrome, and Safari 26.6 through WebDriver (2026-10-19): the whole
 tutorial, ⌘K and the keys, a pinned note with its screenshot, compare and choose; a
 trackpad pinch zooms the 3D view, not the page (by hand); "Notify me when Claude waits"
-asks, and a run waiting for an answer notifies while the page is not in view (Safari and
-Chrome). The permission is per address: a second project's Studio (the next port) asks
+asks, and a run waiting for an answer notifies while the user is elsewhere — the page
+hidden or without the focus (Chrome keeps a window behind another app "visible") — tested
+in Safari and Chrome. The permission is per address: a second project's Studio (the next port) asks
 again. **Not tested yet:** Firefox, Linux and Windows (Blender is opened behind the
 user's windows with macOS's `open -g`; elsewhere it opens in front).
