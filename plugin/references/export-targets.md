@@ -30,8 +30,8 @@ bpy.ops.export_scene.gltf(
     export_apply=False,            # ⚠️ NEVER True — Array modifiers balloon file size (1MB → 56MB)
     export_yup=True,               # convert to Y-up (glTF convention)
     export_texcoords=True,
-    export_normals=True,
-    export_colors=True,
+    export_normals=True,          # vertex colours: the default (export_vertex_color='MATERIAL');
+                                  # export_colors is gone in Blender 5.2 and fails the call
     export_materials='EXPORT',
     export_image_format='AUTO',    # PNG for lossless, JPEG for lossy
     export_draco_mesh_compression_enable=False,  # apply Draco later via gltf-transform

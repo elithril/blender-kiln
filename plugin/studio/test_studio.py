@@ -880,6 +880,7 @@ class Api(Base):
         self.assertEqual(code, 400)
         stl(self.tmp / "generated-assets" / "crate" / "print" / "crate_print_lid.stl")
         stl(self.tmp / "generated-assets" / "crate" / "print" / "crate_print_box.stl")
+        (self.tmp / "generated-assets" / "crate" / "print" / "crate_lid_parts.blend").write_bytes(b"BLENDER")   # kiln's working file
         c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
         c.request("GET", "/files/generated-assets/crate/print?zip=1", headers={"Host": f"127.0.0.1:{self.port}"})
         r = c.getresponse()

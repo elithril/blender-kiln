@@ -392,7 +392,9 @@ def make_handler(studio: Studio, port_ref: list[int]):
                         buf = io.BytesIO()
                         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
                             for f in sorted(p.iterdir()):
-                                if f.is_file() and not f.name.startswith("."):
+                                # The deliverables only: kiln's working files (a part's .blend, a
+                                # check's report) stay in the folder.
+                                if f.is_file() and not f.name.startswith(".") and f.suffix.lower() in sl.MODEL_EXTS:
                                     z.write(f, f.name)
                         name = f"{p.parent.name}_{p.name}.zip"
                         return self._send(200, buf.getvalue(), "application/zip",
