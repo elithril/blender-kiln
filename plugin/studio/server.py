@@ -8,6 +8,7 @@ Binds 127.0.0.1 only, and answers only requests addressed to it by that name
 from __future__ import annotations
 
 import base64
+import io
 import json
 import mimetypes
 import os
@@ -16,6 +17,7 @@ import subprocess
 import sys
 import threading
 import time
+import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
@@ -385,6 +387,17 @@ def make_handler(studio: Studio, port_ref: list[int]):
                     want = parse_qs(urlparse(self.path).query).get("h", [""])[0]
                     if want and p.is_file() and p.suffix.lower() in sl.MODEL_EXTS and sl.file_hash(p) != want:
                         return self._err(409, "the file changed since; reload")
+                    if parse_qs(urlparse(self.path).query).get("zip") and p.is_dir() and p.name in sl.OUTPUT_DIRS:
+                        # An output with several files (a print's 3MF and STLs, AR's USDZ and GLB): one zip.
+                        buf = io.BytesIO()
+                        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+                            for f in sorted(p.iterdir()):
+                                if f.is_file() and not f.name.startswith("."):
+                                    z.write(f, f.name)
+                        name = f"{p.parent.name}_{p.name}.zip"
+                        return self._send(200, buf.getvalue(), "application/zip",
+                                          {"Content-Disposition": f"attachment; filename*=UTF-8''{quote(name)}",
+                                           "Cache-Control": "no-store"})
                     if parse_qs(urlparse(self.path).query).get("download") and p.is_file():
                         # The Outputs bar's download: the file itself, saved under its own name.
                         return self._send(200, p.read_bytes(), "application/octet-stream",

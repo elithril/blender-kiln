@@ -213,12 +213,12 @@ When export target is "multi":
 3. Export USDZ from the same scene with `bpy.ops.wm.usd_export` — no CLI
    conversion needed, and it carries more maps than the GLB
 
-Each format saved in the output folder:
+Each format in its output folder (`naming-conventions.md` § Outputs):
 ```
 generated-assets/wooden-chair/
-├── wooden-chair_final.glb
-├── SM_WoodenChair_final.fbx
-└── wooden-chair_final.usdz
+├── web/   wooden-chair_final.glb
+├── game/  wooden-chair_game.fbx
+└── ar/    wooden-chair_ar.usdz, wooden-chair_ar.glb
 ```
 
 ---

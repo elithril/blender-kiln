@@ -52,7 +52,8 @@ from urllib.parse import unquote
 DATA_DIR = ".kiln-studio"
 MODEL_EXTS = (".glb", ".gltf", ".fbx", ".obj", ".usdz", ".3mf", ".stl")
 # kiln's pipeline stages, best first: the default variant is the most finished one.
-KILN_STAGES = ("final", "optimized", "textured", "clean", "original", "preview", "print")   # preview: a copy of original, for Quick Look; print: the printable output
+KILN_STAGES = ("final", "optimized", "textured", "clean", "original", "preview", "print", "game", "ar")
+# preview: a copy of original, for Quick Look. print, game, ar: the outputs, each in its folder.
 # The scratch export kiln writes after each phase while it builds: first while it is the
 # newest file of the asset (the build is under way), last once a real stage is newer.
 LIVE = "live"
@@ -60,6 +61,9 @@ FORMAT_ORDER = (".glb", ".gltf", ".fbx", ".obj", ".usdz", ".3mf", ".stl")
 STAGE_RE = re.compile(r"^(?P<name>.+)_(?P<stage>" + "|".join(KILN_STAGES + (LIVE,)) + r")$")
 # The printable output's parts beside {name}_print.3mf: {name}_print_{part}.stl, side files of the model.
 PRINT_PART_RE = re.compile(r"^(?P<name>.+)_print_[^_/]+$")
+# A model's outputs, one folder per use in its own folder: web/{name}_final.glb,
+# game/{name}_game.fbx, ar/{name}_ar.usdz + .glb, print/{name}_print.3mf + _print_{part}.stl.
+OUTPUT_DIRS = ("web", "game", "ar", "print")
 # kiln's phases, in pipeline order; rig and animate only show when a build reports them.
 PHASES = ("config", "brief", "source", "import", "cleanup", "texture", "rig", "animate", "optimize", "export")
 OPTIONAL_PHASES = ("rig", "animate")
@@ -376,8 +380,12 @@ def scan(project: Project) -> list[Asset]:
         models = [f for f in filenames if f.lower().endswith(MODEL_EXTS)
                   and not f.startswith(".")
                   and not _excluded(f"{rel_dir}/{f}".lstrip("/"), exclude)]
+        if models and d.name in OUTPUT_DIRS and d != project.root and all(f.startswith(d.parent.name + "_") for f in models):
+            # An output folder of the model next to it: its files are that model's.
+            by_dir.setdefault(d.parent, []).extend(f"{d.name}/{f}" for f in sorted(models))
+            continue
         if models:
-            by_dir[d] = sorted(models)
+            by_dir.setdefault(d, []).extend(sorted(models))
     assets: list[Asset] = []
     for d, models in by_dir.items():
         assets.extend(_group_dir(project, d, models))
@@ -396,7 +404,7 @@ def _group_dir(project: Project, d: Path, models: list[str]) -> list[Asset]:
     mtimes = {f: (d / f).stat().st_mtime for f in models}
     parts = []
     for f in models:
-        stem, ext = os.path.splitext(f)
+        stem, ext = os.path.splitext(f.rsplit("/", 1)[-1])   # an output folder's file: its own name
         if ext.lower() in (".stl", ".3mf") and PRINT_PART_RE.match(stem) and not STAGE_RE.match(stem):
             parts.append(f)
             continue
@@ -443,7 +451,7 @@ def _group_dir(project: Project, d: Path, models: list[str]) -> list[Asset]:
         own_folder = kiln and d.name == name and rel_dir
         if own_folder:
             asset_id = rel_dir
-            files = sorted(siblings + [f for f in parts if f.startswith(name)])
+            files = sorted(siblings + [f for f in parts if f.rsplit("/", 1)[-1].startswith(name)])
         else:
             asset_id = f"{rel_dir}/{name}".lstrip("/")
             files = [f for f in siblings if f.startswith(name) and not f.lower().endswith(MODEL_EXTS)]

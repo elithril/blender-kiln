@@ -875,23 +875,24 @@ function renderTitle() {
 const OUTPUTS = [
   { key: 'web', name: N_('Web'), what: N_('glTF for a website (GLB, compressed)') },
   { key: 'game', name: N_('Game'), what: N_('FBX for Unity and Unreal') },
-  { key: 'ar', name: N_('AR'), what: N_('USDZ for iPhone and Vision Pro') },
+  { key: 'ar', name: N_('AR'), what: N_('USDZ for iPhone and Vision Pro, GLB for Android') },
   { key: 'print', name: N_('3D print'), what: N_('3MF for the slicer, and an STL per part') },
 ];
+// Each output in its folder of the model's (web/, game/, ar/, print/); a final at the root
+// (projects made before) is the web one.
 function outputOf(v) {
-  const ext = (v.ext || '').toLowerCase();
-  if (v.label.startsWith('print')) return 'print';
-  if (ext === '.usdz') return 'ar';
-  if (ext === '.fbx') return 'game';
-  if (v.label === 'final' && (ext === '.glb' || ext === '.gltf')) return 'web';
+  const ext = (v.ext || '').toLowerCase(), kind = v.label.split('.')[0];
+  if (['print', 'game', 'ar'].includes(kind)) return kind;
+  if (kind === 'final' && (ext === '.glb' || ext === '.gltf')) return 'web';
   return null;
 }
+const outputDir = (v) => { const m = /\/(web|game|ar|print)\/[^/]+$/.exec(v.file); return m ? v.file.slice(0, v.file.length - m[0].length + m[1].length + 1) : null; };
 function outputAsk(key, name) {
   return {
-    web: t('Export {name} for the web: {name}_final.glb, compressed, as kiln does for the web target.', { name }),
-    game: t('Prepare {name} for a game engine: export {name}_final.fbx for Unity and Unreal beside the final, with kiln\'s settings for that target.', { name }),
-    ar: t('Prepare {name} for AR: export {name}_final.usdz (iPhone, Vision Pro) beside the final, with kiln\'s settings for that target.', { name }),
-    print: t('Prepare {name} for 3D printing with kiln\'s print mode: check it and make it printable, then save {name}_print.3mf (every part, its colours, in millimetres) and one STL per part ({name}_print_<part>.stl) beside the final.', { name }),
+    web: t('Export {name} for the web: web/{name}_final.glb in its folder, compressed, with kiln\'s settings for the web.', { name }),
+    game: t('Prepare {name} for a game engine: export game/{name}_game.fbx in its folder, for Unity and Unreal, with kiln\'s settings for that target.', { name }),
+    ar: t('Prepare {name} for AR: export ar/{name}_ar.usdz (iPhone, Vision Pro) and ar/{name}_ar.glb (Android) in its folder, with kiln\'s settings for that target.', { name }),
+    print: t('Prepare {name} for 3D printing with kiln\'s print mode: check it and make it printable, then save in its folder print/ one STL per part ({name}_print_<part>.stl) and {name}_print.3mf gathering them, in millimetres.', { name }),
   }[key];
 }
 function renderOutputs(d, v) {
@@ -904,8 +905,11 @@ function renderOutputs(d, v) {
     if (x) return `<button class="out on${x.label === v.label ? ' cur' : ''}" data-out-v="${esc(x.label)}" title="${esc(`${t(o.what)} — ${x.file}`)}"><i aria-hidden="true">✓</i>${esc(t(o.name))}</button>`;
     return `<button class="out add" data-out-make="${o.key}"${busy ? ' disabled' : ''} title="${esc(t('Prepare: {what}', { what: t(o.what) }))}"><i aria-hidden="true">+</i>${esc(t(o.name))}</button>`;
   }).join('');
+  // An output with several files (print, AR) downloads as its folder, zipped.
+  const dir = ['print', 'ar'].includes(outputOf(v)) && outputDir(v);
+  const dl = dir ? { href: `${fileUrl(dir)}?zip=1`, what: dir.split('/').slice(-2).join('_') + '.zip' } : { href: `${fileUrl(v.file)}?download=1`, what: v.file.split('/').pop() };
   const file = `<span class="out-sep" aria-hidden="true"></span>
-    <a class="btn icon sm ghost" href="${esc(fileUrl(v.file))}?download=1" download title="${esc(t('Download {f}', { f: v.file.split('/').pop() }))}" aria-label="${esc(t('Download'))}"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"/></svg></a>
+    <a class="btn icon sm ghost" href="${esc(dl.href)}" download title="${esc(t('Download {f}', { f: dl.what }))}" aria-label="${esc(t('Download'))}"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"/></svg></a>
     <button class="btn icon sm ghost" data-out-reveal="${esc(v.file)}" title="${esc(t('Show in the Finder'))}" aria-label="${esc(t('Show in the Finder'))}"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></svg></button>`;
   el.innerHTML = `<span class="out-label">${esc(t('Outputs'))}</span>${chips}${file}`;
   // Another file can be another layout (a print's parts on the bed): framed anew.

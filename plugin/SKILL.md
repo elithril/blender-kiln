@@ -866,8 +866,9 @@ Project left 1.7% of its surface on collapsed UVs, unseen.
 
 ### [6] OPTIMIZE (interactive in guided mode)
 
-**Print set in CONFIG: skipped.** The deliverable is the STL; the GLB is a preview for the
-user, exported plain (no Draco, no texture pass) under the usual `_final.glb` name. **No
+**Print set in CONFIG: skipped.** The deliverable is the print output (`print/`, below); the
+GLB is a preview for the user, exported plain (no Draco, no texture pass) as the web output
+`web/{name}_final.glb`. **No
 `_original.glb`** — nothing is optimized, so there is nothing to keep it for; the file
 `print_check --reference` reads is `{name}_{part}_parts.blend`, one per printed part (`print.md` § The tool).
 
@@ -889,6 +890,12 @@ neither `KHR_draco_mesh_compression` nor `EXT_texture_webp`.
 Why: the quality bench measured auto mode stopping here on 3 of 6 briefs, leaving
 a 16 MB `_final.glb` for a 724-triangle chair. **`_final.glb` is written only after
 this phase** — before it, the export is `_original.glb`, scripted assets included.
+
+**Each output in its own folder** of the model's: the web one is `web/{name}_final.glb`;
+game `game/{name}_game.fbx`, AR `ar/{name}_ar.usdz` + `ar/{name}_ar.glb`, print
+`print/{name}_print.3mf` + `print/{name}_print_{part}.stl` — made when asked, never
+empty folders (`references/naming-conventions.md` § Outputs). The source stays at the root:
+`_original.glb`, the `.blend`, the log, the preview.
 
 **Guided mode** — propose options:
 - `gltf-transform` → texture compression KTX2, meshopt

@@ -251,11 +251,11 @@ first folder holding `.kiln-studio/`); pass `--root PROJECT` from elsewhere.
 
 ## 7. What the user sees
 
-**Outputs**, beside the stages on top: Web, Game, AR, 3D print — one file per use, found by
-name (`naming-conventions.md` § Outputs). One there opens in the view (an STL or a 3MF in
+**Outputs**, beside the stages on top: Web, Game, AR, 3D print — a folder per use in the
+model's folder, found by name (`naming-conventions.md` § Outputs). One there opens in the view (an STL or a 3MF in
 millimetres, as on the printer's bed); one missing has "+": Studio asks Claude to prepare
 it (with Claude off in Studio, the request is copied for Claude Code). The file shown
-downloads, or shows in the Finder.
+downloads (a print or AR output: its folder, zipped), or shows in the Finder.
 
 The two side panels resize the view, and fold into 60 px rails (`[` the list, `]` the
 notes, `\` both); the view fits the model again once they have moved. On a narrow

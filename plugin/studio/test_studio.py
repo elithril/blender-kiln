@@ -131,23 +131,35 @@ class Scan(Base):
         self.assertEqual(a.blend_file(), "generated-assets/wooden-chair/wooden-chair.blend")
         self.assertIn("generated-assets/wooden-chair/reference.png", a.files)
 
-    def test_outputs_are_stages_and_print_parts_side_files(self) -> None:
+    def test_outputs_in_their_folders_are_the_model_s(self) -> None:
         d = self.tmp / "generated-assets" / "stool"
         glb(d / "stool_original.glb")
-        glb(d / "stool_final.glb")
-        (d / "stool_final.fbx").write_bytes(b"Kaydara FBX Binary")
-        (d / "stool_final.usdz").write_bytes(b"PK\x03\x04")
-        threemf(d / "stool_print.3mf", tris=3)
-        stl(d / "stool_print_seat.stl", tris=2)
-        stl(d / "stool_print_legs.stl", tris=4)
-        [a] = self.p.scan()
-        self.assertEqual([v.label for v in a.variants], ["final", "final.fbx", "final.usdz", "original", "print"])
-        self.assertIn("generated-assets/stool/stool_print_seat.stl", a.files)   # a part: not a model of its own
+        (d / "stool.blend").write_bytes(b"BLENDER")
+        glb(d / "web" / "stool_final.glb")
+        (d / "game").mkdir()
+        (d / "game" / "stool_game.fbx").write_bytes(b"Kaydara FBX Binary")
+        glb(d / "ar" / "stool_ar.glb")
+        (d / "ar" / "stool_ar.usdz").write_bytes(b"PK\x03\x04")
+        threemf(d / "print" / "stool_print.3mf", tris=3)
+        stl(d / "print" / "stool_print_seat.stl", tris=2)
+        stl(d / "print" / "stool_print_legs.stl", tris=4)
+        glb(self.tmp / "props" / "web" / "lamp.glb")   # a folder named web elsewhere is just a folder
+        a, lamp = sorted(self.p.scan(), key=lambda x: x.id)
+        self.assertEqual(a.id, "generated-assets/stool")
+        self.assertEqual([v.label for v in a.variants], ["final", "original", "print", "game", "ar", "ar.usdz"])
+        self.assertEqual(a.variant("final").rel, "generated-assets/stool/web/stool_final.glb")
+        self.assertIn("generated-assets/stool/print/stool_print_seat.stl", a.files)   # a part: not a model of its own
         st = sl.variant_stats(a.variant("print"))
         self.assertEqual((st["tris"], st["meshes"], st["units"]), (3, 1, "millimeter"))
         self.assertEqual(st["dimensions_blender"], [0.04, 0.02, 0.01])
-        one = sl.stl_stats(d / "stool_print_legs.stl")
+        one = sl.stl_stats(d / "print" / "stool_print_legs.stl")
         self.assertEqual((one["tris"], one["dimensions_blender"]), (4, [0.03, 0.03, 0.03]))
+        self.assertEqual(lamp.id, "props/web/lamp")
+
+    def test_a_final_at_the_root_is_still_the_web_output(self) -> None:
+        glb(self.tmp / "generated-assets" / "chair" / "chair_final.glb")
+        [a] = self.p.scan()
+        self.assertEqual([v.label for v in a.variants], ["final"])
 
     def test_batch_folder_is_the_category(self) -> None:
         glb(self.tmp / "generated-assets" / "batch-office" / "desk" / "desk_final.glb")
@@ -866,6 +878,17 @@ class Api(Base):
         c.close()
         code, _ = self.req("POST", "/api/asset/generated-assets%2Fcrate/reveal", {"file": "../../etc/passwd"})
         self.assertEqual(code, 400)
+        stl(self.tmp / "generated-assets" / "crate" / "print" / "crate_print_lid.stl")
+        stl(self.tmp / "generated-assets" / "crate" / "print" / "crate_print_box.stl")
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        c.request("GET", "/files/generated-assets/crate/print?zip=1", headers={"Host": f"127.0.0.1:{self.port}"})
+        r = c.getresponse()
+        self.assertEqual((r.status, r.getheader("Content-Type")), (200, "application/zip"))
+        self.assertIn("crate_print.zip", r.getheader("Content-Disposition"))
+        self.assertEqual(sorted(zipfile.ZipFile(io.BytesIO(r.read())).namelist()), ["crate_print_box.stl", "crate_print_lid.stl"])
+        c.close()
+        code, _ = self.req("GET", "/files/generated-assets?zip=1")   # only an output folder zips
+        self.assertNotEqual(code, 200)
 
     def test_assets_and_detail(self) -> None:
         code, data = self.req("GET", "/api/assets")

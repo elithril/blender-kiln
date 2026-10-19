@@ -99,32 +99,33 @@ generated-assets/
     ├── wooden-chair_clean.glb
     ├── wooden-chair_textured.glb
     ├── wooden-chair_optimized.glb
-    ├── wooden-chair_final.glb
     ├── wooden-chair_preview.glb     (a copy of _original.glb: opens in macOS Quick Look)
-    ├── wooden-chair_final.fbx       (output: a game engine — Unity, Unreal)
-    ├── wooden-chair_final.usdz      (output: AR — iPhone, Vision Pro)
-    ├── wooden-chair_print.3mf       (output: 3D printing — every part, millimetres)
-    ├── wooden-chair_print_seat.stl  (one STL per part of that print)
     ├── wooden-chair.blend
-    └── wooden-chair_log.md
+    ├── wooden-chair_log.md
+    ├── web/    wooden-chair_final.glb                         (output: a website)
+    ├── game/   wooden-chair_game.fbx                          (output: Unity, Unreal)
+    ├── ar/     wooden-chair_ar.usdz, wooden-chair_ar.glb      (output: iPhone and Vision Pro, Android)
+    └── print/  wooden-chair_print.3mf, wooden-chair_print_seat.stl, …   (output: 3D printing)
 ```
 
-**Outputs** — one model, a file per use, beside the final; Kiln Studio's Outputs bar finds
-them by these names and offers to prepare the missing ones:
+**Outputs** — one model, a folder per use; the source (the stages, the `.blend`, the log,
+the preview) stays at the root. A folder is made when its output is asked for, never empty.
+Kiln Studio's Outputs bar finds them by these names and offers to prepare the missing ones
+(a `_final.glb` at the root, from before, still counts as the web output):
 
-| Output | File | How |
+| Output | Files | How |
 |---|---|---|
-| Web | `{name}_final.glb` | the web target (Draco, WebP) |
-| Game | `{name}_final.fbx` | `references/export-targets.md` § FBX, from the same scene |
-| AR | `{name}_final.usdz` | `bpy.ops.wm.usd_export(filepath=…usdz)` from the same scene |
-| 3D print | `{name}_print.3mf` + `{name}_print_{part}.stl` | print mode (`references/print.md`), then the 3MF below |
+| Web | `web/{name}_final.glb` | the web target (Draco, WebP) |
+| Game | `game/{name}_game.fbx` | `references/export-targets.md` § FBX, from the same scene |
+| AR | `ar/{name}_ar.usdz` + `ar/{name}_ar.glb` | `bpy.ops.wm.usd_export(filepath=…usdz)` and the glTF exporter (no Draco: Android's viewer has none), from the same scene |
+| 3D print | `print/{name}_print.3mf` + `print/{name}_print_{part}.stl` | print mode (`references/print.md`), then the 3MF below |
 
 The 3MF gathers the checked STLs, as on the bed, in millimetres — PrusaSlicer's command line,
-**run from the model's folder** (a path in `-o` or no `--dont-arrange`: no file, and still
+**run from the print folder** (a path in `-o` or no `--dont-arrange`: no file, and still
 exit 0):
 
 ```bash
-cd generated-assets/wooden-chair
+cd generated-assets/wooden-chair/print
 /Applications/PrusaSlicer.app/Contents/MacOS/PrusaSlicer -m --dont-arrange --export-3mf \
     -o wooden-chair_print.3mf wooden-chair_print_seat.stl wooden-chair_print_legs.stl
 ```
