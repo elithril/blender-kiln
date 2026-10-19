@@ -162,8 +162,15 @@ the list shows the batch's range on its folder header.
 5. **Answer each note.**
 
    ```bash
-   python3 <skill>/studio/studio.py reply <asset> <note id> "What changed, in a sentence or two." --status addressed
+   python3 <skill>/studio/studio.py reply <asset> <note id> "Done: the hoops are thicker.
+   - Hoop height: 2 cm → 5 cm, 15 mm proud of the wood
+   - Triangles: 2,202 → 2,410" --status addressed
    ```
+
+   - **The reply's shape**: one sentence that answers the note, then one `- ` line per
+     change with its before → after, in the user's words ("likeness to the photo", not
+     "silhouette IoU"; "triangles", not "tris"). Nothing else: the page shows it as a
+     list under the note. In the user's language.
 
    - `--status addressed` only after the new file is exported. The page then renders
      the after view itself; to attach your own render instead (Blender, from the note's

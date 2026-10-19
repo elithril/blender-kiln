@@ -226,10 +226,10 @@
     <button class="rbtn" data-rtab="checks" aria-label="Checks" title="Checks" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg><span class="cnt" id="rc-checks" hidden></span></button>
     <button class="rbtn" data-rtab="details" aria-label="Details" title="Details" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 11v5M12 8v.5"/></svg></button>
     <button class="rbtn" data-rtab="history" aria-label="History" title="History" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button>
-    <button class="rbtn" data-rtab="claude" aria-label="Claude" title="Claude" data-i18n-attr="aria-label,title"><span class="letter">✦</span><span class="cnt" id="rc-claude" hidden></span></button>
+    <button class="rbtn" data-rtab="claude" aria-label="Claude" title="Claude" data-i18n-attr="aria-label,title"><span class="spark" aria-hidden="true">✦</span><span class="cnt" id="rc-claude" hidden></span></button>
     <div class="rsep"></div>
-    <button class="rbtn" id="r-pin" aria-label="Pin a note (N)" title="Pin a note (N)" data-i18n-attr="aria-label,title"><span class="letter">N</span></button>
-    <button class="rbtn" id="r-general" aria-label="Note on the whole model (M)" title="Whole model (M)" data-i18n-attr="aria-label,title"><span class="letter">M</span></button>
+    <button class="rbtn" id="r-pin" aria-label="Pin a note (N)" title="Pin a note (N)" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M9.5 3.5h5l-.8 5.2 3.3 3.1v2H7v-2l3.3-3.1z"/><path d="M12 13.8V21"/></svg></button>
+    <button class="rbtn" id="r-general" aria-label="Note on the whole model (M)" title="Whole model (M)" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M5 4h14v10.5L13.5 20H5z"/><path d="M13.5 20v-5.5H19M8.5 9h7M8.5 12h4"/></svg></button>
   </div>
 </aside>
 
@@ -301,7 +301,7 @@
       <section class="set-pane" data-pane="claude" role="tabpanel" hidden>
         <p class="set-where" data-i18n>This project: how Claude works from the page.</p>
         <div class="srow"><div class="st"><b data-i18n>Ask Claude from Studio</b><span data-i18n>The ✦ tab, New model and the project conversation. Off, Studio is for looking and noting; Claude is used from the terminal.</span></div><div class="sc"><button class="switch" id="set-claude" role="switch" aria-checked="false" aria-label="Ask Claude from Studio" data-i18n-attr="aria-label"><i class="sw"></i></button></div></div>
-        <div class="srow"><div class="st"><b data-i18n>Approvals</b><span id="set-approvals-help"></span></div><div class="sc"><div class="seg small" id="set-approvals"><button data-v="ask" data-i18n>Ask me</button><button data-v="auto" data-i18n>Auto</button></div></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Approvals</b><span id="set-approvals-help"></span></div><div class="sc"><div class="seg small" id="set-approvals"><button data-v="ask" data-i18n>Ask me</button><button data-v="auto" data-i18n>Auto</button><button data-v="all" data-i18n>Allow all</button></div></div></div>
         <div class="srow"><div class="st"><b data-i18n>Paid generation</b><span id="set-paid-help"></span></div><div class="sc"><div class="seg small" id="set-paid"><button data-v="ask" data-i18n>Ask me</button><button data-v="auto" data-i18n>Auto</button></div></div></div>
         <div class="srow"><div class="st"><b data-i18n>At once</b><span id="set-parallel-help"></span></div><div class="sc"><div class="seg small" id="set-parallel"></div></div></div>
         <div class="srow"><div class="st"><label for="set-model"><b data-i18n>Model</b></label><span data-i18n>Claude Code's default follows your plan.</span></div><div class="sc"><select id="set-model"><option value="" data-i18n>Claude Code's default</option><option value="opus">Opus</option><option value="sonnet">Sonnet</option><option value="haiku">Haiku</option></select></div></div>

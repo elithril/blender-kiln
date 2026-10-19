@@ -14,7 +14,8 @@ A PROTOTYPE. What it holds to:
 - **One run at a time**: a queue. The subscription's quota is shared by every session, and
   there is one Blender.
 - **Its own Blender**: a GUI Blender on the project's `blender_port` (default 9877, never
-  9876), with its own profile under .kiln-studio/cache/worker/, and an MCP config that
+  9876), with its own profile under ~/.kiln-studio/blenders/<project>/ (out of the project:
+  macOS will not launch an app logging into Downloads or Documents), and an MCP config that
   points the Blender MCP server at that port — `--strict-mcp-config`, so the user's own
   `blender` MCP (port 9876) is never loaded.
 - **Approvals**: `--permission-mode dontAsk`, a short --allowedTools list, and
@@ -28,6 +29,7 @@ test_worker.py runs it against a fake `claude`.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -332,7 +334,10 @@ class Blender:
 
     @property
     def dir(self) -> Path:
-        d = self.project.data / "cache" / "worker"
+        # Out of the project: macOS refuses to launch an app whose log is in a protected folder
+        # (Downloads, Documents, Desktop — `open` fails with -10810), and projects live there.
+        key = hashlib.sha1(str(self.project.root.resolve()).encode()).hexdigest()[:12]
+        d = sl.user_dir() / "blenders" / key
         return d if self.index == 0 else d / f"blender-{self.index + 1}"
 
     def port_now(self) -> int:
@@ -571,9 +576,17 @@ def system_context(project: sl.Project, job: dict, port: int, lang: str) -> str:
                    "Before any download, say its size and licence and end with a KILN-PROPOSAL line asking to go "
                    "ahead; a licence that limits use (non-commercial, not in the EU) is said plainly."
               if job.get("key") == SETUP_KEY
-              else "This conversation is about a model the user asked for in Studio's Create form. When it "
-                   "exists, close the request with its asset (`studio.py request <id> --asset <asset>`).")
+              else "This conversation is about a model the user asked for in Studio's Create form. As soon as "
+                   "you have named the model's folder, link the request to it (`studio.py request <id> --status open "
+                   "--asset <asset>`): the page then shows this conversation on the model, and its approvals. Once "
+                   "the model is final, close the request (`studio.py request <id> --asset <asset>`).")
+    # The language first, and in that language: the skill's report templates and the tools' output
+    # are in English, and a line at the end of English instructions was not enough to hold it.
+    language = ("Écris tous tes messages à l'utilisateur en français, du premier au dernier, y compris les bilans "
+                "et les blocs du skill, même si ces instructions et les sorties d'outils sont en anglais."
+                if lang == "fr" else "Write every message to the user in English, unless they write in another language.")
     return "\n".join([
+        language,
         "You are running inside Kiln Studio, the user's browser page, started by its Claude worker with "
         "`claude -p`. There is no terminal: the user reads your messages in the page and answers in a later turn.",
         f"Project root: {project.root}. The kiln skill's folder (<skill>): {PLUGIN}. Run its scripts as "
@@ -587,8 +600,10 @@ def system_context(project: sl.Project, job: dict, port: int, lang: str) -> str:
         "The page shows Accept / Decline; the answer comes as the next message.",
         "A shell command other than the skill's own scripts or a read-only command, or a write outside the "
         "project, waits for the user's approval in the page: make such a call alone in its message, never in "
-        "parallel with other calls.",
-        f"Reply in {'French' if lang == 'fr' else 'English'} unless the user writes in another language.",
+        "parallel with other calls. Each approval stops you and resumes you: avoid them. To change a file of "
+        "the project, use Edit or Write (allowed at once), never a sed, Python or heredoc script; copy and "
+        "move within the project, the skill's scripts and a background Blender running them pass too.",
+
     ])
 
 
@@ -912,7 +927,7 @@ class Worker:
         cmd = self.command(job, session, blender.port or self.project.settings()["blender_port"] + slot)
         env = dict(account_env(job["account"]), KILN_STUDIO_ROOT=str(self.project.root), KILN_PLUGIN_DIR=str(PLUGIN),
                    KILN_DECISIONS=str(self.decisions_dir()),
-                   KILN_APPROVALS="auto" if self.project.settings()["claude_approvals"] == "auto" else "ask",
+                   KILN_APPROVALS=self.project.settings()["claude_approvals"],
                    KILN_PAID="auto" if self.project.settings()["claude_paid"] == "auto" else "ask")
         err = (self.project.data / "cache" / "worker" / "claude.err").open("ab")
         t0 = time.time()
@@ -994,15 +1009,22 @@ class Worker:
                 proc.kill()
             proc.stdout.close()
             err.close()
-        job.update(ended=sl.now(), cost_usd=result.get("total_cost_usd"), turns=result.get("num_turns"),
+        # A resumed session reports its cost since it began: this run's share is the difference
+        # with what the session had reported before (each approval is a resume).
+        total = result.get("total_cost_usd")
+        before = self.store.session(job["key"]) or {}
+        same = result.get("session_id") and before.get("id") == result.get("session_id")
+        cost = None if total is None else round(max(0.0, total - ((before.get("cost_total") or 0) if same else 0)), 6)
+        job.update(ended=sl.now(), cost_usd=cost, turns=result.get("num_turns"),
                    duration_ms=result.get("duration_ms"), stop_reason=result.get("stop_reason"))
         self.store.usage({"at": sl.now(), "job": job["id"], "kind": job["kind"], "key": job["key"], "account": job["account"],
-                          "cost_usd": result.get("total_cost_usd"), "turns": result.get("num_turns"),
+                          "cost_usd": cost, "session_total": total, "turns": result.get("num_turns"),
                           "duration_ms": result.get("duration_ms"), "wall_s": round(time.time() - t0, 1),
                           "stop_reason": result.get("stop_reason")})
         if result.get("session_id"):
-            self.store.set_session(job["key"], id=result["session_id"], started=True, account=job["account"])
-        summary = {"job": job["id"], "role": "result", "cost_usd": result.get("total_cost_usd"),
+            self.store.set_session(job["key"], id=result["session_id"], started=True, account=job["account"],
+                                   **({"cost_total": total} if total is not None else {}))
+        summary = {"job": job["id"], "role": "result", "cost_usd": cost,
                    "turns": result.get("num_turns"), "duration_ms": result.get("duration_ms"),
                    "stop_reason": result.get("stop_reason")}
         if job.get("stop_requested"):

@@ -31,6 +31,7 @@ Blender coordinates (x, -z, y), front on -Y, Z up, which is what kiln models in.
 
 from __future__ import annotations
 
+import filecmp
 import fnmatch
 import hashlib
 import json
@@ -50,7 +51,7 @@ from urllib.parse import unquote
 DATA_DIR = ".kiln-studio"
 MODEL_EXTS = (".glb", ".gltf", ".fbx", ".obj")
 # kiln's pipeline stages, best first: the default variant is the most finished one.
-KILN_STAGES = ("final", "optimized", "textured", "clean", "original")
+KILN_STAGES = ("final", "optimized", "textured", "clean", "original", "preview")   # preview: a copy of original, for Quick Look
 # The scratch export kiln writes after each phase while it builds: first while it is the
 # newest file of the asset (the build is under way), last once a real stage is newer.
 LIVE = "live"
@@ -228,7 +229,7 @@ CONFIG_DEFAULTS = {"live_view": True, "auto_open": True, "exclude": [], "target"
                    "claude_paid": "ask",
                    # Studio's Blender opens behind the other windows, without taking focus.
                    "blender_behind": True}
-CLAUDE_APPROVALS = ("ask", "auto")
+CLAUDE_APPROVALS = ("ask", "auto", "all")   # claude_paid takes ask or auto only
 
 
 def user_dir() -> Path:
@@ -276,7 +277,7 @@ def clean_config(data: dict) -> dict:
         out["blender_mcp"] = data["blender_mcp"]
     if data.get("claude_approvals") in CLAUDE_APPROVALS:
         out["claude_approvals"] = data["claude_approvals"]
-    if data.get("claude_paid") in CLAUDE_APPROVALS:
+    if data.get("claude_paid") in ("ask", "auto"):
         out["claude_paid"] = data["claude_paid"]
     if _parallel_ok(data.get("claude_parallel")):
         out["claude_parallel"] = data["claude_parallel"]
@@ -305,8 +306,10 @@ def save_config(project: "Project", updates: dict) -> dict:
                              "(the usual Blender MCP port, kept for your own Blender)")
         if k == "blender_mcp" and v not in BLENDER_MCPS:
             raise ValueError(f"blender_mcp must be one of {', '.join(BLENDER_MCPS)}")
-        if k in ("claude_approvals", "claude_paid") and v not in CLAUDE_APPROVALS:
-            raise ValueError(f"{k} must be ask or auto")
+        if k == "claude_approvals" and v not in CLAUDE_APPROVALS:
+            raise ValueError("claude_approvals must be ask, auto or all")
+        if k == "claude_paid" and v not in ("ask", "auto"):
+            raise ValueError("claude_paid must be ask or auto")
         if k == "claude_parallel" and not _parallel_ok(v):
             raise ValueError(f"claude_parallel must be 1 to {MAX_PARALLEL}")
         if k == "claude_model" and not (isinstance(v, str) and (v == "" or MODEL_RE.match(v))):
@@ -423,6 +426,11 @@ def _group_dir(project: Project, d: Path, models: list[str]) -> list[Asset]:
             seen_labels.add(lab)
             st = p.stat()
             variants.append(Variant(lab, p, p.relative_to(project.root).as_posix(), st.st_size, st.st_mtime))
+        # _preview is kiln's copy of _original for Quick Look: the same model twice is no stage to pick.
+        orig = next((v for v in variants if v.label == "original"), None)
+        if orig:
+            variants = [v for v in variants if not (v.label == "preview" and v.size == orig.size
+                                                    and filecmp.cmp(v.path, orig.path, shallow=False))]
         # A folder named after the asset is kiln's per-asset output folder: the id is
         # the folder, and every side file in it belongs to the asset.
         own_folder = kiln and d.name == name and rel_dir

@@ -719,11 +719,30 @@ function renderEmpty() {
   $('#topbar').hidden = $('#views').hidden = $('#bottom').hidden = none;
   fitSoon();
   if (!none) return;
+  if (renderMaking()) return;
   if (state.assets.length) {
     $('#empty').innerHTML = `<div><p class="big">${esc(t('No model picked'))}</p><p>${esc(t('Choose one on the left. Models re-exported by Claude show up here on their own, and a model kiln is building opens here as it is built.'))}</p></div>`;
     return;
   }
   renderWelcome();
+}
+
+// A model Claude is making that has no file yet (the brief, the first steps): the view says
+// so, with its last action, instead of the welcome or "no model picked". It opens on its own
+// once kiln exports the first stage.
+const makingJob = () => claudeLive().find((j) => String(j.key || '').startsWith('request:') && !(j.asset && state.byId.has(j.asset)));
+function renderMaking() {
+  const el = $('#empty'), j = !state.id && makingJob();
+  if (!j) { if (el.dataset.making) { delete el.dataset.making; renderEmpty(); } return false; }
+  const line = claude.activity.get(j.id) || (j.state === 'waiting' ? t('Claude waits for your answer') : t('Starting…'));
+  const html = `<div class="making"><span class="spin" aria-hidden="true"></span>
+    <p class="big">${esc(j.state === 'waiting' ? t('Claude waits for your answer') : t('Claude is making your model'))}</p>
+    ${j.brief ? `<p class="brief">${esc(j.brief.length > 220 ? `${j.brief.slice(0, 220)}…` : j.brief)}</p>` : ''}
+    <p class="work-line">${esc(line.replace(/\s+/g, ' ').slice(0, 160))}</p>
+    <p class="dim">${esc(t('It shows here as soon as kiln exports its first stage.'))} <button class="linkish" data-open-key="${esc(j.key)}">${esc(t('Follow it in the ✦ tab'))}</button></p></div>`;
+  if (el._making !== html) { el.innerHTML = html; el._making = html; }
+  el.dataset.making = '1';
+  return true;
 }
 
 // ── welcome: an empty project ────────────────────────────────────────────────
@@ -765,7 +784,7 @@ function renderWelcome() {
       } catch (err) { toast(esc(err.message), 'warn', 6000); }
     };
   }
-  if (!setup) api('/api/status').then((s) => { setup = s; if (!state.assets.length && !state.id) renderWelcome(); }).catch(() => {});
+  if (!setup) api('/api/status').then((s) => { setup = s; if (!state.assets.length && !state.id) renderEmpty(); }).catch(() => {});
 }
 function setupRow(r) {
   const d = r.data || {};
@@ -830,7 +849,11 @@ function renderTitle() {
   $('#asset-name').title = d.id;
   const stages = $('#stages');
   stages.hidden = d.variants.length < 2;
-  stages.innerHTML = d.variants.map((x) => `<button role="radio" aria-checked="${x.label === v.label}" class="${x.label === v.label ? 'on' : ''}" data-v="${esc(x.label)}" title="${esc(x.file)}">${esc(x.label)}</button>`).join('');
+  // What each kiln stage is: stages of one model can look the same (final = original, compressed).
+  const stageWhat = { final: t('The delivered file: compressed for its use. Looks like the stage before it.'), original: t('The export from Blender, uncompressed.'),
+    optimized: t('Lighter: fewer triangles or smaller textures.'), textured: t('With its materials and textures.'), clean: t('Cleaned up: merged, normals fixed.'),
+    live: t('Kiln\'s latest step while it builds.'), preview: t('A copy for Quick Look.') };
+  stages.innerHTML = d.variants.map((x) => `<button role="radio" aria-checked="${x.label === v.label}" class="${x.label === v.label ? 'on' : ''}" data-v="${esc(x.label)}" title="${esc([stageWhat[x.label.split('.')[0]], x.file].filter(Boolean).join(' — '))}">${esc(x.label)}</button>`).join('');
   $$('button', stages).forEach((b) => (b.onclick = () => { if (b.dataset.v !== state.variant) loadVariant(b.dataset.v); }));
   const tris = v.stats?.tris ?? s?.tris;
   const dims = v.stats?.dimensions_blender || s?.dims;
@@ -1203,6 +1226,7 @@ function renderCounts() {
   const tn = $('#tc-notes'), rn = $('#rc-notes');
   tn.textContent = active ? fmtN(active) : '';
   tn.className = 'tc ' + (c.addressed ? 'cnt addressed' : c.open ? 'cnt open' : '');
+  tn.title = [c.addressed && tp(c.addressed, '{n} note to check', '{n} notes to check'), c.open && tp(c.open, '{n} open note', '{n} open notes')].filter(Boolean).join(' · ');
   rn.hidden = !active; rn.textContent = fmtN(active); rn.className = 'cnt ' + (c.addressed ? 'addressed' : 'open');
   const w = d?.checks ? checksFor(currentVariant()?.label).filter((r) => r.level === 'warn').length : 0;
   $('#tc-checks').textContent = w ? fmtN(w) : '';
@@ -1224,10 +1248,25 @@ function shotHtml(x, cap, cls = '') {
   return `<button class="shot" data-act="view" aria-label="${esc(t('Open the {cap} picture', { cap }))}"><img src="${esc(fileUrl(x.shot))}" alt="">${x.detail ? `<img class="inset" src="${esc(fileUrl(x.detail))}" alt="${esc(t('Close-up of the pin'))}">` : ''}<span class="cap ${cls}">${esc(cap)}</span></button>`;
 }
 
+// A reply's text: a summary line, then "- " lines as a list; **bold** and `code`, the rest as text.
+function replyBody(s) {
+  const inline = (x) => esc(x).replace(/`([^`\n]+)`/g, '<code>$1</code>').replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>');
+  let html = '', list = [];
+  const flush = () => { if (list.length) { html += `<ul>${list.map((x) => `<li>${inline(x)}</li>`).join('')}</ul>`; list = []; } };
+  for (const line of String(s ?? '').split('\n')) {
+    const m = line.match(/^\s*[-•*]\s+(.*)$/);
+    if (m) { list.push(m[1]); continue; }
+    flush();
+    if (line.trim()) html += `<p>${inline(line.trim())}</p>`;
+  }
+  flush();
+  return html;
+}
+
 function replyHtml(r) {
   const st = r.status ? ` <span class="status ${r.status}">${esc(statusLabel(r.status))}</span>` : '';
   const ver = r.status === 'addressed' && r.version ? ` · ${esc(t('on {v}', { v: `${r.version.variant} ${r.version.hash.slice(0, 7)}` }))}` : '';
-  return `<div class="reply ${r.by === 'claude' ? 'claude' : 'you'}"><div class="who"><b>${r.by === 'claude' ? 'Claude' : esc(t('You'))}</b> · <span title="${esc(stamp(r.at))}">${esc(ago(r.at))}</span>${ver}${st}</div>${r.text ? `<div class="body">${esc(r.text)}</div>` : ''}</div>`;
+  return `<div class="reply ${r.by === 'claude' ? 'claude' : 'you'}"><div class="who"><b>${r.by === 'claude' ? 'Claude' : esc(t('You'))}</b> · <span title="${esc(stamp(r.at))}">${esc(ago(r.at))}</span>${ver}${st}</div>${r.text ? `<div class="body">${replyBody(r.text)}</div>` : ''}</div>`;
 }
 
 function actionsHtml(n) {
@@ -1243,12 +1282,14 @@ function noteEl(n) {
   const stale = isStale(n);
   const after = latestShot(n);
   const lastAddressed = [...(n.thread || [])].reverse().find((r) => r.status === 'addressed');
-  const waiting = lastAddressed && !lastAddressed.shot && d.pending.some((p) => p.reply === lastAddressed.id);
+  // An after view is rendered from the note's camera: a note without one (written by a script) gets none.
+  const waiting = n.camera && lastAddressed && !lastAddressed.shot && d.pending.some((p) => p.reply === lastAddressed.id);
   const a = n.anchor, num = noteNumber(n);
   const before = n.shot ? { shot: n.shot, detail: n.detail } : null;
   let shots = '';
-  if (after) shots = shotHtml(before, t('before')) + shotHtml(after, t('after'), 'after');
-  else if (waiting) shots = shotHtml(before, t('before')) + shotHtml(null, '');
+  // Only frames with something in them: no empty box where a note has no screenshot.
+  if (after) shots = (before ? shotHtml(before, t('before')) : '') + shotHtml(after, t('after'), 'after');
+  else if (waiting) shots = (before ? shotHtml(before, t('before')) : '') + shotHtml(null, '');
   else if (before) shots = shotHtml(before, stale ? t('on an earlier version') : t('when noted'));
   const el = document.createElement('article');
   el.className = `note${state.hl === n.id ? ' hl' : ''}`;
@@ -1260,7 +1301,7 @@ function noteEl(n) {
       : `<p class="text">${esc(n.text)}</p>`}
     ${a ? `<div class="where">${esc(a.object || a.mesh || '')}${a.material ? ` · ${esc(a.material)}` : ''}${a.bone ? ` · ${esc(t('bone {b}', { b: a.bone }))}` : ''} · ${esc(a.region || '')}</div>` : ''}
     ${stale && n.status === 'open' ? `<div class="stale">${esc(t('Made on an earlier version ({h}); the model has changed since.', { h: n.version.hash.slice(0, 7) }))}</div>` : ''}
-    ${shots ? `<div class="shots${after || waiting ? '' : ' one'}">${shots}</div>` : ''}
+    ${shots ? `<div class="shots${before && (after || waiting) ? '' : ' one'}">${shots}</div>` : ''}
     ${(n.thread || []).length ? `<div class="thread">${n.thread.map(replyHtml).join('')}</div>` : ''}
     ${state.replying?.id === n.id ? `<div class="reply-box"><textarea class="reply-text" rows="2" placeholder="${esc(state.replying.status === 'open' ? t('What still needs to change?') : t('Reply…'))}" aria-label="${esc(t('Reply'))}"></textarea><div class="row"><button class="btn sm accent" data-act="send-reply">${esc(state.replying.status === 'open' ? t('Reopen') : t('Send'))}</button><button class="btn sm" data-act="cancel-reply">${esc(t('Cancel'))}</button></div></div>` : ''}
     <div class="actions">${actionsHtml(n)}</div>`;
@@ -1974,6 +2015,7 @@ function claudeChanged() {
   renderClaudePill();
   // The open notes' block follows Claude on the open model (off, free, working, waiting).
   renderNotesWork();
+  if (!state.id && (makingJob() || $('#empty').dataset.making)) renderMaking();
   const waiting = claudeLive().filter((j) => j.state === 'waiting').length;
   const base = state.name ? `${state.name} · Kiln Studio` : 'Kiln Studio';
   document.title = waiting ? `(${waiting}) ${base}` : base;
@@ -2131,7 +2173,7 @@ function renderClaude() {
   const a = st.auth || {};
   $('#cl-hint').innerHTML = busy ? esc(t('Claude is working: send when it is done, or stop it.'))
     : a.ok === false ? `<span class="warn-t">${esc(accountWords(a))}</span>`
-    : esc(t('On {who} · Blender of Studio, port {p}', { who: accountWords(a), p: st.port }));
+    : esc(t('On {who} · in its own Blender, never yours (port {p})', { who: accountWords(a), p: st.port }));
 }
 
 // What goes with the words: a capture of the view, when asked. The worker puts it ahead of
@@ -2248,7 +2290,7 @@ function renderClaudePill() {
   const util = st.account === 'api_key' ? null : session?.used;
   const btn = $('#cl-pill-btn');
   btn.className = `cl-pill-btn${wait.length ? ' wait' : run ? ' run' : ''}`;
-  btn.innerHTML = `<span class="dot${run && !wait.length ? ' pulse' : ''}"></span><b>Claude</b><span>${esc(
+  btn.innerHTML = `<span class="dot${run && !wait.length ? ' pulse' : ''}"></span><b>Claude</b><span class="lbl">${esc(
     wait.length ? tp(wait.length, 'waits for you', '{n} wait for you') : run ? t('on {name}', { name: jobLabel(run) }) : t('ready'))}</span>${queue.length ? `<span class="sep"></span><span>${esc(t('{n} in line', { n: queue.length }))}</span>` : ''}${util != null ? `<span class="sep"></span><span class="qbar" title="${esc(quotaName(session.key))}"><i class="${util >= 0.9 ? 'hot' : ''}" style="width:${Math.round(util * 100)}%"></i></span><span>${Math.round(util * 100)} %</span>` : ''}`;
   btn.setAttribute('aria-expanded', String(claude.menu));
   $('#cl-act').hidden = !claude.menu;
@@ -2294,7 +2336,7 @@ async function onClaude(ev) {
   // What Claude did last, per run: one line in the Notes tab while it works.
   const said = ev.type === 'claude-text' ? ev.text : ev.entry?.role === 'assistant' ? ev.entry.text
     : ev.entry?.role === 'tool' ? String(ev.entry.tool || '').replace(/^mcp__(plugin_[^_]+(?:-[^_]+)*_)?/, '').replace(/__/g, ' · ') : null;
-  if (said) { claude.activity.set(ev.type === 'claude-text' ? ev.job : ev.job?.id, said); renderNotesWork(); }
+  if (said) { claude.activity.set(ev.type === 'claude-text' ? ev.job : ev.job?.id, said); renderNotesWork(); if (!state.id) renderMaking(); }
   if (ev.type === 'claude-text') {
     if (ev.key !== threadKey()) return;
     claude.partial = { job: ev.job, text: ev.text };
@@ -2618,7 +2660,7 @@ async function switchLang(v) {
   syncPersonal(); syncProject();
   claudeChanged(); renderClaude(); syncClaudeSettings(false);
   if (!$('#settings .set-pane[data-pane="setup"]').hidden && setup) $('#set-setup').innerHTML = setup.rows.map(setupRow).join('');
-  if (!state.assets.length && !state.id) renderWelcome();
+  if (!state.assets.length && !state.id) renderEmpty();
 }
 function syncPersonal() {
   syncLang();
@@ -2721,9 +2763,11 @@ async function syncClaudeSettings(fresh = true) {
       <div class="srow in"><div class="st"><label for="set-budget"><b>${esc(t('Cap per request'))}</b></label><span>${esc(t('A request stops when it has spent this much.'))}</span></div><div class="sc"><input id="set-budget" type="number" min="0.1" max="100" step="0.5" class="num" value="${esc(st.budget_usd)}"> <span class="dim small">$</span></div></div>`;
   $('#set-acc').innerHTML = more;
   $('#set-acc').hidden = !more;
-  $('#set-approvals-help').textContent = st.approvals === 'auto'
-    ? t('Claude Code decides alone; what it judges risky is refused, without asking you.')
-    : t('Reading, the project\'s files and kiln\'s scripts go through; anything else waits for your OK.');
+  $('#set-approvals-help').textContent = st.approvals === 'all'
+    ? t('Everything that makes the model goes through, without asking. Still asked: paid generation (below), a write outside the project, sudo, deleting outside the project.')
+    : st.approvals === 'auto'
+      ? t('Claude Code decides alone; what it judges risky is refused, without asking you.')
+      : t('Reading, the project\'s files and kiln\'s scripts go through; anything else waits for your OK.');
   const m = st.machine || {}, max = Math.max(1, m.max_parallel || 1);
   $('#set-parallel').innerHTML = [1, 2, 3, 4].map((n) => `<button data-v="${n}"${n > max ? ` title="${esc(t('More than this computer takes comfortably'))}" class="over"` : ''}>${n}</button>`).join('');
   segSet('#set-parallel', String(st.parallel));
@@ -2991,7 +3035,7 @@ window.addEventListener('hashchange', fromHash);
     return;
   }
   liveEvents();
-  claudeStatus().then(() => { renderClaude(); if (!state.assets.length && !state.id) renderWelcome(); });
+  claudeStatus().then(() => { renderClaude(); if (!state.assets.length && !state.id) renderEmpty(); });
   fromHash();
   // The fonts change the bar's width once they load.
   document.fonts?.ready.then(fitSoon);
