@@ -1,6 +1,7 @@
 """A model's hand-off: every output in one zip, with a sheet that says what each file is for.
 
-    make_package(project, asset, lang) -> (zip name, zip bytes)
+    listing(project, asset, lang)                    -> the outputs and their files (the dialog)
+    make_package(project, asset, lang, outs, sheet)  -> (zip name, zip bytes)
 
 The outputs keep their folders (web/, game/, ar/, print/; a final at the root, from
 before, goes in web/). Only the deliverables: a print's working .blend or a check's
@@ -73,10 +74,10 @@ def _num(x: float, lang: str, digits: int = 0) -> str:
     return s.replace(",", "\u202f").replace(".", ",") if lang == "fr" else s
 
 
-def make_package(project: sl.Project, a: sl.Asset, lang: str = "en") -> tuple[str, bytes]:
-    w = WORDS.get(lang, WORDS["en"])
+def contents(a: sl.Asset) -> tuple[list[tuple[str, str, Path]], list[str]]:
+    """The deliverables, in order — (output, folder, path) — and the outputs to redo."""
     src = next((v for v in a.variants if v.label == "original"), None)
-    files: list[tuple[str, str, Path]] = []   # (output, folder, path)
+    files: list[tuple[str, str, Path]] = []
     stale: list[str] = []
     for v in a.variants:
         out = output_of(v)
@@ -96,7 +97,42 @@ def make_package(project: sl.Project, a: sl.Asset, lang: str = "en") -> tuple[st
     for out, folder, f in files:   # a final at the root and one in web/: the first, once
         uniq.setdefault((folder, f.name), (out, folder, f))
     order = ["web", "game", "ar", "print"]
-    files = sorted(uniq.values(), key=lambda x: (order.index(x[0]), x[2].suffix.lower() != ".3mf", x[2].name))
+    return sorted(uniq.values(), key=lambda x: (order.index(x[0]), x[2].suffix.lower() != ".3mf", x[2].name)), stale
+
+
+def use_of(out: str, f: Path, lang: str = "en") -> str:
+    """What a file is for, in a line."""
+    w = WORDS.get(lang, WORDS["en"])
+    ext = f.suffix.lower()
+    if out == "web":
+        draco = ext in (".glb", ".gltf") and "KHR_draco_mesh_compression" in (sl.read_gltf_json(f).get("extensionsUsed") or [])
+        return w["web"] if draco else w["web_plain"]
+    if out == "ar":
+        return w["ar_usdz"] if ext == ".usdz" else w["ar_glb"]
+    if out == "print":
+        return w["print_3mf"] if ext == ".3mf" else w["print_stl"]
+    return w["game"]
+
+
+def listing(project: sl.Project, a: sl.Asset, lang: str = "en") -> list[dict]:
+    """The outputs a package can hold, for the download dialog: each with its files."""
+    files, stale = contents(a)
+    rows: dict[str, dict] = {}
+    for out, folder, f in files:
+        r = rows.setdefault(out, {"out": out, "stale": out in stale, "files": []})
+        r["files"].append({"path": f"{folder}/{f.name}", "file": f.relative_to(project.root).as_posix(), "size": f.stat().st_size, "use": use_of(out, f, lang)})
+    return list(rows.values())
+
+
+def make_package(project: sl.Project, a: sl.Asset, lang: str = "en", outs: list[str] | None = None,
+                 sheet: bool = True) -> tuple[str, bytes]:
+    """outs: the outputs to put in (all when None); sheet: the LISEZ-MOI / README with them."""
+    w = WORDS.get(lang, WORDS["en"])
+    src = next((v for v in a.variants if v.label == "original"), None)
+    files, stale = contents(a)
+    if outs is not None:
+        files = [x for x in files if x[0] in outs]
+        stale = [o for o in stale if o in outs]
     # The sheet.
     dims = (sl.variant_stats(src) if src else None) or {}
     dims = dims.get("dimensions_blender") or next(
@@ -108,15 +144,7 @@ def make_package(project: sl.Project, a: sl.Asset, lang: str = "en") -> tuple[st
         ext = f.suffix.lower()
         st = sl.stl_stats(f) if ext == ".stl" else sl.threemf_stats(f) if ext == ".3mf" else \
             sl.gltf_stats(f) if ext in (".glb", ".gltf") else {}
-        if out == "web":
-            draco = ext in (".glb", ".gltf") and "KHR_draco_mesh_compression" in (sl.read_gltf_json(f).get("extensionsUsed") or [])
-            use = w["web"] if draco else w["web_plain"]
-        elif out == "ar":
-            use = w["ar_usdz"] if ext == ".usdz" else w["ar_glb"]
-        elif out == "print":
-            use = w["print_3mf"] if ext == ".3mf" else w["print_stl"]
-        else:
-            use = w["game"]
+        use = use_of(out, f, lang)
         tris = st.get("tris")
         lines.append(f"| {folder}/ | `{f.name}` | {use} | {_kb(f.stat().st_size, lang)} | {_num(tris, lang) if tris else '—'} |")
     if stale:
@@ -133,12 +161,9 @@ def make_package(project: sl.Project, a: sl.Asset, lang: str = "en") -> tuple[st
     lines += ["", f"## {w['kept']}", "", w["kept_text"].format(dir=a.folder if a.folder != "." else a.id), ""]
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr(f"{a.name}/{w['sheet']}", "\n".join(lines))
-        seen = set()
+        if sheet:
+            z.writestr(f"{a.name}/{w['sheet']}", "\n".join(lines))
         for _out, folder, f in files:
-            arc = f"{a.name}/{folder}/{f.name}"
-            if arc not in seen:   # a final at the root and one in web/: the first, once
-                seen.add(arc)
-                z.write(f, arc)
+            z.write(f, f"{a.name}/{folder}/{f.name}")
     return f"{a.name}.zip", buf.getvalue()
 

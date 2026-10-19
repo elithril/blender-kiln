@@ -335,6 +335,14 @@
   <ul id="pal-list" role="listbox" aria-label="Commands" data-i18n-attr="aria-label"></ul>
   <div class="pal-foot dim"><span><kbd>↑</kbd> <kbd>↓</kbd> <span data-i18n>to move</span></span><span><kbd>↵</kbd> <span data-i18n>to run</span></span><span><kbd>?</kbd> <span data-i18n>all the keys</span></span></div>
 </dialog>
+<dialog id="dl" aria-labelledby="dl-title">
+  <header class="set-head"><h3 id="dl-title" data-i18n>Download</h3><form method="dialog"><button class="btn sm" data-i18n>Close</button></form></header>
+  <div class="dl-body">
+    <div id="dl-list"></div>
+    <label class="dl-sheet"><input type="checkbox" id="dl-sheet" checked><span><b data-i18n>Add a sheet</b><span class="dim" data-i18n>What each file is for, its size, its triangles, the licences: to send with the files.</span></span></label>
+  </div>
+  <footer class="dl-foot"><span class="dim" id="dl-sum"></span><a class="btn accent" id="dl-go" download autofocus data-i18n>Download</a></footer>
+</dialog>
 <dialog id="confirm"><p></p><form method="dialog"><button class="btn" value="cancel" data-i18n>Cancel</button><button class="btn accent" value="ok">OK</button></form></dialog>
 
 <script type="module" src="/static/app.js"></script>

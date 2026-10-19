@@ -1208,5 +1208,30 @@ svg.spark { width: 14px; height: 14px; fill: var(--new); stroke: none; flex: non
 .outputs .out.add:disabled { opacity: .45; cursor: progress; }
 .outputs .out-sep { width: 1px; height: 16px; background: var(--line-2); margin: 0 4px; }
 .outputs .btn.icon svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.outputs .out-all { gap: 5px; margin-left: 2px; }
-.outputs .out-all svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.outputs .out-dl { gap: 5px; }
+.outputs .out-dl svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+/* the download dialog: an output per row, its files under it; the sheet; one button */
+#dl { width: min(560px, calc(100vw - 24px)); }
+#dl .set-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+#dl .set-head h3 { margin: 0; font-size: 15px; }
+#dl .set-head form { margin: 0; }
+#dl .dl-body { padding: 10px 12px; display: grid; gap: 4px; max-height: 60vh; overflow: auto; }
+#dl .dl-row, #dl .dl-sheet { display: flex; gap: 10px; align-items: flex-start; padding: 9px 8px; border-radius: 8px; cursor: pointer; }
+#dl .dl-row:hover, #dl .dl-sheet:hover { background: var(--panel-3); }
+#dl input[type="checkbox"] { margin: 2px 0 0; accent-color: var(--accent); flex: none; }
+#dl .dl-what { display: grid; gap: 3px; min-width: 0; }
+#dl .dl-what b { font-size: 13px; font-weight: 600; display: flex; align-items: baseline; gap: 6px; }
+#dl .dl-what i { font-style: normal; font-weight: 700; font-size: 11px; }
+#dl .dl-what i.ok { color: var(--ok); }
+#dl .dl-what i.stale, #dl .dl-warn { color: var(--warn); }
+#dl .dl-warn { font-weight: 400; font-size: 11.5px; }
+#dl .dl-file { display: flex; gap: 8px; align-items: baseline; font-size: 11.5px; min-width: 0; }
+#dl .dl-file code { font: 11.5px var(--mono); color: var(--text-2); flex: none; }
+#dl .dl-file .dim { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#dl .dl-sheet { border-top: 1px solid var(--line); border-radius: 0 0 8px 8px; margin-top: 4px; padding-top: 12px; }
+#dl .dl-sheet > span { display: grid; gap: 2px; font-size: 13px; }
+#dl .dl-sheet .dim { font-size: 11.5px; }
+#dl .dl-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; border-top: 1px solid var(--line); }
+#dl .dl-foot .dim { font-size: 12px; }
+#dl #dl-go { text-decoration: none; }
+#dl #dl-go.disabled { opacity: .45; pointer-events: none; }

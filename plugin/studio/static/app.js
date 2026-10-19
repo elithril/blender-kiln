@@ -886,7 +886,6 @@ function outputOf(v) {
   if (kind === 'final' && (ext === '.glb' || ext === '.gltf')) return 'web';
   return null;
 }
-const outputDir = (v) => { const m = /\/(web|game|ar|print)\/[^/]+$/.exec(v.file); return m ? v.file.slice(0, v.file.length - m[0].length + m[1].length + 1) : null; };
 function outputAsk(key, name) {
   return {
     web: t('Export {name} for the web: web/{name}_final.glb in its folder, compressed, with kiln\'s settings for the web.', { name }),
@@ -912,13 +911,10 @@ function renderOutputs(d, v) {
     if (x) return `<button class="out on${x.label === v.label ? ' cur' : ''}" data-out-v="${esc(x.label)}" title="${esc(`${t('Up to date.')} ${t(o.what)} — ${x.file}`)}"><i aria-hidden="true">✓</i>${esc(t(o.name))}</button>`;
     return `<button class="out add" data-out-make="${o.key}"${busy ? ' disabled' : ''} title="${esc(t('Prepare: {what}', { what: t(o.what) }))}"><i aria-hidden="true">+</i>${esc(t(o.name))}</button>`;
   }).join('');
-  // An output with several files (print, AR) downloads as its folder, zipped.
-  const dir = ['print', 'ar'].includes(outputOf(v)) && outputDir(v);
-  const dl = dir ? { href: `${fileUrl(dir)}?zip=1`, what: dir.split('/').slice(-2).join('_') + '.zip' } : { href: `${fileUrl(v.file)}?download=1`, what: v.file.split('/').pop() };
+  // One "Download": a dialog to pick the outputs, with or without the sheet.
   const file = `<span class="out-sep" aria-hidden="true"></span>
-    <a class="btn icon sm ghost" href="${esc(dl.href)}" download title="${esc(t('Download {f}', { f: dl.what }))}" aria-label="${esc(t('Download'))}"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"/></svg></a>
-    <button class="btn icon sm ghost" data-out-reveal="${esc(v.file)}" title="${esc(t('Show in the Finder'))}" aria-label="${esc(t('Show in the Finder'))}"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></svg></button>
-    ${have.size ? `<a class="btn sm ghost out-all" href="/api/asset/${enc(d.id)}/package?lang=${getLang()}" download title="${esc(t('Every output in one zip, with a sheet saying what each file is for, its size and its licences: ready to send.'))}"><svg viewBox="0 0 24 24"><path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/></svg>${esc(t('Download all'))}</a>` : ''}`;
+    ${have.size ? `<button class="btn sm ghost out-dl" data-out-dl title="${esc(t('Pick the outputs to download, with a sheet saying what each file is for: ready to send.'))}"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"/></svg>${esc(t('Download'))}</button>` : ''}
+    <button class="btn icon sm ghost" data-out-reveal="${esc(v.file)}" title="${esc(t('Show in the Finder'))}" aria-label="${esc(t('Show in the Finder'))}"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></svg></button>`;
   el.innerHTML = `<span class="out-label">${esc(t('Outputs'))}</span>${chips}${file}`;
   // Another file can be another layout (a print's parts on the bed): framed anew.
   $$('[data-out-v]', el).forEach((b) => (b.onclick = async () => {
@@ -927,7 +923,44 @@ function renderOutputs(d, v) {
     if (b.dataset.outStale) toast(`${esc(t('This output was made before the model last changed.'))} <button class="linkish" data-out-redo="${b.dataset.outStale}">${esc(t('Redo it'))}</button>`, 'warn', 9000);
   }));
   $$('[data-out-make]', el).forEach((b) => (b.onclick = () => makeOutput(b.dataset.outMake)));
+  $$('[data-out-dl]', el).forEach((b) => (b.onclick = () => openDownload()));
   $$('[data-out-reveal]', el).forEach((b) => (b.onclick = () => assetApi(state.id, '/reveal', { method: 'POST', body: { file: b.dataset.outReveal } }).catch((e) => toast(esc(e.message), 'warn'))));
+}
+const fmtSize = (n) => {
+  const fr = getLang() === 'fr', num = (x, d) => x.toLocaleString(fr ? 'fr-FR' : 'en-US', { maximumFractionDigits: d });
+  return n >= 1048576 ? `${num(n / 1048576, 1)} ${fr ? 'Mo' : 'MB'}` : n >= 1024 ? `${num(Math.round(n / 1024), 0)} ${fr ? 'Ko' : 'KB'}` : `${n} ${fr ? 'o' : 'B'}`;
+};
+// The download dialog: every output there, checked; one file alone downloads as is, else a zip.
+async function openDownload() {
+  const d = state.detail, dlg = $('#dl');
+  let outs;
+  try { outs = (await assetApi(d.id, `/outputs?lang=${getLang()}`)).outputs; } catch (e) { toast(esc(e.message), 'warn'); return; }
+  $('#dl-title').textContent = t('Download {name}', { name: d.name });
+  $('#dl-list').innerHTML = outs.map((o) => {
+    const meta = OUTPUTS.find((x) => x.key === o.out);
+    return `<label class="dl-row"><input type="checkbox" data-dl-out="${o.out}" checked>
+      <span class="dl-what"><b><i class="${o.stale ? 'stale' : 'ok'}" aria-hidden="true">${o.stale ? '↻' : '✓'}</i>${esc(t(meta.name))}${o.stale ? ` <span class="dl-warn">${esc(t('made before the model last changed'))}</span>` : ''}</b>
+      ${o.files.map((f) => `<span class="dl-file"><code>${esc(f.path)}</code><span class="dim" title="${esc(f.use)}">${esc(fmtSize(f.size))} · ${esc(f.use)}</span></span>`).join('')}</span></label>`;
+  }).join('');
+  const sync = () => {
+    const picked = outs.filter((o) => $(`[data-dl-out="${o.out}"]`, dlg).checked);
+    const files = picked.flatMap((o) => o.files), sheet = $('#dl-sheet').checked;
+    const go = $('#dl-go'), size = files.reduce((n, f) => n + f.size, 0);
+    if (!files.length) $('#dl-sum').textContent = t('Pick at least one output.');
+    else if (files.length === 1 && !sheet) {
+      go.href = `${fileUrl(files[0].file)}?download=1`;
+      $('#dl-sum').textContent = `${files[0].path.split('/').pop()} · ${fmtSize(size)}`;
+    } else {
+      go.href = `/api/asset/${enc(d.id)}/package?lang=${getLang()}&outs=${picked.map((o) => o.out).join(',')}&sheet=${sheet ? 1 : 0}`;
+      $('#dl-sum').textContent = t('{n} files · {size} → {zip}', { n: files.length + (sheet ? 1 : 0), size: fmtSize(size), zip: `${d.name}.zip` });
+    }
+    go.classList.toggle('disabled', !files.length);
+    go.setAttribute('aria-disabled', String(!files.length));
+  };
+  $$('input', dlg).forEach((i) => (i.onchange = sync));
+  $('#dl-go').onclick = (e) => { if ($('#dl-go').classList.contains('disabled')) e.preventDefault(); else setTimeout(() => dlg.close(), 0); };
+  sync();
+  dlg.showModal();
 }
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-out-redo]'); if (b) makeOutput(b.dataset.outRedo, true); });
 async function makeOutput(key, redo = false) {

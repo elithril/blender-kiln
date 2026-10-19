@@ -922,6 +922,17 @@ class Api(Base):
         self.assertIn("Unity, Unreal", sheet)
         self.assertIn("**À refaire :** Jeu", sheet)
         self.assertIn("Poly Haven, CC0 — libre d'usage", sheet)
+        # The dialog lists each output and its files; a pick without the sheet holds only those.
+        code, d = self.req("GET", "/api/asset/generated-assets%2Fcrate/outputs?lang=fr")
+        self.assertEqual(code, 200)
+        self.assertEqual([o["out"] for o in d["outputs"]], ["web", "game", "print"])
+        self.assertTrue(d["outputs"][1]["stale"])
+        self.assertEqual([f["path"] for f in d["outputs"][2]["files"]], ["print/crate_print.3mf", "print/crate_print_lid.stl"])
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        c.request("GET", "/api/asset/generated-assets%2Fcrate/package?lang=fr&outs=print&sheet=0", headers={"Host": f"127.0.0.1:{self.port}"})
+        z = zipfile.ZipFile(io.BytesIO(c.getresponse().read()))
+        c.close()
+        self.assertEqual(sorted(z.namelist()), ["crate/print/crate_print.3mf", "crate/print/crate_print_lid.stl"])
 
     def test_assets_and_detail(self) -> None:
         code, data = self.req("GET", "/api/assets")
