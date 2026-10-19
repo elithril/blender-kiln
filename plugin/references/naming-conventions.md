@@ -101,9 +101,35 @@ generated-assets/
     ├── wooden-chair_optimized.glb
     ├── wooden-chair_final.glb
     ├── wooden-chair_preview.glb     (a copy of _original.glb: opens in macOS Quick Look)
+    ├── wooden-chair_final.fbx       (output: a game engine — Unity, Unreal)
+    ├── wooden-chair_final.usdz      (output: AR — iPhone, Vision Pro)
+    ├── wooden-chair_print.3mf       (output: 3D printing — every part, millimetres)
+    ├── wooden-chair_print_seat.stl  (one STL per part of that print)
     ├── wooden-chair.blend
     └── wooden-chair_log.md
 ```
+
+**Outputs** — one model, a file per use, beside the final; Kiln Studio's Outputs bar finds
+them by these names and offers to prepare the missing ones:
+
+| Output | File | How |
+|---|---|---|
+| Web | `{name}_final.glb` | the web target (Draco, WebP) |
+| Game | `{name}_final.fbx` | `references/export-targets.md` § FBX, from the same scene |
+| AR | `{name}_final.usdz` | `bpy.ops.wm.usd_export(filepath=…usdz)` from the same scene |
+| 3D print | `{name}_print.3mf` + `{name}_print_{part}.stl` | print mode (`references/print.md`), then the 3MF below |
+
+The 3MF gathers the checked STLs, as on the bed, in millimetres — PrusaSlicer's command line,
+**run from the model's folder** (a path in `-o` or no `--dont-arrange`: no file, and still
+exit 0):
+
+```bash
+cd generated-assets/wooden-chair
+/Applications/PrusaSlicer.app/Contents/MacOS/PrusaSlicer -m --dont-arrange --export-3mf \
+    -o wooden-chair_print.3mf wooden-chair_print_seat.stl wooden-chair_print_legs.stl
+```
+
+No PrusaSlicer: the STLs alone, and the report says the 3MF is missing.
 
 ---
 

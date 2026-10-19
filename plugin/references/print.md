@@ -293,6 +293,13 @@ drawing — a stylised subject — rather than a photo.
 
 ## A model you bring
 
+**Asked from Kiln Studio** ("Prepare for 3D printing" in the Outputs bar): the model exists,
+built for the screen. Run the method above on it — walls, closed solids, parts that print
+flat, `print_check` on each — then save the parts beside its final as
+`{name}_print_{part}.stl` (one part: `{name}_print.stl`) and gather them into
+`{name}_print.3mf` (`references/naming-conventions.md` § Outputs). Never touch its
+`_final.glb`: the print is another output of the same model, not a replacement.
+
 `print_check` works on any mesh, and `tools/flatten.py` is the one change kiln makes to a model
 it did not build. A model finished by hand often has faces that should be flat and are not,
 and sits a degree off; the slicer prints it as it is.

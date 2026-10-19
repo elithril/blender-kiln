@@ -9,6 +9,9 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+import { ThreeMFLoader } from 'three/addons/loaders/3MFLoader.js';
+import { USDLoader } from 'three/addons/loaders/USDLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
@@ -28,7 +31,7 @@ function makeLoaders(renderer) {
   const draco = new DRACOLoader().setDecoderPath(CDN + 'draco/gltf/');
   const ktx2 = new KTX2Loader().setTranscoderPath(CDN + 'basis/').detectSupport(renderer);
   const gltf = new GLTFLoader().setDRACOLoader(draco).setKTX2Loader(ktx2).setMeshoptDecoder(MeshoptDecoder);
-  return { gltf, fbx: new FBXLoader(), obj: new OBJLoader() };
+  return { gltf, fbx: new FBXLoader(), obj: new OBJLoader(), stl: new STLLoader(), threemf: new ThreeMFLoader(), usd: new USDLoader() };
 }
 
 async function loadModel(loaders, url, ext) {
@@ -40,6 +43,29 @@ async function loadModel(loaders, url, ext) {
   }
   if (ext === '.obj') {
     const root = await loaders.obj.loadAsync(url);
+    return { root, animations: [], parser: null };
+  }
+  if (ext === '.stl' || ext === '.3mf') {
+    // A print file: millimetres, Z up (as Blender exports it for the printer). One grey
+    // material for an STL (it has none); a 3MF keeps its colours.
+    let root;
+    if (ext === '.stl') {
+      const geo = await loaders.stl.loadAsync(url);
+      geo.computeVertexNormals();
+      root = new THREE.Group();
+      root.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xbdbdbd, roughness: 0.75, metalness: 0 })));
+    } else {
+      root = await loaders.threemf.loadAsync(url);
+    }
+    const holder = new THREE.Group();
+    // Z up to the view's Y up. A slicer's 3MF lays the parts out as on the bed, each on it.
+    root.rotation.x = -Math.PI / 2;
+    root.scale.setScalar(0.001);
+    holder.add(root);
+    return { root: holder, animations: [], parser: null };
+  }
+  if (ext === '.usdz' || ext === '.usd' || ext === '.usda' || ext === '.usdc') {
+    const root = await loaders.usd.loadAsync(url);
     return { root, animations: [], parser: null };
   }
   const g = await loaders.gltf.loadAsync(url);

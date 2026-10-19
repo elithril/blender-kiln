@@ -853,14 +853,78 @@ function renderTitle() {
   const stageWhat = { final: t('The delivered file: compressed for its use. Looks like the stage before it.'), original: t('The export from Blender, uncompressed.'),
     optimized: t('Lighter: fewer triangles or smaller textures.'), textured: t('With its materials and textures.'), clean: t('Cleaned up: merged, normals fixed.'),
     live: t('Kiln\'s latest step while it builds.'), preview: t('A copy for Quick Look.') };
-  stages.innerHTML = d.variants.map((x) => `<button role="radio" aria-checked="${x.label === v.label}" class="${x.label === v.label ? 'on' : ''}" data-v="${esc(x.label)}" title="${esc([stageWhat[x.label.split('.')[0]], x.file].filter(Boolean).join(' — '))}">${esc(x.label)}</button>`).join('');
+  // Outputs (game, AR, print) have their own bar: the stage switch keeps the build's stages.
+  const stageList = d.variants.filter((x) => [null, 'web'].includes(outputOf(x)));
+  stages.innerHTML = stageList.map((x) => `<button role="radio" aria-checked="${x.label === v.label}" class="${x.label === v.label ? 'on' : ''}" data-v="${esc(x.label)}" title="${esc([stageWhat[x.label.split('.')[0]], x.file].filter(Boolean).join(' — '))}">${esc(x.label)}</button>`).join('');
   $$('button', stages).forEach((b) => (b.onclick = () => { if (b.dataset.v !== state.variant) loadVariant(b.dataset.v); }));
+  stages.hidden = stageList.length < 2;
+  renderOutputs(d, v);
   const tris = v.stats?.tris ?? s?.tris;
   const dims = v.stats?.dimensions_blender || s?.dims;
   const parts = [`<span>${esc(t('{n} tris', { n: fmtN(tris) }))}</span>`, `<span>${fmtB(v.size)}</span>`];
   if (dims) parts.push(`<span title="${esc(t('Blender X × Y × Z'))}">${fmtLen(dims[0])} × ${fmtLen(dims[1])} × ${fmtLen(dims[2])}</span>`);
   if (d.variants.length > 1 && v.label !== d.variants[0].label) parts.push(`<span>${esc(v.label)}</span>`);
   $('#stats').innerHTML = parts.join('<span class="sep">·</span>');
+}
+
+// ── outputs: one model, a file per use ─────────────────────────────────────
+// Web (the final GLB), a game engine (FBX), AR (USDZ), 3D printing (3MF, an STL per part).
+// One there opens in the view; one missing is prepared by Claude (or by the command, in
+// Claude Code). The file shown downloads, or shows in the Finder.
+
+const OUTPUTS = [
+  { key: 'web', name: N_('Web'), what: N_('glTF for a website (GLB, compressed)') },
+  { key: 'game', name: N_('Game'), what: N_('FBX for Unity and Unreal') },
+  { key: 'ar', name: N_('AR'), what: N_('USDZ for iPhone and Vision Pro') },
+  { key: 'print', name: N_('3D print'), what: N_('3MF for the slicer, and an STL per part') },
+];
+function outputOf(v) {
+  const ext = (v.ext || '').toLowerCase();
+  if (v.label.startsWith('print')) return 'print';
+  if (ext === '.usdz') return 'ar';
+  if (ext === '.fbx') return 'game';
+  if (v.label === 'final' && (ext === '.glb' || ext === '.gltf')) return 'web';
+  return null;
+}
+function outputAsk(key, name) {
+  return {
+    web: t('Export {name} for the web: {name}_final.glb, compressed, as kiln does for the web target.', { name }),
+    game: t('Prepare {name} for a game engine: export {name}_final.fbx for Unity and Unreal beside the final, with kiln\'s settings for that target.', { name }),
+    ar: t('Prepare {name} for AR: export {name}_final.usdz (iPhone, Vision Pro) beside the final, with kiln\'s settings for that target.', { name }),
+    print: t('Prepare {name} for 3D printing with kiln\'s print mode: check it and make it printable, then save {name}_print.3mf (every part, its colours, in millimetres) and one STL per part ({name}_print_<part>.stl) beside the final.', { name }),
+  }[key];
+}
+function renderOutputs(d, v) {
+  const el = $('#outputs');
+  const have = new Map();
+  for (const x of d.variants) { const o = outputOf(x); if (o && !have.has(o)) have.set(o, x); }
+  const busy = modelBusy();
+  const chips = OUTPUTS.map((o) => {
+    const x = have.get(o.key);
+    if (x) return `<button class="out on${x.label === v.label ? ' cur' : ''}" data-out-v="${esc(x.label)}" title="${esc(`${t(o.what)} — ${x.file}`)}"><i aria-hidden="true">✓</i>${esc(t(o.name))}</button>`;
+    return `<button class="out add" data-out-make="${o.key}"${busy ? ' disabled' : ''} title="${esc(t('Prepare: {what}', { what: t(o.what) }))}"><i aria-hidden="true">+</i>${esc(t(o.name))}</button>`;
+  }).join('');
+  const file = `<span class="out-sep" aria-hidden="true"></span>
+    <a class="btn icon sm ghost" href="${esc(fileUrl(v.file))}?download=1" download title="${esc(t('Download {f}', { f: v.file.split('/').pop() }))}" aria-label="${esc(t('Download'))}"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"/></svg></a>
+    <button class="btn icon sm ghost" data-out-reveal="${esc(v.file)}" title="${esc(t('Show in the Finder'))}" aria-label="${esc(t('Show in the Finder'))}"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></svg></button>`;
+  el.innerHTML = `<span class="out-label">${esc(t('Outputs'))}</span>${chips}${file}`;
+  // Another file can be another layout (a print's parts on the bed): framed anew.
+  $$('[data-out-v]', el).forEach((b) => (b.onclick = () => b.dataset.outV !== state.variant && loadVariant(b.dataset.outV, { keepCamera: false })));
+  $$('[data-out-make]', el).forEach((b) => (b.onclick = () => makeOutput(b.dataset.outMake)));
+  $$('[data-out-reveal]', el).forEach((b) => (b.onclick = () => assetApi(state.id, '/reveal', { method: 'POST', body: { file: b.dataset.outReveal } }).catch((e) => toast(esc(e.message), 'warn'))));
+}
+async function makeOutput(key) {
+  const d = state.detail, o = OUTPUTS.find((x) => x.key === key);
+  const ask = outputAsk(key, d.name);
+  if (!claude.status?.enabled) {
+    // Claude off in Studio: the request goes to Claude Code, by hand.
+    await copy(`/kiln ${ask}`);
+    toast(esc(t('Copied: paste it in Claude Code, in this project. Claude in Studio is off (Settings → Claude).')), 'ok', 7000);
+    return;
+  }
+  if (!(await confirmDialog(t('Ask Claude to prepare the {out} output of {name}? {what}.', { out: t(o.name), name: d.name, what: t(o.what) }) + (key === 'print' ? ' ' + t('Printing is a real pass of kiln\'s print mode: it can change the shape (walls, parts), and takes longer.') : ''), t('Prepare')))) return;
+  openClaudeView(null);
+  await claudeSend('chat', ask);
 }
 
 // ── build strip: the phases of the build kiln is running ─────────────────────

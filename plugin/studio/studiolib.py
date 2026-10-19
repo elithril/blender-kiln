@@ -43,20 +43,23 @@ import shutil
 import struct
 import tempfile
 import time
+import zipfile
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import unquote
 
 DATA_DIR = ".kiln-studio"
-MODEL_EXTS = (".glb", ".gltf", ".fbx", ".obj")
+MODEL_EXTS = (".glb", ".gltf", ".fbx", ".obj", ".usdz", ".3mf", ".stl")
 # kiln's pipeline stages, best first: the default variant is the most finished one.
-KILN_STAGES = ("final", "optimized", "textured", "clean", "original", "preview")   # preview: a copy of original, for Quick Look
+KILN_STAGES = ("final", "optimized", "textured", "clean", "original", "preview", "print")   # preview: a copy of original, for Quick Look; print: the printable output
 # The scratch export kiln writes after each phase while it builds: first while it is the
 # newest file of the asset (the build is under way), last once a real stage is newer.
 LIVE = "live"
-FORMAT_ORDER = (".glb", ".gltf", ".fbx", ".obj")
+FORMAT_ORDER = (".glb", ".gltf", ".fbx", ".obj", ".usdz", ".3mf", ".stl")
 STAGE_RE = re.compile(r"^(?P<name>.+)_(?P<stage>" + "|".join(KILN_STAGES + (LIVE,)) + r")$")
+# The printable output's parts beside {name}_print.3mf: {name}_print_{part}.stl, side files of the model.
+PRINT_PART_RE = re.compile(r"^(?P<name>.+)_print_[^_/]+$")
 # kiln's phases, in pipeline order; rig and animate only show when a build reports them.
 PHASES = ("config", "brief", "source", "import", "cleanup", "texture", "rig", "animate", "optimize", "export")
 OPTIONAL_PHASES = ("rig", "animate")
@@ -391,8 +394,12 @@ def _group_dir(project: Project, d: Path, models: list[str]) -> list[Asset]:
                       and _within(project, d / f))
     groups: dict[tuple[str, bool], list[tuple[str, str]]] = {}
     mtimes = {f: (d / f).stat().st_mtime for f in models}
+    parts = []
     for f in models:
         stem, ext = os.path.splitext(f)
+        if ext.lower() in (".stl", ".3mf") and PRINT_PART_RE.match(stem) and not STAGE_RE.match(stem):
+            parts.append(f)
+            continue
         m = STAGE_RE.match(stem)
         if m:
             groups.setdefault((m.group("name"), True), []).append((m.group("stage"), f))
@@ -436,7 +443,7 @@ def _group_dir(project: Project, d: Path, models: list[str]) -> list[Asset]:
         own_folder = kiln and d.name == name and rel_dir
         if own_folder:
             asset_id = rel_dir
-            files = [f for f in siblings]
+            files = sorted(siblings + [f for f in parts if f.startswith(name)])
         else:
             asset_id = f"{rel_dir}/{name}".lstrip("/")
             files = [f for f in siblings if f.startswith(name) and not f.lower().endswith(MODEL_EXTS)]
@@ -564,13 +571,56 @@ def gltf_stats(path: Path) -> dict:
 _stats_cache: dict[tuple[str, str], dict] = {}
 
 
+def stl_stats(path: Path) -> dict:
+    """Triangles and size of an STL (binary or ASCII). kiln's print files are in millimetres."""
+    data = path.read_bytes()
+    pts: list[tuple[float, float, float]] = []
+    n = struct.unpack_from("<I", data, 80)[0] if len(data) >= 84 else 0
+    if len(data) == 84 + 50 * n and n:
+        for i in range(n):
+            o = 84 + 50 * i + 12
+            pts += [struct.unpack_from("<3f", data, o + 12 * k) for k in range(3)]
+    else:
+        txt = data.decode("ascii", "replace")
+        n = txt.count("facet normal")
+        pts = [tuple(map(float, m.groups())) for m in re.finditer(r"vertex\s+(\S+)\s+(\S+)\s+(\S+)", txt)]
+    out: dict = {"tris": n, "verts": None, "meshes": 1, "units": "mm"}
+    if pts:
+        lo = [min(p[k] for p in pts) for k in range(3)]
+        hi = [max(p[k] for p in pts) for k in range(3)]
+        out["dimensions_blender"] = [round((hi[k] - lo[k]) / 1000, 4) for k in range(3)]
+    return out
+
+
+def threemf_stats(path: Path) -> dict:
+    """Triangles, parts and size of a 3MF (a zip of XML models)."""
+    tris, objects, xs, ys, zs, unit = 0, 0, [], [], [], "millimeter"
+    with zipfile.ZipFile(path) as z:
+        for name in z.namelist():
+            if not name.lower().endswith(".model"):
+                continue
+            x = z.read(name)
+            m = re.search(rb'<model[^>]*\sunit="(\w+)"', x)
+            unit = m.group(1).decode() if m else unit
+            tris += x.count(b"<triangle ")
+            objects += len(re.findall(rb"<mesh>", x))
+            for v in re.finditer(rb'<vertex\s+x="([^"]+)"\s+y="([^"]+)"\s+z="([^"]+)"', x):
+                xs.append(float(v.group(1))); ys.append(float(v.group(2))); zs.append(float(v.group(3)))
+    scale = {"micron": 1e-6, "millimeter": 1e-3, "centimeter": 1e-2, "inch": 0.0254, "foot": 0.3048, "meter": 1.0}.get(unit, 1e-3)
+    out: dict = {"tris": tris, "verts": None, "meshes": objects, "units": unit}
+    if xs:
+        out["dimensions_blender"] = [round((max(a) - min(a)) * scale, 4) for a in (xs, ys, zs)]
+    return out
+
+
 def variant_stats(v: Variant) -> dict | None:
-    if v.path.suffix.lower() not in (".glb", ".gltf"):
+    ext = v.path.suffix.lower()
+    if ext not in (".glb", ".gltf", ".stl", ".3mf"):
         return None
     key = (v.rel, v.hash or file_hash(v.path))
     if key not in _stats_cache:
         try:
-            _stats_cache[key] = gltf_stats(v.path)
+            _stats_cache[key] = stl_stats(v.path) if ext == ".stl" else threemf_stats(v.path) if ext == ".3mf" else gltf_stats(v.path)
         except (OSError, ValueError, KeyError, IndexError, TypeError, json.JSONDecodeError) as e:
             _stats_cache[key] = {"error": str(e)}
     return _stats_cache[key]

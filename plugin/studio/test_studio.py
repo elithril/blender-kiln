@@ -23,6 +23,7 @@ import tempfile
 import threading
 import time
 import unittest
+import zipfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -78,6 +79,25 @@ def glb(path: Path, *, scale: float = 1.0, tris: int = 1, name: str = "SM_Box",
     return path
 
 
+def stl(path: Path, tris: int = 2, size_mm: float = 30.0) -> Path:
+    """A binary STL of `tris` triangles inside a size_mm cube."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    body = b"".join(struct.pack("<12fH", 0, 0, 1, 0, 0, 0, size_mm, 0, 0, 0, size_mm, size_mm, 0) for _ in range(tris))
+    path.write_bytes(b"\0" * 80 + struct.pack("<I", tris) + body)
+    return path
+
+
+def threemf(path: Path, tris: int = 3) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    verts = '<vertex x="0" y="0" z="0"/><vertex x="40" y="0" z="0"/><vertex x="0" y="20" z="10"/>'
+    xml = ('<?xml version="1.0"?><model unit="millimeter" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">'
+           f'<resources><object id="1" type="model"><mesh><vertices>{verts}</vertices><triangles>'
+           + '<triangle v1="0" v2="1" v3="2"/>' * tris + '</triangles></mesh></object></resources><build><item objectid="1"/></build></model>')
+    with zipfile.ZipFile(path, "w") as z:
+        z.writestr("3D/3dmodel.model", xml)
+    return path
+
+
 class Base(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = Path(tempfile.mkdtemp(prefix="kiln-studio-test-"))
@@ -110,6 +130,24 @@ class Scan(Base):
         self.assertEqual(a.log_file(), "generated-assets/wooden-chair/wooden-chair_log.md")
         self.assertEqual(a.blend_file(), "generated-assets/wooden-chair/wooden-chair.blend")
         self.assertIn("generated-assets/wooden-chair/reference.png", a.files)
+
+    def test_outputs_are_stages_and_print_parts_side_files(self) -> None:
+        d = self.tmp / "generated-assets" / "stool"
+        glb(d / "stool_original.glb")
+        glb(d / "stool_final.glb")
+        (d / "stool_final.fbx").write_bytes(b"Kaydara FBX Binary")
+        (d / "stool_final.usdz").write_bytes(b"PK\x03\x04")
+        threemf(d / "stool_print.3mf", tris=3)
+        stl(d / "stool_print_seat.stl", tris=2)
+        stl(d / "stool_print_legs.stl", tris=4)
+        [a] = self.p.scan()
+        self.assertEqual([v.label for v in a.variants], ["final", "final.fbx", "final.usdz", "original", "print"])
+        self.assertIn("generated-assets/stool/stool_print_seat.stl", a.files)   # a part: not a model of its own
+        st = sl.variant_stats(a.variant("print"))
+        self.assertEqual((st["tris"], st["meshes"], st["units"]), (3, 1, "millimeter"))
+        self.assertEqual(st["dimensions_blender"], [0.04, 0.02, 0.01])
+        one = sl.stl_stats(d / "stool_print_legs.stl")
+        self.assertEqual((one["tris"], one["dimensions_blender"]), (4, [0.03, 0.03, 0.03]))
 
     def test_batch_folder_is_the_category(self) -> None:
         glb(self.tmp / "generated-assets" / "batch-office" / "desk" / "desk_final.glb")
@@ -816,6 +854,18 @@ class Api(Base):
             return r.status, json.loads(raw)
         except ValueError:
             return r.status, raw
+
+    def test_a_file_downloads_under_its_name_and_only_the_model_s_files_reveal(self) -> None:
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        c.request("GET", "/files/generated-assets/crate/crate_final.glb?download=1", headers={"Host": f"127.0.0.1:{self.port}"})
+        r = c.getresponse()
+        self.assertEqual(r.status, 200)
+        self.assertIn("attachment", r.getheader("Content-Disposition"))
+        self.assertIn("crate_final.glb", r.getheader("Content-Disposition"))
+        self.assertEqual(r.read(), self.f.read_bytes())
+        c.close()
+        code, _ = self.req("POST", "/api/asset/generated-assets%2Fcrate/reveal", {"file": "../../etc/passwd"})
+        self.assertEqual(code, 400)
 
     def test_assets_and_detail(self) -> None:
         code, data = self.req("GET", "/api/assets")

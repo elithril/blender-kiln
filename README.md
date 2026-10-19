@@ -522,7 +522,7 @@ plugin/
 | `plugin/references/export-targets.md` | GLB/FBX/USDZ settings, headless CLI, post-export checklist | ~240 |
 | `plugin/references/cli-tools.md` | gltf-transform, gltfpack, LOD workflow, metrics | ~210 |
 | `plugin/references/uv-materials.md` | UV unwrapping, the UV check, PBR channel packing | ~180 |
-| `plugin/references/naming-conventions.md` | Blender + GLTF name mapping + file conventions | ~150 |
+| `plugin/references/naming-conventions.md` | Blender + GLTF name mapping + file conventions, outputs | ~180 |
 | `plugin/references/topology-rules.md` | Poly budgets, quad rules, edge flow | ~90 |
 | `plugin/references/setup-install.md` | Model selection, install commands, post-install validation | ~70 |
 | `plugin/references/sourcing-strategy.md` | PolyHaven (MCP or public API) + Sketchfab search patterns | ~120 |

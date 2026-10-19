@@ -18,7 +18,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, unquote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 import checks
 import setup_status
@@ -385,6 +385,11 @@ def make_handler(studio: Studio, port_ref: list[int]):
                     want = parse_qs(urlparse(self.path).query).get("h", [""])[0]
                     if want and p.is_file() and p.suffix.lower() in sl.MODEL_EXTS and sl.file_hash(p) != want:
                         return self._err(409, "the file changed since; reload")
+                    if parse_qs(urlparse(self.path).query).get("download") and p.is_file():
+                        # The Outputs bar's download: the file itself, saved under its own name.
+                        return self._send(200, p.read_bytes(), "application/octet-stream",
+                                          {"Content-Disposition": f"attachment; filename*=UTF-8''{quote(p.name)}",
+                                           "Cache-Control": "no-store"})
                     return self._file(p)
                 if parts[:2] == ["api", "hello"]:
                     return self._json({"app": "kiln-studio", "version": VERSION,
@@ -650,6 +655,19 @@ def make_handler(studio: Studio, port_ref: list[int]):
                 if method == "POST" and rest == ["snapshot"]:
                     return self._json(sl.take_baseline(project, a, a.variant(body.get("variant")),
                                                        reason="snapshot from Studio"))
+                if method == "POST" and rest == ["reveal"]:
+                    # Show one of the model's files in the Finder (or the file manager).
+                    rel = str(body.get("file") or "")
+                    if rel not in {v.rel for v in a.variants} | set(a.files):
+                        return self._err(400, "not one of this model's files")
+                    p = project.inside(rel)
+                    if sys.platform == "darwin":
+                        subprocess.Popen(["open", "-R", str(p)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    elif sys.platform.startswith("linux"):
+                        subprocess.Popen(["xdg-open", str(p.parent)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    elif os.name == "nt":
+                        subprocess.Popen(["explorer", "/select,", str(p)])
+                    return self._json({"ok": True})
                 if method == "POST" and rest == ["revert"]:
                     b = sl.revert(project, a)
                     studio.refresh()
