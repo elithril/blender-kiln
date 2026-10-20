@@ -545,6 +545,13 @@ body:has(#left.collapsed) .outputs .out-var { display: inline-flex; }
 #toolbar .btn:hover { background: var(--panel-3); }
 #toolbar .btn.on { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
 #toolbar .seg { background: transparent; border: 0; padding: 0; }
+/* finishes (KHR_materials_variants): one shown at a time, in the view */
+#finishbar { gap: 4px; padding: 5px 6px; flex-wrap: wrap; justify-content: center; }
+#finishbar .lab { font: 600 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); padding: 0 6px; }
+#finishbar button { height: 28px; padding: 0 10px; border-radius: 7px; border: 1px solid var(--line-2); background: transparent; color: var(--text-2); font: inherit; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+#finishbar button .sw { width: 12px; height: 12px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--tint) 20%, transparent); flex: none; }
+#finishbar button[aria-checked="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--text); }
+#finishbar .add { border-style: dashed; color: var(--text-3); }
 #animbar { gap: 8px; padding: 5px 10px 5px 5px; width: min(560px, 100%); }
 #animbar .btn.icon { width: 30px; height: 26px; }
 #animbar select { height: 26px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--bg); padding: 0 6px; font-size: 12px; }
@@ -1224,6 +1231,7 @@ svg.spark { width: 14px; height: 14px; fill: var(--new); stroke: none; flex: non
 .outputs .out-label { font: 600 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin-right: 2px; }
 .outputs .out { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border-radius: 6px; font-size: 11.5px; cursor: pointer;
   border: 1px solid var(--line-2); background: transparent; color: var(--text-2); transition: background-color .15s, border-color .15s, color .15s; }
+.outputs .out .fin { color: var(--text-3); }
 .outputs .out i { font-style: normal; font-weight: 700; font-size: 10px; }
 .outputs .out.on i { color: var(--ok); }
 .outputs .out.on:not(.stale) { border-color: color-mix(in srgb, var(--ok) 35%, var(--line-2)); }
@@ -1245,6 +1253,18 @@ svg.spark { width: 14px; height: 14px; fill: var(--new); stroke: none; flex: non
 #decl .set-head h3 { margin: 0; font-size: 15px; }
 #decl .set-head form { margin: 0; }
 #decl .dc-head { display: grid; gap: 2px; font-size: 12px; }
+#decl .dc-tabs { display: flex; gap: 6px; padding: 14px 18px 0; }
+#decl .dc-tabs button { flex: 1; display: grid; gap: 3px; text-align: left; padding: 10px 12px; border-radius: 9px; border: 1px solid var(--line); background: transparent; color: var(--text); font: inherit; cursor: pointer; }
+#decl .dc-tabs button b { font-size: 13px; font-weight: 600; }
+#decl .dc-tabs button span { font-size: 11.5px; color: var(--text-2); line-height: 1.45; }
+#decl .dc-tabs button[aria-selected="true"] { border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+#decl .dc-tabs button:hover:not([aria-selected="true"]) { background: var(--panel-2); }
+#decl .dc-have { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2); padding: 2px 2px 4px; }
+#decl .dc-have .chip { height: 24px; padding: 0 9px; border-radius: 6px; border: 1px solid var(--line-2); display: inline-flex; align-items: center; color: var(--text); font-size: 12px; }
+#decl .dc-card-body.fin { grid-template-columns: 200px minmax(0, 1fr); }
+#decl .dc-in { font-size: 12px; color: var(--text-2); line-height: 1.5; }
+#decl .dc-in code { font: 12px var(--mono); color: var(--text); }
+#decl .dc-def { width: 220px; }
 #decl .dc-body { padding: 14px 18px 4px; display: grid; gap: 10px; overflow-y: auto; min-height: 0; }
 #decl .dc-rows { display: grid; gap: 10px; }
 #decl .dc-card { border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); }

@@ -36,6 +36,7 @@ WORDS = {
         "kept": "Not in this package", "kept_text": "The source (the .blend, `_original.glb`, the production log) stays in the project: `{dir}/`.",
         "outs": {"web": "Web", "game": "Game", "ar": "AR", "print": "3D print"},
         "variant": "Variation · {name}", "variants_dir": "variations",
+        "finishes": " — {n} finishes (glTF material variants): {list}",
     },
     "fr": {
         "sheet": "LISEZ-MOI.md", "made": "Préparé avec kiln le {date}", "size": "{x} × {y} × {z} cm (largeur × profondeur × hauteur)",
@@ -52,6 +53,7 @@ WORDS = {
         "kept": "Pas dans ce paquet", "kept_text": "La source (le .blend, `_original.glb`, le journal de fabrication) reste dans le projet : `{dir}/`.",
         "outs": {"web": "Web", "game": "Jeu", "ar": "AR", "print": "Impression 3D"},
         "variant": "Variante · {name}", "variants_dir": "variantes",
+        "finishes": " — {n} finitions (variantes de matériaux glTF) : {list}",
     },
 }
 
@@ -106,11 +108,15 @@ def use_of(out: str, f: Path, lang: str = "en") -> str:
     """What a file is for, in a line."""
     w = WORDS.get(lang, WORDS["en"])
     ext = f.suffix.lower()
+    fin = ""
+    if ext in (".glb", ".gltf"):
+        names = [v.get("name", "") for v in (sl.read_gltf_json(f).get("extensions") or {}).get("KHR_materials_variants", {}).get("variants", [])]
+        fin = w["finishes"].format(n=len(names), list=", ".join(names)) if len(names) > 1 else ""
     if out == "web":
         draco = ext in (".glb", ".gltf") and "KHR_draco_mesh_compression" in (sl.read_gltf_json(f).get("extensionsUsed") or [])
-        return w["web"] if draco else w["web_plain"]
+        return (w["web"] if draco else w["web_plain"]) + fin
     if out == "ar":
-        return w["ar_usdz"] if ext == ".usdz" else w["ar_glb"]
+        return w["ar_usdz"] if ext == ".usdz" else w["ar_glb"] + fin
     if out == "print":
         return w["print_3mf"] if ext == ".3mf" else w["print_stl"]
     return w["game"]

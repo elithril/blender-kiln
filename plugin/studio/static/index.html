@@ -139,6 +139,7 @@
   </nav>
 
   <div class="bottom" id="bottom" hidden>
+    <div id="finishbar" class="bar" role="radiogroup" aria-label="Surface finish" data-i18n-attr="aria-label" hidden></div>
     <div id="animbar" class="bar" hidden>
       <button id="a-play" class="btn icon" aria-label="Pause (Space)" title="Play / pause (Space)" data-i18n-attr="title"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
       <select id="a-clip" aria-label="Clip" data-i18n-attr="aria-label"></select>
@@ -338,15 +339,23 @@
   <div class="pal-foot dim"><span><kbd>↑</kbd> <kbd>↓</kbd> <span data-i18n>to move</span></span><span><kbd>↵</kbd> <span data-i18n>to run</span></span><span><kbd>?</kbd> <span data-i18n>all the keys</span></span></div>
 </dialog>
 <dialog id="decl" aria-labelledby="dc-title">
-  <header class="set-head"><div class="dc-head"><h3 id="dc-title"></h3><span class="dim" data-i18n>Each variation starts from a copy of the model. The original is never changed.</span></div><form method="dialog"><button class="btn sm" data-i18n>Close</button></form></header>
+  <header class="set-head"><div class="dc-head"><h3 id="dc-title"></h3><span class="dim" id="dc-sub"></span></div><form method="dialog"><button class="btn sm" data-i18n>Close</button></form></header>
+  <div class="dc-tabs" role="tablist" aria-label="What changes" data-i18n-attr="aria-label">
+    <button type="button" role="tab" data-dc-mode="copies"><b data-i18n>New models</b><span data-i18n>A file per variation. Anything can change: shape, size, colours, a version for printing.</span></button>
+    <button type="button" role="tab" data-dc-mode="finishes"><b data-i18n>Finishes of this model</b><span data-i18n>Only the materials change (wood, paint, metal), in the same file: a website switches from one to the other without loading again.</span></button>
+  </div>
   <div class="dc-body">
     <div class="dc-rows" id="dc-rows"></div>
-    <button type="button" class="dc-add" id="dc-add" data-i18n>+ Add a variation</button>
+    <button type="button" class="dc-add" id="dc-add"></button>
   </div>
-  <div class="dc-opts">
+  <div class="dc-opts" id="dc-opts-copies">
     <span class="lab" data-i18n>Start from</span><div class="dc-pills" id="dc-from"></div>
     <span class="lab" data-i18n>Make the outputs again</span><div class="dc-pills" id="dc-outs"></div>
     <span class="lab" data-i18n>Open notes</span><div class="dc-pills" id="dc-notes"></div>
+  </div>
+  <div class="dc-opts" id="dc-opts-finishes" hidden>
+    <span class="lab" data-i18n>In</span><span class="dc-in" id="dc-in"></span>
+    <span class="lab" data-i18n>Shown first</span><span class="sel dc-def"><select id="dc-default" aria-label="Finish shown first" data-i18n-attr="aria-label"></select><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
   </div>
   <footer class="dc-foot">
     <div class="dc-sum"><div class="dc-facts" id="dc-facts"></div><span class="dc-est" id="dc-est"></span><span class="dc-err" id="dc-err" role="alert"></span></div>

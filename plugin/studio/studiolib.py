@@ -566,6 +566,8 @@ def gltf_stats(path: Path) -> dict:
         "textures": len(g.get("textures", [])), "images": len(g.get("images", [])),
         "animations": anims, "skins": len(g.get("skins", [])),
         "extensions": sorted(set(g.get("extensionsUsed", []))),
+        # Finishes: the same shape in other materials (KHR_materials_variants), by name.
+        "finishes": [v.get("name", "") for v in (g.get("extensions") or {}).get("KHR_materials_variants", {}).get("variants", [])],
         "generator": g.get("asset", {}).get("generator", ""),
     }
     if lo[0] != math.inf:

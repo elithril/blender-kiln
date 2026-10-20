@@ -278,7 +278,16 @@ original's working folders, and records the link in `catalog.json` (`derived`); 
 Claude run per variation (task `derive`, the outputs in the same run), as many at once as
 `claude_parallel`. With Claude off, the copies are made and the requests copied for
 Claude Code. The list shows a variation under its original; its header says "Declined
-from", and Details lists both ways. Finishes (materials in the same GLB) come next.
+from", and Details lists both ways.
+
+**Finishes** (the dialog's second tab, or "+ Finish" in the view): the same shape in
+other materials, in the model's own glTF files (web, and AR's GLB) as
+`KHR_materials_variants` — a website switches without loading again. A card per finish
+(a name, the material in words), the one shown first; one Claude run (task `finishes`),
+the version before kept for Compare and choose. FBX, USDZ and print files carry none.
+How Blender writes them: `export-targets.md` § Finishes. A file with finishes shows a
+picker in the view (a swatch per finish), "Web · 3 finishes" on its output, and its
+finishes in the hand-off sheet.
 
 The two side panels resize the view, and fold into 60 px rails (`[` the list, `]` the
 notes, `\` both); the view fits the model again once they have moved. On a narrow

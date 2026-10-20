@@ -106,6 +106,43 @@ glTF packs AO/Roughness/Metallic into one texture:
 
 ---
 
+### Finishes (KHR_materials_variants)
+
+Finishes are one shape in several materials (oak, walnut, matte black) in **one** glTF
+file: a website switches from one to the other without loading again (three.js,
+model-viewer). Studio asks for them ("Variations" → "Finishes of this model") and shows
+a picker in the view. Only glTF carries them: FBX, USDZ and the print files keep the
+default material (make a separate model for those — a variation).
+
+Blender 5.2's exporter writes them from its own data, **through its operators only**
+(assigning `variant_idx` or `gltf2_variant_mesh_data` directly crashed Blender 5.2.2):
+
+```python
+prefs = bpy.context.preferences.addons["io_scene_gltf2"].preferences
+prefs.KHR_materials_variants_ui = True          # registers the variant data; the export needs it on
+sc = bpy.data.scenes[0]
+finishes = [("Oak", {obj: [mat_oak, ...]}), ("Walnut", {obj: [mat_walnut, ...]})]   # per object, per slot
+for i, (name, per_obj) in enumerate(finishes):
+    bpy.ops.scene.gltf2_variant_add()
+    sc.gltf2_KHR_materials_variants_variants[i].name = name
+    sc.gltf2_active_variant = i
+    for obj, mats in per_obj.items():
+        for slot, m in zip(obj.material_slots, mats):
+            slot.material = m
+        bpy.context.view_layer.objects.active = obj
+        bpy.ops.scene.gltf2_assign_to_variant()   # records this object's slots for variant i
+# Put back the finish shown first (the file's own material), then export as usual.
+```
+
+- The first finish is the model's current material, under its name ("Current" when it
+  has none); the one shown first is the materials left on the slots at export.
+- Same slots, same UVs for every finish: only the material changes. A finish that needs
+  other geometry is a variation, not a finish.
+- Check after export: `extensionsUsed` holds `KHR_materials_variants`, the root
+  `extensions.KHR_materials_variants.variants` lists the names, each primitive has a
+  `mappings` entry per finish. Draco and the variants live together.
+- Log the finishes (names, materials) in `<name>_log.md`.
+
 ## FBX
 
 **For Unity and Unreal Engine.**

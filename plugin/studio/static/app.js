@@ -702,8 +702,37 @@ async function loadVariant(label, { keepCamera = true } = {}) {
     if (seq === state.loadSeq) $('#loading').hidden = true;
   }
   setupAnimBar();
+  setupFinishBar();
   renderAll();
   reportSelection();
+}
+// The finishes in the file shown (glTF material variants): pick one to see it. A swatch
+// from each finish's base colour, when it has one.
+function setupFinishBar() {
+  const bar = $('#finishbar'), slot = viewer.a, names = slot.finishes?.() || [];
+  bar.hidden = names.length < 2;
+  if (bar.hidden) return;
+  const json = slot.parser.json;
+  // The one the file shows by itself: the variant whose material its meshes carry.
+  const own = (() => {
+    for (const m of json.meshes || []) for (const p of m.primitives || []) {
+      const map = p.extensions?.KHR_materials_variants?.mappings?.find((x) => x.material === p.material);
+      if (map) return map.variants[0];
+    }
+    return 0;
+  })();
+  const cur = slot.finish ?? own;
+  const colour = (i) => {
+    for (const m of json.meshes || []) for (const p of m.primitives || []) {
+      const map = p.extensions?.KHR_materials_variants?.mappings?.find((x) => x.variants.includes(i));
+      const f = map && json.materials?.[map.material]?.pbrMetallicRoughness?.baseColorFactor;
+      if (f) return `rgb(${f.slice(0, 3).map((c) => Math.round(255 * Math.pow(c, 1 / 2.2))).join(',')})`;
+    }
+    return 'var(--panel-3)';
+  };
+  bar.innerHTML = `<span class="lab">${esc(t('Surface finish'))}</span>${names.map((n, i) => `<button role="radio" aria-checked="${i === cur}" data-finish="${i}"><span class="sw" style="background:${colour(i)}"></span>${esc(n)}</button>`).join('')}${state.detail?.kiln ? `<button class="add" data-finish-add title="${esc(t('Add finishes: other materials, same shape'))}">${esc(t('+ Finish'))}</button>` : ''}`;
+  $$('[data-finish]', bar).forEach((b) => (b.onclick = async () => { await viewer.setFinish(+b.dataset.finish); setupFinishBar(); }));
+  $('[data-finish-add]', bar)?.addEventListener('click', () => openDecline('finishes'));
 }
 const VIEW_DIRS = { front: [0, 0, 1], back: [0, 0, -1], right: [1, 0, 0], left: [-1, 0, 0], top: [0, 1, 0.0001], iso: [1, 0.7, 1.3] };
 for (const k in VIEW_DIRS) VIEW_DIRS[k] = new (viewer.camera.position.constructor)(...VIEW_DIRS[k]);
@@ -914,6 +943,8 @@ function outputStale(d, x) {
   const src = d.variants.find((y) => y.label === 'original');
   return !!(src && x !== src && x.mtime + 1 < src.mtime);
 }
+// "· 3 finishes" on an output whose file carries them.
+const finTag = (x) => { const n = x.stats?.finishes?.length || 0; return n > 1 ? `<span class="fin">· ${esc(tp(n, '{n} finish', '{n} finishes'))}</span>` : ''; };
 function renderOutputs(d, v) {
   const el = $('#outputs');
   const have = new Map();
@@ -921,8 +952,8 @@ function renderOutputs(d, v) {
   const busy = modelBusy();
   const chips = OUTPUTS.map((o) => {
     const x = have.get(o.key);
-    if (x && outputStale(d, x)) return `<button class="out on stale${x.label === v.label ? ' cur' : ''}" data-out-v="${esc(x.label)}" data-out-stale="${o.key}" title="${esc(`${t('Made before the model last changed: to redo.')} ${t(o.what)} — ${x.file}`)}"><i aria-hidden="true">↻</i>${esc(t(o.name))}</button>`;
-    if (x) return `<button class="out on${x.label === v.label ? ' cur' : ''}" data-out-v="${esc(x.label)}" title="${esc(`${t('Up to date.')} ${t(o.what)} — ${x.file}`)}"><i aria-hidden="true">✓</i>${esc(t(o.name))}</button>`;
+    if (x && outputStale(d, x)) return `<button class="out on stale${x.label === v.label ? ' cur' : ''}" data-out-v="${esc(x.label)}" data-out-stale="${o.key}" title="${esc(`${t('Made before the model last changed: to redo.')} ${t(o.what)} — ${x.file}`)}"><i aria-hidden="true">↻</i>${esc(t(o.name))}${finTag(x)}</button>`;
+    if (x) return `<button class="out on${x.label === v.label ? ' cur' : ''}" data-out-v="${esc(x.label)}" title="${esc(`${t('Up to date.')} ${t(o.what)} — ${x.file}`)}"><i aria-hidden="true">✓</i>${esc(t(o.name))}${finTag(x)}</button>`;
     return `<button class="out add" data-out-make="${o.key}"${busy ? ' disabled' : ''} title="${esc(t('Prepare: {what}', { what: t(o.what) }))}"><i aria-hidden="true">+</i>${esc(t(o.name))}</button>`;
   }).join('');
   // One "Download": a dialog to pick the outputs, with or without the sheet.
@@ -956,7 +987,10 @@ function renderOutputs(d, v) {
 const DC_TARGETS = [['same', 'Same as the original'], ['web', 'Web (glTF)'], ['desktop', 'Unity / Unreal'], ['ar', 'AR'], ['print', '3D print']];
 const DC_STOP = new Set(['a', 'an', 'the', 'of', 'with', 'for', 'and', 'in', 'on', 'to', 'at', 'version', 'same', 'one',
   'la', 'le', 'les', 'un', 'une', 'des', 'de', 'du', 'et', 'en', 'au', 'aux', 'avec', 'pour', 'sans', 'sur', 'meme', 'même']);
-const dc = { rows: [], start: 'current', outs: new Set(), notes: false, busy: false };
+const dc = { mode: 'copies', rows: [], frows: [], def: 0, start: 'current', outs: new Set(), notes: false, busy: false };
+// Finishes: the same shape in other materials, in the model's own glTF files (web, AR GLB).
+const finishFiles = (d) => d.variants.filter((x) => (outputOf(x) === 'web' || (outputOf(x) === 'ar' && x.ext === '.glb')));
+const finishesOf = (d) => finishFiles(d).map((x) => x.stats?.finishes || []).find((f) => f.length) || [];
 function dcSlug(text) {
   const words = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 1 && !DC_STOP.has(w));
   return words.slice(0, 2).join('-');
@@ -964,8 +998,11 @@ function dcSlug(text) {
 function dcRow(i) {
   return { text: '', name: `${state.detail.name}-${i + 1}`, target: 'same', auto: true };
 }
-function openDecline() {
+function openDecline(mode = 'copies') {
   const d = state.detail;
+  dc.mode = mode;
+  dc.frows = [{ name: '', text: '' }];
+  dc.def = 0;
   dc.rows = [dcRow(0)];
   dc.start = 'current';
   dc.notes = false;
@@ -979,6 +1016,13 @@ function openDecline() {
 }
 function renderDecline() {
   const d = state.detail;
+  $$('#decl [data-dc-mode]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.dcMode === dc.mode)));
+  $('#dc-opts-copies').hidden = dc.mode !== 'copies';
+  $('#dc-opts-finishes').hidden = dc.mode !== 'finishes';
+  $('#dc-add').textContent = dc.mode === 'copies' ? t('+ Add a variation') : t('+ Add a finish');
+  $('#dc-sub').textContent = dc.mode === 'copies' ? t('Each variation starts from a copy of the model. The original is never changed.')
+    : t('The finishes go in this model\'s glTF files. The version before is kept: Compare and choose goes back to it.');
+  if (dc.mode === 'finishes') return renderFinishes();
   $('#dc-rows').innerHTML = dc.rows.map((r, i) => `<div class="dc-card" data-i="${i}">
     <div class="dc-card-head"><span>${esc(t('Variation {n}', { n: i + 1 }))}</span>${dc.rows.length > 1 ? `<button class="btn icon sm ghost" data-dc-del="${i}" title="${esc(t('Remove'))}" aria-label="${esc(t('Remove variation {n}', { n: i + 1 }))}"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>` : ''}</div>
     <div class="dc-card-body">
@@ -1022,7 +1066,56 @@ function declineProblem(r, i) {
   if (state.assets.some((a) => a.name === r.name) || dc.rows.some((x, j) => j < i && x.name === r.name)) return t('Variation {n}: a model named {name} is already there.', { n: i + 1, name: r.name });
   return '';
 }
+function renderFinishes() {
+  const d = state.detail, have = finishesOf(d);
+  // The finishes the model has (or its own material, "Current"), then a card per new one.
+  const fixed = `<div class="dc-have"><span>${esc(have.length ? t('Already in the file') : t('The model\'s material today, kept as it is'))}</span>${(have.length ? have : [t('Current')]).map((name) => `<span class="chip">${esc(name)}</span>`).join('')}</div>`;
+  $('#dc-rows').innerHTML = fixed + dc.frows.map((r, i) => `<div class="dc-card" data-i="${i}">
+    <div class="dc-card-head"><span>${esc(t('Finish {n}', { n: (have.length || 1) + i + 1 }))}</span>${dc.frows.length > 1 ? `<button class="btn icon sm ghost" data-fn-del="${i}" title="${esc(t('Remove'))}" aria-label="${esc(t('Remove'))}"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>` : ''}</div>
+    <div class="dc-card-body fin">
+      <label class="f"><span>${esc(t('Name'))}</span><input type="text" data-fn="name" value="${esc(r.name)}" placeholder="${esc(t('E.g.: Walnut'))}" autocomplete="off"></label>
+      <label class="f"><span>${esc(t('The material, in words'))}</span><textarea data-fn="text" rows="2" placeholder="${esc(t('E.g.: oiled walnut, dark grain, brushed brass feet'))}">${esc(r.text)}</textarea></label>
+    </div></div>`).join('');
+  $$('#dc-rows .dc-card[data-i]').forEach((card) => {
+    const r = dc.frows[+card.dataset.i];
+    $('[data-fn="name"]', card).oninput = (e) => { r.name = e.target.value; renderFinishDefault(); renderDeclineFoot(); };
+    $('[data-fn="text"]', card).oninput = (e) => { r.text = e.target.value; renderDeclineFoot(); };
+  });
+  $$('[data-fn-del]').forEach((b) => (b.onclick = () => { dc.frows.splice(+b.dataset.fnDel, 1); renderDecline(); }));
+  const files = finishFiles(d);
+  $('#dc-in').innerHTML = files.length
+    ? `${files.map((x) => `<code>${esc(x.file.split('/').slice(-2).join('/'))}</code>`).join(' · ')}<br>${esc(t('The glTF files carry the finishes. The game, the iPhone and the print do not: make new models for them.'))}`
+    : esc(t('No glTF output yet: the finishes go in the web file Claude makes.'));
+  renderFinishDefault();
+  renderDeclineFoot();
+}
+function renderFinishDefault() {
+  const have = finishesOf(state.detail), names = [...(have.length ? have : [t('Current')]), ...dc.frows.map((r) => r.name.trim()).filter(Boolean)];
+  dc.def = Math.min(dc.def, names.length - 1);
+  $('#dc-default').innerHTML = names.map((n, i) => `<option value="${i}"${i === dc.def ? ' selected' : ''}>${esc(n)}</option>`).join('');
+  $('#dc-default').onchange = (e) => (dc.def = +e.target.value);
+}
+function finishAsk(d) {
+  const have = finishesOf(d), base = have.length ? have : [t('Current')];
+  const names = [...base, ...dc.frows.map((r) => r.name.trim())];
+  const files = finishFiles(d).map((x) => x.file.split('/').slice(-2).join('/'));
+  return [t('Add finishes to {name}: the same shape in other materials, in the same glTF files, as material variants (KHR_materials_variants; kiln\'s export-targets.md § Finishes).', { name: d.name }),
+    have.length ? t('It has these finishes already: {list}. Keep them.', { list: have.join(', ') }) : t('Keep its material as it is as the first finish, named "{current}".', { current: base[0] }),
+    `${t('The new finishes:')}\n${dc.frows.map((r) => `- ${r.name.trim()}: ${r.text.trim()}`).join('\n')}`,
+    t('Shown first: {name}. Export again {files} with the finishes; leave the FBX, the USDZ and the print files (they carry none). Add the finishes to {log}.', { name: names[dc.def] || base[0], files: files.length ? files.join(', ') : `web/${d.name}_final.glb`, log: `${d.name}_log.md` })].join('\n\n');
+}
 function renderDeclineFoot() {
+  if (dc.mode === 'finishes') {
+    const n = dc.frows.length, on = !!claude.status?.enabled;
+    $('#dc-facts').innerHTML = [[n, tp(n, 'finish', 'finishes')], ...(on ? [[1, t('request to Claude')]] : [])]
+      .map(([k, l]) => `<span><b>${fmtN(k)}</b>${esc(l)}</span>`).join('');
+    const est = $('#dc-est');
+    est.hidden = !on;
+    if (on) { est.title = ESTIMATE_WHY(); estimateOf('finishes').then((e) => (est.textContent = estimateText(e))); }
+    $('#dc-go').textContent = on ? tp(n, 'Add {n} finish', 'Add {n} finishes') : t('Copy the request');
+    $('#dc-go').disabled = dc.busy;
+    return;
+  }
   const n = dc.rows.length, on = !!claude.status?.enabled, par = Math.min(n, claude.status?.parallel || 1);
   $('#dc-facts').innerHTML = [[n, tp(n, 'model', 'models')], ...(on ? [[n, tp(n, 'request to Claude', 'requests to Claude')], [par, t('at a time')]] : [])]
     .map(([k, l]) => `<span><b>${fmtN(k)}</b>${esc(l)}</span>`).join('');
@@ -1046,8 +1139,31 @@ function declineAsk(d, r) {
     dc.notes ? t('The open notes of {from} were copied onto it: handle them too.', { from: d.name }) : '',
     outs.length ? `${t('Then make its outputs:')} ${outs.join(' ')}` : ''].filter(Boolean).join('\n\n');
 }
-$('#dc-add').onclick = () => { dc.rows.push(dcRow(dc.rows.length)); renderDecline(); $$('#dc-rows textarea').at(-1)?.focus(); };
+$('#dc-add').onclick = () => {
+  if (dc.mode === 'finishes') { dc.frows.push({ name: '', text: '' }); renderDecline(); $$('#dc-rows [data-fn="name"]').at(-1)?.focus(); return; }
+  dc.rows.push(dcRow(dc.rows.length)); renderDecline(); $$('#dc-rows textarea').at(-1)?.focus();
+};
+$$('#decl [data-dc-mode]').forEach((b) => (b.onclick = () => { dc.mode = b.dataset.dcMode; $('#dc-err').textContent = ''; renderDecline(); }));
+async function launchFinishes() {
+  const d = state.detail, on = !!claude.status?.enabled, have = finishesOf(d);
+  const taken = new Set([...(have.length ? have : [t('Current')])].map((x) => x.toLowerCase()));
+  for (const [i, r] of dc.frows.entries()) {
+    if (!r.name.trim() || !r.text.trim()) { $('#dc-err').textContent = t('Finish {n}: a name and the material.', { n: i + 1 }); return; }
+    if (taken.has(r.name.trim().toLowerCase())) { $('#dc-err').textContent = t('Finish {n}: {name} is already there.', { n: i + 1, name: r.name.trim() }); return; }
+    taken.add(r.name.trim().toLowerCase());
+  }
+  const ask = finishAsk(d);
+  if (!on) { await copy(`/kiln ${ask}`); $('#decl').close(); toast(esc(t('Copied: paste it in Claude Code, in this project. Claude in Studio is off (Settings → Claude).')), 'ok', 7000); return; }
+  dc.busy = true; renderDeclineFoot();
+  // The version before, kept: Compare and choose can go back to it.
+  try { await assetApi(d.id, '/snapshot', { method: 'POST', body: { variant: finishFiles(d)[0]?.label } }); } catch { /* compare without it */ }
+  $('#decl').close();
+  openClaudeView(null);
+  await claudeSend('chat', ask, null, 'finishes');
+  dc.busy = false;
+}
 $('#dc-go').onclick = async () => {
+  if (dc.mode === 'finishes') return launchFinishes();
   const d = state.detail, on = !!claude.status?.enabled;
   const bad = dc.rows.map(declineProblem).find(Boolean);
   $$('#dc-rows .dc-card').forEach((c, i) => c.classList.toggle('bad', !!declineProblem(dc.rows[i], i)));

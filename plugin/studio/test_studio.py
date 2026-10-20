@@ -585,6 +585,27 @@ class Derive(Base):
         self.assertEqual(sorted(f.name for f in (self.tmp / new.id).iterdir()), ["stool-old_log.md", "stool-old_original.glb"])
 
 
+class Finishes(Base):
+    def test_a_glb_says_its_finishes_and_the_sheet_too(self) -> None:
+        f = glb(self.tmp / "generated-assets" / "chair" / "web" / "chair_final.glb")
+        # Add KHR_materials_variants to its JSON chunk, as Blender's exporter writes it.
+        b = f.read_bytes()
+        n = struct.unpack("<I", b[12:16])[0]
+        g = json.loads(b[20:20 + n])
+        g["extensionsUsed"] = ["KHR_materials_variants"]
+        g["extensions"] = {"KHR_materials_variants": {"variants": [{"name": "Oak"}, {"name": "Walnut"}]}}
+        g["materials"].append({"name": "M_Walnut"})
+        g["meshes"][0]["primitives"][0]["extensions"] = {"KHR_materials_variants": {"mappings": [
+            {"material": 0, "variants": [0]}, {"material": 1, "variants": [1]}]}}
+        j = json.dumps(g).encode()
+        j += b" " * (-len(j) % 4)
+        rest = b[20 + n:]
+        f.write_bytes(b[:8] + struct.pack("<I", 12 + 8 + len(j) + len(rest)) + struct.pack("<I", len(j)) + b"JSON" + j + rest)
+        a = self.p.find("chair")
+        self.assertEqual(sl.variant_stats(a.variant("final"))["finishes"], ["Oak", "Walnut"])
+        import handoff
+        self.assertIn("2 finitions (variantes de matériaux glTF) : Oak, Walnut", handoff.use_of("web", f, "fr"))
+
 class Estimate(Base):
     def usage(self, *entries: dict) -> None:
         d = self.tmp / ".kiln-studio" / "claude"

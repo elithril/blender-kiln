@@ -519,7 +519,7 @@ plugin/
 | `plugin/tools/uv_check.py` | UV check: used tile, overlap, stretch, collapsed and flipped faces; FAIL on a texture without UVs or collapsed UVs | ~180 |
 | `plugin/references/validation-checklist.md` | Geometry cleanup (welding that keeps the shading) + material export audit | ~290 |
 | `plugin/references/ai-generation.md` | Backend order (TRELLIS.2 first), licences, Hunyuan3D 2.x (on request), TRELLIS.2 local (measured), concept art (FLUX.1-schnell, nano-banana), free-quota and token rules | ~430 |
-| `plugin/references/export-targets.md` | GLB/FBX/USDZ settings, headless CLI, post-export checklist | ~240 |
+| `plugin/references/export-targets.md` | GLB/FBX/USDZ settings, finishes (material variants), headless CLI, post-export checklist | ~300 |
 | `plugin/references/cli-tools.md` | gltf-transform, gltfpack, LOD workflow, metrics | ~210 |
 | `plugin/references/uv-materials.md` | UV unwrapping, the UV check, PBR channel packing | ~180 |
 | `plugin/references/naming-conventions.md` | Blender + GLTF name mapping + file conventions, outputs | ~180 |

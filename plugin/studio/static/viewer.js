@@ -184,7 +184,7 @@ class Slot {
     }
     if (this.skeleton) { this.scene.remove(this.skeleton); this.skeleton = null; }
     for (const p of this.proxies.values()) p.geometry.dispose();
-    this.model = null; this.meshes = []; this.mixer = null; this.clips = []; this.action = null; this.parser = null;
+    this.model = null; this.meshes = []; this.mixer = null; this.clips = []; this.action = null; this.parser = null; this.finish = undefined;
     this.proxies = new Map(); this.proxyAt = -1;
   }
   set(loaded) {
@@ -226,6 +226,26 @@ class Slot {
       p.matrixWorld.copy(m.matrixWorld);
     }
     this.proxyAt = performance.now();
+  }
+  // Finishes (glTF KHR_materials_variants): the names, and one put on. Its materials come
+  // from the file through the loader's parser; -1 puts back the file's own.
+  finishes() {
+    return (this.parser?.json.extensions?.KHR_materials_variants?.variants || []).map((v) => v.name);
+  }
+  async setFinish(i) {
+    if (!this.parser) return;
+    for (const m of this.meshes) {
+      const ext = m.userData.gltfExtensions?.KHR_materials_variants;
+      if (!ext) continue;
+      if (!m.userData.finish0) m.userData.finish0 = m.userData.orig;
+      const map = i < 0 ? null : ext.mappings.find((x) => x.variants.includes(i));
+      if (map) {
+        m.material = await this.parser.getDependency('material', map.material);
+        this.parser.assignFinalMaterial(m);
+        m.userData.orig = m.material;
+      } else m.userData.orig = m.userData.finish0;
+    }
+    this.finish = i;
   }
   // What a ray hits: visible meshes, the skinned ones as posed.
   targets() { return this.meshes.filter((m) => m.visible).map((m) => this.proxies.get(m) || m); }
@@ -383,6 +403,12 @@ export class Viewer {
       const c = slot.clips.find((x) => x.name.toLowerCase() === want) || slot.clips[0];
       this.playClip(c.name, slot);
     }
+  }
+
+  async setFinish(i, slot = this.a) {
+    await slot.setFinish(i);
+    this.applyShading(slot);
+    this.onChange?.();
   }
 
   // shading

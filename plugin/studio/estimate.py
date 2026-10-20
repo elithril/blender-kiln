@@ -5,7 +5,7 @@
 n: the runs the figure comes from; seen: this project's runs of the task (under needed, the bench).
 
 The tasks: create.text, create.photo (a Create request, with or without a reference photo),
-output.web|game|ar|print, derive (a declination: the change and its outputs), notes, chat, setup.
+output.web|game|ar|print, derive (a variation: the change and its outputs), finishes (materials added to a model), notes, chat, setup.
 
 This project's own runs first (.kiln-studio/claude/usage.jsonl): a task is a run and the
 resumes after it on the same conversation (each approval is a resume), summed. The time is
@@ -25,7 +25,7 @@ import statistics
 import studiolib as sl
 
 MIN_RUNS = 3
-TASK_RE = re.compile(r"^(create\.(text|photo)|output\.(web|game|ar|print)|derive|notes|chat|setup)$")
+TASK_RE = re.compile(r"^(create\.(text|photo)|output\.(web|game|ar|print)|derive|finishes|notes|chat|setup)$")
 
 # bench/runs/v220-ahujasid/<brief>/result.json, kiln 2.2.0, October 2026: (seconds, $ API-equivalent).
 BENCH = {
