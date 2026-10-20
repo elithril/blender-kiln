@@ -416,7 +416,8 @@ function renderList() {
 
 function itemInner(a) {
   const c = counts(a), dot = dotOf(a), building = isBuilding(a), v = a.variants[0];
-  const n = a.variants.length;
+  // The build's stages only: the outputs (game, AR, print) are not stages.
+  const n = a.kiln ? a.variants.filter((x) => [null, 'web'].includes(outputOf(x))).length : a.variants.length;
   const sub = building ? `<span class="bld">${esc(t('building · {phase}', { phase: a.live.phase || t('starting') }))}</span>`
     : esc([a.tris != null ? t('{n} tris', { n: fmtK(a.tris) }) : v.ext.slice(1).toUpperCase(),
       n > 1 ? (a.kiln ? tp(n, '{n} stage', '{n} stages') : tp(n, '{n} file', '{n} files')) : fmtB(v.size),
