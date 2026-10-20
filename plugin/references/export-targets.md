@@ -198,6 +198,9 @@ bpy.ops.wm.usd_export(
     relative_paths=True,
     convert_world_material=False,     # see the gotcha below — this matters
     export_animation=True,            # an animated model: OFF by default, the USDZ is then still
+    convert_orientation=True,         # ARKit wants Y up: usdchecker --arkit fails on Z up
+    export_global_forward_selection='NEGATIVE_Z',
+    export_global_up_selection='Y',
 )
 ```
 

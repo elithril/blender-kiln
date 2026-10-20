@@ -223,7 +223,11 @@ function pick(i) {{
   if (g) g.href = D.glb[i];
   document.getElementById('n').hidden = !(apple && !D.has[i] && i !== {cur});
 }}
-document.querySelectorAll('.fins button').forEach(function (b) {{ b.onclick = function () {{ pick(+b.dataset.i); }}; }});
+// On an iPhone, only the finishes that have their own USDZ (and the model's own).
+if (apple) document.querySelectorAll('.fins button').forEach(function (b) {{ var i = +b.dataset.i; if (!D.has[i] && i !== D.cur) b.remove(); }});
+var fins = document.querySelectorAll('.fins button');
+if (fins.length < 2 && document.querySelector('.fins')) {{ document.querySelector('.fins').remove(); D.usdz = []; }}
+fins.forEach(function (b) {{ b.onclick = function () {{ pick(+b.dataset.i); }}; }});
 if (D.usdz.length) pick(D.cur);
 // One model, no finish to pick, on an iPhone: straight to Quick Look (AR is one tap there).
 else if (apple && document.querySelector('.ios')) location.replace('model.usdz');

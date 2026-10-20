@@ -726,7 +726,10 @@ def make_handler(studio: Studio, port_ref: list[int]):
                             p = files["usdz"].with_name(f"{a.name}_ar_{sl.finish_slug(f)}.usdz")
                             if p.is_file():
                                 per[f] = p
-                    return self._json(studio.phone.link(a.name, files, str(body.get("lang", "en")), fins, shown, per))
+                    out = studio.phone.link(a.name, files, str(body.get("lang", "en")), fins, shown, per)
+                    # The finishes an iPhone cannot pick yet (no USDZ of their own).
+                    out["ios_missing"] = [f for f in fins if f != shown and f not in per] if files.get("usdz") else []
+                    return self._json(out)
                 if method == "POST" and rest == ["derive"]:
                     # Décliner: a new model from a copy of this one, then Claude makes the change.
                     new = sl.derive(project, a, str(body.get("name", "")), str(body.get("text", ""))[:4000],

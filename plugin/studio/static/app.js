@@ -1269,6 +1269,20 @@ async function openPhone() {
   $('#ph-url').textContent = link.url;
   $('#ph-when').textContent = [link.ios && t('iPhone and iPad: AR Quick Look'), link.android && t('Android: Scene Viewer'),
     t('valid until {time}', { time: new Date(link.expires * 1000).toLocaleTimeString(getLang() === 'fr' ? 'fr-FR' : 'en-US', { hour: '2-digit', minute: '2-digit' }) })].filter(Boolean).join(' · ');
+  // Finishes an iPhone cannot pick yet: a USDZ each, made by Claude when asked.
+  const miss = link.ios_missing || [], box = $('#ph-miss');
+  box.hidden = !miss.length;
+  if (miss.length) {
+    const on = !!claude.status?.enabled;
+    box.innerHTML = `<span>${esc(tp(miss.length, 'On iPhone, {list} has no AR file of its own yet: AR shows the model\'s material.', 'On iPhone, {list} have no AR file of their own yet: AR shows the model\'s material.', { list: miss.join(', ') }))}</span>${on ? `<button class="btn sm" id="ph-make">${esc(tp(miss.length, 'Prepare it for iPhone', 'Prepare them for iPhone'))}</button>` : ''}`;
+    $('#ph-make')?.addEventListener('click', async () => {
+      const ask = t('Export, for iPhone AR (Quick Look shows one finish per file), a USDZ for each of these finishes of {name}: {list}. Beside ar/{name}_ar.usdz: ar/{name}_ar_<finish>.usdz, the finish in lower case, - for spaces, no accents ({examples}), each with that finish\'s materials, with the AR export\'s settings (export-targets.md § USDZ: Y up, animation on).',
+        { name: d.name, list: miss.join(', '), examples: miss.map((f) => `ar/${d.name}_ar_${finishSlug(f)}.usdz`).join(', ') });
+      dlg.close();
+      openClaudeView(null);
+      await claudeSend('chat', ask, null, 'output.ar');
+    });
+  }
   dlg.showModal();
 }
 $('#ph-stop').onclick = async () => { try { await api('/api/phone/stop', { method: 'POST', body: {} }); } catch { /* closed anyway */ } $('#phone').close(); toast(esc(t('Sharing stopped: the link no longer opens.')), 'ok'); };
