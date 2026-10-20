@@ -749,6 +749,7 @@ function setupFinishBar() {
       ${state.detail?.kiln ? `<button class="fcell add" data-finish-add title="${esc(t('Add finishes: other materials, same shape'))}"><span class="sw plus">+</span><span class="fl">${esc(t('Add'))}</span></button>` : ''}</div>
       ${shown.length ? '' : `<p class="fnone">${esc(t('No finish matches.'))}</p>`}`;
     $$('[data-finish]', pop).forEach((b) => (b.onclick = () => put(+b.dataset.finish)));
+    tip('palette', pop);
     $('[data-finish-add]', pop)?.addEventListener('click', () => { finishUI.open = false; pop.hidden = true; openDecline('finishes'); });
     const inp = $('input', pop);
     if (inp) inp.oninput = () => { finishUI.q = inp.value; const pos = inp.selectionStart; setupFinishBar(); const n = $('#finishpop input'); n.focus(); n.setSelectionRange(pos, pos); };
@@ -1077,6 +1078,7 @@ function openDecline(mode = 'copies') {
   $('#dc-err').textContent = '';
   renderDecline();
   $('#decl').showModal();
+  tip(mode === 'finishes' ? 'finishes' : 'variations', '#dc-rows');
   $('#dc-rows textarea')?.focus();
 }
 function renderDecline() {
@@ -1287,6 +1289,7 @@ async function openPhone() {
     t('No notes, measures or comparison in AR: those stay in Studio.')].filter(Boolean);
   $('#ph-lim').hidden = false;
   $('#ph-lim').innerHTML = `<b>${esc(t('In AR'))}</b><ul>${lim.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
+  setTimeout(() => tip('ar', '#ph-qr'), 50);
   // Finishes an iPhone cannot pick yet: a USDZ each, made by Claude when asked.
   const miss = link.ios_missing || [], box = $('#ph-miss');
   box.hidden = !miss.length;
@@ -1367,6 +1370,7 @@ async function openDownload() {
   $('#dl-go').onclick = (e) => { if ($('#dl-go').classList.contains('disabled')) e.preventDefault(); else setTimeout(() => dlg.close(), 0); };
   sync();
   dlg.showModal();
+  tip('download', '#dl-list');
 }
 // What a request takes, said before it is sent (estimate.py): from this project's runs of
 // the same kind, else kiln's bench. Kept until a run ends (it changes the figures).
@@ -1463,6 +1467,7 @@ async function setCompare(mode, target) {
   }
   const was = state.compare;
   state.compare = mode ? { mode, target: target || was?.target } : null;
+  if (mode && !was) tip('compare', '#cmpbar', { delay: 900 });
   viewer.setCompare(mode || null);
   $('#cmpbar').hidden = !mode;
   $('#split').hidden = mode !== 'split';
@@ -1655,6 +1660,7 @@ function startPin() {
   cancelDraft(false);
   state.pinning = true;
   stage.classList.add('pinning');
+  tip('pin', '#t-pin');
   hint(t('Click the model where the note goes · Esc cancels'));
   syncToolbar();
 }
@@ -2778,6 +2784,7 @@ function renderClaude() {
   if (pend.dataset.sig !== sig) {
     pend.dataset.sig = sig;
     pend.hidden = !waitingMsgs.length;
+    if (waitingMsgs.length) tip('queue', pend);
     pend.innerHTML = waitingMsgs.map((w) => (claude.editing === w.id
       ? `<div class="cl-msg me pending"><div class="who">${esc(t('Waiting'))}</div><textarea class="cl-edit" rows="3">${esc(w.text)}</textarea><div class="acts"><button class="btn sm accent" data-cl="wsave" data-job="${esc(w.id)}">${esc(t('Save'))}</button><button class="btn sm ghost" data-cl="wcancel">${esc(t('Cancel'))}</button></div></div>`
       : `<div class="cl-msg me pending"><div class="who">${esc(t('Waiting · goes when Claude is done'))}</div>${mdLite(w.text)}<div class="acts"><button class="btn sm" data-cl="wnow" data-job="${esc(w.id)}" title="${esc(t('Stop Claude and send this now: it keeps what it did and takes your message into account'))}">${esc(t('Interrupt and send'))}</button><button class="btn sm ghost" data-cl="wedit" data-job="${esc(w.id)}">${esc(t('Edit'))}</button><button class="btn sm ghost" data-cl="wdrop" data-job="${esc(w.id)}">${esc(t('Remove'))}</button></div></div>`)).join('');
@@ -3015,6 +3022,66 @@ document.addEventListener('click', (e) => {
   renderNotesWork();
   claudeSend('notes').finally(() => { claude.sending = false; renderNotesWork(); });
 });
+
+// ── tips: a word on a feature the first time it is used ─────────────────────
+// One at a time, never during the tutorial, once each (this browser); Settings → Display
+// shows them again.
+// Each tip is laid out as the tutorial's cards are (tutorial.js): a title, short points
+// with their key words in **bold**, and what to do, after "→".
+const TIPS = {
+  variations: { title: 'Variations of this model',
+    points: ['Each card is **a new model**, made from a copy', 'The **original** is never touched', 'Claude makes them, **several at once** if Settings allow'],
+    act: 'Say what changes: the name follows.' },
+  finishes: { title: 'Finishes',
+    points: ['Other materials for **the same shape**, in the same file', 'On a website, **the visitor picks**', 'Claude makes the materials once; **Studio does the rest**'],
+    act: 'Name a finish and describe its material.' },
+  download: { title: 'What to send',
+    points: ['Everything ticked goes in **one zip**', '**The sheet** tells whoever receives it what each file is for'],
+    act: 'Untick what not to send.' },
+  ar: { title: 'See it in AR',
+    points: ['The phone must be on **the same Wi-Fi**', 'The link lasts **15 minutes**; nothing else of the project is reachable'],
+    act: 'Scan the code with the phone\'s camera.' },
+  palette: { title: 'The finishes of this file',
+    points: ['**A dot per finish**, its colour', 'With the pill selected, **← →** go through them'],
+    act: 'Pick one to see it.' },
+  queue: { title: 'Your message waits',
+    points: ['It goes **when Claude finishes**', '**Interrupt and send** stops Claude now: it keeps what it did'] },
+  compare: { title: 'Compare',
+    points: ['**The kept version** on one side, this one on the other', '**Compare and choose** (Details) keeps the one you prefer'],
+    act: 'Drag the divider.' },
+  pin: { title: 'A note on the model',
+    points: ['**The point, the angle and a picture** go with the note', 'Claude reads them'],
+    act: 'Click the model where the change goes.' },
+};
+const tipsSeen = () => store.get('kiln-studio:tips', {});
+$('#set-tips').onclick = () => { store.set('kiln-studio:tips', {}); toast(esc(t('The tips will show again, each at its feature.')), 'ok'); };
+function tip(id, anchor, { delay = 350 } = {}) {
+  const el = typeof anchor === 'string' ? $(anchor) : anchor;
+  if (!el || tipsSeen()[id] || hooks.api || $('.coach')) return;
+  setTimeout(() => {
+    if (!el.isConnected || !el.getClientRects().length || $('.coach') || hooks.api) return;
+    const T = TIPS[id], bold = (x) => esc(t(x)).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    const html = `<div class="coach" role="note" data-tip="${id}"><div class="coach-main"><span class="k">${esc(t('Tip'))}</span><h4>${esc(t(T.title))}</h4>`
+      + `<ul>${T.points.map((x) => `<li>${bold(x)}</li>`).join('')}</ul>`
+      + (T.act ? `<div class="tuto-act"><span class="tuto-act-ico" aria-hidden="true">→</span><span>${bold(T.act)}</span></div>` : '')
+      + `</div><button class="btn sm accent">${esc(t('Got it'))}</button></div>`;
+    // In a dialog: a line above what it is about, covering nothing. Elsewhere: beside it.
+    if (el.closest('dialog')) el.insertAdjacentHTML('beforebegin', html.replace('class="coach"', 'class="coach inline"'));
+    else document.body.insertAdjacentHTML('beforeend', html);
+    const c = $(`.coach[data-tip="${id}"]`);
+    if (!c.classList.contains('inline')) {
+      const r = el.getBoundingClientRect(), w = Math.min(320, innerWidth - 24);
+      c.style.width = `${w}px`;
+      const below = r.bottom + 12 + c.offsetHeight < innerHeight;
+      c.style.top = `${below ? r.bottom + 10 : Math.max(12, r.top - c.offsetHeight - 10)}px`;
+      c.style.left = `${Math.min(Math.max(12, r.left + r.width / 2 - w / 2), innerWidth - w - 12)}px`;
+    }
+    const done = () => { store.set('kiln-studio:tips', { ...tipsSeen(), [id]: true }); c.remove(); };
+    $('button', c).onclick = done;
+    // Gone with its dialog, or with the next click elsewhere (seen: it does not come back).
+    el.closest('dialog')?.addEventListener('close', () => c.isConnected && done(), { once: true });
+  }, delay);
+}
 
 // ── the tutorial (tutorial.js): a scripted, simulated walk through Studio ─────
 // Offered once, the first time; ⌘K → Take the tutorial starts it again.

@@ -554,6 +554,13 @@ kiln's bench (2.2.0 baseline: a create from a brief 3–5 min, $1.02–1.54; fro
 16–21 min, $4.17–5.18). Neither: "no estimate yet", never a made-up figure. Outputs are
 told apart from other chats by the task the page sends (`output.print`…).
 
+**Tips** (one line each, shown once): the first time a feature is opened — variations,
+finishes, the download, AR, the finish palette, a message queued for Claude, compare, a
+pin — a tip says what it does and how. Inside a window, a line above its content, covering
+nothing; elsewhere, beside what it is about. Never during the tutorial, one at a time;
+"Got it" (or closing the window) and it does not come back. Seen tips live in the browser
+(`kiln-studio:tips`); Settings → Display → Tips → "Show them again".
+
 **Browsers:** Chrome, and Safari 26.6 through WebDriver (2026-10-19): the whole
 tutorial, ⌘K and the keys, a pinned note with its screenshot, compare and choose; a
 trackpad pinch zooms the 3D view, not the page (by hand); "Notify me when Claude waits"
