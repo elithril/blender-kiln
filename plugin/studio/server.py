@@ -606,6 +606,8 @@ def make_handler(studio: Studio, port_ref: list[int]):
                         return self._json(studio.worker.now(parts[3]))
                     if parts[4] == "answer":
                         return self._json(studio.worker.answer(parts[3], str(body.get("decision", "")), str(body.get("reason", ""))))
+                if parts == ["api", "phone", "log"]:
+                    return self._json({"log": studio.phone.log})
                 if method == "POST" and parts == ["api", "phone", "stop"]:
                     studio.phone.stop()
                     return self._json({"ok": True})

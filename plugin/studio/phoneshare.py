@@ -54,6 +54,7 @@ class PhoneShare:
         self.srv: ThreadingHTTPServer | None = None
         self.links: dict[str, dict] = {}
         self.lock = threading.Lock()
+        self.log: list[str] = []
 
     def link(self, name: str, files: dict[str, Path], lang: str = "en") -> dict:
         ip = lan_ip()
@@ -93,8 +94,16 @@ class PhoneShare:
         share = self
 
         class Handler(BaseHTTPRequestHandler):
-            def log_message(self, *a):   # quiet
-                pass
+            def log_message(self, fmt, *a):
+                # What the phone asked, kept short (the last 50), to see why an opening failed.
+                share.log.append(f"{time.strftime('%H:%M:%S')} {self.command} {self.path.split('?')[0][-40:]} "
+                                 f"range={self.headers.get('Range', '-')} -> {a[1] if len(a) > 1 else ''} "
+                                 f"{(self.headers.get('User-Agent') or '')[:60]}")
+                del share.log[:-50]
+
+            def do_HEAD(self):
+                self._head_only = True
+                self.do_GET()
 
             def do_GET(self):
                 parts = self.path.split("?")[0].strip("/").split("/")
@@ -107,7 +116,21 @@ class PhoneShare:
                 f = l["files"].get(kind)
                 if not f or parts[2] != f"model.{kind}":
                     return self._send(404, b"Not found.", "text/plain; charset=utf-8")
-                self._send(200, f.read_bytes(), TYPES[kind], {"Content-Disposition": f'inline; filename="{quote(l["name"])}.{kind}"'})
+                data = f.read_bytes()
+                extra = {"Content-Disposition": f'inline; filename="{quote(l["name"])}.{kind}"', "Accept-Ranges": "bytes"}
+                # A byte range (Quick Look and media loaders ask for one): 206 with that part.
+                rng = self.headers.get("Range", "")
+                if rng.startswith("bytes="):
+                    try:
+                        a0, _, a1 = rng[6:].split(",")[0].partition("-")
+                        start = int(a0) if a0 else max(0, len(data) - int(a1))
+                        end = min(int(a1), len(data) - 1) if a0 and a1 else len(data) - 1
+                        if start > end or start >= len(data):
+                            raise ValueError
+                    except ValueError:
+                        return self._send(416, b"", TYPES[kind], {"Content-Range": f"bytes */{len(data)}"})
+                    return self._send(206, data[start:end + 1], TYPES[kind], {**extra, "Content-Range": f"bytes {start}-{end}/{len(data)}"})
+                self._send(200, data, TYPES[kind], extra)
 
             def _send(self, code, body, ctype, extra=None):
                 self.send_response(code)
@@ -117,7 +140,8 @@ class PhoneShare:
                 for k, v in (extra or {}).items():
                     self.send_header(k, v)
                 self.end_headers()
-                self.wfile.write(body)
+                if not getattr(self, "_head_only", False):
+                    self.wfile.write(body)
 
         self.srv = ThreadingHTTPServer(("0.0.0.0", self.port), Handler)
         threading.Thread(target=self.srv.serve_forever, daemon=True, name="phone-share").start()
@@ -127,10 +151,10 @@ class PhoneShare:
         base = f"http://{host}/ar/{token}/"
         # Quick Look wants the link to hold an image; Scene Viewer takes the GLB's full URL.
         icon = ("data:image/svg+xml," + quote('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>'))
-        ios = (f'<a class="b" rel="ar" href="model.usdz"><img src="{icon}" alt="">{html.escape(w["ios"])}</a>'
+        ios = (f'<a class="b ios" rel="ar" href="model.usdz"><img src="{icon}" alt="">{html.escape(w["ios"])}</a>'
                if "usdz" in l["files"] else "")
         glb = quote(base + "model.glb", safe="")
-        android = (f'<a class="b" href="intent://arvr.google.com/scene-viewer/1.0?file={glb}&amp;mode=ar_preferred&amp;title={quote(l["name"])}'
+        android = (f'<a class="b android" href="intent://arvr.google.com/scene-viewer/1.0?file={glb}&amp;mode=ar_preferred&amp;title={quote(l["name"])}'
                    f'#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;'
                    f'S.browser_fallback_url={quote(base, safe="")};end;">{html.escape(w["android"])}</a>' if "glb" in l["files"] else "")
         return f"""<!doctype html><html lang="{l['lang']}"><head><meta charset="utf-8">
@@ -146,4 +170,10 @@ font-weight:600;text-decoration:none;font-size:17px}} .b img{{width:0;height:0}}
 <h1>{name}</h1><p>{html.escape(w['lead'])}</p>
 {ios}{android}{'' if ios or android else '<p>' + html.escape(w['none']) + '</p>'}
 <p class="f">{html.escape(w['foot'].format(m=MINUTES))}</p>
+<script>
+// The button for this phone only: AR Quick Look on Apple's, Scene Viewer on Android.
+var ua = navigator.userAgent, apple = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1), android = /Android/.test(ua);
+if (apple) document.querySelectorAll('.android').forEach(function (e) {{ e.remove(); }});
+if (android) document.querySelectorAll('.ios').forEach(function (e) {{ e.remove(); }});
+</script>
 </body></html>"""

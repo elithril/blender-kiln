@@ -672,6 +672,14 @@ class Phone(Base):
             self.assertIn("Voir en AR".encode(), body)
             self.assertEqual(get(path + "model.usdz")[:2], (200, "model/vnd.usdz+zip"))
             self.assertEqual(get(path + "model.glb")[1], "model/gltf-binary")
+            c = http.client.HTTPConnection("127.0.0.1", port, timeout=5)   # a range, as Quick Look asks
+            c.request("GET", path + "model.usdz", headers={"Host": f"127.0.0.1:{port}", "Range": "bytes=0-1"})
+            r = c.getresponse()
+            self.assertEqual((r.status, r.getheader("Content-Range"), r.read()), (206, "bytes 0-1/7", b"PK"))
+            c.request("HEAD", path + "model.usdz", headers={"Host": f"127.0.0.1:{port}"})
+            r = c.getresponse()
+            self.assertEqual((r.status, r.getheader("Content-Length"), r.read()), (200, "7", b""))
+            c.close()
             self.assertEqual(get(path + "../../etc/passwd")[0], 404)
             self.assertEqual(get("/ar/nope/model.usdz")[0], 404)
             share.links[path.split("/")[2]]["until"] = 0   # expired
