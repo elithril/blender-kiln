@@ -1581,7 +1581,7 @@ def derive_task(a: Asset, new: str, text: str, *, target: str = "same", start: s
            f"Studio copied the source of {a.name} here: {new}.blend, {new}_original.glb, its build scripts and its log.")
     parts = [f"{new} is a variation of {a.name}, in its own folder. {src}", f"Change it: {text.strip()}",
              f"Made for: {made}. Work on this copy only, never on {a.name}. Save {new}.blend, export {new}_original.glb "
-             f"and {new}_final.glb with kiln's settings, and add the change to {new}_log.md."]
+             f"and web/{new}_final.glb with kiln's settings, and add the change to {new}_log.md."]
     if notes:
         parts.append(f"The open notes of {a.name} were copied onto it: handle them too.")
     outs = [OUTPUT_FILES[o].format(n=new) for o in (outputs or []) if o in OUTPUT_FILES]

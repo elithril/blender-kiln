@@ -935,7 +935,7 @@ function renderOutputs(d, v) {
   df.hidden = !from;
   if (from) {
     const parent = state.byId.get(from.from);
-    df.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v12a3 3 0 0 0 3 3h9M15 15l3 3-3 3"/></svg><span>${esc(t('A variation of'))} ${parent ? `<button class="linkish" data-go="${esc(parent.id)}">${esc(parent.name)}</button>` : esc(from.from.split('/').pop())}</span><span class="q" title="${esc(from.text)}">· « ${esc(from.text)} »</span>`;
+    df.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v12a3 3 0 0 0 3 3h9M15 15l3 3-3 3"/></svg><span class="of">${esc(t('A variation of'))} ${parent ? `<button class="linkish" data-go="${esc(parent.id)}">${esc(parent.name)}</button>` : esc(from.from.split('/').pop())}</span><span class="q" title="${esc(from.text)}">· « ${esc(from.text)} »</span>`;
     $$('[data-go]', df).forEach((b) => (b.onclick = () => go(b.dataset.go)));
   }
   // Another file can be another layout (a print's parts on the bed): framed anew.
@@ -1042,7 +1042,7 @@ function declineAsk(d, r) {
   const outs = [...dc.outs].map((k) => outputAsk(k, r.name));
   return [t('{name} is a variation of {from}, in its own folder. {src}', { name: r.name, from: d.name, src }),
     t('Change it: {text}', { text: r.text.trim() }),
-    t('Made for: {made}. Work on this copy only, never on {from}. Save {name}.blend, export {name}_original.glb and {name}_final.glb with kiln\'s settings, and add the change to {name}_log.md.', { made, from: d.name, name: r.name }),
+    t('Made for: {made}. Work on this copy only, never on {from}. Save {name}.blend, export {name}_original.glb and web/{name}_final.glb with kiln\'s settings, and add the change to {name}_log.md.', { made, from: d.name, name: r.name }),
     dc.notes ? t('The open notes of {from} were copied onto it: handle them too.', { from: d.name }) : '',
     outs.length ? `${t('Then make its outputs:')} ${outs.join(' ')}` : ''].filter(Boolean).join('\n\n');
 }

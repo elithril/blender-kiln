@@ -1111,7 +1111,7 @@
   "Each variation starts from a copy of the model. The original is never changed.": "Chaque variante part d'une copie du modèle. L'original n'est jamais modifié.",
   "Launch {n} variation": "Lancer {n} variante",
   "Launch {n} variations": "Lancer {n} variantes",
-  "Made for: {made}. Work on this copy only, never on {from}. Save {name}.blend, export {name}_original.glb and {name}_final.glb with kiln's settings, and add the change to {name}_log.md.": "Destiné à : {made}. Travaille uniquement sur cette copie, jamais sur {from}. Enregistre {name}.blend, exporte {name}_original.glb et {name}_final.glb avec les réglages de kiln, et note le changement dans {name}_log.md.",
+  "Made for: {made}. Work on this copy only, never on {from}. Save {name}.blend, export {name}_original.glb and web/{name}_final.glb with kiln's settings, and add the change to {name}_log.md.": "Destiné à : {made}. Travaille uniquement sur cette copie, jamais sur {from}. Enregistre {name}.blend, exporte {name}_original.glb et web/{name}_final.glb avec les réglages de kiln, et note le changement dans {name}_log.md.",
   "Make the outputs again": "Refaire les sorties",
   "Make {n} copies": "Faire {n} copies",
   "Make {n} copy": "Faire {n} copie",
