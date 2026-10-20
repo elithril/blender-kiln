@@ -263,7 +263,7 @@ and the sheet — LISEZ-MOI.md or README.md — with the size, each file's use a
 redo, and the licences of the log; never the source nor kiln's working files.
 
 **Variations** ("Variantes"; a kiln model only): new models from a copy of this one, always
-asked for by the user — "+ Variations" on the selected model's row in the list, where they
+asked for by the user — "Create variations" (an accent link) on the selected model's row in the list, where they
 will go, or ⌘K. A card per variation — what changes (free text), the new model's
 name (suggested from the words), what it is for (as the original, web, game, AR, print:
 the budgets follow) — as many as wanted. Options: start from the current version or the
