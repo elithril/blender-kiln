@@ -283,7 +283,7 @@ from", and Details lists both ways.
 **Finishes** (the dialog's second tab, or "+ Finish" in the view): the same shape in
 other materials, in the model's own glTF files (web, and AR's GLB) as
 `KHR_materials_variants` — a website switches without loading again. A card per finish
-(a name, the material in words), the one shown first; one Claude run (task `finishes`),
+(a name, the material in words), the one shown on opening (the file's own material: what Quick Look and viewers without finishes show); one Claude run (task `finishes`),
 the version before kept for Compare and choose. FBX, USDZ and print files carry none.
 How Blender writes them: `export-targets.md` § Finishes. A file with finishes shows a
 picker in the view (a swatch per finish), "Web · 3 finishes" on its output, and its

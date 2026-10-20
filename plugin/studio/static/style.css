@@ -1265,6 +1265,10 @@ svg.spark { width: 14px; height: 14px; fill: var(--new); stroke: none; flex: non
 #decl .dc-in { font-size: 12px; color: var(--text-2); line-height: 1.5; }
 #decl .dc-in code { font: 12px var(--mono); color: var(--text); }
 #decl .dc-def { width: 220px; }
+#decl .dc-defcell { display: grid; gap: 6px; }
+#decl #dc-opts-finishes { align-items: start; }
+#decl #dc-opts-finishes .lab { padding-top: 7px; }
+#decl .dc-help { font-size: 11.5px; color: var(--text-3); line-height: 1.45; }
 #decl .dc-body { padding: 14px 18px 4px; display: grid; gap: 10px; overflow-y: auto; min-height: 0; }
 #decl .dc-rows { display: grid; gap: 10px; }
 #decl .dc-card { border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); }

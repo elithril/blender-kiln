@@ -1102,7 +1102,7 @@ function finishAsk(d) {
   return [t('Add finishes to {name}: the same shape in other materials, in the same glTF files, as material variants (KHR_materials_variants; kiln\'s export-targets.md § Finishes).', { name: d.name }),
     have.length ? t('It has these finishes already: {list}. Keep them.', { list: have.join(', ') }) : t('Keep its material as it is as the first finish, named "{current}".', { current: base[0] }),
     `${t('The new finishes:')}\n${dc.frows.map((r) => `- ${r.name.trim()}: ${r.text.trim()}`).join('\n')}`,
-    t('Shown first: {name}. Export again {files} with the finishes; leave the FBX, the USDZ and the print files (they carry none). Add the finishes to {log}.', { name: names[dc.def] || base[0], files: files.length ? files.join(', ') : `web/${d.name}_final.glb`, log: `${d.name}_log.md` })].join('\n\n');
+    t('Shown on opening: {name}. Export again {files} with the finishes; leave the FBX, the USDZ and the print files (they carry none). Add the finishes to {log}.', { name: names[dc.def] || base[0], files: files.length ? files.join(', ') : `web/${d.name}_final.glb`, log: `${d.name}_log.md` })].join('\n\n');
 }
 function renderDeclineFoot() {
   if (dc.mode === 'finishes') {
