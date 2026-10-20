@@ -2605,7 +2605,9 @@ function claudeEntry(e, results, job) {
       // A Create request done: its model, one click away.
       const made = job == null && claude.view?.startsWith('request:') && (claude.status?.jobs || []).find((j) => j.id === e.job)?.asset;
       const open = made && state.byId.has(made) ? `<button class="btn sm accent" data-open-key="asset:${esc(made)}">${esc(t('Open {name}', { name: state.byId.get(made).name }))}</button>` : '';
-      return `<div class="cl-res">${esc([e.turns != null && tp(e.turns, '{n} turn', '{n} turns'), e.duration_ms != null && fmtSecs(e.duration_ms / 1000), e.cost_usd != null && t('≈ ${c} API-equivalent, included in your subscription', { c: fmtD(e.cost_usd, 2) })].filter(Boolean).join(' · '))}</div>${open}`;
+      // Short: the time and the cost; what the cost is, on hover.
+      const billed = claude.status?.account === 'api_key';
+      return `<div class="cl-res" title="${esc([e.turns != null && tp(e.turns, '{n} turn', '{n} turns'), billed ? t('billed to your API key') : t('API-equivalent: included in your subscription, counted in its quota')].filter(Boolean).join(' · '))}">${esc([e.duration_ms != null && fmtSecs(e.duration_ms / 1000), e.cost_usd != null && (getLang() === 'fr' ? `${fmtD(e.cost_usd, 2)} $` : `$${fmtD(e.cost_usd, 2)}`)].filter(Boolean).join(' · '))}</div>${open}`;
     }
     case 'proposal':
       return `<div class="cl-card prop"><div class="k">${esc(t('Claude proposes'))}</div><p>${mdLite(e.question)}</p>${live
@@ -2676,16 +2678,21 @@ function renderClaude() {
   if (inTools) html += '</div>';
   if (claude.partial && job && claude.partial.job === job.id && job.state === 'running') html += `<div class="cl-msg cl"><div class="who"><b>Claude</b> · ${esc(t('now'))}</div>${mdLite(claude.partial.text)}<span class="caret"></span></div>`;
   else if (job?.state === 'running') html += `<div class="cl-sys"><span class="dot pulse"></span> ${esc(t('Claude is working…'))}</div>`;
-  // Messages written while Claude works: they go when it is done, or now.
-  for (const w of claudeWaitingMsgs()) {
-    html += claude.editing === w.id
-      ? `<div class="cl-msg me pending"><div class="who">${esc(t('Waiting'))}</div><textarea class="cl-edit" rows="3">${esc(w.text)}</textarea><div class="acts"><button class="btn sm accent" data-cl="wsave" data-job="${esc(w.id)}">${esc(t('Save'))}</button><button class="btn sm ghost" data-cl="wcancel">${esc(t('Cancel'))}</button></div></div>`
-      : `<div class="cl-msg me pending"><div class="who">${esc(t('Waiting · goes when Claude is done'))}</div>${mdLite(w.text)}<div class="acts"><button class="btn sm" data-cl="wnow" data-job="${esc(w.id)}" title="${esc(t('Stop Claude and send this now: it keeps what it did and takes your message into account'))}">${esc(t('Now'))}</button><button class="btn sm ghost" data-cl="wedit" data-job="${esc(w.id)}">${esc(t('Edit'))}</button><button class="btn sm ghost" data-cl="wdrop" data-job="${esc(w.id)}">${esc(t('Remove'))}</button></div></div>`;
-  }
   if (!msgs.length && !job) html = `<div class="empty-notes"><b>${esc(t('Ask Claude about {name}', { name }))}</b>${esc(t('It sees the model you have open, your notes and your view, and changes the model in its own Blender. Studio shows each new version here.'))}</div>`;
   const atEnd = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 40;
   thread.innerHTML = html;
   if (atEnd || claude.stick) { thread.scrollTop = thread.scrollHeight; claude.stick = false; }
+  // Messages written while Claude works, above the box: drawn again only when they change
+  // (the thread is redrawn as Claude writes; a button there could vanish under the click).
+  const waitingMsgs = claudeWaitingMsgs(), pend = $('#cl-pending');
+  const sig = JSON.stringify([waitingMsgs.map((w) => [w.id, w.text]), claude.editing]);
+  if (pend.dataset.sig !== sig) {
+    pend.dataset.sig = sig;
+    pend.hidden = !waitingMsgs.length;
+    pend.innerHTML = waitingMsgs.map((w) => (claude.editing === w.id
+      ? `<div class="cl-msg me pending"><div class="who">${esc(t('Waiting'))}</div><textarea class="cl-edit" rows="3">${esc(w.text)}</textarea><div class="acts"><button class="btn sm accent" data-cl="wsave" data-job="${esc(w.id)}">${esc(t('Save'))}</button><button class="btn sm ghost" data-cl="wcancel">${esc(t('Cancel'))}</button></div></div>`
+      : `<div class="cl-msg me pending"><div class="who">${esc(t('Waiting · goes when Claude is done'))}</div>${mdLite(w.text)}<div class="acts"><button class="btn sm" data-cl="wnow" data-job="${esc(w.id)}" title="${esc(t('Stop Claude and send this now: it keeps what it did and takes your message into account'))}">${esc(t('Interrupt and send'))}</button><button class="btn sm ghost" data-cl="wedit" data-job="${esc(w.id)}">${esc(t('Edit'))}</button><button class="btn sm ghost" data-cl="wdrop" data-job="${esc(w.id)}">${esc(t('Remove'))}</button></div></div>`)).join('');
+  }
   // composer
   const tool = job?.state === 'waiting' && (claude.thread?.jobs || []).some((j) => j.id === job.id && j.waiting?.type === 'tool');
   const busy = job && ['running', 'queued'].includes(job.state);
@@ -2699,7 +2706,7 @@ function renderClaude() {
   const a = st.auth || {};
   // Only when it matters: Claude at work, or an account to fix. The account and the
   // Blender are in the Claude pill's menu, up top.
-  $('#cl-hint').innerHTML = busy ? esc(t('Claude is working: a message now waits for it to be done — or goes at once with "Now".'))
+  $('#cl-hint').innerHTML = busy ? esc(t('Claude is working: a message waits for it to be done — or "Interrupt and send".'))
     : a.ok === false ? `<span class="warn-t">${esc(accountWords(a))}</span>` : '';
 }
 
@@ -2775,10 +2782,10 @@ $('#tab-claude').addEventListener('click', async (e) => {
   } else if (['wnow', 'wdrop', 'wsave'].includes(act)) {
     const id = e.target.closest('[data-job]').dataset.job;
     const path = { wnow: 'now', wdrop: 'stop', wsave: 'edit' }[act];
-    const body = act === 'wsave' ? { text: $('#cl-thread .cl-edit')?.value || '' } : {};
+    const body = act === 'wsave' ? { text: $('#cl-pending .cl-edit')?.value || '' } : {};
     try { await api(`/api/claude/jobs/${enc(id)}/${path}`, { method: 'POST', body }); claude.editing = null; await claudeStatus(); await claudeLoad(); } catch (err) { toast(esc(err.message), 'warn'); }
   } else if (act === 'wedit') {
-    claude.editing = e.target.closest('[data-job]').dataset.job; renderClaude(); $('#cl-thread .cl-edit')?.focus();
+    claude.editing = e.target.closest('[data-job]').dataset.job; renderClaude(); $('#cl-pending .cl-edit')?.focus();
   } else if (act === 'wcancel') {
     claude.editing = null; renderClaude();
   } else if (act === 'stop' && job) {

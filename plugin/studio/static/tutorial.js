@@ -451,7 +451,7 @@ const STEPS = [
     points: [N_('One conversation per model, kept between sessions'),
       N_('What Claude did on the note is here, line by line: open one to see what went in and out'),
       N_('Write in the box below; **view capture** lets Claude look at your view first'),
-      N_('While Claude works, write anyway: the message waits its turn, or goes at once with **Now**'),
+      N_('While Claude works, write anyway: the message waits its turn, or **Interrupt and send**'),
       N_('Another conversation covers the whole project')] },
   { id: 'compare', ch: C_CMP, target: '#t-compare', do: true, title: N_('Compare'),
     enter: () => X.ensureRight('notes'),

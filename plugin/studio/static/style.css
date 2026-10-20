@@ -1015,6 +1015,7 @@ body.present .topbar { pointer-events: none; opacity: .85; }
 .cl-msg { font-size: 12.5px; line-height: 1.55; overflow-wrap: anywhere; }
 .cl-msg .who { font-size: 11px; color: var(--text-3); margin-bottom: 3px; }
 .cl-msg.cl .who b { color: var(--new); font-weight: 600; }
+.cl-pending { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; padding: 8px 14px 0; max-height: 40%; overflow-y: auto; flex: none; }
 .cl-msg.me.pending { opacity: .85; border-style: dashed; }
 .cl-msg.me.pending .who { font-size: 11px; color: var(--text-3); margin-bottom: 4px; }
 .cl-msg.me.pending .acts { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
