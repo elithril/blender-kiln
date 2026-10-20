@@ -1678,6 +1678,51 @@ def asset_summary(project: Project, a: Asset, catalog: dict) -> dict:
     }
 
 
+def shape_signature(path: Path) -> str | None:
+    """What the shape is, from a glTF's JSON alone: each primitive's vertex count and bounds,
+    each node's transform — not its materials. Finishes (new materials, a second UV map)
+    leave it as it is."""
+    try:
+        g = read_gltf_json(path)
+    except (OSError, ValueError):
+        return None
+    acc = g.get("accessors") or []
+    parts = []
+    for m in g.get("meshes") or []:
+        for p in m.get("primitives") or []:
+            a = acc[p["attributes"]["POSITION"]] if p.get("attributes", {}).get("POSITION") is not None else {}
+            # Bounds to the millimetre, not the vertex count: Draco may renumber vertices.
+            parts.append([[round(x, 3) for x in a.get("min", [])], [round(x, 3) for x in a.get("max", [])]])
+    nodes = [[n.get("mesh"), [round(x, 3) for x in n.get("translation", [])], [round(x, 3) for x in n.get("scale", [])],
+              [round(x, 3) for x in n.get("rotation", [])]] for n in g.get("nodes") or []]
+    return hashlib.sha1(json.dumps([parts, nodes]).encode()).hexdigest()[:16]
+
+
+def shape_since(project: Project, a: Asset) -> float | None:
+    """When the model's shape last changed: the source's date the first time its shape was
+    seen as it is now. An output older than that is to redo; one made before a change that
+    left the shape alone (finishes) is not."""
+    src = next((v for v in a.variants if v.label == "original"), None)
+    if not src:
+        return None
+    sig = shape_signature(src.path)
+    if not sig:
+        return src.mtime
+    p = project.asset_dir(a.id) / "shape.json"
+    cur = read_json(p, None) or {}
+    if cur.get("signature") != sig:
+        since = src.mtime
+        if not cur:
+            # First look: the kept version, when it has this shape, says it is at least as old.
+            b = baseline(project, a.id)
+            kept = project.root / b["file"] if b else None
+            if kept and kept.suffix.lower() in (".glb", ".gltf") and shape_signature(kept) == sig:
+                since = min(since, kept.stat().st_mtime)
+        cur = {"signature": sig, "since": since}
+        write_json(p, cur)
+    return cur["since"]
+
+
 def asset_detail(project: Project, a: Asset, catalog: dict) -> dict:
     out = asset_summary(project, a, catalog)
     out["variants"] = [dict(v.to_json(), stats=variant_stats(v)) for v in a.variants]
@@ -1692,4 +1737,5 @@ def asset_detail(project: Project, a: Asset, catalog: dict) -> dict:
     out["thumbs"] = sorted(h for h in versions if has_thumb(project, a.id, h))
     out["live"] = load_live(project, a.id) if a.kiln else None
     out["derivations"] = derivations(catalog, a.id)
+    out["shape_since"] = shape_since(project, a) if a.kiln else None
     return out

@@ -606,6 +606,26 @@ class Finishes(Base):
         import handoff
         self.assertIn("2 finitions (variantes de matériaux glTF) : Oak, Walnut", handoff.use_of("web", f, "fr"))
 
+class Shape(Base):
+    def test_an_output_is_to_redo_when_the_shape_changes_not_the_materials(self) -> None:
+        import handoff
+        d = self.tmp / "generated-assets" / "box"
+        glb(d / "box_original.glb")
+        game = glb(d / "game" / "box_game.glb")
+        old = time.time() - 3600
+        os.utime(game, (old, old))
+        os.utime(d / "box_original.glb", (old - 60, old - 60))         # the game came after the source
+        a = self.p.find("box")
+        self.assertEqual(handoff.contents(a, self.p)[1], [])
+        # Re-exported with new materials (finishes): same shape, the game stays up to date.
+        glb(d / "box_original.glb", name="SM_Box")
+        a = self.p.find("box")
+        self.assertEqual(handoff.contents(a, self.p)[1], [])
+        # Re-exported taller: the game is to redo.
+        glb(d / "box_original.glb", scale=2.0)
+        a = self.p.find("box")
+        self.assertEqual(handoff.contents(a, self.p)[1], ["game"])
+
 class Estimate(Base):
     def usage(self, *entries: dict) -> None:
         d = self.tmp / ".kiln-studio" / "claude"

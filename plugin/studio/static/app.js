@@ -416,11 +416,11 @@ function renderList() {
 
 function itemInner(a) {
   const c = counts(a), dot = dotOf(a), building = isBuilding(a), v = a.variants[0];
-  // The build's stages only: the outputs (game, AR, print) are not stages.
-  const n = a.kiln ? a.variants.filter((x) => [null, 'web'].includes(outputOf(x))).length : a.variants.length;
+  const n = a.variants.length;
   const sub = building ? `<span class="bld">${esc(t('building · {phase}', { phase: a.live.phase || t('starting') }))}</span>`
     : esc([a.tris != null ? t('{n} tris', { n: fmtK(a.tris) }) : v.ext.slice(1).toUpperCase(),
-      n > 1 ? (a.kiln ? tp(n, '{n} stage', '{n} stages') : tp(n, '{n} file', '{n} files')) : fmtB(v.size),
+      // A kiln model: its file's weight (the stages are in the view's switch); else its files.
+      a.kiln || n < 2 ? fmtB(v.size) : tp(n, '{n} file', '{n} files'),
       a.finishes?.length > 1 ? tp(a.finishes.length, '{n} finish', '{n} finishes') : ''].filter(Boolean).join(' · '));
   const dotT = dot && (claudeDot(a) ? claudeDotTitle(a) : workTitle(state.work.dots[a.id]));
   return `<img class="thumb" alt="" ${a.thumb ? `src="${esc(fileUrl(a.thumb))}"` : ''}>
@@ -986,11 +986,12 @@ function outputAsk(key, name) {
     print: t('Prepare {name} for 3D printing with kiln\'s print mode: check it and make it printable, then save in its folder print/ one STL per part ({name}_print_<part>.stl) and {name}_print.3mf gathering them, in millimetres.', { name }),
   }[key];
 }
-// An output made before the model last changed is out of date: older than _original.glb,
-// the source's export Claude makes again at every change (not the .blend, saved for less).
+// An output made before the model's shape last changed is out of date (the server reads
+// the shape off _original.glb; a re-export for new finishes leaves it as it was).
 function outputStale(d, x) {
   const src = d.variants.find((y) => y.label === 'original');
-  return !!(src && x !== src && x.mtime + 1 < src.mtime);
+  // Against when the shape last changed (shape_since): new finishes are not a change of shape.
+  return !!(src && x !== src && x.mtime + 1 < (d.shape_since ?? src.mtime));
 }
 // "· 3 finishes" on an output whose file carries them.
 const finTag = (x) => { const n = x.stats?.finishes?.length || 0; return n > 1 ? `<span class="fin">· ${esc(tp(n, '{n} finish', '{n} finishes'))}</span>` : ''; };

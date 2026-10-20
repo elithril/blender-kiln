@@ -253,7 +253,7 @@ first folder holding `.kiln-studio/`); pass `--root PROJECT` from elsewhere.
 
 **Outputs**, beside the stages on top: Web, Game, AR, 3D print — a folder per use in the
 model's folder, found by name (`naming-conventions.md` § Outputs). ✓: up to date; ↻: made
-before `_original.glb` last changed, to redo ("Redo it"). One there opens in the view (an STL or a 3MF in
+before the model's shape last changed (`sl.shape_since`: read off `_original.glb` — bounds and transforms, not materials, so new finishes leave the outputs ✓), to redo ("Redo it"). One there opens in the view (an STL or a 3MF in
 millimetres, as on the printer's bed); one missing has "+": Studio asks Claude to prepare
 it (with Claude off in Studio, the request is copied for Claude Code). "Download" opens a
 dialog: each output checked, with its files, their size and use (`/api/asset/<id>/outputs`),

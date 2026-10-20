@@ -78,16 +78,18 @@ def _num(x: float, lang: str, digits: int = 0) -> str:
     return s.replace(",", "\u202f").replace(".", ",") if lang == "fr" else s
 
 
-def contents(a: sl.Asset) -> tuple[list[tuple[str, str, Path]], list[str]]:
-    """The deliverables, in order — (output, folder, path) — and the outputs to redo."""
+def contents(a: sl.Asset, project: sl.Project | None = None) -> tuple[list[tuple[str, str, Path]], list[str]]:
+    """The deliverables, in order — (output, folder, path) — and the outputs to redo (made
+    before the shape last changed: new finishes are not a change of shape)."""
     src = next((v for v in a.variants if v.label == "original"), None)
+    since = (sl.shape_since(project, a) if project and a.kiln else None) or (src.mtime if src else None)
     files: list[tuple[str, str, Path]] = []
     stale: list[str] = []
     for v in a.variants:
         out = output_of(v)
         if not out:
             continue
-        if src and v is not src and v.mtime + 1 < src.mtime and out not in stale:
+        if since and v is not src and v.mtime + 1 < since and out not in stale:
             stale.append(out)
         folder = out
         if out in ("print", "ar") and v.path.parent.name == out:
@@ -129,7 +131,7 @@ def variants_of(project: sl.Project, a: sl.Asset) -> list[sl.Asset]:
 
 
 def _rows(project: sl.Project, a: sl.Asset, lang: str) -> list[dict]:
-    files, stale = contents(a)
+    files, stale = contents(a, project)
     rows: dict[str, dict] = {}
     for out, folder, f in files:
         r = rows.setdefault(out, {"out": out, "stale": out in stale, "files": []})
@@ -170,7 +172,7 @@ def make_package(project: sl.Project, a: sl.Asset, lang: str = "en", outs: list[
     parts += [(v, f"{w['variants_dir']}/{v.name}/") for v in variants_of(project, a) if v.id in (variants or [])]
     packed: list[tuple[sl.Asset, str, list, list]] = []
     for x, prefix in parts:
-        files, stale = contents(x)
+        files, stale = contents(x, project)
         if outs is not None:
             files = [f for f in files if f[0] in outs]
             stale = [o for o in stale if o in outs]
