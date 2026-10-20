@@ -97,20 +97,22 @@
         <h2 id="asset-name">…</h2>
         <div id="stages" class="seg small stages" role="radiogroup" aria-label="Stage" data-i18n-attr="aria-label"></div>
         <div id="outputs" class="outputs" role="group" aria-label="Outputs" data-i18n-attr="aria-label"></div>
-        <div class="pinsctl" id="pinsctl" hidden>
-          <button id="t-pins" class="eye on" aria-pressed="true" aria-label="Hide pins (P)" title="Pins (P)">
-            <svg class="on-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
-            <svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 5.1A9.8 9.8 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-2.4 3.3M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18"/></svg>
-          </button>
-          <div class="pinsmenu"><div class="box" role="group" aria-label="Which pins" data-i18n-attr="aria-label">
-            <button id="pm-all" aria-pressed="false"><i class="sw"></i><span data-i18n>Hide all pins</span> <kbd style="margin-left:auto">P</kbd></button>
-            <button id="pm-fixed" aria-pressed="false" title="Hide the pins Claude already addressed, and closed ones" data-i18n-attr="title"><i class="sw"></i><span data-i18n>Hide fixed pins</span></button>
-            <button id="pm-behind" aria-pressed="false" title="Pins on the far side are faded; this hides them (raycast against the model)" data-i18n-attr="title"><i class="sw"></i><span data-i18n>Hide pins behind the model</span></button>
-          </div></div>
-        </div>
       </div>
       <div id="derived-from" class="derived-from" hidden></div>
-      <div id="stats" class="stats" aria-live="polite"></div>
+      <div class="statline">
+        <div id="stats" class="stats" aria-live="polite"></div>
+          <div class="pinsctl" id="pinsctl" hidden>
+            <button id="t-pins" class="eye on" aria-pressed="true" aria-label="Hide pins (P)" title="Pins (P)">
+              <svg class="on-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 5.1A9.8 9.8 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-2.4 3.3M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18"/></svg>
+            </button>
+            <div class="pinsmenu"><div class="box" role="group" aria-label="Which pins" data-i18n-attr="aria-label">
+              <button id="pm-all" aria-pressed="false"><i class="sw"></i><span data-i18n>Hide all pins</span> <kbd style="margin-left:auto">P</kbd></button>
+              <button id="pm-fixed" aria-pressed="false" title="Hide the pins Claude already addressed, and closed ones" data-i18n-attr="title"><i class="sw"></i><span data-i18n>Hide fixed pins</span></button>
+              <button id="pm-behind" aria-pressed="false" title="Pins on the far side are faded; this hides them (raycast against the model)" data-i18n-attr="title"><i class="sw"></i><span data-i18n>Hide pins behind the model</span></button>
+            </div></div>
+          </div>
+      </div>
     </div>
   </div>
 
