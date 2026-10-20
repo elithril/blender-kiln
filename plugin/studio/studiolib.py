@@ -1674,6 +1674,7 @@ def asset_summary(project: Project, a: Asset, catalog: dict) -> dict:
         "pending_shots": len(pending_shots(notes, a)),
         "live": live_summary(load_live(project, a.id)) if a.kiln else None,
         "derived": meta.get("derived"),
+        "finishes": finishes_of(a),
     }
 
 

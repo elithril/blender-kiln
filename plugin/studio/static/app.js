@@ -307,7 +307,7 @@ async function fetchAssets() {
 }
 
 // What a row shows: when it changes, the row is redrawn.
-const rowSig = (a) => JSON.stringify([counts(a), a.live?.state, a.live?.phase, a.thumb, a.variants[0]?.hash, a.variants.length, a.tris, dotOf(a), isNew(a), a.tags]);
+const rowSig = (a) => JSON.stringify([counts(a), a.live?.state, a.live?.phase, a.thumb, a.variants[0]?.hash, a.variants.length, a.tris, dotOf(a), isNew(a), a.tags, a.finishes?.length]);
 
 function markSeen(a) {
   if (!a) return;
@@ -419,7 +419,8 @@ function itemInner(a) {
   const n = a.variants.length;
   const sub = building ? `<span class="bld">${esc(t('building · {phase}', { phase: a.live.phase || t('starting') }))}</span>`
     : esc([a.tris != null ? t('{n} tris', { n: fmtK(a.tris) }) : v.ext.slice(1).toUpperCase(),
-      n > 1 ? (a.kiln ? tp(n, '{n} stage', '{n} stages') : tp(n, '{n} file', '{n} files')) : fmtB(v.size)].join(' · '));
+      n > 1 ? (a.kiln ? tp(n, '{n} stage', '{n} stages') : tp(n, '{n} file', '{n} files')) : fmtB(v.size),
+      a.finishes?.length > 1 ? tp(a.finishes.length, '{n} finish', '{n} finishes') : ''].filter(Boolean).join(' · '));
   const dotT = dot && (claudeDot(a) ? claudeDotTitle(a) : workTitle(state.work.dots[a.id]));
   return `<img class="thumb" alt="" ${a.thumb ? `src="${esc(fileUrl(a.thumb))}"` : ''}>
     <div class="meta"><div class="name" title="${esc(a.id)}">${esc(a.name)}</div><div class="sub">${sub}</div>${a.kiln ? `<button class="itm-act" data-decline="${esc(a.id)}" tabindex="-1" title="${esc(t('New models from a copy of this one: another size, other colours, a version for printing…'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>${esc(t('Create variations'))}</button>` : ''}</div>
