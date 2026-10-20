@@ -270,6 +270,16 @@ those (`handoff.with_finishes`: the JSON, then `gltf-transform prune` and Draco 
 when it is installed, so the left-out textures go), the project's files keep them all;
 FBX, USDZ and print keep the model's material (`&finishes=` names, `&shown=`).
 
+**Phone** (a model with an AR or web output): a QR code to see it in AR on the phone, on
+the same Wi-Fi. Studio itself stays on 127.0.0.1 (it writes files and runs Claude); a
+second server (`studio/phoneshare.py`, started on the first QR code, on the local network)
+serves only a page and the model's AR files — the USDZ for AR Quick Look (iPhone, iPad),
+the GLB for Scene Viewer (Android; the web one when AR has none) — read-only, under a
+random token, for 15 minutes; "Stop sharing" ends every link. The first time, macOS may
+ask to let Python take incoming connections. Tested: page and files over the LAN address,
+Studio's API not reachable through it; **not yet on a real phone** (Scene Viewer may want
+https for the file).
+
 **Variations** ("Variantes"; a kiln model only): new models from a copy of this one, always
 asked for by the user — "Create variations" (a button) on the selected model's row in the list, where they
 will go; with the list folded, "Variations" in the top bar; or ⌘K. A card per variation — what changes (free text), the new model's

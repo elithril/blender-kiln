@@ -365,6 +365,23 @@
     <button class="btn accent" id="dc-go" type="button"></button>
   </footer>
 </dialog>
+<dialog id="phone" aria-labelledby="ph-title">
+  <header class="set-head"><h3 id="ph-title" data-i18n>See it on your phone</h3><form method="dialog"><button class="btn sm" data-i18n>Close</button></form></header>
+  <div class="ph-body">
+    <div class="ph-qr" id="ph-qr" aria-label="QR code" data-i18n-attr="aria-label"></div>
+    <div class="ph-how">
+      <ol>
+        <li data-i18n>Your phone on the same Wi-Fi as this computer.</li>
+        <li data-i18n>Scan the code with its camera.</li>
+        <li data-i18n>Tap "View in AR", and place the model in the room.</li>
+      </ol>
+      <code id="ph-url"></code>
+      <p class="dim" id="ph-when"></p>
+      <p class="dim ph-note" data-i18n>Only this model's AR files are shared, read-only, for a few minutes. The first time, macOS may ask to let Python take incoming connections: allow it.</p>
+    </div>
+  </div>
+  <footer class="ph-foot"><button class="btn" id="ph-stop" data-i18n>Stop sharing</button></footer>
+</dialog>
 <dialog id="dl" aria-labelledby="dl-title">
   <header class="set-head"><h3 id="dl-title" data-i18n>Download</h3><form method="dialog"><button class="btn sm" data-i18n>Close</button></form></header>
   <div class="dl-body">

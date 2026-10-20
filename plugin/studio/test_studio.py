@@ -643,6 +643,45 @@ class Shape(Base):
         a = self.p.find("box")
         self.assertEqual(handoff.contents(a, self.p)[1], ["game"])
 
+class Phone(Base):
+    def test_the_phone_page_serves_the_ar_files_and_nothing_else(self) -> None:
+        import phoneshare
+        usdz = self.tmp / "a.usdz"
+        usdz.write_bytes(b"PK usdz")
+        glbf = glb(self.tmp / "a.glb")
+        share = phoneshare.PhoneShare()
+        old = phoneshare.lan_ip
+        phoneshare.lan_ip = lambda: "127.0.0.1"
+        try:
+            link = share.link("stool", {"usdz": usdz, "glb": glbf}, "fr")
+            self.assertTrue(link["ios"] and link["android"])
+            url = link["url"]
+            port = int(url.split(":")[2].split("/")[0])
+            def get(path):
+                c = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                c.request("GET", path, headers={"Host": f"127.0.0.1:{port}"})
+                r = c.getresponse()
+                out = (r.status, r.getheader("Content-Type"), r.read())
+                c.close()
+                return out
+            path = url.split(str(port), 1)[1]
+            code, ctype, body = get(path)
+            self.assertEqual(code, 200)
+            self.assertIn(b'rel="ar" href="model.usdz"', body)
+            self.assertIn(b"scene-viewer", body)
+            self.assertIn("Voir en AR".encode(), body)
+            self.assertEqual(get(path + "model.usdz")[:2], (200, "model/vnd.usdz+zip"))
+            self.assertEqual(get(path + "model.glb")[1], "model/gltf-binary")
+            self.assertEqual(get(path + "../../etc/passwd")[0], 404)
+            self.assertEqual(get("/ar/nope/model.usdz")[0], 404)
+            share.links[path.split("/")[2]]["until"] = 0   # expired
+            self.assertEqual(get(path)[0], 404)
+            with self.assertRaises(ValueError):
+                share.link("stool", {})
+        finally:
+            phoneshare.lan_ip = old
+            share.shutdown()
+
 class Estimate(Base):
     def usage(self, *entries: dict) -> None:
         d = self.tmp / ".kiln-studio" / "claude"

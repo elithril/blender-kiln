@@ -25,6 +25,7 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 import checks
 import estimate
 import handoff
+import phoneshare
 import setup_status
 import studiolib as sl
 import worker as wk
@@ -57,6 +58,8 @@ class Studio:
         self.captures: dict[str, list] = {}
         # Claude Code runs started from the page (worker.py): off until the project turns it on.
         self.worker = wk.Worker(project, self.emit)
+        # A model in AR on the phone: a separate, read-only server, started on the first QR code.
+        self.phone = phoneshare.PhoneShare()
         self.refresh(initial=True)
 
     # live events
@@ -603,6 +606,9 @@ def make_handler(studio: Studio, port_ref: list[int]):
                         return self._json(studio.worker.now(parts[3]))
                     if parts[4] == "answer":
                         return self._json(studio.worker.answer(parts[3], str(body.get("decision", "")), str(body.get("reason", ""))))
+                if method == "POST" and parts == ["api", "phone", "stop"]:
+                    studio.phone.stop()
+                    return self._json({"ok": True})
                 if method == "PUT" and parts == ["api", "claude", "account"]:
                     # Per user (~/.kiln-studio/claude.json), not per project: which account runs.
                     wk.save_user_settings(account=str(body.get("account", "")))
@@ -697,6 +703,20 @@ def make_handler(studio: Studio, port_ref: list[int]):
                 if method == "POST" and rest == ["snapshot"]:
                     return self._json(sl.take_baseline(project, a, a.variant(body.get("variant")),
                                                        reason="snapshot from Studio"))
+                if method == "POST" and rest == ["phone"]:
+                    # The QR code: AR's USDZ (iPhone) and GLB (Android; the web one if AR has none).
+                    files = {}
+                    for v in a.variants:
+                        kind, ext = v.label.split(".")[0], v.path.suffix.lower()
+                        if kind == "ar" and ext == ".usdz":
+                            files["usdz"] = v.path
+                        elif kind == "ar" and ext == ".glb":
+                            files["glb"] = v.path
+                    if "glb" not in files:
+                        web = next((v for v in a.variants if v.label == "final" and v.path.suffix.lower() == ".glb"), None)
+                        if web:
+                            files["glb"] = web.path
+                    return self._json(studio.phone.link(a.name, files, str(body.get("lang", "en"))))
                 if method == "POST" and rest == ["derive"]:
                     # Décliner: a new model from a copy of this one, then Claude makes the change.
                     new = sl.derive(project, a, str(body.get("name", "")), str(body.get("text", ""))[:4000],

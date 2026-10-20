@@ -1022,6 +1022,7 @@ function renderOutputs(d, v) {
   const file = `<span class="out-tools"><span class="out-sep" aria-hidden="true"></span>
     ${have.size ? `<button class="btn sm ghost out-dl" data-out-dl title="${esc(t('Pick the outputs to download, with a sheet saying what each file is for: ready to send.'))}"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"/></svg>${esc(t('Download'))}</button>` : ''}
     ${d.kiln ? `<button class="btn sm ghost out-dl out-var" data-decline title="${esc(t('New models from a copy of this one: another size, other colours, a version for printing…'))}"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>${esc(t('Variations'))}</button>` : ''}
+    ${d.variants.some((x) => outputOf(x) === 'ar' || outputOf(x) === 'web') ? `<button class="btn sm ghost out-dl" data-phone title="${esc(t('See it in AR on your phone: a QR code to scan'))}"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/></svg>${esc(t('Phone'))}</button>` : ''}
     <button class="btn sm ghost out-dl" data-out-reveal="${esc(v.file)}" title="${esc(t('Show in the Finder'))}"><svg viewBox="0 0 24 24"><path d="M3 5.5h6l2 2.5h10v10.5H3z"/></svg>${esc(t('Folder'))}</button></span>`;
   el.innerHTML = `<span class="out-label">${esc(t('Outputs'))}</span>${chips}${file}`;
   const from = d.derived, df = $('#derived-from');
@@ -1040,6 +1041,7 @@ function renderOutputs(d, v) {
   $$('[data-out-make]', el).forEach((b) => (b.onclick = () => makeOutput(b.dataset.outMake)));
   $$('[data-out-dl]:not([data-decline])', el).forEach((b) => (b.onclick = () => openDownload()));
   $$('[data-decline]', el).forEach((b) => (b.onclick = () => openDecline()));
+  $$('[data-phone]', el).forEach((b) => (b.onclick = () => openPhone()));
   $$('[data-out-reveal]', el).forEach((b) => (b.onclick = () => assetApi(state.id, '/reveal', { method: 'POST', body: { file: b.dataset.outReveal } }).catch((e) => toast(esc(e.message), 'warn'))));
 }
 // ── Décliner: new models from a copy of this one ─────────────────────────────
@@ -1240,6 +1242,27 @@ $('#dc-go').onclick = async () => {
   if (on) toast(esc(tp(made.length, '{n} variation launched: it appears under {name} in the list.', '{n} variations launched: they appear under {name} in the list.', { name: d.name })), 'ok', 7000);
   else { await copy(asks.join('\n\n')); toast(esc(tp(made.length, '{n} copy made. Its request is copied: paste it in Claude Code (Claude in Studio is off).', '{n} copies made. Their requests are copied: paste them in Claude Code, one at a time (Claude in Studio is off).')), 'ok', 9000); }
 };
+
+// AR on the phone: a link Studio's phone share serves on the Wi-Fi (phoneshare.py), as a QR code.
+let qrLib = null;
+async function openPhone() {
+  const d = state.detail, dlg = $('#phone');
+  let link;
+  try { link = await assetApi(d.id, '/phone', { method: 'POST', body: { lang: getLang() } }); } catch (e) { toast(esc(e.message), 'warn', 7000); return; }
+  try {
+    qrLib ||= (await import('https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/+esm')).default;
+    const qr = qrLib(0, 'M');
+    qr.addData(link.url);
+    qr.make();
+    $('#ph-qr').innerHTML = qr.createSvgTag({ cellSize: 6, margin: 3, scalable: true });
+  } catch { $('#ph-qr').textContent = t('The QR code needs the internet once (its library); the link below works as well.'); }
+  $('#ph-title').textContent = t('See {name} on your phone', { name: d.name });
+  $('#ph-url').textContent = link.url;
+  $('#ph-when').textContent = [link.ios && t('iPhone and iPad: AR Quick Look'), link.android && t('Android: Scene Viewer'),
+    t('valid until {time}', { time: new Date(link.expires * 1000).toLocaleTimeString(getLang() === 'fr' ? 'fr-FR' : 'en-US', { hour: '2-digit', minute: '2-digit' }) })].filter(Boolean).join(' · ');
+  dlg.showModal();
+}
+$('#ph-stop').onclick = async () => { try { await api('/api/phone/stop', { method: 'POST', body: {} }); } catch { /* closed anyway */ } $('#phone').close(); toast(esc(t('Sharing stopped: the link no longer opens.')), 'ok'); };
 
 const fmtSize = (n) => {
   const fr = getLang() === 'fr', num = (x, d) => x.toLocaleString(fr ? 'fr-FR' : 'en-US', { maximumFractionDigits: d });

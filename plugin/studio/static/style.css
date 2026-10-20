@@ -1319,6 +1319,21 @@ svg.spark { width: 14px; height: 14px; fill: var(--new); stroke: none; flex: non
 #decl .dc-err { font-size: 12px; color: var(--danger); }
 #decl .dc-err:empty { display: none; }
 @media (max-width: 640px) { #decl .dc-card-body, #decl .dc-opts { grid-template-columns: minmax(0, 1fr); } }
+/* AR on the phone: the QR code and how to use it */
+#phone { width: min(560px, calc(100vw - 24px)); }
+#phone .set-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+#phone .set-head h3 { margin: 0; font-size: 15px; }
+#phone .set-head form { margin: 0; }
+#phone .ph-body { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 18px; padding: 18px; align-items: start; }
+#phone .ph-qr { width: 200px; height: 200px; border-radius: 10px; background: #fff; display: grid; place-items: center; overflow: hidden; font-size: 12px; color: #333; text-align: center; padding: 0; }
+#phone .ph-qr svg { width: 100%; height: 100%; display: block; }
+#phone .ph-how { display: grid; gap: 10px; font-size: 13px; color: var(--text-2); }
+#phone ol { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+#phone code { font: 11px var(--mono); color: var(--text-3); word-break: break-all; }
+#phone .dim { margin: 0; font-size: 12px; }
+#phone .ph-note { font-size: 11.5px; line-height: 1.45; }
+#phone .ph-foot { display: flex; justify-content: flex-end; padding: 12px 18px; border-top: 1px solid var(--line); }
+@media (max-width: 560px) { #phone .ph-body { grid-template-columns: 1fr; justify-items: center; } }
 /* the download dialog: an output per row, its files under it; the sheet; one button */
 #dl { width: min(560px, calc(100vw - 24px)); }
 #dl .set-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--line); }
