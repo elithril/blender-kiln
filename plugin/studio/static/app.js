@@ -2628,7 +2628,7 @@ function renderClaudePill() {
   const util = st.account === 'api_key' ? null : session?.used;
   const btn = $('#cl-pill-btn');
   btn.className = `cl-pill-btn${wait.length ? ' wait' : run ? ' run' : ''}`;
-  btn.innerHTML = `<span class="dot${run && !wait.length ? ' pulse' : ''}"></span><b>Claude</b><span class="lbl">${esc(
+  btn.innerHTML = `<span class="dot${run && !wait.length ? ' pulse' : ''}"></span><b>Claude</b><span class="lbl" title="${esc(run ? jobLabel(run) : '')}">${esc(
     wait.length ? tp(wait.length, 'waits for you', '{n} wait for you') : run ? t('on {name}', { name: jobLabel(run) }) : t('ready'))}</span>${queue.length ? `<span class="sep"></span><span>${esc(t('{n} in line', { n: queue.length }))}</span>` : ''}${util != null ? `<span class="sep"></span><span class="qbar" title="${esc(quotaName(session.key))}"><i class="${util >= 0.9 ? 'hot' : ''}" style="width:${Math.round(util * 100)}%"></i></span><span>${Math.round(util * 100)} %</span>` : ''}`;
   btn.setAttribute('aria-expanded', String(claude.menu));
   $('#cl-act').hidden = !claude.menu;

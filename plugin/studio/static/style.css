@@ -1046,7 +1046,7 @@ body.present .topbar { pointer-events: none; opacity: .85; }
 .cl-pill { position: absolute; top: 12px; right: 12px; z-index: 25; }
 .cl-pill-btn { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 11px; border-radius: 15px; background: color-mix(in srgb, var(--glass) 88%, transparent); border: 1px solid var(--line-2); color: var(--text-2); font: 11.5px var(--font); white-space: nowrap; backdrop-filter: blur(8px); }
 .cl-pill-btn b { color: var(--text); font-weight: 600; }
-.cl-pill-btn .lbl { max-width: min(280px, 32vw); overflow: hidden; text-overflow: ellipsis; }   /* a long brief stays in the pill */
+.cl-pill-btn .lbl { max-width: min(170px, 16vw); overflow: hidden; text-overflow: ellipsis; }   /* a long brief stays in the pill */
 .cl-pill-btn .dot { background: var(--ok); }
 .cl-pill-btn.run .dot { background: var(--new); }
 .cl-pill-btn.wait { border-color: var(--warn); color: var(--warn); }
