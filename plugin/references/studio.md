@@ -262,7 +262,7 @@ and "Add a sheet". One file alone without the sheet downloads as is; otherwise a
 and the sheet — LISEZ-MOI.md or README.md — with the size, each file's use and triangles, the outputs to
 redo, and the licences of the log; never the source nor kiln's working files.
 
-**Décliner** (variations; a kiln model only): new models from a copy of this one, always
+**Variations** ("Variantes"; a kiln model only): new models from a copy of this one, always
 asked for by the user. A card per variation — what changes (free text), the new model's
 name (suggested from the words), what it is for (as the original, web, game, AR, print:
 the budgets follow) — as many as wanted. Options: start from the current version or the
