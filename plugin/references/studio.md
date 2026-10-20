@@ -513,8 +513,8 @@ own share, not the session's total again.
 
 **A message while Claude works** waits its turn: shown as waiting above the box (Edit,
 Remove), it enters the conversation and goes when the run ends — or "Interrupt and send",
-which stops the run (the session keeps what was done) and sends it first. A run's line is
-short (time · cost; turns and what the cost is, on hover). Not slipped
+which stops the run (the session keeps what was done) and sends it first. No cost line under each
+answer: the totals are in the Claude pill's menu. Not slipped
 into the run under way: tried with `--input-format stream-json` (2026-10-20), Claude reads
 a message arriving mid-run as text inside the last tool's result and follows it or takes it
 for an injection — once each in two runs. Refused only while an approval waits.

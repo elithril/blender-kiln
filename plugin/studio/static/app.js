@@ -2605,9 +2605,8 @@ function claudeEntry(e, results, job) {
       // A Create request done: its model, one click away.
       const made = job == null && claude.view?.startsWith('request:') && (claude.status?.jobs || []).find((j) => j.id === e.job)?.asset;
       const open = made && state.byId.has(made) ? `<button class="btn sm accent" data-open-key="asset:${esc(made)}">${esc(t('Open {name}', { name: state.byId.get(made).name }))}</button>` : '';
-      // Short: the time and the cost; what the cost is, on hover.
-      const billed = claude.status?.account === 'api_key';
-      return `<div class="cl-res" title="${esc([e.turns != null && tp(e.turns, '{n} turn', '{n} turns'), billed ? t('billed to your API key') : t('API-equivalent: included in your subscription, counted in its quota')].filter(Boolean).join(' · '))}">${esc([e.duration_ms != null && fmtSecs(e.duration_ms / 1000), e.cost_usd != null && (getLang() === 'fr' ? `${fmtD(e.cost_usd, 2)} $` : `$${fmtD(e.cost_usd, 2)}`)].filter(Boolean).join(' · '))}</div>${open}`;
+      // No line per run (the totals are in the Claude pill's menu): only a made model's link.
+      return open;
     }
     case 'proposal':
       return `<div class="cl-card prop"><div class="k">${esc(t('Claude proposes'))}</div><p>${mdLite(e.question)}</p>${live
@@ -3415,23 +3414,12 @@ function applyTheme() {
     root.style.setProperty('--accent', accent);
     root.style.setProperty('--accent-ink', ink);
   }
-  if (th.key === 'forge') lightEmbers();
   // A light theme on the dark stage reads badly: until the user picks a background
   // (Bg), the stage follows the theme.
   if (prefs.bg === undefined) {
     const bg = ['light', 'studio'].includes(th.key) ? 'light' : 'dark';
     if (viewer.opts.bg !== bg) { viewer.set('bg', bg); stage.dataset.bg = bg; syncToolbar(); }
   }
-}
-// Forge's embers: made once, then pure CSS animation.
-let embersLit = false;
-function lightEmbers() {
-  if (embersLit) return;
-  embersLit = true;
-  $('#embers').innerHTML = Array.from({ length: 18 }, (_, i) => {
-    const r = (k) => ((Math.sin(i * 12.9898 + k * 78.233) * 43758.5453) % 1 + 1) % 1;
-    return `<i style="left:${(r(1) * 100).toFixed(1)}%;--dx:${((r(2) - 0.5) * 120).toFixed(0)}px;animation-duration:${(9 + r(3) * 9).toFixed(1)}s;animation-delay:-${(r(4) * 18).toFixed(1)}s;transform:scale(${(0.6 + r(5)).toFixed(2)})"></i>`;
-  }).join('');
 }
 settingsRows.push({
   sync() {
