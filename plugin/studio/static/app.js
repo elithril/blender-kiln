@@ -449,10 +449,10 @@ function itemEl(a) {
 }
 
 function renderRail(items = visibleAssets()) {
-  $('#lrail').innerHTML = items.map((a) => {
+  $('#lrail').innerHTML = nestDerived(items).map(([a, depth]) => {
     const c = counts(a), dot = dotOf(a);
     const cnt = c.addressed ? `<span class="cnt addressed">${fmtN(c.addressed)}</span>` : c.open ? `<span class="cnt open">${fmtN(c.open)}</span>` : isNew(a) ? `<span class="cnt new" aria-label="${esc(t('new'))}">•</span>` : '';
-    return `<button class="rbtn${a.id === state.id ? ' sel' : ''}" data-id="${esc(a.id)}" aria-label="${esc(itemLabel(a))}" title="${esc(a.name)}">${a.thumb ? `<img src="${esc(fileUrl(a.thumb))}" alt="">` : '<span class="ph"></span>'}${cnt}${isBuilding(a) ? '<i class="bmark"></i>' : ''}${dot ? `<span class="wdot ${dot}"></span>` : ''}</button>`;
+    return `<button class="rbtn${a.id === state.id ? ' sel' : ''}${depth ? ' child' : ''}" data-id="${esc(a.id)}" aria-label="${esc(itemLabel(a))}" title="${esc(a.name)}">${a.thumb ? `<img src="${esc(fileUrl(a.thumb))}" alt="">` : '<span class="ph"></span>'}${cnt}${isBuilding(a) ? '<i class="bmark"></i>' : ''}${dot ? `<span class="wdot ${dot}"></span>` : ''}</button>`;
   }).join('');
   $$('#lrail .rbtn').forEach((b) => (b.onclick = () => go(b.dataset.id)));
 }

@@ -474,8 +474,13 @@ kbd { font: 500 10px/1 var(--mono); padding: 2px 5px; border-radius: 4px; border
 .outputs .out-var { display: none; }
 body:has(#left.collapsed) .outputs .out-var { display: inline-flex; }
 /* a declination, under its original in the list */
-.item.child { margin-left: 22px; }
-.item.child::before { content: ""; position: absolute; left: -9px; top: -2px; bottom: 50%; width: 8px; border-left: 1px solid var(--line-2); border-bottom: 1px solid var(--line-2); border-bottom-left-radius: 6px; }
+.item.child { margin-left: 34px; }
+.item.child .thumb { width: 32px; height: 32px; border-radius: 6px; }
+.item.child::before { content: ""; position: absolute; left: -18px; top: -6px; height: calc(50% + 6px); width: 14px; border-left: 1.5px solid var(--line-3); border-bottom: 1.5px solid var(--line-3); border-bottom-left-radius: 7px; pointer-events: none; }
+#list.compact .item.child .thumb { width: 20px; height: 20px; }
+/* folded, a variation is a smaller thumbnail tucked under its original */
+#lrail .rbtn.child { transform: scale(.78); margin-top: -6px; }
+#lrail .rbtn.child::before { content: ""; position: absolute; left: -9px; top: -8px; height: 50%; width: 7px; border-left: 2px solid var(--line-3); border-bottom: 2px solid var(--line-3); border-bottom-left-radius: 6px; }
 .title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 /* Words straight on the view follow its background, whatever the page's theme. */
 #stage { --on-stage: #E6EBF2; --on-stage-2: #A3ADBE; --on-stage-3: #6E788B; }
