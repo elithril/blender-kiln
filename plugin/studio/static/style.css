@@ -1400,5 +1400,7 @@ svg.spark { width: 14px; height: 14px; fill: var(--new); stroke: none; flex: non
 .coach.inline { position: static; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; box-shadow: none; padding: 10px 12px; margin: 0 0 10px;
   background: color-mix(in srgb, var(--accent) 6%, var(--panel)); }
 .coach.inline h4 { margin-top: 2px; }
+.coach.inline { container-type: inline-size; }
+@container (max-width: 440px) { .coach.inline > * { grid-column: 1 / -1; } .coach.inline > button { justify-self: end; } }   /* narrow: Got it below */
 @keyframes coach-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .coach { animation: none; } }

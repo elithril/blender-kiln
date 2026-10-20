@@ -1204,7 +1204,11 @@ $('#dc-add').onclick = () => {
   if (dc.mode === 'finishes') { dc.frows.push({ name: '', text: '' }); renderDecline(); $$('#dc-rows [data-fn="name"]').at(-1)?.focus(); return; }
   dc.rows.push(dcRow(dc.rows.length)); renderDecline(); $$('#dc-rows textarea').at(-1)?.focus();
 };
-$$('#decl [data-dc-mode]').forEach((b) => (b.onclick = () => { dc.mode = b.dataset.dcMode; $('#dc-err').textContent = ''; renderDecline(); }));
+$$('#decl [data-dc-mode]').forEach((b) => (b.onclick = () => {
+  dc.mode = b.dataset.dcMode; $('#dc-err').textContent = ''; renderDecline();
+  $('#decl .coach button')?.click();   // the other tab's tip, seen: this tab's own, the first time
+  tip(dc.mode === 'finishes' ? 'finishes' : 'variations', '#dc-rows');
+}));
 async function launchFinishes() {
   const d = state.detail, on = !!claude.status?.enabled, have = finishesOf(d);
   const taken = new Set([...(have.length ? have : [t('Current')])].map((x) => x.toLowerCase()));
@@ -1289,7 +1293,7 @@ async function openPhone() {
     t('No notes, measures or comparison in AR: those stay in Studio.')].filter(Boolean);
   $('#ph-lim').hidden = false;
   $('#ph-lim').innerHTML = `<b>${esc(t('In AR'))}</b><ul>${lim.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
-  setTimeout(() => tip('ar', '#ph-qr'), 50);
+  setTimeout(() => tip('ar', '#phone .ph-how ol'), 50);
   // Finishes an iPhone cannot pick yet: a USDZ each, made by Claude when asked.
   const miss = link.ios_missing || [], box = $('#ph-miss');
   box.hidden = !miss.length;
@@ -1467,7 +1471,7 @@ async function setCompare(mode, target) {
   }
   const was = state.compare;
   state.compare = mode ? { mode, target: target || was?.target } : null;
-  if (mode && !was) tip('compare', '#cmpbar', { delay: 900 });
+  if (mode && !was) tip('compare', '#split .knob', { delay: 900, beside: true });   // beside the handle it says to drag
   viewer.setCompare(mode || null);
   $('#cmpbar').hidden = !mode;
   $('#split').hidden = mode !== 'split';
@@ -3050,12 +3054,11 @@ const TIPS = {
     points: ['**The kept version** on one side, this one on the other', '**Compare and choose** (Details) keeps the one you prefer'],
     act: 'Drag the divider.' },
   pin: { title: 'A note on the model',
-    points: ['**The point, the angle and a picture** go with the note', 'Claude reads them'],
-    act: 'Click the model where the change goes.' },
+    points: ['**The point, the angle and a picture** go with the note', 'Claude reads them'] },   // what to do: the pin bar says it
 };
 const tipsSeen = () => store.get('kiln-studio:tips', {});
 $('#set-tips').onclick = () => { store.set('kiln-studio:tips', {}); toast(esc(t('The tips will show again, each at its feature.')), 'ok'); };
-function tip(id, anchor, { delay = 350 } = {}) {
+function tip(id, anchor, { delay = 350, beside = false } = {}) {
   const el = typeof anchor === 'string' ? $(anchor) : anchor;
   if (!el || tipsSeen()[id] || hooks.api || $('.coach')) return;
   setTimeout(() => {
@@ -3072,9 +3075,14 @@ function tip(id, anchor, { delay = 350 } = {}) {
     if (!c.classList.contains('inline')) {
       const r = el.getBoundingClientRect(), w = Math.min(320, innerWidth - 24);
       c.style.width = `${w}px`;
-      const below = r.bottom + 12 + c.offsetHeight < innerHeight;
-      c.style.top = `${below ? r.bottom + 10 : Math.max(12, r.top - c.offsetHeight - 10)}px`;
-      c.style.left = `${Math.min(Math.max(12, r.left + r.width / 2 - w / 2), innerWidth - w - 12)}px`;
+      if (beside) {   // to its right, level with it: what it is about stays in sight
+        c.style.top = `${Math.min(Math.max(12, r.top + r.height / 2 - c.offsetHeight / 2), innerHeight - c.offsetHeight - 12)}px`;
+        c.style.left = `${Math.min(r.right + 16, innerWidth - w - 12)}px`;
+      } else {
+        const below = r.bottom + 12 + c.offsetHeight < innerHeight;
+        c.style.top = `${below ? r.bottom + 10 : Math.max(12, r.top - c.offsetHeight - 10)}px`;
+        c.style.left = `${Math.min(Math.max(12, r.left + r.width / 2 - w / 2), innerWidth - w - 12)}px`;
+      }
     }
     const done = () => { store.set('kiln-studio:tips', { ...tipsSeen(), [id]: true }); c.remove(); };
     $('button', c).onclick = done;

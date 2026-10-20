@@ -505,7 +505,7 @@ const STEPS = [
       N_('**Notify me**: a notification when Claude waits, even in another window')] },
   { ch: C_MORE, target: '#t-settings', next: true, title: N_('Settings'),
     enter: () => { if (!$('#cl-act').hidden) click('#cl-pill-btn'); },
-    points: [N_('**Display**: how this browser shows Studio'), N_('**Project**: what models are made for, its CLAUDE.md'),
+    points: [N_('**Display**: how this browser shows Studio, and the tips seen to show again'), N_('**Project**: what models are made for, its CLAUDE.md'),
       N_('**Claude**: approvals, paid generation, how many at once'), N_('**Account**: which one pays'),
       N_('**Setup**: what kiln uses, and installs what is missing')] },
   { ch: C_MORE, center: true, next: true, last: true, title: N_('That is Studio'),

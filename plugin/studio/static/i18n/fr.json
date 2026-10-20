@@ -969,7 +969,7 @@
   "**Amber**: worth a look, with what to do": "**Orange** : à regarder, avec quoi faire",
   "A check Claude can fix comes with the words to ask for it": "Un contrôle que Claude sait corriger vient avec la phrase pour le lui demander",
   "The pill says what Claude does, what waits for you and how much of your quota is used.": "La pastille dit ce que fait Claude, ce qui vous attend et combien de votre quota est utilisé.",
-  "**Display**: how this browser shows Studio": "**Affichage** : comment ce navigateur montre le studio",
+  "**Display**: how this browser shows Studio, and the tips seen to show again": "**Affichage** : comment ce navigateur montre le studio, et les astuces déjà vues, à revoir",
   "**Project**: what models are made for, its CLAUDE.md": "**Projet** : à quoi sont destinés les modèles, son CLAUDE.md",
   "**Claude**: approvals, paid generation, how many at once": "**Claude** : validations, génération payante, combien à la fois",
   "**Account**: which one pays": "**Compte** : lequel paie",
@@ -1291,8 +1291,7 @@
   "Drag the divider.": "Faites glisser la séparation.",
   "A note on the model": "Une note sur le modèle",
   "**The point, the angle and a picture** go with the note": "**Le point, l'angle et une image** partent avec la note",
-  "Claude reads them": "Claude les lit",
-  "Click the model where the change goes.": "Cliquez sur le modèle là où va le changement."
+  "Claude reads them": "Claude les lit"
  },
  "checks": {
   "what": "un {cat:w} de niveau {tier:w}",
