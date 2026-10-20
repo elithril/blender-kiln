@@ -2067,6 +2067,7 @@ function baselineWhy(r) {
   let m;
   if (r === 'snapshot before an edit') return t('before an edit');
   if (r === 'snapshot from Studio') return t('kept from Studio');
+  if (r === 'before finishes') return t('before finishes were added');
   if ((m = /^note (\S+)$/.exec(r))) { const n = state.detail?.notes.find((x) => x.id === m[1]); return n ? t('when note {n} was made', { n: noteNumber(n) }) : t('when a note was made'); }
   if ((m = /^replaced by revert to (\w+)$/.exec(r))) return t('replaced when {h} was put back', { h: m[1].slice(0, 7) });
   return r;

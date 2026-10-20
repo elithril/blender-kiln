@@ -1160,6 +1160,7 @@
   "Add finishes to {name}: the same shape in other materials, in the same glTF files, as material variants (KHR_materials_variants; kiln's export-targets.md § Finishes).": "Ajoute des finitions à {name} : la même forme dans d'autres matières, dans les mêmes fichiers glTF, en variantes de matériaux (KHR_materials_variants ; export-targets.md de kiln, § Finishes).",
   "Add finishes: other materials, same shape": "Ajouter des finitions : d'autres matières, la même forme",
   "Surface finish": "Finition",
+  "before finishes were added": "avant l'ajout de finitions",
   "Shown on opening": "Montrée à l'ouverture",
   "Finish shown on opening": "Finition montrée à l'ouverture",
   "The one seen when the file opens, and wherever finishes are not supported (Quick Look, Preview, many viewers). Usually the current material.": "Celle qu'on voit en ouvrant le fichier, et partout où les finitions ne sont pas gérées (Quick Look, Aperçu, beaucoup de visionneuses). En général, la matière actuelle.",

@@ -1390,13 +1390,30 @@ class Mcp(Base):
         self.assertIn("Claude in Studio is off", msg)
         self.assertTrue((self.tmp / "generated-assets" / "crate-blue").is_dir())
 
+    def test_finishes_from_the_terminal(self) -> None:
+        err, r = self.tool("add_finishes", asset="crate", finishes=[{"name": "Walnut", "material": "oiled walnut"},
+                                                                    {"name": "Black", "material": "matte black paint"}],
+                           shown_on_opening="Walnut")
+        self.assertFalse(err, r)
+        self.assertIn("- Walnut: oiled walnut", r["task"])
+        self.assertIn('named "Current"', r["task"])
+        self.assertIn("Shown on opening: Walnut", r["task"])
+        self.assertIn("crate_final.glb", r["task"])
+        self.assertEqual(sl.baseline(self.p, "generated-assets/crate")["reason"], "before finishes")   # kept for Compare and choose
+        err, msg = self.tool("add_finishes", asset="crate", finishes=[{"name": "Current", "material": "x"}])
+        self.assertTrue(err)
+        self.assertIn("already", msg)
+        err, msg = self.tool("add_finishes", asset="crate", finishes=[{"name": "Red", "material": "red"}], in_studio=True)
+        self.assertTrue(err)
+        self.assertIn("Claude in Studio is off", msg)
+
     def test_the_tools(self) -> None:
         init = self.rpc("initialize", {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "test"}})
         self.assertEqual((init["result"]["serverInfo"]["name"], init["result"]["protocolVersion"]), ("kiln-studio", "2025-06-18"))
         self.rpc("notifications/initialized", notify=True)
         names = [t["name"] for t in self.rpc("tools/list")["result"]["tools"]]
         self.assertEqual(names, ["get_selection", "get_notes", "reply_to_note", "set_camera", "get_view_image", "list_models",
-                                 "add_note", "make_variations", "open_model", "set_view", "compare", "play_clip", "present"])
+                                 "add_note", "make_variations", "add_finishes", "open_model", "set_view", "compare", "play_clip", "present"])
 
         err, sel = self.tool("get_selection")   # no page holds the event stream: closed
         self.assertFalse(err, sel)

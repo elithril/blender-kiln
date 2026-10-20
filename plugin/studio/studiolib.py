@@ -1592,6 +1592,40 @@ def derive_task(a: Asset, new: str, text: str, *, target: str = "same", start: s
     return "\n\n".join(parts)
 
 
+def finish_files(a: Asset) -> list[Variant]:
+    """The model's glTF files that carry finishes: the web one (its final) and AR's GLB."""
+    out = []
+    for v in a.variants:
+        kind, ext = v.label.split(".")[0], v.path.suffix.lower()
+        if ext in (".glb", ".gltf") and (kind == "final" or kind == "ar"):
+            out.append(v)
+    return out
+
+
+def finishes_of(a: Asset) -> list[str]:
+    """The finishes the model's glTF files have (KHR_materials_variants), by name."""
+    for v in finish_files(a):
+        names = [x.get("name", "") for x in (read_gltf_json(v.path).get("extensions") or {}).get("KHR_materials_variants", {}).get("variants", [])]
+        if names:
+            return names
+    return []
+
+
+def finish_task(project: Project, a: Asset, finishes: list[tuple[str, str]], shown: str | None = None) -> str:
+    """What is asked of Claude to add finishes (the page asks the same, in the user's language)."""
+    have = finishes_of(a)
+    base = have or ["Current"]
+    files = [str(Path(project.rel(v.path)).relative_to(a.folder)) for v in finish_files(a)] or [f"web/{a.name}_final.glb"]
+    parts = [f"Add finishes to {a.name}: the same shape in other materials, in the same glTF files, as material "
+             "variants (KHR_materials_variants; kiln's export-targets.md § Finishes).",
+             f"It has these finishes already: {', '.join(have)}. Keep them." if have else
+             f'Keep its material as it is as the first finish, named "{base[0]}".',
+             "The new finishes:\n" + "\n".join(f"- {n.strip()}: {m.strip()}" for n, m in finishes),
+             f"Shown on opening: {shown or base[0]}. Export again {', '.join(files)} with the finishes; leave the FBX, "
+             f"the USDZ and the print files (they carry none). Add the finishes to {a.name}_log.md."]
+    return "\n\n".join(parts)
+
+
 def derivations(catalog: dict, asset_id: str) -> list[str]:
     """The models declined from this one."""
     return sorted(k for k, e in catalog.get("assets", {}).items() if (e.get("derived") or {}).get("from") == asset_id)

@@ -436,6 +436,7 @@ notes. It never touches a model file.
 | `reply_to_note` | `studio.py reply`: `status` addressed, open or wontfix — never resolved |
 | `add_note` | A note by Claude on a whole model (a finding, a question), shown as "from Claude"; the user answers or closes it |
 | `make_variations` | Variations, only when the user asks: a copy per variation beside the original (as the page's "Variations", § 7), each with its `task`; this session then does each task in turn with kiln — or `in_studio: true` hands them to Claude in Studio (on in Settings), as many at once as it allows. Defaults: names from the words, made for the same use, the original's outputs |
+| `add_finishes` | Finishes, only when the user asks: other materials in the model's own glTF files (§ 7). Keeps the version before ("before finishes"), then gives this session its `task` (export-targets.md § Finishes) — or `in_studio: true` hands it to Claude in Studio. `shown_on_opening`: the file's own material (default: the current one) |
 | `open_model` | Opens a model in the page, at a `stage` |
 | `set_camera` | Turns the open page's view: `view` (front, back, left, right, top, iso), a `note`'s own view, or `position_blender` and `target_blender`; with `asset`, opens it first |
 | `set_view` | `shading` (lit, unlit, clay, normals, uv, faces), `background`, `wire`, `grid`, `bounds` (size), `skeleton` (bones), a preset `view`, `frame` |

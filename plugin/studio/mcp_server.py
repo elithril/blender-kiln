@@ -14,7 +14,8 @@ Writing, Studio's own records only (never the models):
 - add_note        a note by Claude on a model, on the whole model, for the user to look at.
 Making, when the user asks:
 - make_variations new models from a copy of one (Studio's "Variations"): copies made here,
-                  the change done by this session, or handed to Claude in Studio.
+                  the change done by this session, or handed to Claude in Studio;
+- add_finishes    other materials in the model's own glTF files (KHR_materials_variants).
 Driving the open page:
 - open_model      open a model, at a stage;
 - set_camera      a preset, a note's own view, or a camera position and target in Blender's frame;
@@ -140,6 +141,24 @@ TOOLS = [
             "copy_notes": {"type": "boolean", "description": "Copy the original's open notes onto each (default false)"},
             "in_studio": {"type": "boolean", "description": "Hand the changes to Claude in Studio instead of doing them here"},
             "root": ROOT_ARG}, "required": ["variations"], "additionalProperties": False},
+        "annotations": {"readOnlyHint": False, "destructiveHint": False},
+    },
+    {
+        "name": "add_finishes",
+        "description": ("Studio's Finishes, from the terminal: the same shape in other materials, added to the model's own "
+                        "glTF files (web, AR's GLB) as KHR_materials_variants, so a website can switch between them. Only when "
+                        "the user asks. Keeps the version before (Studio's Compare and choose goes back to it), then gives "
+                        "this session the task to do with kiln (export-targets.md § Finishes) — or, with in_studio, hands "
+                        "it to Claude in Studio. FBX, USDZ and print files carry no finishes: for those, make_variations."),
+        "inputSchema": {"type": "object", "properties": {
+            "asset": {"type": "string", "description": "Default: the one open in Studio"},
+            "finishes": {"type": "array", "minItems": 1, "items": {"type": "object", "properties": {
+                "name": {"type": "string", "description": "As shown in Studio and on the website (\"Walnut\")"},
+                "material": {"type": "string", "description": "The material, in the user's words"}},
+                "required": ["name", "material"], "additionalProperties": False}},
+            "shown_on_opening": {"type": "string", "description": "The finish the file shows by itself (default: the current material)"},
+            "in_studio": {"type": "boolean", "description": "Hand it to Claude in Studio instead of doing it here"},
+            "root": ROOT_ARG}, "required": ["finishes"], "additionalProperties": False},
         "annotations": {"readOnlyHint": False, "destructiveHint": False},
     },
     {
@@ -488,7 +507,38 @@ def make_variations(args: dict) -> dict:
                      "Do each task in turn with kiln, in its folder (the Studio page shows each under the original).")}
 
 
-HANDLERS = {"make_variations": make_variations, "get_selection": get_selection, "get_notes": get_notes, "reply_to_note": reply_to_note, "set_camera": set_camera,
+def add_finishes(args: dict) -> dict:
+    project = find_project(args.get("root"))
+    a = _asset(project, args.get("asset"))
+    rows = [(str(f.get("name", "")).strip(), str(f.get("material", "")).strip()) for f in args.get("finishes") or []]
+    have = sl.finishes_of(a) or ["Current"]
+    taken = {x.lower() for x in have}
+    for n, m in rows:
+        if not n or not m:
+            raise ToolError("each finish needs a name and its material")
+        if n.lower() in taken:
+            raise ToolError(f"{a.id} has a finish named {n} already")
+        taken.add(n.lower())
+    shown = args.get("shown_on_opening")
+    if shown and shown.lower() not in taken:
+        raise ToolError(f"shown_on_opening: {shown} is not one of the finishes")
+    task = sl.finish_task(project, a, rows, shown)
+    files = sl.finish_files(a)
+    if args.get("in_studio"):
+        st = call_studio(project, "/api/claude")
+        if not st.get("enabled"):
+            raise ToolError("Claude in Studio is off (Settings → Claude): do it here instead (without in_studio).")
+        if files:
+            call_studio(project, f"/api/asset/{urllib.request.quote(a.id, safe='')}/snapshot", {"variant": files[0].label})
+        job = call_studio(project, "/api/claude/jobs", {"kind": "chat", "asset": a.id, "text": task, "task": "finishes"}, timeout=30)
+        return {"asset": a.id, "studio_job": job.get("id"), "next": "Claude in Studio adds them; the user follows it in Studio."}
+    if files:
+        sl.take_baseline(project, a, files[0], reason="before finishes")
+    return {"asset": a.id, "files": [str(v.path) for v in files], "task": task,
+            "next": "Do the task with kiln (export-targets.md § Finishes), then check the file's KHR_materials_variants."}
+
+
+HANDLERS = {"make_variations": make_variations, "add_finishes": add_finishes, "get_selection": get_selection, "get_notes": get_notes, "reply_to_note": reply_to_note, "set_camera": set_camera,
             "get_view_image": get_view_image, "list_models": list_models, "add_note": add_note, "open_model": open_model,
             "set_view": set_view, "compare": compare, "play_clip": play_clip, "present": present}
 
@@ -507,8 +557,8 @@ def handle(msg: dict) -> dict | None:
         return ok({"protocolVersion": want if want in PROTOCOLS else PROTOCOLS[0],
                    "capabilities": {"tools": {"listChanged": False}}, "serverInfo": SERVER,
                    "instructions": "Kiln Studio: what the user looks at (get_selection, get_view_image, list_models), "
-                                   "their notes (get_notes, reply_to_note, add_note), variations of a model when the user asks "
-                                   "(make_variations), and driving the open page "
+                                   "their notes (get_notes, reply_to_note, add_note), variations and finishes of a model when the user asks "
+                                   "(make_variations, add_finishes), and driving the open page "
                                    "(open_model, set_camera, set_view, compare, play_clip, present)."})
     if method == "ping":
         return ok({})
