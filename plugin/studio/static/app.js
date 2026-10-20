@@ -1079,25 +1079,34 @@ const fmtSize = (n) => {
 // The download dialog: every output there, checked; one file alone downloads as is, else a zip.
 async function openDownload() {
   const d = state.detail, dlg = $('#dl');
-  let outs;
-  try { outs = (await assetApi(d.id, `/outputs?lang=${getLang()}`)).outputs; } catch (e) { toast(esc(e.message), 'warn'); return; }
+  let outs, vars;
+  try { ({ outputs: outs, variants: vars } = await assetApi(d.id, `/outputs?lang=${getLang()}`)); } catch (e) { toast(esc(e.message), 'warn'); return; }
   $('#dl-title').textContent = t('Download {name}', { name: d.name });
   $('#dl-list').innerHTML = outs.map((o) => {
     const meta = OUTPUTS.find((x) => x.key === o.out);
     return `<label class="dl-row"><input type="checkbox" data-dl-out="${o.out}" checked>
       <span class="dl-what"><b><i class="${o.stale ? 'stale' : 'ok'}" aria-hidden="true">${o.stale ? '↻' : '✓'}</i>${esc(t(meta.name))}${o.stale ? ` <span class="dl-warn">${esc(t('made before the model last changed'))}</span>` : ''}</b>
       ${o.files.map((f) => `<span class="dl-file"><code>${esc(f.path)}</code><span class="dim" title="${esc(f.use)}">${esc(fmtSize(f.size))} · ${esc(f.use)}</span></span>`).join('')}</span></label>`;
-  }).join('');
+  }).join('') + (vars.length ? `<h4 class="dl-sec">${esc(t('Its variations'))}</h4>${vars.map((v) => {
+    const n = v.outputs.reduce((k, o) => k + o.files.length, 0);
+    // Checked by default: the user unticks what is not to send.
+    return `<label class="dl-row"><input type="checkbox" data-dl-var="${esc(v.id)}"${n ? ' checked' : ' disabled'}>
+      <span class="dl-what"><b>${esc(v.name)}</b>${v.text ? `<span class="dim dl-vtext" title="${esc(v.text)}">${esc(v.text)}</span>` : ''}
+      <span class="dl-file"><span class="dim">${n ? esc(`${v.outputs.map((o) => t(OUTPUTS.find((x) => x.key === o.out).name)).join(', ')} · ${tp(n, '{n} file', '{n} files')}`) : esc(t('No output yet'))}</span></span></span></label>`;
+  }).join('')}` : '');
   const sync = () => {
     const picked = outs.filter((o) => $(`[data-dl-out="${o.out}"]`, dlg).checked);
-    const files = picked.flatMap((o) => o.files), sheet = $('#dl-sheet').checked;
+    const kinds = new Set(picked.map((o) => o.out));
+    const vpicked = vars.filter((v) => $(`[data-dl-var="${CSS.escape(v.id)}"]`, dlg)?.checked);
+    const files = [...picked.flatMap((o) => o.files), ...vpicked.flatMap((v) => v.outputs.filter((o) => kinds.has(o.out)).flatMap((o) => o.files))];
+    const sheet = $('#dl-sheet').checked;
     const go = $('#dl-go'), size = files.reduce((n, f) => n + f.size, 0);
     if (!files.length) $('#dl-sum').textContent = t('Pick at least one output.');
-    else if (files.length === 1 && !sheet) {
+    else if (files.length === 1 && !sheet && !vpicked.length) {
       go.href = `${fileUrl(files[0].file)}?download=1`;
       $('#dl-sum').textContent = `${files[0].path.split('/').pop()} · ${fmtSize(size)}`;
     } else {
-      go.href = `/api/asset/${enc(d.id)}/package?lang=${getLang()}&outs=${picked.map((o) => o.out).join(',')}&sheet=${sheet ? 1 : 0}`;
+      go.href = `/api/asset/${enc(d.id)}/package?lang=${getLang()}&outs=${picked.map((o) => o.out).join(',')}&sheet=${sheet ? 1 : 0}${vpicked.length ? `&variants=${vpicked.map((v) => enc(v.id)).join(',')}` : ''}`;
       $('#dl-sum').textContent = t('{n} files · {size} → {zip}', { n: files.length + (sheet ? 1 : 0), size: fmtSize(size), zip: `${d.name}.zip` });
     }
     go.classList.toggle('disabled', !files.length);

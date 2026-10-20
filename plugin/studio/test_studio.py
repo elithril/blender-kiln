@@ -1013,6 +1013,26 @@ class Api(Base):
         z = zipfile.ZipFile(io.BytesIO(c.getresponse().read()))
         c.close()
         self.assertEqual(sorted(z.namelist()), ["crate/print/crate_print.3mf", "crate/print/crate_print_lid.stl"])
+        # A variation goes in with its outputs, under variantes/ in French, and in the sheet.
+        (self.tmp / "generated-assets" / "crate" / "crate.blend").write_bytes(b"BLENDER")
+        self.studio.refresh()
+        v = sl.derive(self.p, self.p.find("crate"), "crate-red", "Painted red")
+        glb(self.tmp / v.id / "web" / "crate-red_final.glb")
+        self.studio.refresh()
+        code, d2 = self.req("GET", "/api/asset/generated-assets%2Fcrate/outputs?lang=fr")
+        self.assertEqual([(x["name"], x["text"], [o["out"] for o in x["outputs"]]) for x in d2["variants"]],
+                         [("crate-red", "Painted red", ["web"])])
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        c.request("GET", "/api/asset/generated-assets%2Fcrate/package?lang=fr&outs=web&variants=generated-assets/crate-red",
+                  headers={"Host": f"127.0.0.1:{self.port}"})
+        z = zipfile.ZipFile(io.BytesIO(c.getresponse().read()))
+        c.close()
+        self.assertEqual(sorted(z.namelist()), ["crate/LISEZ-MOI.md", "crate/variantes/crate-red/web/crate-red_final.glb",
+                                                "crate/web/crate_final.glb"])
+        sheet = z.read("crate/LISEZ-MOI.md").decode()
+        self.assertIn("## Variante · crate-red", sheet)
+        self.assertIn("> Painted red", sheet)
+        self.assertIn("| variantes/crate-red/web/ |", sheet)
 
     def test_decline_route(self) -> None:
         (self.tmp / "generated-assets" / "crate" / "crate.blend").write_bytes(b"BLENDER")

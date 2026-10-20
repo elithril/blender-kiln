@@ -1,7 +1,7 @@
 """A model's hand-off: every output in one zip, with a sheet that says what each file is for.
 
-    listing(project, asset, lang)                    -> the outputs and their files (the dialog)
-    make_package(project, asset, lang, outs, sheet)  -> (zip name, zip bytes)
+    listing(project, asset, lang)                              -> the outputs, the variations (the dialog)
+    make_package(project, asset, lang, outs, sheet, variants)  -> (zip name, zip bytes)
 
 The outputs keep their folders (web/, game/, ar/, print/; a final at the root, from
 before, goes in web/). Only the deliverables: a print's working .blend or a check's
@@ -35,6 +35,7 @@ WORDS = {
                      "free": "free to use", "check the terms": "read the terms"},
         "kept": "Not in this package", "kept_text": "The source (the .blend, `_original.glb`, the production log) stays in the project: `{dir}/`.",
         "outs": {"web": "Web", "game": "Game", "ar": "AR", "print": "3D print"},
+        "variant": "Variation · {name}", "variants_dir": "variations",
     },
     "fr": {
         "sheet": "LISEZ-MOI.md", "made": "Préparé avec kiln le {date}", "size": "{x} × {y} × {z} cm (largeur × profondeur × hauteur)",
@@ -50,6 +51,7 @@ WORDS = {
                      "free": "libre d'usage", "check the terms": "lire les conditions"},
         "kept": "Pas dans ce paquet", "kept_text": "La source (le .blend, `_original.glb`, le journal de fabrication) reste dans le projet : `{dir}/`.",
         "outs": {"web": "Web", "game": "Jeu", "ar": "AR", "print": "Impression 3D"},
+        "variant": "Variante · {name}", "variants_dir": "variantes",
     },
 }
 
@@ -114,8 +116,13 @@ def use_of(out: str, f: Path, lang: str = "en") -> str:
     return w["game"]
 
 
-def listing(project: sl.Project, a: sl.Asset, lang: str = "en") -> list[dict]:
-    """The outputs a package can hold, for the download dialog: each with its files."""
+def variants_of(project: sl.Project, a: sl.Asset) -> list[sl.Asset]:
+    """The models declined from this one (Studio's variations), in the order made."""
+    ids = sl.derivations(sl.load_catalog(project), a.id)
+    return [x for x in sl.scan(project) if x.id in ids]
+
+
+def _rows(project: sl.Project, a: sl.Asset, lang: str) -> list[dict]:
     files, stale = contents(a)
     rows: dict[str, dict] = {}
     for out, folder, f in files:
@@ -124,46 +131,80 @@ def listing(project: sl.Project, a: sl.Asset, lang: str = "en") -> list[dict]:
     return list(rows.values())
 
 
+def listing(project: sl.Project, a: sl.Asset, lang: str = "en") -> dict:
+    """What a package can hold, for the download dialog: the outputs and their files, and
+    the variations with theirs."""
+    cat = sl.load_catalog(project)["assets"]
+    return {"outputs": _rows(project, a, lang),
+            "variants": [{"id": v.id, "name": v.name, "text": (cat.get(v.id, {}).get("derived") or {}).get("text", ""),
+                          "outputs": _rows(project, v, lang)} for v in variants_of(project, a)]}
+
+
+def _table(files: list[tuple[str, str, Path]], stale: list[str], w: dict, lang: str, prefix: str = "") -> list[str]:
+    lines = [w["head"], "|---|---|---|---|---|"]
+    for out, folder, f in files:
+        ext = f.suffix.lower()
+        st = sl.stl_stats(f) if ext == ".stl" else sl.threemf_stats(f) if ext == ".3mf" else \
+            sl.gltf_stats(f) if ext in (".glb", ".gltf") else {}
+        tris = st.get("tris")
+        lines.append(f"| {prefix}{folder}/ | `{f.name}` | {use_of(out, f, lang)} | {_kb(f.stat().st_size, lang)} | {_num(tris, lang) if tris else '—'} |")
+    if stale:
+        lines += ["", w["stale"].format(outs=", ".join(w["outs"][o] for o in stale))]
+    return lines
+
+
 def make_package(project: sl.Project, a: sl.Asset, lang: str = "en", outs: list[str] | None = None,
-                 sheet: bool = True) -> tuple[str, bytes]:
-    """outs: the outputs to put in (all when None); sheet: the LISEZ-MOI / README with them."""
+                 sheet: bool = True, variants: list[str] | None = None) -> tuple[str, bytes]:
+    """outs: the outputs to put in (all when None); sheet: the LISEZ-MOI / README with them;
+    variants: the variations to add (ids of models declined from this one), each in
+    variants/<its name>/ with its outputs."""
     w = WORDS.get(lang, WORDS["en"])
+    cat = sl.load_catalog(project)["assets"]
+    parts: list[tuple[sl.Asset, str]] = [(a, "")]
+    parts += [(v, f"{w['variants_dir']}/{v.name}/") for v in variants_of(project, a) if v.id in (variants or [])]
+    packed: list[tuple[sl.Asset, str, list, list]] = []
+    for x, prefix in parts:
+        files, stale = contents(x)
+        if outs is not None:
+            files = [f for f in files if f[0] in outs]
+            stale = [o for o in stale if o in outs]
+        packed.append((x, prefix, files, stale))
+    # The sheet: the model, then each variation, then the licences of all.
     src = next((v for v in a.variants if v.label == "original"), None)
-    files, stale = contents(a)
-    if outs is not None:
-        files = [x for x in files if x[0] in outs]
-        stale = [o for o in stale if o in outs]
-    # The sheet.
     dims = (sl.variant_stats(src) if src else None) or {}
     dims = dims.get("dimensions_blender") or next(
         ((sl.variant_stats(v) or {}).get("dimensions_blender") for v in a.variants if (sl.variant_stats(v) or {}).get("dimensions_blender")), None)
     lines = [f"# {a.name}", "", w["made"].format(date=time.strftime("%d/%m/%Y" if lang == "fr" else "%Y-%m-%d"))
              + (" · " + w["size"].format(x=_num(dims[0] * 100, lang, 1), y=_num(dims[1] * 100, lang, 1), z=_num(dims[2] * 100, lang, 1)) if dims else ""), "",
-             f"## {w['files']}", "", w["head"], "|---|---|---|---|---|"]
-    for out, folder, f in files:
-        ext = f.suffix.lower()
-        st = sl.stl_stats(f) if ext == ".stl" else sl.threemf_stats(f) if ext == ".3mf" else \
-            sl.gltf_stats(f) if ext in (".glb", ".gltf") else {}
-        use = use_of(out, f, lang)
-        tris = st.get("tris")
-        lines.append(f"| {folder}/ | `{f.name}` | {use} | {_kb(f.stat().st_size, lang)} | {_num(tris, lang) if tris else '—'} |")
-    if stale:
-        lines += ["", w["stale"].format(outs=", ".join(w["outs"][o] for o in stale))]
-    logp = project.root / a.log_file() if a.log_file() else None
-    lic = checks.licence_check(checks.parse_log(logp), bool(logp and logp.is_file()))
+             f"## {w['files']}", ""]
+    lines += _table(packed[0][2], packed[0][3], w, lang)
+    for x, prefix, files, stale in packed[1:]:
+        text = (cat.get(x.id, {}).get("derived") or {}).get("text", "")
+        lines += ["", f"## {w['variant'].format(name=x.name)}", "", *([f"> {text}", ""] if text else []), *_table(files, stale, w, lang, prefix)]
+    entries, logged, missing = [], False, False
+    for x, *_ in packed:
+        logp = project.root / x.log_file() if x.log_file() else None
+        if logp and logp.is_file():
+            logged = True
+            for e in checks.licence_check(checks.parse_log(logp), True).get("entries") or []:
+                if e["text"] not in [y["text"] for y in entries]:
+                    entries.append(e)
+        else:
+            missing = True
     lines += ["", f"## {w['lic']}", ""]
-    if not (logp and logp.is_file()):
+    if not logged or missing and not entries:
         lines.append(w["lic_nolog"])
-    elif not lic.get("entries"):
+    elif not entries:
         lines.append(w["lic_none"])
     else:
-        lines += [f"- {e['text']} — {w['lic_kind'][e['kind']]}" for e in lic["entries"]]
+        lines += [f"- {e['text']} — {w['lic_kind'][e['kind']]}" for e in entries]
     lines += ["", f"## {w['kept']}", "", w["kept_text"].format(dir=a.folder if a.folder != "." else a.id), ""]
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         if sheet:
             z.writestr(f"{a.name}/{w['sheet']}", "\n".join(lines))
-        for _out, folder, f in files:
-            z.write(f, f"{a.name}/{folder}/{f.name}")
+        for _x, prefix, files, _stale in packed:
+            for _out, folder, f in files:
+                z.write(f, f"{a.name}/{prefix}{folder}/{f.name}")
     return f"{a.name}.zip", buf.getvalue()
 

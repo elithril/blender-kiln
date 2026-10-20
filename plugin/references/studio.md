@@ -260,7 +260,10 @@ dialog: each output checked, with its files, their size and use (`/api/asset/<id
 and "Add a sheet". One file alone without the sheet downloads as is; otherwise a zip
 (`/api/asset/<id>/package?outs=…&sheet=0|1`, `studio/handoff.py`): each output in its folder,
 and the sheet — LISEZ-MOI.md or README.md — with the size, each file's use and triangles, the outputs to
-redo, and the licences of the log; never the source nor kiln's working files.
+redo, and the licences of the log; never the source nor kiln's working files. Its
+variations are listed too, ticked by default (the user unticks): each goes in
+`variations/<name>/` (`variantes/` in French) with the same kinds of outputs, and the
+sheet gives each its section and merges the licences (`&variants=` ids).
 
 **Variations** ("Variantes"; a kiln model only): new models from a copy of this one, always
 asked for by the user — "Create variations" (a button) on the selected model's row in the list, where they

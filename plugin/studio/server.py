@@ -464,13 +464,14 @@ def make_handler(studio: Studio, port_ref: list[int]):
                 if parts[:2] == ["api", "asset"] and parts[3:] == ["outputs"]:
                     # The download dialog: each output, its files, their size and use.
                     lang = parse_qs(urlparse(self.path).query).get("lang", ["en"])[0]
-                    return self._json({"outputs": handoff.listing(project, studio.asset(parts[2]), lang)})
+                    return self._json(handoff.listing(project, studio.asset(parts[2]), lang))
                 if parts[:2] == ["api", "asset"] and parts[3:] == ["package"]:
                     # What to hand over: the outputs picked (all by default) and a sheet, in one zip.
                     q = parse_qs(urlparse(self.path).query)
                     outs = q["outs"][0].split(",") if q.get("outs") else None
                     name, data = handoff.make_package(project, studio.asset(parts[2]), q.get("lang", ["en"])[0],
-                                                      outs, q.get("sheet", ["1"])[0] != "0")
+                                                      outs, q.get("sheet", ["1"])[0] != "0",
+                                                      q["variants"][0].split(",") if q.get("variants") else [])
                     return self._send(200, data, "application/zip",
                                       {"Content-Disposition": f"attachment; filename*=UTF-8''{quote(name)}",
                                        "Cache-Control": "no-store"})
