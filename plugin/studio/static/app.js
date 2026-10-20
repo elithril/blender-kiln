@@ -928,6 +928,7 @@ function renderOutputs(d, v) {
   // One "Download": a dialog to pick the outputs, with or without the sheet.
   const file = `<span class="out-sep" aria-hidden="true"></span>
     ${have.size ? `<button class="btn sm ghost out-dl" data-out-dl title="${esc(t('Pick the outputs to download, with a sheet saying what each file is for: ready to send.'))}"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"/></svg>${esc(t('Download'))}</button>` : ''}
+    ${d.kiln ? `<button class="btn sm ghost out-dl out-var" data-decline title="${esc(t('New models from a copy of this one: another size, other colours, a version for printing…'))}"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>${esc(t('Variations'))}</button>` : ''}
     <button class="btn icon sm ghost" data-out-reveal="${esc(v.file)}" title="${esc(t('Show in the Finder'))}" aria-label="${esc(t('Show in the Finder'))}"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></svg></button>`;
   el.innerHTML = `<span class="out-label">${esc(t('Outputs'))}</span>${chips}${file}`;
   const from = d.derived, df = $('#derived-from');
@@ -944,7 +945,8 @@ function renderOutputs(d, v) {
     if (b.dataset.outStale) toast(`${esc(t('This output was made before the model last changed.'))} <button class="linkish" data-out-redo="${b.dataset.outStale}">${esc(t('Redo it'))}</button>`, 'warn', 9000);
   }));
   $$('[data-out-make]', el).forEach((b) => (b.onclick = () => makeOutput(b.dataset.outMake)));
-  $$('[data-out-dl]', el).forEach((b) => (b.onclick = () => openDownload()));
+  $$('[data-out-dl]:not([data-decline])', el).forEach((b) => (b.onclick = () => openDownload()));
+  $$('[data-decline]', el).forEach((b) => (b.onclick = () => openDecline()));
   $$('[data-out-reveal]', el).forEach((b) => (b.onclick = () => assetApi(state.id, '/reveal', { method: 'POST', body: { file: b.dataset.outReveal } }).catch((e) => toast(esc(e.message), 'warn'))));
 }
 // ── Décliner: new models from a copy of this one ─────────────────────────────
