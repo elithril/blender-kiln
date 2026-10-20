@@ -277,8 +277,15 @@ serves only a page and the model's AR files — the USDZ for AR Quick Look (iPho
 the GLB for Scene Viewer (Android; the web one when AR has none) — read-only, under a
 random token, for 15 minutes; "Stop sharing" ends every link. The first time, macOS may
 ask to let Python take incoming connections. Tested: page and files over the LAN address,
-Studio's API not reachable through it; **not yet on a real phone** (Scene Viewer may want
-https for the file).
+Studio's API not reachable through it; opened on an iPhone in AR Quick Look (2026-10-20),
+once HEAD and byte ranges were answered — Quick Look asks for both. Android: not yet
+tried (Scene Viewer may want https for the file). The page shows only this phone's
+button; on an iPhone with nothing to pick it goes straight to Quick Look (AR is one tap
+there: only a tap on a `rel="ar"` link opens AR itself). A model with finishes: the page
+offers them — Android gets a GLB of the one picked, made on the spot (`handoff.with_finishes`),
+iPhone the USDZ exported for it (`ar/<model>_ar_<finish>.usdz`, asked with the finishes:
+"A USDZ per finish"), else the model's own with a word that it is. Animation: the
+viewers play the file's own, in a loop.
 
 **Variations** ("Variantes"; a kiln model only): new models from a copy of this one, always
 asked for by the user — "Create variations" (a button) on the selected model's row in the list, where they

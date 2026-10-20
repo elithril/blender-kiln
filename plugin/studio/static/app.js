@@ -1022,7 +1022,7 @@ function renderOutputs(d, v) {
   const file = `<span class="out-tools"><span class="out-sep" aria-hidden="true"></span>
     ${have.size ? `<button class="btn sm ghost out-dl" data-out-dl title="${esc(t('Pick the outputs to download, with a sheet saying what each file is for: ready to send.'))}"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"/></svg>${esc(t('Download'))}</button>` : ''}
     ${d.kiln ? `<button class="btn sm ghost out-dl out-var" data-decline title="${esc(t('New models from a copy of this one: another size, other colours, a version for printing…'))}"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>${esc(t('Variations'))}</button>` : ''}
-    ${d.variants.some((x) => outputOf(x) === 'ar' || outputOf(x) === 'web') ? `<button class="btn sm ghost out-dl" data-phone title="${esc(t('See it in AR on your phone: a QR code to scan'))}"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/></svg>${esc(t('Phone'))}</button>` : ''}
+    ${d.variants.some((x) => outputOf(x) === 'ar' || outputOf(x) === 'web') ? `<button class="btn sm ghost out-dl" data-phone title="${esc(t('See it in AR on your phone: a QR code to scan'))}"><svg viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/></svg>${esc(t('View in AR'))}</button>` : ''}
     <button class="btn sm ghost out-dl" data-out-reveal="${esc(v.file)}" title="${esc(t('Show in the Finder'))}"><svg viewBox="0 0 24 24"><path d="M3 5.5h6l2 2.5h10v10.5H3z"/></svg>${esc(t('Folder'))}</button></span>`;
   el.innerHTML = `<span class="out-label">${esc(t('Outputs'))}</span>${chips}${file}`;
   const from = d.derived, df = $('#derived-from');
@@ -1065,6 +1065,7 @@ function dcRow(i) {
 function openDecline(mode = 'copies') {
   const d = state.detail;
   dc.mode = mode;
+  dc.ios = undefined;
   dc.frows = [{ name: '', text: '' }];
   dc.rows = [dcRow(0)];
   dc.start = 'current';
@@ -1149,15 +1150,23 @@ function renderFinishes() {
   $('#dc-in').innerHTML = files.length
     ? `${files.map((x) => `<code>${esc(x.file.split('/').slice(-2).join('/'))}</code>`).join(' · ')}<br>${esc(t('The glTF files carry the finishes. The game, the iPhone and the print do not: make new models for them.'))}`
     : esc(t('No glTF output yet: the finishes go in the web file Claude makes.'));
+  // iPhone AR: a USDZ per finish (Quick Look shows one at a time), on by default when it has AR.
+  const hasUsdz = d.variants.some((x) => outputOf(x) === 'ar' && x.ext === '.usdz');
+  if (dc.ios === undefined) dc.ios = hasUsdz;
+  $('#dc-ios').innerHTML = `<button type="button" class="${dc.ios ? 'on' : ''}" data-dc-ios aria-pressed="${dc.ios}"><i aria-hidden="true">${dc.ios ? '✓' : '+'}</i>${esc(t('A USDZ per finish, to pick it on the phone'))}</button>`;
+  $('[data-dc-ios]').onclick = () => { dc.ios = !dc.ios; renderFinishes(); };
   renderDeclineFoot();
 }
+// A finish's name in a file name, as sl.finish_slug: "Noir mat" -> "noir-mat".
+const finishSlug = (n) => n.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'finish';
 function finishAsk(d) {
   const have = finishesOf(d), base = have.length ? have : [t('Current')];
   const files = finishFiles(d).map((x) => x.file.split('/').slice(-2).join('/'));
   return [t('Add finishes to {name}: the same shape in other materials, in the same glTF files, as material variants (KHR_materials_variants; kiln\'s export-targets.md § Finishes).', { name: d.name }),
     have.length ? t('It has these finishes already: {list}. Keep them.', { list: have.join(', ') }) : t('Keep its material as it is as the first finish, named "{current}".', { current: base[0] }),
     `${t('The new finishes:')}\n${dc.frows.map((r) => `- ${r.name.trim()}: ${r.text.trim()}`).join('\n')}`,
-    t('Export again {files} with the finishes, the material shown on opening left as it is; leave the FBX, the USDZ and the print files (they carry none). Add the finishes to {log}.', { files: files.length ? files.join(', ') : `web/${d.name}_final.glb`, log: `${d.name}_log.md` })].join('\n\n');
+    t('Export again {files} with the finishes, the material shown on opening left as it is; leave the FBX, the USDZ and the print files (they carry none). Add the finishes to {log}.', { files: files.length ? files.join(', ') : `web/${d.name}_final.glb`, log: `${d.name}_log.md` }),
+    dc.ios ? t('For iPhone AR (Quick Look shows one finish per file): also export a USDZ per finish, new ones and those already there, beside ar/{name}_ar.usdz: ar/{name}_ar_<finish>.usdz, the finish in lower case, - for spaces, no accents (e.g. {example}), each with that finish\'s materials, with the AR export\'s settings.', { name: d.name, example: `ar/${d.name}_ar_${finishSlug(dc.frows[0]?.name || 'noyer')}.usdz` }) : ''].filter(Boolean).join('\n\n');
 }
 function renderDeclineFoot() {
   if (dc.mode === 'finishes') {

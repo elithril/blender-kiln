@@ -710,15 +710,23 @@ def make_handler(studio: Studio, port_ref: list[int]):
                     files = {}
                     for v in a.variants:
                         kind, ext = v.label.split(".")[0], v.path.suffix.lower()
-                        if kind == "ar" and ext == ".usdz":
-                            files["usdz"] = v.path
+                        if kind == "ar" and ext == ".usdz" and (v.path.name == f"{a.name}_ar.usdz" or "usdz" not in files):
+                            files["usdz"] = v.path   # the model's own, not a finish's
                         elif kind == "ar" and ext == ".glb":
                             files["glb"] = v.path
                     if "glb" not in files:
                         web = next((v for v in a.variants if v.label == "final" and v.path.suffix.lower() == ".glb"), None)
                         if web:
                             files["glb"] = web.path
-                    return self._json(studio.phone.link(a.name, files, str(body.get("lang", "en"))))
+                    # Its finishes (from the GLB), and a USDZ per finish when one was exported.
+                    fins, shown = handoff.finish_state(files["glb"]) if files.get("glb") else ([], None)
+                    per = {}
+                    if files.get("usdz"):
+                        for f in fins:
+                            p = files["usdz"].with_name(f"{a.name}_ar_{sl.finish_slug(f)}.usdz")
+                            if p.is_file():
+                                per[f] = p
+                    return self._json(studio.phone.link(a.name, files, str(body.get("lang", "en")), fins, shown, per))
                 if method == "POST" and rest == ["derive"]:
                     # Décliner: a new model from a copy of this one, then Claude makes the change.
                     new = sl.derive(project, a, str(body.get("name", "")), str(body.get("text", ""))[:4000],

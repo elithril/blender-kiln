@@ -15,6 +15,7 @@ Android, the GLB in Scene Viewer (an intent link). Standard library only.
 from __future__ import annotations
 
 import html
+import json
 import secrets
 import socket
 import threading
@@ -28,10 +29,12 @@ TYPES = {"usdz": "model/vnd.usdz+zip", "glb": "model/gltf-binary"}
 WORDS = {
     "en": {"title": "{name} in AR", "lead": "Open it in your room, on this phone.", "ios": "View in AR — iPhone, iPad",
            "android": "View in AR — Android", "none": "No AR file for this phone.",
-           "foot": "Shared from Kiln Studio on your computer, for {m} minutes, on this Wi-Fi only."},
+           "foot": "Shared from Kiln Studio on your computer, for {m} minutes, on this Wi-Fi only.",
+           "finish": "Finish", "nousdz": "On iPhone this finish has no AR file of its own yet: AR shows the model's own material."},
     "fr": {"title": "{name} en AR", "lead": "Posez-le chez vous, sur ce téléphone.", "ios": "Voir en AR — iPhone, iPad",
            "android": "Voir en AR — Android", "none": "Pas de fichier AR pour ce téléphone.",
-           "foot": "Partagé depuis Kiln Studio sur votre ordinateur, pendant {m} minutes, sur ce Wi-Fi seulement."},
+           "foot": "Partagé depuis Kiln Studio sur votre ordinateur, pendant {m} minutes, sur ce Wi-Fi seulement.",
+           "finish": "Finition", "nousdz": "Sur iPhone, cette finition n'a pas encore son fichier AR : l'AR montre la matière du modèle."},
 }
 
 
@@ -56,7 +59,11 @@ class PhoneShare:
         self.lock = threading.Lock()
         self.log: list[str] = []
 
-    def link(self, name: str, files: dict[str, Path], lang: str = "en") -> dict:
+    def link(self, name: str, files: dict[str, Path], lang: str = "en", finishes: list[str] | None = None,
+             shown: str | None = None, usdz_finishes: dict[str, Path] | None = None) -> dict:
+        """finishes: the GLB's (KHR_materials_variants), the page offers them — Android gets a
+        GLB of the one picked, made here; iPhone a USDZ of it when one was exported
+        (usdz_finishes, by finish name), the default USDZ otherwise."""
         ip = lan_ip()
         if not ip:
             raise ValueError("this computer is on no local network: the phone could not reach it")
@@ -69,7 +76,10 @@ class PhoneShare:
         with self.lock:
             now = time.time()
             self.links = {t: l for t, l in self.links.items() if l["until"] > now}
-            self.links[token] = {"name": name, "files": files, "until": until, "lang": lang if lang in WORDS else "en"}
+            self.links[token] = {"name": name, "files": files, "until": until, "lang": lang if lang in WORDS else "en",
+                                 "finishes": list(finishes or []) if len(finishes or []) > 1 else [],
+                                 "shown": shown, "usdz_finishes": {k: Path(v) for k, v in (usdz_finishes or {}).items() if Path(v).is_file()},
+                                 "made": {}}
         return {"url": f"http://{ip}:{self.srv.server_address[1]}/ar/{token}/", "expires": until,
                 "ios": "usdz" in files, "android": "glb" in files, "minutes": MINUTES}
 
@@ -87,6 +97,24 @@ class PhoneShare:
         with self.lock:
             l = self.links.get(token)
         return l if l and l["until"] > time.time() else None
+
+    def file(self, l: dict, fname: str) -> bytes | None:
+        """model.usdz / model.glb, or a finish's: model-<n>.usdz (exported), model-<n>.glb
+        (made here once from the GLB, that finish alone)."""
+        stem, kind = fname.rsplit(".", 1)
+        if stem == "model":
+            f = l["files"].get(kind)
+            return f.read_bytes() if f else None
+        if not stem.startswith("model-") or not stem[6:].isdigit() or int(stem[6:]) >= len(l["finishes"]):
+            return None
+        fin = l["finishes"][int(stem[6:])]
+        if kind == "usdz":
+            f = l["usdz_finishes"].get(fin)
+            return f.read_bytes() if f else None
+        if fname not in l["made"]:
+            import handoff
+            l["made"][fname] = handoff.with_finishes(l["files"]["glb"], [fin], fin)
+        return l["made"][fname]
 
     def _start(self) -> None:
         if self.srv:
@@ -113,10 +141,9 @@ class PhoneShare:
                 if len(parts) == 2:
                     return self._send(200, share.page(parts[1], l, self.headers.get("Host", "")).encode(), "text/html; charset=utf-8")
                 kind = parts[2].rsplit(".", 1)[-1] if len(parts) == 3 else ""
-                f = l["files"].get(kind)
-                if not f or parts[2] != f"model.{kind}":
+                data = share.file(l, parts[2]) if kind in TYPES else None
+                if data is None:
                     return self._send(404, b"Not found.", "text/plain; charset=utf-8")
-                data = f.read_bytes()
                 extra = {"Content-Disposition": f'inline; filename="{quote(l["name"])}.{kind}"', "Accept-Ranges": "bytes"}
                 # A byte range (Quick Look and media loaders ask for one): 206 with that part.
                 rng = self.headers.get("Range", "")
@@ -149,14 +176,24 @@ class PhoneShare:
     def page(self, token: str, l: dict, host: str) -> str:
         w, name = WORDS[l["lang"]], html.escape(l["name"])
         base = f"http://{host}/ar/{token}/"
+        fins = l["finishes"]
+        # Per finish: its USDZ when exported (else the default), its GLB made on demand.
+        usdz = [f"model-{i}.usdz" if f in l["usdz_finishes"] else "model.usdz" for i, f in enumerate(fins)]
+        glbs = [f"model-{i}.glb" for i in range(len(fins))]
+        intent = lambda f: (f"intent://arvr.google.com/scene-viewer/1.0?file={quote(base + f, safe='')}&mode=ar_preferred&title={quote(l['name'])}"
+                            f"#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;"
+                            f"S.browser_fallback_url={quote(base, safe='')};end;")
         # Quick Look wants the link to hold an image; Scene Viewer takes the GLB's full URL.
         icon = ("data:image/svg+xml," + quote('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>'))
         ios = (f'<a class="b ios" rel="ar" href="model.usdz"><img src="{icon}" alt="">{html.escape(w["ios"])}</a>'
                if "usdz" in l["files"] else "")
-        glb = quote(base + "model.glb", safe="")
-        android = (f'<a class="b android" href="intent://arvr.google.com/scene-viewer/1.0?file={glb}&amp;mode=ar_preferred&amp;title={quote(l["name"])}'
-                   f'#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;'
-                   f'S.browser_fallback_url={quote(base, safe="")};end;">{html.escape(w["android"])}</a>' if "glb" in l["files"] else "")
+        android = (f'<a class="b android" href="{html.escape(intent("model.glb"))}">{html.escape(w["android"])}</a>' if "glb" in l["files"] else "")
+        cur = fins.index(l["shown"]) if l["shown"] in fins else 0
+        picker = (f'<div class="fins" role="radiogroup" aria-label="{html.escape(w["finish"])}">'
+                  + "".join(f'<button role="radio" aria-checked="{"true" if i == cur else "false"}" data-i="{i}">{html.escape(f)}</button>' for i, f in enumerate(fins))
+                  + "</div>" if fins else "")
+        nousdz = html.escape(w["nousdz"])
+        data = json.dumps({"usdz": usdz, "glb": [intent(g) for g in glbs], "has": [f in l["usdz_finishes"] for f in fins], "cur": cur})
         return f"""<!doctype html><html lang="{l['lang']}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(w['title'].format(name=l['name']))}</title>
 <style>
@@ -165,15 +202,30 @@ background:#0B0D11;color:#E6EBF2;font:16px/1.45 -apple-system,system-ui,sans-ser
 h1{{margin:0;font-size:24px}} p{{margin:0;color:#A3ADBE}}
 .b{{display:flex;align-items:center;justify-content:center;min-height:52px;border-radius:12px;background:#5CE1E6;color:#062A2C;
 font-weight:600;text-decoration:none;font-size:17px}} .b img{{width:0;height:0}}
-.f{{font-size:13px;color:#808A9D;margin-top:8px}}
+.fins{{display:flex;flex-wrap:wrap;gap:8px}} .fins button{{min-height:40px;padding:0 14px;border-radius:10px;border:1px solid #2A3244;
+background:transparent;color:#E6EBF2;font:inherit;font-size:15px}} .fins button[aria-checked=true]{{border-color:#5CE1E6;background:rgba(92,225,230,.12)}}
+.n{{font-size:13px;color:#FFB547}} .f{{font-size:13px;color:#808A9D;margin-top:8px}}
 </style></head><body>
 <h1>{name}</h1><p>{html.escape(w['lead'])}</p>
-{ios}{android}{'' if ios or android else '<p>' + html.escape(w['none']) + '</p>'}
+{picker}{ios}{android}<p class="n" id="n" hidden>{nousdz}</p>{'' if ios or android else '<p>' + html.escape(w['none']) + '</p>'}
 <p class="f">{html.escape(w['foot'].format(m=MINUTES))}</p>
 <script>
+var D = {data};
 // The button for this phone only: AR Quick Look on Apple's, Scene Viewer on Android.
 var ua = navigator.userAgent, apple = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1), android = /Android/.test(ua);
 if (apple) document.querySelectorAll('.android').forEach(function (e) {{ e.remove(); }});
 if (android) document.querySelectorAll('.ios').forEach(function (e) {{ e.remove(); }});
+function pick(i) {{
+  D.cur = i;
+  document.querySelectorAll('.fins button').forEach(function (b) {{ b.setAttribute('aria-checked', String(+b.dataset.i === i)); }});
+  var a = document.querySelector('.ios'), g = document.querySelector('.android');
+  if (a) a.href = D.usdz[i];
+  if (g) g.href = D.glb[i];
+  document.getElementById('n').hidden = !(apple && !D.has[i] && i !== {cur});
+}}
+document.querySelectorAll('.fins button').forEach(function (b) {{ b.onclick = function () {{ pick(+b.dataset.i); }}; }});
+if (D.usdz.length) pick(D.cur);
+// One model, no finish to pick, on an iPhone: straight to Quick Look (AR is one tap there).
+else if (apple && document.querySelector('.ios')) location.replace('model.usdz');
 </script>
 </body></html>"""

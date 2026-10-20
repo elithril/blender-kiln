@@ -61,6 +61,7 @@ FORMAT_ORDER = (".glb", ".gltf", ".fbx", ".obj", ".usdz", ".3mf", ".stl")
 STAGE_RE = re.compile(r"^(?P<name>.+)_(?P<stage>" + "|".join(KILN_STAGES + (LIVE,)) + r")$")
 # The printable output's parts beside {name}_print.3mf: {name}_print_{part}.stl, side files of the model.
 PRINT_PART_RE = re.compile(r"^(?P<name>.+)_print_[^_/]+$")
+AR_FINISH_RE = re.compile(r"^(?P<name>.+)_ar_[^_/]+$")   # a finish's own USDZ, ar/<model>_ar_<finish>.usdz
 # A model's outputs, one folder per use in its own folder: web/{name}_final.glb,
 # game/{name}_game.fbx, ar/{name}_ar.usdz + .glb, print/{name}_print.3mf + _print_{part}.stl.
 OUTPUT_DIRS = ("web", "game", "ar", "print")
@@ -407,6 +408,9 @@ def _group_dir(project: Project, d: Path, models: list[str]) -> list[Asset]:
         stem, ext = os.path.splitext(f.rsplit("/", 1)[-1])   # an output folder's file: its own name
         if ext.lower() in (".stl", ".3mf") and PRINT_PART_RE.match(stem) and not STAGE_RE.match(stem):
             parts.append(f)
+            continue
+        if ext.lower() == ".usdz" and AR_FINISH_RE.match(stem) and not STAGE_RE.match(stem):
+            parts.append(f)   # beside its model, not a model of its own
             continue
         m = STAGE_RE.match(stem)
         if m:
@@ -1592,6 +1596,13 @@ def derive_task(a: Asset, new: str, text: str, *, target: str = "same", start: s
     return "\n\n".join(parts)
 
 
+def finish_slug(name: str) -> str:
+    """A finish's name in a file name: "Noir mat" -> "noir-mat" (ar/<model>_ar_noir-mat.usdz)."""
+    import unicodedata
+    plain = unicodedata.normalize("NFD", name).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]+", "-", plain).strip("-") or "finish"
+
+
 def finish_files(a: Asset) -> list[Variant]:
     """The model's glTF files that carry finishes: the web one (its final) and AR's GLB."""
     out = []
@@ -1611,7 +1622,8 @@ def finishes_of(a: Asset) -> list[str]:
     return []
 
 
-def finish_task(project: Project, a: Asset, finishes: list[tuple[str, str]], shown: str | None = None) -> str:
+def finish_task(project: Project, a: Asset, finishes: list[tuple[str, str]], shown: str | None = None,
+                ios: bool = False) -> str:
     """What is asked of Claude to add finishes (the page asks the same, in the user's language)."""
     have = finishes_of(a)
     base = have or ["Current"]
@@ -1624,6 +1636,11 @@ def finish_task(project: Project, a: Asset, finishes: list[tuple[str, str]], sho
              (f"Shown on opening: {shown}. " if shown else "") + f"Export again {', '.join(files)} with the finishes"
              + ("" if shown else ", the material shown on opening left as it is") + "; leave the FBX, "
              f"the USDZ and the print files (they carry none). Add the finishes to {a.name}_log.md."]
+    if ios:
+        parts.append(f"For iPhone AR (Quick Look shows one finish per file): also export a USDZ per finish, new ones and "
+                     f"those already there, beside ar/{a.name}_ar.usdz: ar/{a.name}_ar_<finish>.usdz, the finish in lower case, "
+                     f"- for spaces, no accents (e.g. ar/{a.name}_ar_{finish_slug(finishes[0][0])}.usdz), each with that "
+                     "finish's materials, with the AR export's settings.")
     return "\n\n".join(parts)
 
 

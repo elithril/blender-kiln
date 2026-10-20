@@ -686,6 +686,29 @@ class Phone(Base):
             self.assertEqual(get(path)[0], 404)
             with self.assertRaises(ValueError):
                 share.link("stool", {})
+            # With finishes: the page offers them; Android gets a GLB of the one picked, made here,
+            # iPhone the USDZ exported for it (else the model's own).
+            g = sl.read_gltf_json(glbf)
+            b = glbf.read_bytes(); n = struct.unpack("<I", b[12:16])[0]
+            g["extensionsUsed"] = ["KHR_materials_variants"]
+            g["extensions"] = {"KHR_materials_variants": {"variants": [{"name": "Oak"}, {"name": "Walnut"}]}}
+            g["materials"].append({"name": "M_Walnut"})
+            g["meshes"][0]["primitives"][0]["extensions"] = {"KHR_materials_variants": {"mappings": [{"material": 0, "variants": [0]}, {"material": 1, "variants": [1]}]}}
+            j = json.dumps(g).encode(); j += b" " * (-len(j) % 4); rest = b[20 + n:]
+            glbf.write_bytes(b[:8] + struct.pack("<I", 20 + len(j) + len(rest)) + struct.pack("<I", len(j)) + b"JSON" + j + rest)
+            walnut = self.tmp / "a_walnut.usdz"
+            walnut.write_bytes(b"PK walnut")
+            link = share.link("stool", {"usdz": usdz, "glb": glbf}, "en", ["Oak", "Walnut"], "Oak", {"Walnut": walnut})
+            path = link["url"].split(str(port), 1)[1]
+            code, _, body = get(path)
+            self.assertIn(b'data-i="1">Walnut</button>', body)
+            self.assertEqual(get(path + "model-1.usdz")[2], b"PK walnut")
+            self.assertEqual(get(path + "model-0.usdz")[0], 404)   # Oak: the model's own, model.usdz
+            one = self.tmp / "one.glb"
+            one.write_bytes(get(path + "model-1.glb")[2])
+            import handoff
+            self.assertEqual(handoff.finish_state(one)[0], [])        # a plain GLB, walnut on
+            self.assertEqual(get(path + "model-9.glb")[0], 404)
         finally:
             phoneshare.lan_ip = old
             share.shutdown()

@@ -197,8 +197,15 @@ bpy.ops.wm.usd_export(
     export_textures_mode='NEW',       # copies textures into the archive
     relative_paths=True,
     convert_world_material=False,     # see the gotcha below — this matters
+    export_animation=True,            # an animated model: OFF by default, the USDZ is then still
 )
 ```
+
+**Animation:** `export_animation` is off by default — checked on Blender 5.2.2: with
+kiln's settings an animated cube and a rigged bone came out still (no time samples);
+with it on, the cube's `xformOp:translate` and the bone's `SkelAnimation` (24 keys) are
+there. AR Quick Look plays the file's animation in a loop, with no choice of clip: the
+one the scene has active is the one seen. Several clips to show in AR: a USDZ per clip.
 
 What that produced: a 1.86 MB archive holding the `.usdc` plus **four JPEG maps**,
 and a complete preview-surface graph — 1 `UsdPreviewSurface`, 4 `UsdUVTexture`,

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import shutil
 import tempfile
 import time
@@ -230,10 +231,12 @@ def with_finishes(path: Path, keep: list[str], shown: str | None) -> bytes:
             src, dst = Path(d) / "in.glb", Path(d) / "out.glb"
             src.write_bytes(out)
             try:
-                r = subprocess.run([tool, "prune", str(src), str(dst)], capture_output=True, timeout=60)
+                # Its update check waits on the network (8 s seen): off.
+                env = {**os.environ, "NO_UPDATE_NOTIFIER": "1"}
+                r = subprocess.run([tool, "prune", str(src), str(dst)], capture_output=True, timeout=60, env=env)
                 # prune writes the meshes uncompressed: Draco again when the file had it.
                 if r.returncode == 0 and "KHR_draco_mesh_compression" in g.get("extensionsUsed", []):
-                    r = subprocess.run([tool, "draco", str(dst), str(dst)], capture_output=True, timeout=120)
+                    r = subprocess.run([tool, "draco", str(dst), str(dst)], capture_output=True, timeout=120, env=env)
                 if r.returncode == 0 and dst.is_file() and finish_state(dst)[0] == (kept if len(kept) > 1 else []):
                     out = dst.read_bytes()
             except (OSError, subprocess.TimeoutExpired):
@@ -269,6 +272,11 @@ def make_package(project: sl.Project, a: sl.Asset, lang: str = "en", outs: list[
             if len(have) < 2:
                 continue
             keep = [x for x in have if finishes is None or x in finishes] or [shown or own]
+            # The iPhone files of the finishes left out stay out too.
+            if finishes is not None:
+                gone = {f"{a.name}_ar_{sl.finish_slug(x)}.usdz" for x in have if x not in keep}
+                x0, p0, fl, st0 = packed[0]
+                packed[0] = (x0, p0, [t for t in fl if t[2].name not in gone], st0)
             if keep != have or (shown and shown != own):
                 rewritten[f] = with_finishes(f, keep, shown if shown in keep else (own if own in keep else keep[0]))
     # Written beside, under the same names: the sheet reads them (size, finishes), the zip takes them.
