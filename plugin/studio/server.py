@@ -597,6 +597,10 @@ def make_handler(studio: Studio, port_ref: list[int]):
                 if method == "POST" and parts[:3] == ["api", "claude", "jobs"] and len(parts) == 5:
                     if parts[4] == "stop":
                         return self._json(studio.worker.stop(parts[3]))
+                    if parts[4] == "edit":
+                        return self._json(studio.worker.edit(parts[3], str(body.get("text", ""))[:8000]))
+                    if parts[4] == "now":
+                        return self._json(studio.worker.now(parts[3]))
                     if parts[4] == "answer":
                         return self._json(studio.worker.answer(parts[3], str(body.get("decision", "")), str(body.get("reason", ""))))
                 if method == "PUT" and parts == ["api", "claude", "account"]:

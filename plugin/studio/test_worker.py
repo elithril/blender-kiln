@@ -317,11 +317,24 @@ class Runs(Base):
         time.sleep(0.6)
         self.assertEqual((self.w.jobs[a["id"]]["state"], self.w.jobs[b["id"]]["state"]), ("running", "queued"))
         self.assertEqual(self.w.status()["jobs"][-1]["position"], 1)
-        with self.assertRaises(ValueError):   # one message at a time per conversation
-            self.w.submit("chat", asset="a", text="more")
-        self.w.stop(a["id"])   # SIGINT: the turn ends, the session stays
+        # A message while Claude works: it waits its turn, out of the conversation until it goes.
+        c = self.w.submit("chat", asset="a", text="more")
+        self.assertEqual((c["state"], c["follows"]), ("queued", True))
+        self.assertNotIn("more", [m.get("text") for m in self.w.thread("asset:a")["messages"]])
+        self.assertEqual(self.w.edit(c["id"], "more, in blue")["text"], "more, in blue")
+        with self.assertRaises(ValueError):   # a create request still waits for the conversation
+            self.w.submit("notes", asset="a")
+        # Now: the run under way stops, the message goes first (before b, queued earlier).
+        self.w.now(c["id"])
         self.assertEqual(self.wait(a["id"])["state"], "stopped")
+        self.assertEqual(self.wait(c["id"])["state"], "done")
+        texts = [m.get("text") for m in self.w.thread("asset:a")["messages"]]
+        self.assertLess(texts.index("Stopped."), texts.index("more, in blue"))
+        with self.assertRaises(ValueError):   # gone: no longer to change
+            self.w.edit(c["id"], "x")
         self.assertEqual(self.wait(b["id"])["state"], "done")
+        prompts = [x["prompt"] for x in self.calls()]
+        self.assertLess(next(i for i, p in enumerate(prompts) if "more, in blue" in p), next(i for i, p in enumerate(prompts) if "hello" in p))
 
     def test_two_at_a_time_never_on_one_model(self) -> None:
         sl.save_config(self.p, {"claude_parallel": 2})

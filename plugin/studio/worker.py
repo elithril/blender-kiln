@@ -673,7 +673,7 @@ class Worker:
     def view(self, job: dict) -> dict:
         out = {k: job.get(k) for k in ("id", "kind", "key", "asset", "request", "text", "state", "created",
                                        "started", "ended", "session", "cost_usd", "turns", "duration_ms",
-                                       "stop_reason", "error", "waiting", "position")}
+                                       "stop_reason", "error", "waiting", "position", "follows")}
         if out["request"] and not out["asset"]:
             # A Create request's model, once kiln has named it.
             r = next((x for x in sl.load_requests(self.project) if x["id"] == out["request"]), None)
@@ -747,22 +747,26 @@ class Worker:
                "task": task if task and re.match(r"^(output\.(web|game|ar|print)|derive|finishes)$", task) else None}
         with self.cv:
             busy = [j for j in self.jobs.values() if j["key"] == job["key"] and j["state"] in ("queued", "running")]
-            if busy and kind != "resume":
+            if busy and kind not in ("resume", "chat", "answer"):
                 raise ValueError("Claude is already on this conversation: wait for it, or stop it")
+            # A message while Claude works: it waits its turn (never sent into the run under
+            # way — Claude reads a message slipped into a run as text of a tool's result, and
+            # takes it or not), shown as waiting until then; "now" stops the run to send it.
+            job["follows"] = bool(busy) and kind != "resume"
             waiting = [j for j in self.jobs.values() if j["key"] == job["key"] and j["state"] == "waiting"]
             if kind != "resume" and any((j.get("waiting") or {}).get("type") == "tool" for j in waiting):
                 raise ValueError("Claude is waiting for your approval of a tool call: allow or deny it first")
-            for j in waiting:   # a proposal is answered by the next message
+            for j in ([] if job["follows"] else waiting):   # a proposal is answered by the next message
                 j["state"], j["waiting"] = "done", {**j["waiting"], "answered": text[:200]}
             self.jobs[job["id"]] = job
             self.queue.append(job["id"])
             self.cv.notify_all()
             self._start_slots()
-        if kind != "resume":
+        if kind != "resume" and not job["follows"]:
             entry = self.store.append(job["key"], {"job": job["id"], "role": "user", "kind": kind, "text": text,
                                                    **({"context": ctx} if ctx else {})})
         else:
-            entry = None
+            entry = None   # a waiting message enters the conversation when it goes
         self._changed(job, entry)
         return self.view(job)
 
@@ -785,6 +789,35 @@ class Worker:
         self._changed(job, entry)
         return self.submit("resume", asset=job["asset"], request=job["request"], key=job["key"],
                            lang=job.get("lang", "en"), deferred=w, task=job.get("task"))
+
+    def edit(self, job_id: str, text: str) -> dict:
+        """A waiting message, written again before it goes."""
+        text = str(text or "").strip()
+        if not text:
+            raise ValueError("a message needs text")
+        with self.cv:
+            job = self.jobs.get(job_id)
+            if not job or job["state"] != "queued" or not job.get("follows"):
+                raise ValueError("only a message still waiting can be changed")
+            job["text"] = text
+            job["prompt"] = "\n".join([*context_lines(job["context"]), text]) if job.get("context") else text
+        self._changed(job)
+        return self.view(job)
+
+    def now(self, job_id: str) -> dict:
+        """Send a waiting message now: first in line, and the run under way on its
+        conversation stopped (the session goes on with the message)."""
+        with self.cv:
+            job = self.jobs.get(job_id)
+            if not job or job["state"] != "queued" or not job.get("follows"):
+                raise ValueError("only a message still waiting can be sent now")
+            self.queue.remove(job_id)
+            self.queue.appendleft(job_id)
+            run = next((j for j in self.running.values() if j["key"] == job["key"]), None)
+            self.cv.notify_all()
+        if run:
+            self.stop(run["id"])
+        return self.view(job)
 
     def stop(self, job_id: str) -> dict:
         with self.cv:
@@ -839,11 +872,17 @@ class Worker:
             return None
         model = lambda j: j.get("asset") or (self.view(j)["asset"] if j.get("request") else None)
         busy_keys = {j["key"] for j in self.running.values()}
+        # A conversation waiting for an approval takes nothing until it is answered.
+        busy_keys |= {j["key"] for j in self.jobs.values() if j["state"] == "waiting" and (j.get("waiting") or {}).get("type") == "tool"}
         busy_assets = {model(j) for j in self.running.values()} - {None}
         for jid in self.queue:
             j = self.jobs[jid]
             if j["key"] not in busy_keys and model(j) not in busy_assets:
                 self.queue.remove(jid)
+                if j.get("follows"):
+                    for w in self.jobs.values():   # it answers the proposal left meanwhile
+                        if w["key"] == j["key"] and w["state"] == "waiting":
+                            w["state"], w["waiting"] = "done", {**w["waiting"], "answered": j["text"][:200]}
                 return j
         return None
 
@@ -858,6 +897,9 @@ class Worker:
                 if self._stopping or job is None:
                     return
                 self.running[slot] = job
+            if job.pop("follows", False):
+                self._changed(job, self.store.append(job["key"], {"job": job["id"], "role": "user", "kind": job["kind"], "text": job["text"],
+                                                                  **({"context": job["context"]} if job.get("context") else {})}))
             try:
                 self._run(job, slot)
             except WorkerError as e:

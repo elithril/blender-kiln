@@ -2556,10 +2556,12 @@ async function claudeLoad() {
 }
 
 // The job on this conversation that runs, waits in the queue or waits for you.
+// The run of this conversation (a message waiting behind it is not one).
 function claudeJob() {
-  const jobs = claude.thread?.jobs || [];
+  const jobs = (claude.thread?.jobs || []).filter((j) => !j.follows);
   return [...jobs].reverse().find((j) => ['queued', 'running', 'waiting'].includes(j.state)) || null;
 }
+const claudeWaitingMsgs = () => (claude.thread?.jobs || []).filter((j) => j.follows && j.state === 'queued');
 
 function renderClaudeBadge() {
   const st = claude.status;
@@ -2674,6 +2676,12 @@ function renderClaude() {
   if (inTools) html += '</div>';
   if (claude.partial && job && claude.partial.job === job.id && job.state === 'running') html += `<div class="cl-msg cl"><div class="who"><b>Claude</b> · ${esc(t('now'))}</div>${mdLite(claude.partial.text)}<span class="caret"></span></div>`;
   else if (job?.state === 'running') html += `<div class="cl-sys"><span class="dot pulse"></span> ${esc(t('Claude is working…'))}</div>`;
+  // Messages written while Claude works: they go when it is done, or now.
+  for (const w of claudeWaitingMsgs()) {
+    html += claude.editing === w.id
+      ? `<div class="cl-msg me pending"><div class="who">${esc(t('Waiting'))}</div><textarea class="cl-edit" rows="3">${esc(w.text)}</textarea><div class="acts"><button class="btn sm accent" data-cl="wsave" data-job="${esc(w.id)}">${esc(t('Save'))}</button><button class="btn sm ghost" data-cl="wcancel">${esc(t('Cancel'))}</button></div></div>`
+      : `<div class="cl-msg me pending"><div class="who">${esc(t('Waiting · goes when Claude is done'))}</div>${mdLite(w.text)}<div class="acts"><button class="btn sm" data-cl="wnow" data-job="${esc(w.id)}" title="${esc(t('Stop Claude and send this now: it keeps what it did and takes your message into account'))}">${esc(t('Now'))}</button><button class="btn sm ghost" data-cl="wedit" data-job="${esc(w.id)}">${esc(t('Edit'))}</button><button class="btn sm ghost" data-cl="wdrop" data-job="${esc(w.id)}">${esc(t('Remove'))}</button></div></div>`;
+  }
   if (!msgs.length && !job) html = `<div class="empty-notes"><b>${esc(t('Ask Claude about {name}', { name }))}</b>${esc(t('It sees the model you have open, your notes and your view, and changes the model in its own Blender. Studio shows each new version here.'))}</div>`;
   const atEnd = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 40;
   thread.innerHTML = html;
@@ -2683,15 +2691,16 @@ function renderClaude() {
   const busy = job && ['running', 'queued'].includes(job.state);
   $('#cl-text').placeholder = tool ? t('Answer the approval first') : t('Ask Claude about {name}…', { name });
   $('#cl-text').disabled = !!tool;
-  $('#cl-send').disabled = !!tool || !!busy;
+  $('#cl-send').disabled = !!tool;
   $('#cl-ctx').innerHTML = [
     `<button class="chip${claude.ctxView ? ' on' : ''}" data-cl="ctx-view" title="${esc(t('Claude looks at the 3D view as you see it (angle, render) before answering.'))}">${esc(t('view capture'))}</button>`,
   ].join('');
 
   const a = st.auth || {};
-  $('#cl-hint').innerHTML = busy ? esc(t('Claude is working: send when it is done, or stop it.'))
-    : a.ok === false ? `<span class="warn-t">${esc(accountWords(a))}</span>`
-    : esc(t('On {who} · in its own Blender, never yours (port {p})', { who: accountWords(a), p: st.port }));
+  // Only when it matters: Claude at work, or an account to fix. The account and the
+  // Blender are in the Claude pill's menu, up top.
+  $('#cl-hint').innerHTML = busy ? esc(t('Claude is working: a message now waits for it to be done — or goes at once with "Now".'))
+    : a.ok === false ? `<span class="warn-t">${esc(accountWords(a))}</span>` : '';
 }
 
 // What goes with the words: a capture of the view, when asked. The worker puts it ahead of
@@ -2763,6 +2772,15 @@ $('#tab-claude').addEventListener('click', async (e) => {
   const job = claudeJob();
   if (act === 'enable') {
     try { await api('/api/config', { method: 'PUT', body: { claude_worker: true } }); await claudeStatus(); renderClaude(); } catch (err) { toast(esc(err.message), 'warn'); }
+  } else if (['wnow', 'wdrop', 'wsave'].includes(act)) {
+    const id = e.target.closest('[data-job]').dataset.job;
+    const path = { wnow: 'now', wdrop: 'stop', wsave: 'edit' }[act];
+    const body = act === 'wsave' ? { text: $('#cl-thread .cl-edit')?.value || '' } : {};
+    try { await api(`/api/claude/jobs/${enc(id)}/${path}`, { method: 'POST', body }); claude.editing = null; await claudeStatus(); await claudeLoad(); } catch (err) { toast(esc(err.message), 'warn'); }
+  } else if (act === 'wedit') {
+    claude.editing = e.target.closest('[data-job]').dataset.job; renderClaude(); $('#cl-thread .cl-edit')?.focus();
+  } else if (act === 'wcancel') {
+    claude.editing = null; renderClaude();
   } else if (act === 'stop' && job) {
     try { await api(`/api/claude/jobs/${enc(job.id)}/stop`, { method: 'POST', body: {} }); } catch (err) { toast(esc(err.message), 'warn'); }
   } else if (act === 'accept') {
@@ -2822,7 +2840,7 @@ function renderClaudePill() {
     ? `<div class="g">${esc(t('Quota'))} <span class="when">${esc(t('updated {ago}', { ago: ago(st.rate.at) }))}</span></div>${wins.map((x) => `<div class="qrow"><span class="qn">${esc(quotaName(x.key))}</span><span class="qbar"><i class="${x.used >= 0.9 ? 'hot' : ''}" style="width:${Math.max(2, Math.round(x.used * 100))}%"></i></span><span class="qv">${Math.round(x.used * 100)} %</span><span class="qr">${esc(resetWords(x.resets))}</span></div>`).join('')}`
     : `<div class="g">${esc(t('Quota'))}</div><div class="none">${esc(t('Known after Claude\'s first request: Claude Code tells it during each run.'))}</div>`;
   const u = (st.usage?.by_account || {})[st.account] || { runs: 0, cost_usd: 0 };
-  $('#cl-act').innerHTML = `<div class="h"><b>${esc(t("Claude's activity"))}</b><span>${esc(st.auth ? accountWords(st.auth) : '')}</span></div>
+  $('#cl-act').innerHTML = `<div class="h"><b>${esc(t("Claude's activity"))}</b><span>${esc(st.auth ? accountWords(st.auth) : '')}</span><span class="bl">${esc(t('In its own Blender, never yours (port {p})', { p: st.port }))}</span></div>
     ${group(t('Waits for your answer'), wait)}${group(t('Running'), run ? [run] : [])}${group(t('In line'), queue)}
     ${live.length ? '' : `<div class="none">${esc(t('Nothing running. Ask from a model\'s ✦ tab, the project conversation, or New model.'))}</div>`}
     <button class="it proj" data-key="project"><span class="t"><b>${esc(t('Project conversation'))}</b><span>${esc(t('What concerns several models at once'))}</span></span></button>
