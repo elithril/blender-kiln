@@ -266,6 +266,18 @@ installed, and `tools/print_check.py` on the file — is in `references/print.md
 § Printable from the brief and § The tool. The glTF material rules above do not apply: an
 STL carries geometry only.
 
+## Game and AR outputs without a session: `tools/export_outputs.py`
+
+```bash
+python3 tools/export_outputs.py <model folder> game ar
+```
+
+From `<name>_original.glb`: `game/<name>_game.fbx` (`tools/glb_to_fbx.py`, the FBX settings
+above, read back: same size as the GLB) and `ar/<name>_ar.glb` + `ar/<name>_ar.usdz`
+(`tools/glb_to_usdz.py`, `usdchecker --arkit` clean). Deterministic, a few seconds, a line
+in the log; a failed check writes nothing. Studio's "+ Game" / "+ AR" run it. Prefer it to
+a hand-written export script for these two targets.
+
 ## Multi-Target Export
 
 When export target is "multi":

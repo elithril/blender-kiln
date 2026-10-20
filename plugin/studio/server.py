@@ -30,6 +30,8 @@ import setup_status
 import studiolib as sl
 import worker as wk
 
+HERE = Path(__file__).resolve().parent
+
 VERSION = "1.0.0"
 STATIC = Path(__file__).resolve().parent / "static"
 MAX_BODY = 30 * 1024 * 1024
@@ -60,6 +62,8 @@ class Studio:
         self.worker = wk.Worker(project, self.emit)
         # A model in AR on the phone: a separate, read-only server, started on the first QR code.
         self.phone = phoneshare.PhoneShare(cache=project.data / "cache" / "ar")
+        # Game and AR outputs made here, without Claude (tools/export_outputs.py): asset id -> kinds.
+        self.exporting: dict[str, list[str]] = {}
         self.refresh(initial=True)
 
     # live events
@@ -485,6 +489,7 @@ def make_handler(studio: Studio, port_ref: list[int]):
                     a = studio.asset(parts[2])
                     sl.observe(project, a)
                     detail = sl.asset_detail(project, a, sl.load_catalog(project))
+                    detail["exporting"] = studio.exporting.get(a.id, [])
                     try:
                         detail["checks"] = checks.asset_checks(project, a)
                     except Exception as e:  # a check must never hide the model
@@ -705,6 +710,36 @@ def make_handler(studio: Studio, port_ref: list[int]):
                 if method == "POST" and rest == ["snapshot"]:
                     return self._json(sl.take_baseline(project, a, a.variant(body.get("variant")),
                                                        reason="snapshot from Studio"))
+                if method == "POST" and rest == ["export"]:
+                    # "+ Game", "+ AR": kiln's settings in Blender headless, checked; seconds, no Claude.
+                    kinds = [k for k in body.get("kinds", []) if k in ("game", "ar")]
+                    if not kinds or not a.kiln:
+                        raise ValueError("game or ar, on a kiln model")
+                    if not any(v.label == "original" for v in a.variants):
+                        raise ValueError(f"{a.name} has no _original.glb to export from")
+                    with studio.lock:
+                        if a.id in studio.exporting:
+                            raise ValueError("an export of this model is already running")
+                        studio.exporting[a.id] = kinds
+                    folder = project.root / a.folder
+                    aid = a.id
+
+                    def run() -> None:
+                        t0 = time.time()
+                        try:
+                            r = subprocess.run([sys.executable, str(HERE.parent / "tools" / "export_outputs.py"), str(folder), *kinds],
+                                               capture_output=True, text=True, timeout=1200)
+                            out = json.loads(r.stdout.strip().splitlines()[-1]) if r.stdout.strip() else {"ok": False, "error": r.stderr[-300:]}
+                        except (subprocess.TimeoutExpired, ValueError, IndexError) as e:
+                            out = {"ok": False, "error": str(e)}
+                        with studio.lock:
+                            studio.exporting.pop(aid, None)
+                        studio.refresh()
+                        studio.emit({"type": "export", "id": aid, "kinds": kinds, "ok": out.get("ok", False),
+                                     "error": out.get("error", ""), "seconds": round(time.time() - t0)})
+                    threading.Thread(target=run, daemon=True, name="export").start()
+                    studio.emit({"type": "export", "id": aid, "kinds": kinds, "state": "running"})
+                    return self._json({"started": True, "kinds": kinds})
                 if method == "POST" and rest == ["phone"]:
                     # The QR code: AR's USDZ (iPhone) and GLB (Android; the web one if AR has none).
                     files = {}

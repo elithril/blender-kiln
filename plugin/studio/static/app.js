@@ -1011,8 +1011,10 @@ function renderOutputs(d, v) {
   const have = new Map();
   for (const x of d.variants) { const o = outputOf(x); if (o && !have.has(o)) have.set(o, x); }
   const busy = modelBusy();
+  const running = exportsNow.get(d.id) || d.exporting || [];
   const chips = OUTPUTS.map((o) => {
     const x = have.get(o.key);
+    if (running.includes(o.key)) return `<button class="out busy" disabled title="${esc(t('Being made, in Blender, without Claude: a few seconds.'))}"><span class="spin" aria-hidden="true"></span>${esc(t(o.name))}</button>`;
     if (x && outputStale(d, x)) return `<button class="out on stale${x.label === v.label ? ' cur' : ''}" data-out-v="${esc(x.label)}" data-out-stale="${o.key}" title="${esc(`${t('Made before the model last changed: to redo.')} ${t(o.what)} — ${x.file}`)}"><i aria-hidden="true">↻</i>${esc(t(o.name))}${finTag(x)}</button>`;
     if (x) return `<button class="out on${x.label === v.label ? ' cur' : ''}" data-out-v="${esc(x.label)}" title="${esc(`${t('Up to date.')} ${t(o.what)} — ${x.file}`)}"><i aria-hidden="true">✓</i>${esc(t(o.name))}${finTag(x)}</button>`;
     return `<button class="out add" data-out-make="${o.key}"${busy ? ' disabled' : ''} title="${esc(t('Prepare: {what}', { what: t(o.what) }))}"><i aria-hidden="true">+</i>${esc(t(o.name))}</button>`;
@@ -1386,8 +1388,28 @@ function estimateText(e) {
 }
 const ESTIMATE_WHY = () => t('Claude\'s working time, not the time it waits for your approvals. The cost is what the API charges: a subscription pays nothing more, it counts against its quota.');
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-out-redo]'); if (b) makeOutput(b.dataset.outRedo, true); });
-async function makeOutput(key, redo = false) {
+// Game and AR: made here, in seconds, without Claude (tools/export_outputs.py); print, and
+// a model without its _original.glb, still go to Claude.
+const exportsNow = new Map();   // asset id -> kinds being made
+async function exportOutput(key) {
+  const d = state.detail;
+  exportsNow.set(d.id, [key]);
+  renderTitle();
+  try { await assetApi(d.id, '/export', { method: 'POST', body: { kinds: [key] } }); }
+  catch (e) { exportsNow.delete(d.id); renderTitle(); toast(esc(e.message), 'warn', 7000); }
+}
+function onExport(ev) {
+  if (ev.state === 'running') { exportsNow.set(ev.id, ev.kinds); if (ev.id === state.id) renderTitle(); return; }
+  exportsNow.delete(ev.id);
+  const a = state.byId.get(ev.id), names = ev.kinds.map((k) => t(OUTPUTS.find((o) => o.key === k).name)).join(', ');
+  if (ev.ok) toast(esc(t('{out} output of {name} ready ({s} s).', { out: names, name: a?.name || ev.id, s: ev.seconds })), 'ok', 6000);
+  else toast(`${esc(t('The {out} output of {name} did not pass its check: {why}', { out: names, name: a?.name || ev.id, why: ev.error }))} <button class="linkish" data-out-claude="${ev.kinds[0]}">${esc(t('Ask Claude'))}</button>`, 'warn', 15000);
+  if (ev.id === state.id) fetchDetail();
+}
+document.addEventListener('click', (e) => { const b = e.target.closest('[data-out-claude]'); if (b) makeOutput(b.dataset.outClaude, true, true); });
+async function makeOutput(key, redo = false, viaClaude = false) {
   const d = state.detail, o = OUTPUTS.find((x) => x.key === key);
+  if (!viaClaude && ['game', 'ar'].includes(key) && d.kiln && d.variants.some((x) => x.label === 'original')) return exportOutput(key);
   const ask = outputAsk(key, d.name);
   if (!claude.status?.enabled) {
     // Claude off in Studio: the request goes to Claude Code, by hand.
@@ -2537,6 +2559,7 @@ async function onCapture(ev) {
 
 async function onEvent(ev) {
   if (ev.type === 'claude' || ev.type === 'claude-text') return onClaude(ev);
+  if (ev.type === 'export') return onExport(ev);
   if (ev.type === 'control') return onControl(ev);
   if (ev.type === 'capture') return onCapture(ev);
   if (ev.type !== 'camera') return;

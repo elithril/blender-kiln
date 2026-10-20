@@ -715,6 +715,27 @@ class Phone(Base):
             phoneshare.lan_ip = old
             share.shutdown()
 
+@unittest.skipUnless(Path("/Applications/Blender.app/Contents/MacOS/Blender").exists() or shutil.which("blender"), "needs Blender")
+class Exports(Base):
+    def test_game_and_ar_without_claude(self) -> None:
+        d = self.tmp / "generated-assets" / "box"
+        glb(d / "box_original.glb", scale=0.4)
+        tool = Path(__file__).resolve().parent.parent / "tools" / "export_outputs.py"
+        r = subprocess.run([sys.executable, str(tool), str(d), "game", "ar"], capture_output=True, text=True, timeout=600)
+        out = json.loads(r.stdout.strip().splitlines()[-1])
+        self.assertTrue(out["ok"], out)
+        self.assertTrue((d / "game" / "box_game.fbx").is_file())
+        self.assertTrue((d / "ar" / "box_ar.glb").is_file() and (d / "ar" / "box_ar.usdz").is_file())
+        self.assertIn("usdchecker --arkit clean", out["outputs"]["ar"]["checks"])
+        self.assertIn("## Outputs (Studio,", (d / "box_log.md").read_text())
+        self.assertFalse(any(p.name.startswith(".export-") for p in d.iterdir()))   # nothing left behind
+        # No source: refused, nothing written.
+        e = self.tmp / "generated-assets" / "empty"
+        e.mkdir()
+        r = subprocess.run([sys.executable, str(tool), str(e), "game"], capture_output=True, text=True, timeout=60)
+        self.assertFalse(json.loads(r.stdout)["ok"])
+        self.assertEqual(list(e.iterdir()), [])
+
 class Estimate(Base):
     def usage(self, *entries: dict) -> None:
         d = self.tmp / ".kiln-studio" / "claude"

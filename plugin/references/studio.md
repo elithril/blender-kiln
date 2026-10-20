@@ -254,8 +254,12 @@ first folder holding `.kiln-studio/`); pass `--root PROJECT` from elsewhere.
 **Outputs**, beside the stages on top: Web, Game, AR, 3D print — a folder per use in the
 model's folder, found by name (`naming-conventions.md` § Outputs). ✓: up to date; ↻: made
 before the model's shape last changed (`sl.shape_since`: read off `_original.glb` — bounds and transforms, not materials, so new finishes leave the outputs ✓), to redo ("Redo it"). One there opens in the view (an STL or a 3MF in
-millimetres, as on the printer's bed); one missing has "+": Studio asks Claude to prepare
-it (with Claude off in Studio, the request is copied for Claude Code). "Download" opens a
+millimetres, as on the printer's bed); one missing has "+": Game and AR are made by Studio
+itself, in seconds and without Claude — `tools/export_outputs.py`: from `_original.glb`, the
+FBX with kiln's settings read back at the model's size, the AR GLB (the _original as it is)
+and the USDZ (`tools/glb_to_usdz.py`) passing `usdchecker --arkit`, a line in the log; a
+failed check offers "Ask Claude". 3D print goes to Claude (print_check, parts, walls); with
+Claude off in Studio, its request is copied for Claude Code. "Download" opens a
 dialog: each output checked, with its files, their size and use (`/api/asset/<id>/outputs`),
 and "Add a sheet". One file alone without the sheet downloads as is; otherwise a zip
 (`/api/asset/<id>/package?outs=…&sheet=0|1`, `studio/handoff.py`): each output in its folder,

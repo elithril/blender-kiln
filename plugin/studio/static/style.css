@@ -1255,6 +1255,8 @@ svg.spark { width: 14px; height: 14px; fill: var(--new); stroke: none; flex: non
 .outputs .out.on:hover { background: var(--panel-3); color: var(--text); }
 .outputs .out.cur { border-color: color-mix(in srgb, var(--accent) 50%, transparent); color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .outputs .out.add { border-style: dashed; color: var(--text-3); }
+.outputs .out.busy { color: var(--text-2); cursor: progress; }
+.outputs .out.busy .spin { width: 10px; height: 10px; }
 .outputs .out.add:hover:not(:disabled) { color: var(--text); border-color: var(--line-3); background: var(--panel-3); }
 .outputs .out.add:disabled { opacity: .45; cursor: progress; }
 .outputs .out-sep { width: 1px; height: 16px; background: var(--line-2); margin: 0 4px; }

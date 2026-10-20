@@ -388,7 +388,7 @@ const STEPS = [
     enter: () => { if (X.viewer.opts.shade !== 'lit') shade('lit'); },
     lead: N_('One model, a file per use.'),
     points: [N_('**Web** is there: the file for a website'),
-      N_('**+ Game**, **+ AR**, **+ 3D print**: Claude prepares the one missing'),
+      N_('**+ Game**, **+ AR**: made here in seconds; **+ 3D print**: Claude prepares it'),
       N_('**✓** up to date; **↻** made before the model changed: to redo'),
       N_('**Download**: pick the outputs, with a sheet to send them'),
       N_('**View in AR**: a QR code to see it on the phone, in the room')] },
