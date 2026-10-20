@@ -1550,6 +1550,46 @@ def derive(project: Project, a: Asset, name: str, text: str, *, target: str = "s
     return new
 
 
+DERIVE_STOP = {"a", "an", "the", "of", "with", "for", "and", "in", "on", "to", "at", "version", "same", "one",
+               "la", "le", "les", "un", "une", "des", "de", "du", "et", "en", "au", "aux", "avec", "pour", "sans", "sur", "meme"}
+
+
+def derive_name(project: Project, a: Asset, text: str, taken: set[str] | None = None) -> str:
+    """A name for a variation from its words (as the page suggests): `stool-high-seat`."""
+    import unicodedata
+    plain = unicodedata.normalize("NFD", text).encode("ascii", "ignore").decode().lower()
+    words = [w for w in re.split(r"[^a-z0-9]+", plain) if len(w) > 1 and w not in DERIVE_STOP][:2]
+    base = "-".join([a.name, *words])[:64].strip("-")
+    names = {x.name for x in scan(project)} | (taken or set())
+    name, n = base, 2
+    while name in names or (project.root / a.folder).parent.joinpath(name).exists():
+        name, n = f"{base}-{n}", n + 1
+    return name
+
+
+OUTPUT_FILES = {"game": "game/{n}_game.fbx (Unity, Unreal)", "ar": "ar/{n}_ar.usdz (iPhone, Vision Pro) and ar/{n}_ar.glb (Android)",
+                "print": "print/{n}_print.3mf and one STL per part, print/{n}_print_<part>.stl, in millimetres, with kiln's print mode"}
+
+
+def derive_task(a: Asset, new: str, text: str, *, target: str = "same", start: str = "current",
+                outputs: list[str] | None = None, notes: bool = False) -> str:
+    """What is asked of Claude for one variation (the page asks the same, in the user's language)."""
+    made = {"same": f"the same use as {a.name}", "web": "the web", "desktop": "Unity and Unreal", "ar": "AR",
+            "print": "3D printing, with kiln's print mode"}[target]
+    src = (f"Studio copied the kept (previous) version of {a.name} as {new}_original.glb; there is no .blend: rebuild it from that file."
+           if start == "kept" else
+           f"Studio copied the source of {a.name} here: {new}.blend, {new}_original.glb, its build scripts and its log.")
+    parts = [f"{new} is a variation of {a.name}, in its own folder. {src}", f"Change it: {text.strip()}",
+             f"Made for: {made}. Work on this copy only, never on {a.name}. Save {new}.blend, export {new}_original.glb "
+             f"and {new}_final.glb with kiln's settings, and add the change to {new}_log.md."]
+    if notes:
+        parts.append(f"The open notes of {a.name} were copied onto it: handle them too.")
+    outs = [OUTPUT_FILES[o].format(n=new) for o in (outputs or []) if o in OUTPUT_FILES]
+    if outs:
+        parts.append("Then make its outputs, each in its folder: " + "; ".join(outs) + ".")
+    return "\n\n".join(parts)
+
+
 def derivations(catalog: dict, asset_id: str) -> list[str]:
     """The models declined from this one."""
     return sorted(k for k, e in catalog.get("assets", {}).items() if (e.get("derived") or {}).get("from") == asset_id)

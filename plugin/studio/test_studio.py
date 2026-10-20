@@ -1350,13 +1350,32 @@ class Mcp(Base):
         text = r["content"][0]["text"]
         return r["isError"], (text if r["isError"] else json.loads(text))
 
+    def test_variations_from_the_terminal(self) -> None:
+        err, r = self.tool("make_variations", asset="crate", variations=[
+            {"change": "Peinte en rouge vif"}, {"change": "Twice as tall", "name": "crate-tall", "made_for": "print"}],
+            outputs=["print"])
+        self.assertFalse(err, r)
+        self.assertEqual([v["asset"] for v in r["variations"]], ["generated-assets/crate-peinte-rouge", "generated-assets/crate-tall"])
+        tall = r["variations"][1]
+        self.assertTrue(Path(tall["folder"], "crate-tall_original.glb").is_file())
+        self.assertIn("Change it: Twice as tall", tall["task"])
+        self.assertIn("Made for: 3D printing", tall["task"])
+        self.assertIn("print/crate-tall_print.3mf", tall["task"])
+        self.assertEqual(sl.derivations(sl.load_catalog(self.p), "generated-assets/crate"),
+                         ["generated-assets/crate-peinte-rouge", "generated-assets/crate-tall"])
+        # Handed to Studio with its Claude off: the copy is made, and the session is told to do it.
+        err, msg = self.tool("make_variations", asset="crate", variations=[{"change": "Blue"}], in_studio=True)
+        self.assertTrue(err)
+        self.assertIn("Claude in Studio is off", msg)
+        self.assertTrue((self.tmp / "generated-assets" / "crate-blue").is_dir())
+
     def test_the_tools(self) -> None:
         init = self.rpc("initialize", {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "test"}})
         self.assertEqual((init["result"]["serverInfo"]["name"], init["result"]["protocolVersion"]), ("kiln-studio", "2025-06-18"))
         self.rpc("notifications/initialized", notify=True)
         names = [t["name"] for t in self.rpc("tools/list")["result"]["tools"]]
         self.assertEqual(names, ["get_selection", "get_notes", "reply_to_note", "set_camera", "get_view_image", "list_models",
-                                 "add_note", "open_model", "set_view", "compare", "play_clip", "present"])
+                                 "add_note", "make_variations", "open_model", "set_view", "compare", "play_clip", "present"])
 
         err, sel = self.tool("get_selection")   # no page holds the event stream: closed
         self.assertFalse(err, sel)

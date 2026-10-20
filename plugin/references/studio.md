@@ -426,6 +426,7 @@ notes. It never touches a model file.
 | `get_notes` | The notes of an asset (default: the one open), as `studio.py show` gives them, with the pictures' absolute paths to read; no asset and none open: the assets with notes |
 | `reply_to_note` | `studio.py reply`: `status` addressed, open or wontfix — never resolved |
 | `add_note` | A note by Claude on a whole model (a finding, a question), shown as "from Claude"; the user answers or closes it |
+| `make_variations` | Variations, only when the user asks: a copy per variation beside the original (as the page's "Variations", § 7), each with its `task`; this session then does each task in turn with kiln — or `in_studio: true` hands them to Claude in Studio (on in Settings), as many at once as it allows. Defaults: names from the words, made for the same use, the original's outputs |
 | `open_model` | Opens a model in the page, at a `stage` |
 | `set_camera` | Turns the open page's view: `view` (front, back, left, right, top, iso), a `note`'s own view, or `position_blender` and `target_blender`; with `asset`, opens it first |
 | `set_view` | `shading` (lit, unlit, clay, normals, uv, faces), `background`, `wire`, `grid`, `bounds` (size), `skeleton` (bones), a preset `view`, `frame` |

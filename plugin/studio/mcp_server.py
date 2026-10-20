@@ -12,6 +12,9 @@ Seeing:
 Writing, Studio's own records only (never the models):
 - reply_to_note   answer a note, as `studio.py reply` (never "resolved": only the user closes);
 - add_note        a note by Claude on a model, on the whole model, for the user to look at.
+Making, when the user asks:
+- make_variations new models from a copy of one (Studio's "Variations"): copies made here,
+                  the change done by this session, or handed to Claude in Studio.
 Driving the open page:
 - open_model      open a model, at a stage;
 - set_camera      a preset, a note's own view, or a camera position and target in Blender's frame;
@@ -114,6 +117,29 @@ TOOLS = [
             "asset": {"type": "string", "description": "Default: the one open in Studio"},
             "text": {"type": "string"}, "stage": {"type": "string", "description": "The stage it is about (default: the first)"},
             "root": ROOT_ARG}, "required": ["text"], "additionalProperties": False},
+        "annotations": {"readOnlyHint": False, "destructiveHint": False},
+    },
+    {
+        "name": "make_variations",
+        "description": ("Studio's Variations, from the terminal: new models from a copy of one, only when the user asks "
+                        "(each is a full kiln run). For each variation, Studio copies the source beside the original "
+                        "(<name>.blend, <name>_original.glb, the build scripts, the log; never the outputs) and links them; "
+                        "the original is never changed. Then, by default, this session makes the change on each copy: "
+                        "the result gives each one's folder and task, to do one after the other with kiln. With "
+                        "in_studio, Studio's own Claude does them instead (Settings → Claude on), as many at once as it allows."),
+        "inputSchema": {"type": "object", "properties": {
+            "asset": {"type": "string", "description": "The model to vary (default: the one open in Studio)"},
+            "variations": {"type": "array", "minItems": 1, "items": {"type": "object", "properties": {
+                "change": {"type": "string", "description": "What changes, in the user's words"},
+                "name": {"type": "string", "description": "The new model's name (default: from the words)"},
+                "made_for": {"type": "string", "enum": ["same", "web", "desktop", "ar", "print"], "description": "Default: same as the original"}},
+                "required": ["change"], "additionalProperties": False}},
+            "start": {"type": "string", "enum": ["current", "kept"], "description": "The current version (default) or the kept previous one"},
+            "outputs": {"type": "array", "items": {"type": "string", "enum": ["game", "ar", "print"]},
+                        "description": "The outputs to make for each, besides the web one (default: the original's)"},
+            "copy_notes": {"type": "boolean", "description": "Copy the original's open notes onto each (default false)"},
+            "in_studio": {"type": "boolean", "description": "Hand the changes to Claude in Studio instead of doing them here"},
+            "root": ROOT_ARG}, "required": ["variations"], "additionalProperties": False},
         "annotations": {"readOnlyHint": False, "destructiveHint": False},
     },
     {
@@ -425,7 +451,44 @@ def add_note(args: dict) -> dict:
     return {"asset": a.id, "note": n["id"], "number": number, "status": n["status"]}
 
 
-HANDLERS = {"get_selection": get_selection, "get_notes": get_notes, "reply_to_note": reply_to_note, "set_camera": set_camera,
+def make_variations(args: dict) -> dict:
+    project = find_project(args.get("root"))
+    a = _asset(project, args.get("asset"))
+    if not a.kiln:
+        raise ToolError(f"{a.id} is not a kiln model: only one with its _original and .blend can be varied")
+    start = args.get("start") or "current"
+    outputs = args.get("outputs")
+    if outputs is None:   # the original's, as the page does
+        outputs = sorted({v.label.split(".")[0] for v in a.variants} & {"game", "ar", "print"})
+    rows, taken = [], set()
+    for v in args.get("variations") or []:
+        text = str(v.get("change", "")).strip()
+        name = str(v.get("name") or "").strip() or sl.derive_name(project, a, text, taken)
+        taken.add(name)
+        rows.append((text, name, v.get("made_for") or "same"))
+    made = []
+    for text, name, target in rows:
+        task = sl.derive_task(a, name, text, target=target, start=start, outputs=outputs, notes=bool(args.get("copy_notes")))
+        if args.get("in_studio"):
+            out = call_studio(project, f"/api/asset/{urllib.request.quote(a.id, safe='')}/derive",
+                              {"name": name, "text": text, "target": target, "start": start,
+                               "notes": bool(args.get("copy_notes")), "prompt": task}, timeout=30)
+            if not out.get("job"):
+                raise ToolError(f"{name} was copied, but Claude in Studio is off (Settings → Claude): do it here, "
+                                f"in {project.root / Path(a.folder).parent / name}.")
+            made.append({"asset": out["asset"], "studio_job": out["job"]["id"]})
+            continue
+        try:
+            new = sl.derive(project, a, name, text, target=target, start=start, copy_notes=bool(args.get("copy_notes")))
+        except ValueError as e:
+            raise ToolError(f"{name}: {e}" + (f" (made before it: {', '.join(m['asset'] for m in made)})" if made else ""))
+        made.append({"asset": new.id, "folder": str(project.root / new.folder), "task": task})
+    return {"from": a.id, "variations": made,
+            "next": ("Claude in Studio makes them; the user follows them in Studio." if args.get("in_studio") else
+                     "Do each task in turn with kiln, in its folder (the Studio page shows each under the original).")}
+
+
+HANDLERS = {"make_variations": make_variations, "get_selection": get_selection, "get_notes": get_notes, "reply_to_note": reply_to_note, "set_camera": set_camera,
             "get_view_image": get_view_image, "list_models": list_models, "add_note": add_note, "open_model": open_model,
             "set_view": set_view, "compare": compare, "play_clip": play_clip, "present": present}
 
@@ -444,7 +507,8 @@ def handle(msg: dict) -> dict | None:
         return ok({"protocolVersion": want if want in PROTOCOLS else PROTOCOLS[0],
                    "capabilities": {"tools": {"listChanged": False}}, "serverInfo": SERVER,
                    "instructions": "Kiln Studio: what the user looks at (get_selection, get_view_image, list_models), "
-                                   "their notes (get_notes, reply_to_note, add_note), and driving the open page "
+                                   "their notes (get_notes, reply_to_note, add_note), variations of a model when the user asks "
+                                   "(make_variations), and driving the open page "
                                    "(open_model, set_camera, set_view, compare, play_clip, present)."})
     if method == "ping":
         return ok({})
