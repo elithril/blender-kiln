@@ -286,7 +286,7 @@ other materials, in the model's own glTF files (web, and AR's GLB) as
 (a name, the material in words), the one shown on opening (the file's own material: what Quick Look and viewers without finishes show); one Claude run (task `finishes`),
 the version before kept for Compare and choose. FBX, USDZ and print files carry none.
 How Blender writes them: `export-targets.md` § Finishes. A file with finishes shows a
-picker in the view (a swatch per finish), "3 finishes" on its row in the list and "Web · 3 finishes" on its output, and its
+picker in the view (a swatch per finish, from the material covering most of the model; beyond 6 finishes a list with ‹ › instead of buttons), "3 finishes" on its row in the list and "Web · 3 finishes" on its output, and its
 finishes in the hand-off sheet.
 
 The two side panels resize the view, and fold into 60 px rails (`[` the list, `]` the

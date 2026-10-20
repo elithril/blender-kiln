@@ -723,17 +723,58 @@ function setupFinishBar() {
     return 0;
   })();
   const cur = slot.finish ?? own;
-  const colour = (i) => {
-    for (const m of json.meshes || []) for (const p of m.primitives || []) {
-      const map = p.extensions?.KHR_materials_variants?.mappings?.find((x) => x.variants.includes(i));
-      const f = map && json.materials?.[map.material]?.pbrMetallicRoughness?.baseColorFactor;
-      if (f) return `rgb(${f.slice(0, 3).map((c) => Math.round(255 * Math.pow(c, 1 / 2.2))).join(',')})`;
-    }
-    return 'var(--panel-3)';
-  };
-  bar.innerHTML = `<span class="lab">${esc(t('Surface finish'))}</span>${names.map((n, i) => `<button role="radio" aria-checked="${i === cur}" data-finish="${i}"><span class="sw" style="background:${colour(i)}"></span>${esc(n)}</button>`).join('')}${state.detail?.kiln ? `<button class="add" data-finish-add title="${esc(t('Add finishes: other materials, same shape'))}">${esc(t('+ Finish'))}</button>` : ''}`;
-  $$('[data-finish]', bar).forEach((b) => (b.onclick = async () => { await viewer.setFinish(+b.dataset.finish); setupFinishBar(); }));
+  const add = state.detail?.kiln ? `<button class="add" data-finish-add title="${esc(t('Add finishes: other materials, same shape'))}">${esc(t('+ Finish'))}</button>` : '';
+  if (names.length <= FINISH_BUTTONS) {
+    bar.innerHTML = `<span class="lab">${esc(t('Surface finish'))}</span>${names.map((n, i) => `<button role="radio" aria-checked="${i === cur}" data-finish="${i}"><span class="sw" data-sw="${i}"></span>${esc(n)}</button>`).join('')}${add}`;
+  } else {
+    // Many: the one shown, a list of all, and ‹ › to go through them.
+    bar.innerHTML = `<span class="lab">${esc(t('Surface finish'))}</span>
+      <button class="nav" data-finish-step="-1" aria-label="${esc(t('Previous finish'))}">‹</button>
+      <span class="sw" data-sw="${cur}"></span>
+      <span class="sel"><select id="finish-pick" aria-label="${esc(t('Surface finish'))}">${names.map((n, i) => `<option value="${i}"${i === cur ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
+      <span class="count">${esc(t('{i} of {n}', { i: cur + 1, n: names.length }))}</span>
+      <button class="nav" data-finish-step="1" aria-label="${esc(t('Next finish'))}">›</button>${add}`;
+  }
+  const put = async (i) => { await viewer.setFinish((i + names.length) % names.length); setupFinishBar(); };
+  $$('[data-finish]', bar).forEach((b) => (b.onclick = () => put(+b.dataset.finish)));
+  $$('[data-finish-step]', bar).forEach((b) => (b.onclick = () => put(cur + +b.dataset.finishStep)));
+  $('#finish-pick', bar)?.addEventListener('change', (e) => put(+e.target.value));
   $('[data-finish-add]', bar)?.addEventListener('click', () => openDecline('finishes'));
+  $$('[data-sw]', bar).forEach(async (sw) => { sw.style.background = await finishSwatch(slot, +sw.dataset.sw); });
+}
+const FINISH_BUTTONS = 6;
+// A finish's colour: the material that covers most of the model in it (by vertex count),
+// its base colour times its texture's average. Kept per file.
+const swatches = new Map();
+async function finishSwatch(slot, i) {
+  const json = slot.parser.json, key = `${state.detail?.id}|${slot.parser.json.asset?.generator}|${i}|${(json.materials || []).length}`;
+  if (swatches.has(key)) return swatches.get(key);
+  const weight = new Map();
+  for (const m of json.meshes || []) for (const p of m.primitives || []) {
+    const map = p.extensions?.KHR_materials_variants?.mappings?.find((x) => x.variants.includes(i));
+    const idx = map ? map.material : p.material;
+    if (idx == null) continue;
+    weight.set(idx, (weight.get(idx) || 0) + (json.accessors?.[p.attributes?.POSITION]?.count || 1));
+  }
+  const best = [...weight].sort((a, b) => b[1] - a[1])[0]?.[0];
+  let css = 'var(--panel-3)';
+  if (best != null) {
+    try {
+      const mat = await slot.parser.getDependency('material', best);
+      const c = mat.color ? mat.color.clone() : null;
+      const img = mat.map?.image;
+      if (c && img) {
+        const cv = document.createElement('canvas'); cv.width = cv.height = 8;
+        const g = cv.getContext('2d'); g.drawImage(img, 0, 0, 8, 8);
+        const d = g.getImageData(0, 0, 8, 8).data; let r = 0, gg = 0, b = 0;
+        for (let k = 0; k < d.length; k += 4) { r += d[k]; gg += d[k + 1]; b += d[k + 2]; }
+        const n = d.length / 4, f = c.convertLinearToSRGB();
+        css = `rgb(${Math.round(r / n * f.r)},${Math.round(gg / n * f.g)},${Math.round(b / n * f.b)})`;
+      } else if (c) css = `#${c.getHexString()}`;
+    } catch { /* a neutral swatch */ }
+  }
+  swatches.set(key, css);
+  return css;
 }
 const VIEW_DIRS = { front: [0, 0, 1], back: [0, 0, -1], right: [1, 0, 0], left: [-1, 0, 0], top: [0, 1, 0.0001], iso: [1, 0.7, 1.3] };
 for (const k in VIEW_DIRS) VIEW_DIRS[k] = new (viewer.camera.position.constructor)(...VIEW_DIRS[k]);

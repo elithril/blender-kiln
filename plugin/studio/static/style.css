@@ -552,6 +552,12 @@ body:has(#left.collapsed) .outputs .out-var { display: inline-flex; }
 #finishbar button .sw { width: 12px; height: 12px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--tint) 20%, transparent); flex: none; }
 #finishbar button[aria-checked="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--text); }
 #finishbar .add { border-style: dashed; color: var(--text-3); }
+#finishbar > .sw { width: 14px; height: 14px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--tint) 20%, transparent); flex: none; }
+#finishbar .nav { width: 28px; padding: 0; justify-content: center; font-size: 15px; }
+#finishbar .sel { position: relative; display: inline-flex; }
+#finishbar select { -webkit-appearance: none; appearance: none; height: 28px; padding: 0 28px 0 10px; border-radius: 7px; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--text); font: inherit; font-size: 12px; max-width: 200px; }
+#finishbar .sel svg { position: absolute; right: 8px; top: 7px; width: 14px; height: 14px; fill: none; stroke: var(--text-2); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+#finishbar .count { font: 11px var(--mono); color: var(--text-3); padding: 0 2px; }
 #animbar { gap: 8px; padding: 5px 10px 5px 5px; width: min(560px, 100%); }
 #animbar .btn.icon { width: 30px; height: 26px; }
 #animbar select { height: 26px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--bg); padding: 0 6px; font-size: 12px; }
