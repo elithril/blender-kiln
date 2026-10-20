@@ -1150,6 +1150,8 @@
   "A card per variation: **what changes**, its name, what it is for": "Une carte par variante : **ce qui change**, son nom, à quoi elle sert",
   "Each is a new model under the original, which is never changed": "Chacune est un nouveau modèle, rangé sous l'original, qui n'est jamais modifié",
   "Claude makes them, as many at once as Settings allow": "Claude les fait, autant en même temps que les Réglages le permettent",
+  "+ Variations": "+ Variantes",
+  "Create variations of this model": "Créer des variantes de ce modèle",
   "Download {name}": "Télécharger {name}",
   "Add a sheet": "Ajouter une fiche",
   "What each file is for, its size, its triangles, the licences: to send with the files.": "À quoi sert chaque fichier, sa taille, ses triangles, les licences : à envoyer avec les fichiers.",

@@ -422,7 +422,7 @@ function itemInner(a) {
       n > 1 ? (a.kiln ? tp(n, '{n} stage', '{n} stages') : tp(n, '{n} file', '{n} files')) : fmtB(v.size)].join(' · '));
   const dotT = dot && (claudeDot(a) ? claudeDotTitle(a) : workTitle(state.work.dots[a.id]));
   return `<img class="thumb" alt="" ${a.thumb ? `src="${esc(fileUrl(a.thumb))}"` : ''}>
-    <div class="meta"><div class="name" title="${esc(a.id)}">${esc(a.name)}</div><div class="sub">${sub}</div></div>
+    <div class="meta"><div class="name" title="${esc(a.id)}">${esc(a.name)}</div><div class="sub">${sub}</div>${a.kiln ? `<button class="itm-act" data-decline="${esc(a.id)}" tabindex="-1" title="${esc(t('New models from a copy of this one: another size, other colours, a version for printing…'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v12a3 3 0 0 0 3 3h9M15 15l3 3-3 3"/></svg>${esc(t('+ Variations'))}</button>` : ''}</div>
     <span class="badges">${isNew(a) ? `<span class="badge new" title="${esc(t('Changed since you last looked'))}">${esc(t('new'))}</span>` : ''}${building && dot !== 'active' ? `<i class="bmark" title="${esc(t('kiln is building it: open it to watch'))}"></i>` : ''}${c.open ? `<span class="badge open" title="${esc(tp(c.open, '{n} open note', '{n} open notes'))}">${fmtN(c.open)}</span>` : ''}${c.addressed ? `<span class="badge addressed" title="${esc(tp(c.addressed, '{n} to check: Claude addressed it', '{n} to check: Claude addressed them'))}">${fmtN(c.addressed)}</span>` : ''}</span>
     <span class="wslot">${dot ? `<span class="wdot ${dot}" role="img" aria-label="${esc(dotT)}" title="${esc(dotT)}"></span>` : ''}</span>`;
 }
@@ -439,8 +439,11 @@ function itemEl(a) {
   el.setAttribute('role', 'button');
   el.setAttribute('aria-label', itemLabel(a));
   el.innerHTML = itemInner(a);
-  el.onclick = () => go(a.id);
-  el.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(a.id); } };
+  el.onclick = (e) => {
+    if (e.target.closest('[data-decline]')) { if (state.detail?.id === a.id) openDecline(); return; }
+    go(a.id);
+  };
+  el.onkeydown = (e) => { if (e.target === el && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); go(a.id); } };
   if (!a.thumb) thumbObserver.observe(el);
   return el;
 }
@@ -925,7 +928,6 @@ function renderOutputs(d, v) {
   // One "Download": a dialog to pick the outputs, with or without the sheet.
   const file = `<span class="out-sep" aria-hidden="true"></span>
     ${have.size ? `<button class="btn sm ghost out-dl" data-out-dl title="${esc(t('Pick the outputs to download, with a sheet saying what each file is for: ready to send.'))}"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"/></svg>${esc(t('Download'))}</button>` : ''}
-    ${d.kiln ? `<button class="btn sm ghost out-dl" data-decline title="${esc(t('New models from a copy of this one: another size, other colours, a version for printing…'))}"><svg viewBox="0 0 24 24"><path d="M6 3v12a3 3 0 0 0 3 3h9M15 15l3 3-3 3M6 9h6"/></svg>${esc(t('Make variations'))}</button>` : ''}
     <button class="btn icon sm ghost" data-out-reveal="${esc(v.file)}" title="${esc(t('Show in the Finder'))}" aria-label="${esc(t('Show in the Finder'))}"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></svg></button>`;
   el.innerHTML = `<span class="out-label">${esc(t('Outputs'))}</span>${chips}${file}`;
   const from = d.derived, df = $('#derived-from');
@@ -943,7 +945,6 @@ function renderOutputs(d, v) {
   }));
   $$('[data-out-make]', el).forEach((b) => (b.onclick = () => makeOutput(b.dataset.outMake)));
   $$('[data-out-dl]', el).forEach((b) => (b.onclick = () => openDownload()));
-  $$('[data-decline]', el).forEach((b) => (b.onclick = () => openDecline()));
   $$('[data-out-reveal]', el).forEach((b) => (b.onclick = () => assetApi(state.id, '/reveal', { method: 'POST', body: { file: b.dataset.outReveal } }).catch((e) => toast(esc(e.message), 'warn'))));
 }
 // ── Décliner: new models from a copy of this one ─────────────────────────────
@@ -2719,6 +2720,7 @@ async function startTutorial() {
     fetchAssets, renderEmpty, openClaudeView, cancelDraft });
 }
 paletteExtras.push((add) => add('Help', 'Take the tutorial', [], startTutorial));
+paletteExtras.push((add) => add('Model', 'Create variations of this model', [], openDecline, () => !!state.detail?.kiln));
 setTimeout(() => {
   if (prefs.tutorialSeen || hooks.api || document.querySelector('dialog[open]')) return;
   document.body.insertAdjacentHTML('beforeend', `<div id="tuto-offer" class="tuto-offer"><b>${esc(t('First time in Studio?'))}</b><p>${esc(t('A five-minute tutorial shows everything: notes, Claude at work, a model made step by step. It is a simulation: no Claude runs and nothing is written to your project.'))}</p><div class="tuto-acts"><button class="btn sm ghost" id="tuto-later">${esc(t('Not now'))}</button><span class="sp"></span><button class="btn sm accent" id="tuto-go">${esc(t('Take the tutorial'))}</button></div></div>`);

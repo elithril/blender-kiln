@@ -391,7 +391,7 @@ const STEPS = [
       N_('**+ Game**, **+ AR**, **+ 3D print**: Claude prepares the one missing'),
       N_('**✓** up to date; **↻** made before the model changed: to redo'),
       N_('**Download**: pick the outputs, with a sheet to send them')] },
-  { ch: C_LOOK, target: '[data-decline]', next: true, title: N_('Make variations'),
+  { ch: C_LOOK, target: () => ($('#list .item.sel [data-decline]')?.offsetParent ? '#list .item.sel [data-decline]' : '#list .item.sel'), next: true, title: N_('Make variations'),
     lead: N_('Another size, other colours, a version for printing: new models from a copy of this one.'),
     points: [N_('A card per variation: **what changes**, its name, what it is for'),
       N_('Each is a new model under the original, which is never changed'),

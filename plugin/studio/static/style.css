@@ -464,6 +464,11 @@ kbd { font: 500 10px/1 var(--mono); padding: 2px 5px; border-radius: 4px; border
 .derived-from { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2); min-width: 0; }
 .derived-from svg { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .derived-from .q { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-3); }
+/* "+ Variations" on the selected model's row: they go right under it */
+.item .itm-act { display: none; align-items: center; gap: 5px; margin-top: 6px; height: 24px; padding: 0 9px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--text-2); font: inherit; font-size: 11.5px; cursor: pointer; width: max-content; }
+.item.sel .itm-act { display: inline-flex; }
+.item .itm-act:hover { color: var(--text); border-color: var(--line-3); background: var(--panel-3); }
+.item .itm-act svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 /* a declination, under its original in the list */
 .item.child { margin-left: 22px; }
 .item.child::before { content: ""; position: absolute; left: -9px; top: -2px; bottom: 50%; width: 8px; border-left: 1px solid var(--line-2); border-bottom: 1px solid var(--line-2); border-bottom-left-radius: 6px; }
@@ -1203,7 +1208,8 @@ select:not([multiple]) { -webkit-appearance: none; appearance: none; padding-rig
 svg.spark { width: 14px; height: 14px; fill: var(--new); stroke: none; flex: none; }
 .rail svg.spark { width: 16px; height: 16px; fill: var(--new); stroke: none; }
 /* outputs: a chip per use, the file shown downloads or shows in the Finder */
-.outputs { display: inline-flex; align-items: center; gap: 4px; margin-left: 10px; }
+.outputs { display: inline-flex; align-items: center; flex-wrap: wrap; row-gap: 6px; gap: 4px; margin-left: 10px; min-width: 0; }
+.outputs > * { white-space: nowrap; flex: none; }
 .outputs .out-label { font: 600 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin-right: 2px; }
 .outputs .out { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border-radius: 6px; font-size: 11.5px; cursor: pointer;
   border: 1px solid var(--line-2); background: transparent; color: var(--text-2); transition: background-color .15s, border-color .15s, color .15s; }
