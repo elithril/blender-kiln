@@ -710,10 +710,13 @@ async function loadVariant(label, { keepCamera = true } = {}) {
 }
 // The finishes in the file shown (glTF material variants): pick one to see it. A swatch
 // from each finish's base colour, when it has one.
+// One pill in the view: the finish shown. A click opens a palette above it — a swatch per
+// finish, the current one ringed, a search when there are many; ← → go through them.
+const finishUI = { open: false, q: '' };
 function setupFinishBar() {
-  const bar = $('#finishbar'), slot = viewer.a, names = slot.finishes?.() || [];
+  const bar = $('#finishbar'), pop = $('#finishpop'), slot = viewer.a, names = slot.finishes?.() || [];
   bar.hidden = names.length < 2;
-  if (bar.hidden) return;
+  if (bar.hidden) { pop.hidden = true; finishUI.open = false; return; }
   const json = slot.parser.json;
   // The one the file shows by itself: the variant whose material its meshes carry.
   const own = (() => {
@@ -724,26 +727,29 @@ function setupFinishBar() {
     return 0;
   })();
   const cur = slot.finish ?? own;
-  const add = state.detail?.kiln ? `<button class="add" data-finish-add title="${esc(t('Add finishes: other materials, same shape'))}">${esc(t('+ Finish'))}</button>` : '';
-  if (names.length <= FINISH_BUTTONS) {
-    bar.innerHTML = `<span class="lab">${esc(t('Surface finish'))}</span>${names.map((n, i) => `<button role="radio" aria-checked="${i === cur}" data-finish="${i}"><span class="sw" data-sw="${i}"></span>${esc(n)}</button>`).join('')}${add}`;
-  } else {
-    // Many: the one shown, a list of all, and ‹ › to go through them.
-    bar.innerHTML = `<span class="lab">${esc(t('Surface finish'))}</span>
-      <button class="nav" data-finish-step="-1" aria-label="${esc(t('Previous finish'))}">‹</button>
-      <span class="sw" data-sw="${cur}"></span>
-      <span class="sel"><select id="finish-pick" aria-label="${esc(t('Surface finish'))}">${names.map((n, i) => `<option value="${i}"${i === cur ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
-      <span class="count">${esc(t('{i} of {n}', { i: cur + 1, n: names.length }))}</span>
-      <button class="nav" data-finish-step="1" aria-label="${esc(t('Next finish'))}">›</button>${add}`;
-  }
+  bar.innerHTML = `<button class="fpill" aria-haspopup="dialog" aria-expanded="${finishUI.open}" title="${esc(t('Surface finish'))} · ${esc(t('← → to go through them'))}"><span class="sw" data-sw="${cur}"></span><span class="fn">${esc(names[cur])}</span><span class="fc">${fmtN(cur + 1)}/${fmtN(names.length)}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button>`;
   const put = async (i) => { await viewer.setFinish((i + names.length) % names.length); setupFinishBar(); };
-  $$('[data-finish]', bar).forEach((b) => (b.onclick = () => put(+b.dataset.finish)));
-  $$('[data-finish-step]', bar).forEach((b) => (b.onclick = () => put(cur + +b.dataset.finishStep)));
-  $('#finish-pick', bar)?.addEventListener('change', (e) => put(+e.target.value));
-  $('[data-finish-add]', bar)?.addEventListener('click', () => openDecline('finishes'));
-  $$('[data-sw]', bar).forEach(async (sw) => { sw.style.background = await finishSwatch(slot, +sw.dataset.sw); });
+  const pill = $('.fpill', bar);
+  pill.onclick = () => { finishUI.open = !finishUI.open; finishUI.q = ''; setupFinishBar(); if (finishUI.open) $('#finishpop input')?.focus(); };
+  pill.onkeydown = (e) => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); put(cur + (e.key === 'ArrowRight' ? 1 : -1)); } };
+  pop.hidden = !finishUI.open;
+  if (finishUI.open) {
+    const q = finishUI.q.trim().toLowerCase();
+    const shown = names.map((n, i) => [n, i]).filter(([n]) => !q || n.toLowerCase().includes(q));
+    pop.innerHTML = `<div class="fhead"><span>${esc(t('Surface finish'))} · ${fmtN(names.length)}</span>${names.length > 12 ? `<input type="search" placeholder="${esc(t('Search…'))}" value="${esc(finishUI.q)}" aria-label="${esc(t('Search a finish'))}">` : ''}</div>
+      <div class="fgrid">${shown.map(([n, i]) => `<button class="fcell${i === cur ? ' on' : ''}" data-finish="${i}" aria-pressed="${i === cur}" title="${esc(n)}"><span class="sw" data-sw="${i}"></span><span class="fl">${esc(n)}</span></button>`).join('')}
+      ${state.detail?.kiln ? `<button class="fcell add" data-finish-add title="${esc(t('Add finishes: other materials, same shape'))}"><span class="sw plus">+</span><span class="fl">${esc(t('Add'))}</span></button>` : ''}</div>
+      ${shown.length ? '' : `<p class="fnone">${esc(t('No finish matches.'))}</p>`}`;
+    $$('[data-finish]', pop).forEach((b) => (b.onclick = () => put(+b.dataset.finish)));
+    $('[data-finish-add]', pop)?.addEventListener('click', () => { finishUI.open = false; pop.hidden = true; openDecline('finishes'); });
+    const inp = $('input', pop);
+    if (inp) inp.oninput = () => { finishUI.q = inp.value; const pos = inp.selectionStart; setupFinishBar(); const n = $('#finishpop input'); n.focus(); n.setSelectionRange(pos, pos); };
+  }
+  $$('[data-sw]', bar.parentElement).forEach(async (sw) => { sw.style.background = await finishSwatch(slot, +sw.dataset.sw); });
 }
-const FINISH_BUTTONS = 6;
+// The palette closes on a click elsewhere, or Esc.
+document.addEventListener('pointerdown', (e) => { if (finishUI.open && !e.target.closest('#finishpop, #finishbar')) { finishUI.open = false; setupFinishBar(); } });
+document.addEventListener('keydown', (e) => { if (finishUI.open && e.key === 'Escape') { finishUI.open = false; setupFinishBar(); $('#finishbar .fpill')?.focus(); } });
 // A finish's colour: the material that covers most of the model in it (by vertex count),
 // its base colour times its texture's average. Kept per file.
 const swatches = new Map();

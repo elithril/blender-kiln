@@ -545,19 +545,26 @@ body:has(#left.collapsed) .outputs .out-var { display: inline-flex; }
 #toolbar .btn:hover { background: var(--panel-3); }
 #toolbar .btn.on { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
 #toolbar .seg { background: transparent; border: 0; padding: 0; }
-/* finishes (KHR_materials_variants): one shown at a time, in the view */
-#finishbar { gap: 4px; padding: 5px 6px; flex-wrap: wrap; justify-content: center; }
-#finishbar .lab { font: 600 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); padding: 0 6px; }
-#finishbar button { height: 28px; padding: 0 10px; border-radius: 7px; border: 1px solid var(--line-2); background: transparent; color: var(--text-2); font: inherit; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
-#finishbar button .sw { width: 12px; height: 12px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--tint) 20%, transparent); flex: none; }
-#finishbar button[aria-checked="true"] { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--text); }
-#finishbar .add { border-style: dashed; color: var(--text-3); }
-#finishbar > .sw { width: 14px; height: 14px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--tint) 20%, transparent); flex: none; }
-#finishbar .nav { width: 28px; padding: 0; justify-content: center; font-size: 15px; }
-#finishbar .sel { position: relative; display: inline-flex; }
-#finishbar select { -webkit-appearance: none; appearance: none; height: 28px; padding: 0 28px 0 10px; border-radius: 7px; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--text); font: inherit; font-size: 12px; max-width: 200px; }
-#finishbar .sel svg { position: absolute; right: 8px; top: 7px; width: 14px; height: 14px; fill: none; stroke: var(--text-2); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
-#finishbar .count { font: 11px var(--mono); color: var(--text-3); padding: 0 2px; }
+/* finishes (KHR_materials_variants): a pill for the one shown, a palette above it */
+#finishbar { padding: 3px; }
+#finishbar .fpill { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px 0 8px; border: 0; border-radius: 8px; background: transparent; color: var(--text); font: inherit; font-size: 12.5px; cursor: pointer; }
+#finishbar .fpill:hover, #finishbar .fpill[aria-expanded="true"] { background: var(--panel-3); }
+#finishbar .fpill .fn { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#finishbar .fpill .fc { font: 11px var(--mono); color: var(--text-3); }
+#finishbar .fpill svg { width: 13px; height: 13px; fill: none; stroke: var(--text-2); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+#finishbar .sw, #finishpop .sw { width: 16px; height: 16px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 18%, transparent); background: var(--panel-3); }
+#finishpop { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px; width: min(380px, 100%); }
+#finishpop .fhead { display: flex; align-items: center; gap: 8px; justify-content: space-between; font: 600 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); padding: 0 2px; }
+#finishpop input { flex: 1; max-width: 200px; height: 26px; padding: 0 9px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--bg); color: var(--text); font: 12px var(--font); text-transform: none; letter-spacing: 0; }
+#finishpop .fgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 4px; max-height: 248px; overflow-y: auto; }
+#finishpop .fcell { display: grid; justify-items: center; gap: 5px; padding: 8px 2px 6px; border: 0; border-radius: 8px; background: transparent; color: var(--text-2); font: inherit; cursor: pointer; min-width: 0; }
+#finishpop .fcell:hover { background: var(--panel-3); color: var(--text); }
+#finishpop .fcell .sw { width: 26px; height: 26px; }
+#finishpop .fcell.on .sw { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent); }
+#finishpop .fcell.on { color: var(--text); }
+#finishpop .fl { font-size: 10.5px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#finishpop .add .sw.plus { display: grid; place-items: center; background: transparent; box-shadow: inset 0 0 0 1px var(--line-3); color: var(--text-3); font-size: 15px; }
+#finishpop .fnone { margin: 2px; font-size: 12px; color: var(--text-3); }
 #animbar { gap: 8px; padding: 5px 10px 5px 5px; width: min(560px, 100%); }
 #animbar .btn.icon { width: 30px; height: 26px; }
 #animbar select { height: 26px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--bg); padding: 0 6px; font-size: 12px; }
