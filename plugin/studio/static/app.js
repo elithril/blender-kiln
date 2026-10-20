@@ -84,6 +84,7 @@ const narrow = () => matchMedia('(max-width: 760px)').matches;
 const isOpen = (el) => !el.classList.contains('collapsed');
 function setPanel(el, open, save = true) {
   el.classList.toggle('collapsed', !open);
+  if (el === left && state.detail) renderTitle();
   if (save && !narrow()) { prefs[el.id + 'Open'] = open; savePrefs(); }
   // On a narrow screen a panel lies over the view: one at a time.
   if (narrow() && open) (el === left ? right : left).classList.add('collapsed');
@@ -960,7 +961,10 @@ function renderTitle() {
   renderOutputs(d, v);
   const tris = v.stats?.tris ?? s?.tris;
   const dims = v.stats?.dimensions_blender || s?.dims;
-  const parts = [`<span>${esc(t('{n} tris', { n: fmtN(tris) }))}</span>`, `<span>${fmtB(v.size)}</span>`];
+  // Triangles and weight are on the model's row in the list: here only when the list is
+  // folded, or for another stage than the one the row gives.
+  const inList = isOpen(left) && v.label === d.variants[0].label;
+  const parts = inList ? [] : [`<span>${esc(t('{n} tris', { n: fmtN(tris) }))}</span>`, `<span>${fmtB(v.size)}</span>`];
   if (dims) parts.push(`<span title="${esc(t('Blender X × Y × Z'))}">${fmtLen(dims[0])} × ${fmtLen(dims[1])} × ${fmtLen(dims[2])}</span>`);
   if (d.variants.length > 1 && v.label !== d.variants[0].label) parts.push(`<span>${esc(v.label)}</span>`);
   $('#stats').innerHTML = parts.join('<span class="sep">·</span>');
