@@ -643,7 +643,14 @@ async function openAsset(id) {
   state.hl = null;
   state.editing = state.replying = null;
   $$('#list .item').forEach((e) => e.classList.toggle('sel', e.dataset.id === id));
-  $('#list .item.sel')?.scrollIntoView({ block: 'nearest' });
+  // Up or down the list to the model, when the list is shown — never sideways (a variation
+  // sits further in; scrolling to it moved the whole panel when folded).
+  const sel = $('#list .item.sel'), box = $('#list');
+  if (sel && isOpen(left) && box) {
+    const r = sel.getBoundingClientRect(), b = box.getBoundingClientRect();
+    if (r.top < b.top) box.scrollTop -= b.top - r.top;
+    else if (r.bottom > b.bottom) box.scrollTop += r.bottom - b.bottom;
+  }
   renderEmpty();
   $('#asset-name').textContent = a.name;
   $('#loading-t').textContent = t('Loading {name}…', { name: a.name });
