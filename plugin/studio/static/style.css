@@ -1260,7 +1260,7 @@ svg.spark { width: 14px; height: 14px; fill: var(--new); stroke: none; flex: non
 .outputs .out-sep { width: 1px; height: 16px; background: var(--line-2); margin: 0 4px; }
 .outputs .btn.icon svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .outputs .out-dl { gap: 5px; }
-.outputs .out-dl svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.outputs .out-dl svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transform: translateY(-1px); }   /* level with the text's capitals */
 /* Décliner: a card per declination (what changes, its name, what it is for), the options, one button */
 #decl { width: min(820px, calc(100vw - 24px)); max-height: calc(100vh - 48px); display: none; flex-direction: column; }
 #decl[open] { display: flex; }
