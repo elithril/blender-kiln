@@ -1059,6 +1059,7 @@
   "Prepare: {what}": "Préparer : {what}",
   "Download": "Télécharger",
   "Show in the Finder": "Afficher dans le Finder",
+  "Folder": "Dossier",
   "Copied: paste it in Claude Code, in this project. Claude in Studio is off (Settings → Claude).": "Copié : collez-le dans Claude Code, dans ce projet. Claude est désactivé dans le studio (Réglages → Claude).",
   "Ask Claude to prepare the {out} output of {name}? {what}.": "Demander à Claude de préparer la sortie {out} de {name} ? {what}.",
   "Printing is a real pass of kiln's print mode: it can change the shape (walls, parts), and takes longer.": "L'impression est un vrai passage du mode impression de kiln : il peut modifier la forme (parois, pièces), et prend plus de temps.",
