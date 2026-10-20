@@ -13,6 +13,9 @@ production log records. Standard library only.
 from __future__ import annotations
 
 import io
+import json
+import shutil
+import tempfile
 import time
 import zipfile
 from pathlib import Path
@@ -143,7 +146,9 @@ def listing(project: sl.Project, a: sl.Asset, lang: str = "en") -> dict:
     """What a package can hold, for the download dialog: the outputs and their files, and
     the variations with theirs."""
     cat = sl.load_catalog(project)["assets"]
-    return {"outputs": _rows(project, a, lang),
+    glbs = [f for _o, _fo, f in contents(a, project)[0] if f.suffix.lower() == ".glb"]
+    names, own = next((st for st in (finish_state(f) for f in glbs) if len(st[0]) > 1), ([], None))
+    return {"outputs": _rows(project, a, lang), "finishes": {"names": names, "shown": own},
             "variants": [{"id": v.id, "name": v.name, "text": (cat.get(v.id, {}).get("derived") or {}).get("text", ""),
                           "outputs": _rows(project, v, lang)} for v in variants_of(project, a)]}
 
@@ -161,11 +166,88 @@ def _table(files: list[tuple[str, str, Path]], stale: list[str], w: dict, lang: 
     return lines
 
 
+def finish_state(path: Path) -> tuple[list[str], str | None]:
+    """A glTF file's finishes, and the one it shows by itself (its meshes' own material)."""
+    g = sl.read_gltf_json(path)
+    names = [v.get("name", "") for v in (g.get("extensions") or {}).get("KHR_materials_variants", {}).get("variants", [])]
+    for m in g.get("meshes") or []:
+        for p in m.get("primitives") or []:
+            for x in (p.get("extensions") or {}).get("KHR_materials_variants", {}).get("mappings", []):
+                if x.get("material") == p.get("material") and x.get("variants"):
+                    return names, names[x["variants"][0]]
+    return names, names[0] if names else None
+
+
+def with_finishes(path: Path, keep: list[str], shown: str | None) -> bytes:
+    """A GLB with only the finishes kept, showing `shown` by itself: its JSON rewritten, its
+    binary as it is (then pruned by gltf-transform when it is there, so the textures of the
+    finishes left out go too). One finish kept: the extension goes, the file is plain."""
+    import shutil
+    import struct
+    import subprocess
+    import tempfile
+    b = path.read_bytes()
+    n = struct.unpack("<I", b[12:16])[0]
+    g = json.loads(b[20:20 + n])
+    names = [v.get("name", "") for v in g["extensions"]["KHR_materials_variants"]["variants"]]
+    old_new = {i: k for k, i in enumerate(i for i, nm in enumerate(names) if nm in keep)}
+    kept = [names[i] for i in sorted(old_new)]
+    show = old_new.get(names.index(shown)) if shown in names else None
+    for m in g.get("meshes") or []:
+        for p in m.get("primitives") or []:
+            ext = (p.get("extensions") or {}).get("KHR_materials_variants")
+            if not ext:
+                continue
+            maps = []
+            for x in ext.get("mappings", []):
+                vs = [old_new[v] for v in x.get("variants", []) if v in old_new]
+                if vs:
+                    maps.append({**x, "variants": vs})
+                if show is not None and show in vs:
+                    p["material"] = x["material"]
+            if len(kept) > 1:
+                ext["mappings"] = maps
+            else:
+                p["extensions"].pop("KHR_materials_variants")
+                if not p["extensions"]:
+                    p.pop("extensions")
+    if len(kept) > 1:
+        g["extensions"]["KHR_materials_variants"]["variants"] = [{"name": nm} for nm in kept]
+    else:
+        g["extensions"].pop("KHR_materials_variants")
+        if not g["extensions"]:
+            g.pop("extensions")
+        g["extensionsUsed"] = [e for e in g.get("extensionsUsed", []) if e != "KHR_materials_variants"]
+        if not g["extensionsUsed"]:
+            g.pop("extensionsUsed")
+    j = json.dumps(g, separators=(",", ":")).encode()
+    j += b" " * (-len(j) % 4)
+    rest = b[20 + n:]
+    out = b[:8] + struct.pack("<I", 12 + 8 + len(j) + len(rest)) + struct.pack("<I", len(j)) + b"JSON" + j + rest
+    tool = shutil.which("gltf-transform")
+    if tool:
+        with tempfile.TemporaryDirectory() as d:
+            src, dst = Path(d) / "in.glb", Path(d) / "out.glb"
+            src.write_bytes(out)
+            try:
+                r = subprocess.run([tool, "prune", str(src), str(dst)], capture_output=True, timeout=60)
+                # prune writes the meshes uncompressed: Draco again when the file had it.
+                if r.returncode == 0 and "KHR_draco_mesh_compression" in g.get("extensionsUsed", []):
+                    r = subprocess.run([tool, "draco", str(dst), str(dst)], capture_output=True, timeout=120)
+                if r.returncode == 0 and dst.is_file() and finish_state(dst)[0] == (kept if len(kept) > 1 else []):
+                    out = dst.read_bytes()
+            except (OSError, subprocess.TimeoutExpired):
+                pass   # the JSON alone: the left-out textures stay in the file, unused
+    return out
+
+
 def make_package(project: sl.Project, a: sl.Asset, lang: str = "en", outs: list[str] | None = None,
-                 sheet: bool = True, variants: list[str] | None = None) -> tuple[str, bytes]:
+                 sheet: bool = True, variants: list[str] | None = None, finishes: list[str] | None = None,
+                 shown: str | None = None) -> tuple[str, bytes]:
     """outs: the outputs to put in (all when None); sheet: the LISEZ-MOI / README with them;
     variants: the variations to add (ids of models declined from this one), each in
-    variants/<its name>/ with its outputs."""
+    variants/<its name>/ with its outputs; finishes / shown: in the model's glTF files, only
+    these finishes, this one shown by itself (the project's files keep them all)."""
     w = WORDS.get(lang, WORDS["en"])
     cat = sl.load_catalog(project)["assets"]
     parts: list[tuple[sl.Asset, str]] = [(a, "")]
@@ -177,7 +259,30 @@ def make_package(project: sl.Project, a: sl.Asset, lang: str = "en", outs: list[
             files = [f for f in files if f[0] in outs]
             stale = [o for o in stale if o in outs]
         packed.append((x, prefix, files, stale))
-    # The sheet: the model, then each variation, then the licences of all.
+    # The model's glTF files, with the finishes picked (the variations go as they are).
+    rewritten: dict[Path, bytes] = {}
+    if finishes is not None or shown:
+        for _out, _folder, f in packed[0][2]:
+            if f.suffix.lower() != ".glb":
+                continue
+            have, own = finish_state(f)
+            if len(have) < 2:
+                continue
+            keep = [x for x in have if finishes is None or x in finishes] or [shown or own]
+            if keep != have or (shown and shown != own):
+                rewritten[f] = with_finishes(f, keep, shown if shown in keep else (own if own in keep else keep[0]))
+    # Written beside, under the same names: the sheet reads them (size, finishes), the zip takes them.
+    tmp = Path(tempfile.mkdtemp(prefix="kiln-package-")) if rewritten else None
+    if rewritten:
+        subs = {}
+        for f, data in rewritten.items():
+            t = tmp / f"{len(subs)}" / f.name
+            t.parent.mkdir()
+            t.write_bytes(data)
+            subs[f] = t
+        x, prefix, files, stale = packed[0]
+        packed[0] = (x, prefix, [(o, fo, subs.get(f, f)) for o, fo, f in files], stale)
+        # The sheet: the model, then each variation, then the licences of all.
     src = next((v for v in a.variants if v.label == "original"), None)
     dims = (sl.variant_stats(src) if src else None) or {}
     dims = dims.get("dimensions_blender") or next(
@@ -214,5 +319,7 @@ def make_package(project: sl.Project, a: sl.Asset, lang: str = "en", outs: list[
         for _x, prefix, files, _stale in packed:
             for _out, folder, f in files:
                 z.write(f, f"{a.name}/{prefix}{folder}/{f.name}")
+    if tmp:
+        shutil.rmtree(tmp, ignore_errors=True)
     return f"{a.name}.zip", buf.getvalue()
 

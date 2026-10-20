@@ -263,7 +263,12 @@ and the sheet — LISEZ-MOI.md or README.md — with the size, each file's use a
 redo, and the licences of the log; never the source nor kiln's working files. Its
 variations are listed too, ticked by default (the user unticks): each goes in
 `variations/<name>/` (`variantes/` in French) with the same kinds of outputs, and the
-sheet gives each its section and merges the licences (`&variants=` ids).
+sheet gives each its section and merges the licences (`&variants=` ids). A model with finishes:
+the finishes to send (all ticked) and the one shown on opening — what Quick Look and
+viewers without finishes show; the package's web and Android GLBs are rewritten to
+those (`handoff.with_finishes`: the JSON, then `gltf-transform prune` and Draco again
+when it is installed, so the left-out textures go), the project's files keep them all;
+FBX, USDZ and print keep the model's material (`&finishes=` names, `&shown=`).
 
 **Variations** ("Variantes"; a kiln model only): new models from a copy of this one, always
 asked for by the user — "Create variations" (a button) on the selected model's row in the list, where they
@@ -283,7 +288,7 @@ from", and Details lists both ways.
 **Finishes** (the dialog's second tab, or "+ Finish" in the view): the same shape in
 other materials, in the model's own glTF files (web, and AR's GLB) as
 `KHR_materials_variants` — a website switches without loading again. A card per finish
-(a name, the material in words), the one shown on opening (the file's own material: what Quick Look and viewers without finishes show); one Claude run (task `finishes`),
+(a name, the material in words) — the model's material stays the one its files show by themselves; one Claude run (task `finishes`),
 the version before kept for Compare and choose. FBX, USDZ and print files carry none.
 How Blender writes them: `export-targets.md` § Finishes. A file with finishes shows a
 pill in the view (the finish shown; ← → go through them) opening a palette (a swatch per finish, from the material covering most of the model; a search beyond 12), "3 finishes" on its row in the list and "Web · 3 finishes" on its output, and its

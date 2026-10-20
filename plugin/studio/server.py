@@ -471,7 +471,10 @@ def make_handler(studio: Studio, port_ref: list[int]):
                     outs = q["outs"][0].split(",") if q.get("outs") else None
                     name, data = handoff.make_package(project, studio.asset(parts[2]), q.get("lang", ["en"])[0],
                                                       outs, q.get("sheet", ["1"])[0] != "0",
-                                                      q["variants"][0].split(",") if q.get("variants") else [])
+                                                      q["variants"][0].split(",") if q.get("variants") else [],
+                                                      # The finishes to send, by name (absent: all of them), and the one shown.
+                                                      [x for x in q["finishes"][0].split("\n") if x] if "finishes" in q else None,
+                                                      q.get("shown", [None])[0])
                     return self._send(200, data, "application/zip",
                                       {"Content-Disposition": f"attachment; filename*=UTF-8''{quote(name)}",
                                        "Cache-Control": "no-store"})

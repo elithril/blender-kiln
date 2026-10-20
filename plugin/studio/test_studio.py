@@ -605,6 +605,23 @@ class Finishes(Base):
         self.assertEqual(sl.variant_stats(a.variant("final"))["finishes"], ["Oak", "Walnut"])
         import handoff
         self.assertIn("2 finitions (variantes de matériaux glTF) : Oak, Walnut", handoff.use_of("web", f, "fr"))
+        # Sent with one finish only, shown by itself: a plain file with the walnut on.
+        self.assertEqual(handoff.finish_state(f), (["Oak", "Walnut"], "Oak"))
+        out = self.tmp / "one.glb"
+        out.write_bytes(handoff.with_finishes(f, ["Walnut"], "Walnut"))
+        g = sl.read_gltf_json(out)
+        self.assertNotIn("KHR_materials_variants", g.get("extensionsUsed", []))
+        self.assertEqual(g["materials"][g["meshes"][0]["primitives"][0]["material"]]["name"], "M_Walnut")   # pruned: indices move
+        # Both kept, walnut shown first: the extension stays, the default changes.
+        out.write_bytes(handoff.with_finishes(f, ["Oak", "Walnut"], "Walnut"))
+        self.assertEqual(handoff.finish_state(out), (["Oak", "Walnut"], "Walnut"))
+        # In a package: the project's file keeps both.
+        _, data = handoff.make_package(self.p, self.p.find("chair"), "fr", finishes=["Walnut"])
+        z = zipfile.ZipFile(io.BytesIO(data))
+        sent = self.tmp / "sent.glb"
+        sent.write_bytes(z.read("chair/web/chair_final.glb"))
+        self.assertEqual(handoff.finish_state(sent)[0], [])
+        self.assertEqual(handoff.finish_state(f)[0], ["Oak", "Walnut"])
 
 class Shape(Base):
     def test_an_output_is_to_redo_when_the_shape_changes_not_the_materials(self) -> None:

@@ -1621,7 +1621,8 @@ def finish_task(project: Project, a: Asset, finishes: list[tuple[str, str]], sho
              f"It has these finishes already: {', '.join(have)}. Keep them." if have else
              f'Keep its material as it is as the first finish, named "{base[0]}".',
              "The new finishes:\n" + "\n".join(f"- {n.strip()}: {m.strip()}" for n, m in finishes),
-             f"Shown on opening: {shown or base[0]}. Export again {', '.join(files)} with the finishes; leave the FBX, "
+             (f"Shown on opening: {shown}. " if shown else "") + f"Export again {', '.join(files)} with the finishes"
+             + ("" if shown else ", the material shown on opening left as it is") + "; leave the FBX, "
              f"the USDZ and the print files (they carry none). Add the finishes to {a.name}_log.md."]
     return "\n\n".join(parts)
 

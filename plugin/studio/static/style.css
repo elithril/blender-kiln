@@ -1338,6 +1338,15 @@ svg.spark { width: 14px; height: 14px; fill: var(--new); stroke: none; flex: non
 #dl .dl-file code { font: 11.5px var(--mono); color: var(--text-2); flex: none; }
 #dl .dl-file .dim { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #dl .dl-sec { margin: 10px 8px 2px; font: 600 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); }
+#dl .dl-fins { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 8px; }
+#dl .dl-fin { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 7px; border: 1px solid var(--line-2); font-size: 12.5px; cursor: pointer; }
+#dl .dl-fin:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 50%, transparent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+#dl .dl-fin input { margin: 0; }
+#dl .dl-shown { display: flex; align-items: center; gap: 10px; padding: 6px 8px 0; font-size: 12.5px; color: var(--text-2); }
+#dl .dl-shown .sel { position: relative; display: inline-flex; }
+#dl .dl-shown select { -webkit-appearance: none; appearance: none; height: 28px; padding: 0 28px 0 10px; border-radius: 7px; border: 1px solid var(--line-2); background: var(--panel-3); color: var(--text); font: inherit; font-size: 12.5px; }
+#dl .dl-shown svg { position: absolute; right: 8px; top: 7px; width: 14px; height: 14px; fill: none; stroke: var(--text-2); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+#dl .dl-fhelp { margin: 6px 8px 2px; font-size: 11.5px; color: var(--text-3); line-height: 1.45; }
 #dl .dl-vtext { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #dl .dl-sheet { border-top: 1px solid var(--line); border-radius: 0 0 8px 8px; margin-top: 4px; padding-top: 12px; }
 #dl .dl-sheet > span { display: grid; gap: 2px; font-size: 13px; }

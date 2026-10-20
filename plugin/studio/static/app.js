@@ -1053,7 +1053,6 @@ function openDecline(mode = 'copies') {
   const d = state.detail;
   dc.mode = mode;
   dc.frows = [{ name: '', text: '' }];
-  dc.def = 0;
   dc.rows = [dcRow(0)];
   dc.start = 'current';
   dc.notes = false;
@@ -1129,7 +1128,7 @@ function renderFinishes() {
     </div></div>`).join('');
   $$('#dc-rows .dc-card[data-i]').forEach((card) => {
     const r = dc.frows[+card.dataset.i];
-    $('[data-fn="name"]', card).oninput = (e) => { r.name = e.target.value; renderFinishDefault(); renderDeclineFoot(); };
+    $('[data-fn="name"]', card).oninput = (e) => { r.name = e.target.value; renderDeclineFoot(); };
     $('[data-fn="text"]', card).oninput = (e) => { r.text = e.target.value; renderDeclineFoot(); };
   });
   $$('[data-fn-del]').forEach((b) => (b.onclick = () => { dc.frows.splice(+b.dataset.fnDel, 1); renderDecline(); }));
@@ -1137,23 +1136,15 @@ function renderFinishes() {
   $('#dc-in').innerHTML = files.length
     ? `${files.map((x) => `<code>${esc(x.file.split('/').slice(-2).join('/'))}</code>`).join(' · ')}<br>${esc(t('The glTF files carry the finishes. The game, the iPhone and the print do not: make new models for them.'))}`
     : esc(t('No glTF output yet: the finishes go in the web file Claude makes.'));
-  renderFinishDefault();
   renderDeclineFoot();
-}
-function renderFinishDefault() {
-  const have = finishesOf(state.detail), names = [...(have.length ? have : [t('Current')]), ...dc.frows.map((r) => r.name.trim()).filter(Boolean)];
-  dc.def = Math.min(dc.def, names.length - 1);
-  $('#dc-default').innerHTML = names.map((n, i) => `<option value="${i}"${i === dc.def ? ' selected' : ''}>${esc(n)}</option>`).join('');
-  $('#dc-default').onchange = (e) => (dc.def = +e.target.value);
 }
 function finishAsk(d) {
   const have = finishesOf(d), base = have.length ? have : [t('Current')];
-  const names = [...base, ...dc.frows.map((r) => r.name.trim())];
   const files = finishFiles(d).map((x) => x.file.split('/').slice(-2).join('/'));
   return [t('Add finishes to {name}: the same shape in other materials, in the same glTF files, as material variants (KHR_materials_variants; kiln\'s export-targets.md § Finishes).', { name: d.name }),
     have.length ? t('It has these finishes already: {list}. Keep them.', { list: have.join(', ') }) : t('Keep its material as it is as the first finish, named "{current}".', { current: base[0] }),
     `${t('The new finishes:')}\n${dc.frows.map((r) => `- ${r.name.trim()}: ${r.text.trim()}`).join('\n')}`,
-    t('Shown on opening: {name}. Export again {files} with the finishes; leave the FBX, the USDZ and the print files (they carry none). Add the finishes to {log}.', { name: names[dc.def] || base[0], files: files.length ? files.join(', ') : `web/${d.name}_final.glb`, log: `${d.name}_log.md` })].join('\n\n');
+    t('Export again {files} with the finishes, the material shown on opening left as it is; leave the FBX, the USDZ and the print files (they carry none). Add the finishes to {log}.', { files: files.length ? files.join(', ') : `web/${d.name}_final.glb`, log: `${d.name}_log.md` })].join('\n\n');
 }
 function renderDeclineFoot() {
   if (dc.mode === 'finishes') {
@@ -1246,21 +1237,33 @@ const fmtSize = (n) => {
 // The download dialog: every output there, checked; one file alone downloads as is, else a zip.
 async function openDownload() {
   const d = state.detail, dlg = $('#dl');
-  let outs, vars;
-  try { ({ outputs: outs, variants: vars } = await assetApi(d.id, `/outputs?lang=${getLang()}`)); } catch (e) { toast(esc(e.message), 'warn'); return; }
+  let outs, vars, fin;
+  try { ({ outputs: outs, variants: vars, finishes: fin } = await assetApi(d.id, `/outputs?lang=${getLang()}`)); } catch (e) { toast(esc(e.message), 'warn'); return; }
+  const fins = fin?.names?.length > 1 ? fin.names : [];
   $('#dl-title').textContent = t('Download {name}', { name: d.name });
   $('#dl-list').innerHTML = outs.map((o) => {
     const meta = OUTPUTS.find((x) => x.key === o.out);
     return `<label class="dl-row"><input type="checkbox" data-dl-out="${o.out}" checked>
       <span class="dl-what"><b><i class="${o.stale ? 'stale' : 'ok'}" aria-hidden="true">${o.stale ? '↻' : '✓'}</i>${esc(t(meta.name))}${o.stale ? ` <span class="dl-warn">${esc(t('made before the model last changed'))}</span>` : ''}</b>
       ${o.files.map((f) => `<span class="dl-file"><code>${esc(f.path)}</code><span class="dim" title="${esc(f.use)}">${esc(fmtSize(f.size))} · ${esc(f.use)}</span></span>`).join('')}</span></label>`;
-  }).join('') + (vars.length ? `<h4 class="dl-sec">${esc(t('Its variations'))}</h4>${vars.map((v) => {
+  }).join('') + (fins.length ? `<h4 class="dl-sec">${esc(t('Finishes'))}</h4>
+    <div class="dl-fins">${fins.map((n) => `<label class="dl-fin"><input type="checkbox" data-dl-fin="${esc(n)}" checked><span>${esc(n)}</span></label>`).join('')}</div>
+    <div class="dl-shown"><span>${esc(t('Shown on opening'))}</span><span class="sel"><select id="dl-shown" aria-label="${esc(t('Finish shown on opening'))}"></select><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></div>
+    <p class="dl-fhelp">${esc(t('In the web and Android files, the finishes ticked; the one shown on opening is what Quick Look and viewers without finishes show. The game, the iPhone and the print keep the model\'s material. The project\'s files keep every finish.'))}</p>` : '') + (vars.length ? `<h4 class="dl-sec">${esc(t('Its variations'))}</h4>${vars.map((v) => {
     const n = v.outputs.reduce((k, o) => k + o.files.length, 0);
     // Checked by default: the user unticks what is not to send.
     return `<label class="dl-row"><input type="checkbox" data-dl-var="${esc(v.id)}"${n ? ' checked' : ' disabled'}>
       <span class="dl-what"><b>${esc(v.name)}</b>${v.text ? `<span class="dim dl-vtext" title="${esc(v.text)}">${esc(v.text)}</span>` : ''}
       <span class="dl-file"><span class="dim">${n ? esc(`${v.outputs.map((o) => t(OUTPUTS.find((x) => x.key === o.out).name)).join(', ')} · ${tp(n, '{n} file', '{n} files')}`) : esc(t('No output yet'))}</span></span></span></label>`;
   }).join('')}` : '');
+  // The finish shown on opening: one of those ticked, the file's own by default.
+  const syncShown = () => {
+    const sel = $('#dl-shown', dlg);
+    if (!sel) return;
+    const on = fins.filter((n) => $(`[data-dl-fin="${CSS.escape(n)}"]`, dlg).checked), was = sel.value || fin.shown;
+    sel.innerHTML = on.map((n) => `<option${n === was ? ' selected' : ''}>${esc(n)}</option>`).join('');
+  };
+  syncShown();
   const sync = () => {
     const picked = outs.filter((o) => $(`[data-dl-out="${o.out}"]`, dlg).checked);
     const kinds = new Set(picked.map((o) => o.out));
@@ -1268,18 +1271,23 @@ async function openDownload() {
     const files = [...picked.flatMap((o) => o.files), ...vpicked.flatMap((v) => v.outputs.filter((o) => kinds.has(o.out)).flatMap((o) => o.files))];
     const sheet = $('#dl-sheet').checked;
     const go = $('#dl-go'), size = files.reduce((n, f) => n + f.size, 0);
+    const fon = fins.filter((n) => $(`[data-dl-fin="${CSS.escape(n)}"]`, dlg).checked), shown = $('#dl-shown', dlg)?.value;
+    // Changed: the glTF files are rewritten for the package (never a file alone, as is).
+    const finQ = fins.length && (fon.length < fins.length || shown !== fin.shown) ? `&finishes=${enc(fon.join('\n'))}&shown=${enc(shown || '')}` : '';
+    if (fins.length && !fon.length) { $('#dl-sum').textContent = t('Keep at least one finish.'); go.classList.add('disabled'); return; }
     if (!files.length) $('#dl-sum').textContent = t('Pick at least one output.');
-    else if (files.length === 1 && !sheet && !vpicked.length) {
+    else if (files.length === 1 && !sheet && !vpicked.length && !finQ) {
       go.href = `${fileUrl(files[0].file)}?download=1`;
       $('#dl-sum').textContent = `${files[0].path.split('/').pop()} · ${fmtSize(size)}`;
     } else {
-      go.href = `/api/asset/${enc(d.id)}/package?lang=${getLang()}&outs=${picked.map((o) => o.out).join(',')}&sheet=${sheet ? 1 : 0}${vpicked.length ? `&variants=${vpicked.map((v) => enc(v.id)).join(',')}` : ''}`;
+      go.href = `/api/asset/${enc(d.id)}/package?lang=${getLang()}&outs=${picked.map((o) => o.out).join(',')}&sheet=${sheet ? 1 : 0}${vpicked.length ? `&variants=${vpicked.map((v) => enc(v.id)).join(',')}` : ''}${finQ}`;
       $('#dl-sum').textContent = t('{n} files · {size} → {zip}', { n: files.length + (sheet ? 1 : 0), size: fmtSize(size), zip: `${d.name}.zip` });
     }
     go.classList.toggle('disabled', !files.length);
     go.setAttribute('aria-disabled', String(!files.length));
   };
-  $$('input', dlg).forEach((i) => (i.onchange = sync));
+  $$('input', dlg).forEach((i) => (i.onchange = () => { if (i.dataset.dlFin != null) syncShown(); sync(); }));
+  $('#dl-shown', dlg)?.addEventListener('change', sync);
   $('#dl-go').onclick = (e) => { if ($('#dl-go').classList.contains('disabled')) e.preventDefault(); else setTimeout(() => dlg.close(), 0); };
   sync();
   dlg.showModal();
