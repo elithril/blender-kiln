@@ -511,7 +511,7 @@ body:has(#left.collapsed) .outputs .out-var { display: inline-flex; }
 .pinsmenu button[aria-pressed="true"] .sw { background: var(--accent); }
 .pinsmenu button[aria-pressed="true"] .sw::after { transform: translateX(10px); background: var(--accent-ink); }
 
-#buildbar { position: absolute; top: 80px; left: 14px; display: flex; align-items: center; gap: 10px; background: color-mix(in srgb, var(--glass) 90%, transparent); border: 1px solid color-mix(in srgb, var(--new) 35%, transparent); border-radius: 8px; padding: 6px 10px; max-width: calc(100% - 90px); flex-wrap: wrap; }
+#buildbar { position: absolute; top: max(80px, var(--topbar-b, 80px)); left: 14px; display: flex; align-items: center; gap: 10px; background: color-mix(in srgb, var(--glass) 90%, transparent); border: 1px solid color-mix(in srgb, var(--new) 35%, transparent); border-radius: 8px; padding: 6px 10px; max-width: calc(100% - 90px); flex-wrap: wrap; }
 #buildbar .st { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12px; color: var(--new); }
 #buildbar ol { display: flex; gap: 3px; list-style: none; margin: 0; padding: 0; flex-wrap: wrap; }
 #buildbar li { font: 500 10px/1 var(--mono); padding: 4px 6px; border-radius: 4px; color: var(--text-3); background: color-mix(in srgb, var(--tint) 4%, transparent); }
@@ -520,7 +520,7 @@ body:has(#left.collapsed) .outputs .out-var { display: inline-flex; }
 #buildbar li.cur { color: var(--pin-ink); background: var(--new); }
 #buildbar .step { font-size: 11.5px; color: var(--text-2); }
 
-#cmpbar { position: absolute; z-index: 6; width: max-content; top: 80px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; background: color-mix(in srgb, var(--glass) 92%, transparent); border: 1px solid var(--line-2); border-radius: 10px; padding: 6px 8px 6px 12px; box-shadow: var(--shadow); max-width: calc(100% - 28px); flex-wrap: wrap; justify-content: center; }
+#cmpbar { position: absolute; z-index: 6; width: max-content; top: max(80px, var(--topbar-b, 80px)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; background: color-mix(in srgb, var(--glass) 92%, transparent); border: 1px solid var(--line-2); border-radius: 10px; padding: 6px 8px 6px 12px; box-shadow: var(--shadow); max-width: calc(100% - 28px); flex-wrap: wrap; justify-content: center; }
 #cmpbar .delta { font: 500 11px/1.3 var(--mono); color: var(--text-2); }
 @media (min-width: 761px) { #cmpbar .delta { white-space: nowrap; } }
 #cmpbar .delta .up { color: var(--warn); }
@@ -778,8 +778,8 @@ dialog::backdrop { background: var(--backdrop); backdrop-filter: blur(2px); }
   #views button { min-width: 38px; padding: 0 6px; height: 24px; font-size: 10.5px; }
   .topbar { left: 10px; right: 10px; top: 10px; flex-direction: column; }
   .title h2 { font-size: 15px; }
-  #buildbar { top: 116px; left: 10px; max-width: calc(100% - 60px); }
-  #cmpbar { top: 116px; }
+  #buildbar { top: max(116px, var(--topbar-b, 116px)); left: 10px; max-width: calc(100% - 60px); }
+  #cmpbar { top: max(116px, var(--topbar-b, 116px)); }
   .bottom { bottom: 8px; padding: 0 6px; }
   #animbar select#a-speed { display: none; }
   #a-read { width: 64px; }
@@ -832,7 +832,7 @@ dialog::backdrop { background: var(--backdrop); backdrop-filter: blur(2px); }
 .feed .phase { font: 600 10px/1 var(--mono); padding: 2px 5px; border-radius: 4px; background: var(--new-soft); color: var(--new); text-transform: uppercase; letter-spacing: .04em; }
 .feed img { cursor: zoom-in; }
 #cmpbar select { height: 24px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--bg); padding: 0 6px; font-size: 11.5px; max-width: 170px; }
-@media (min-width: 761px) { #cmpbar { flex-wrap: nowrap; } }
+/* #cmpbar wraps when the stage is too narrow for it on one line (max-width), never past its edges */
 #composer .where i.whole { border-radius: 2px; background: var(--text-3); }
 .cnt.new { color: var(--new-ink); background: var(--new); }
 .ghead .gl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }

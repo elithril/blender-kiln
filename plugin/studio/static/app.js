@@ -3748,6 +3748,8 @@ window.addEventListener('hashchange', fromHash);
   document.fonts?.ready.then(fitSoon);
   // The top bar keeps clear of the Claude pill, whatever its width.
   const pillEl = $('#cl-pill');
+  // The compare and build bars sit under the title, however many lines its outputs take.
+  { const tb = $('#topbar'); new ResizeObserver(() => document.documentElement.style.setProperty('--topbar-b', tb.offsetHeight ? `${tb.offsetTop + tb.offsetHeight + 10}px` : '80px')).observe(tb); }
   new ResizeObserver(() => document.documentElement.style.setProperty('--pill-w', pillEl.offsetWidth ? `${pillEl.offsetWidth + 12}px` : '0px')).observe(pillEl);
   window.__studio = { state, viewer, openAsset, setCompare, startPin, startGeneral, startTutorial, get detail() { return state.detail; } };
 })();
