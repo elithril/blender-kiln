@@ -1250,7 +1250,10 @@ let qrLib = null, phoneTimer = null;
 async function openPhone() {
   const d = state.detail, dlg = $('#phone');
   let link;
-  try { link = await assetApi(d.id, '/phone', { method: 'POST', body: { lang: getLang() } }); } catch (e) { toast(esc(e.message), 'warn', 7000); return; }
+  // The finishes' colours, as the view's palette has them: for the phone page's swatches.
+  const names = viewer.a.finishes?.() || [];
+  const swatchesNow = names.length > 1 ? await Promise.all(names.map((_, i) => finishSwatch(viewer.a, i))) : [];
+  try { link = await assetApi(d.id, '/phone', { method: 'POST', body: { lang: getLang(), swatches: Object.fromEntries(names.map((n, i) => [n, swatchesNow[i]]).filter(([, c]) => /^(rgb\(|#)/.test(c || ''))) } }); } catch (e) { toast(esc(e.message), 'warn', 7000); return; }
   try {
     qrLib ||= (await import('https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/+esm')).default;
     const qr = qrLib(0, 'M');

@@ -698,10 +698,12 @@ class Phone(Base):
             glbf.write_bytes(b[:8] + struct.pack("<I", 20 + len(j) + len(rest)) + struct.pack("<I", len(j)) + b"JSON" + j + rest)
             walnut = self.tmp / "a_walnut.usdz"
             walnut.write_bytes(b"PK walnut")
-            link = share.link("stool", {"usdz": usdz, "glb": glbf}, "en", ["Oak", "Walnut"], "Oak", {"Walnut": walnut})
+            link = share.link("stool", {"usdz": usdz, "glb": glbf}, "en", ["Oak", "Walnut"], "Oak", {"Walnut": walnut},
+                              {"Walnut": "rgb(60,38,22)", "Oak": "url(javascript:x)"})
             path = link["url"].split(str(port), 1)[1]
             code, _, body = get(path)
-            self.assertIn(b'data-i="1">Walnut</button>', body)
+            self.assertIn(b'data-i="1"><span class="sw" style="background:rgb(60,38,22)"></span><span class="nm">Walnut</span>', body)
+            self.assertNotIn(b"javascript", body)   # only a colour gets in
             self.assertEqual(get(path + "model-1.usdz")[2], b"PK walnut")
             self.assertEqual(get(path + "model-0.usdz")[0], 404)   # Oak: the model's own, model.usdz
             one = self.tmp / "one.glb"

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import html
 import json
+import re
 import secrets
 import socket
 import threading
@@ -75,7 +76,8 @@ class PhoneShare:
         self.log: list[str] = []
 
     def link(self, name: str, files: dict[str, Path], lang: str = "en", finishes: list[str] | None = None,
-             shown: str | None = None, usdz_finishes: dict[str, Path] | None = None) -> dict:
+             shown: str | None = None, usdz_finishes: dict[str, Path] | None = None,
+             swatches: dict[str, str] | None = None) -> dict:
         """finishes: the GLB's (KHR_materials_variants), the page offers them — Android gets a
         GLB of the one picked, made here; iPhone a USDZ of it when one was exported
         (usdz_finishes, by finish name), the default USDZ otherwise."""
@@ -94,7 +96,8 @@ class PhoneShare:
             self.links[token] = {"name": name, "files": files, "until": until, "lang": lang if lang in WORDS else "en",
                                  "finishes": list(finishes or []) if len(finishes or []) > 1 else [],
                                  "shown": shown, "usdz_finishes": {k: Path(v) for k, v in (usdz_finishes or {}).items() if Path(v).is_file()},
-                                 "made": {}}
+                                 "made": {}, "swatches": {k: v for k, v in (swatches or {}).items()
+                                                          if re.match(r"^(#[0-9a-fA-F]{3,8}|rgb\(\d{1,3},\d{1,3},\d{1,3}\))$", v)}}
             l = self.links[token]
         # An iPhone's finishes: each one's USDZ, made in the background when Blender is there.
         if l["finishes"] and "glb" in files and blender() and self.cache:
@@ -257,7 +260,9 @@ class PhoneShare:
         android = (f'<a class="b android" href="{html.escape(intent("model.glb"))}">{html.escape(w["android"])}</a>' if "glb" in l["files"] else "")
         cur = fins.index(l["shown"]) if l["shown"] in fins else 0
         picker = (f'<div class="fins" role="radiogroup" aria-label="{html.escape(w["finish"])}">'
-                  + "".join(f'<button role="radio" aria-checked="{"true" if i == cur else "false"}" data-i="{i}">{html.escape(f)}</button>' for i, f in enumerate(fins))
+                  + "".join(f'<button role="radio" aria-checked="{"true" if i == cur else "false"}" data-i="{i}">'
+                            f'<span class="sw" style="background:{l["swatches"].get(f, "#2A3244")}"></span><span class="nm">{html.escape(f)}</span></button>'
+                            for i, f in enumerate(fins))
                   + "</div>" if fins else "")
         nousdz = html.escape(w["nousdz"])
         data = json.dumps({"usdz": usdz, "glb": [intent(g) for g in glbs], "has": has, "cur": cur})
@@ -269,8 +274,11 @@ background:#0B0D11;color:#E6EBF2;font:16px/1.45 -apple-system,system-ui,sans-ser
 h1{{margin:0;font-size:24px}} p{{margin:0;color:#A3ADBE}}
 .b{{display:flex;align-items:center;justify-content:center;min-height:52px;border-radius:12px;background:#5CE1E6;color:#062A2C;
 font-weight:600;text-decoration:none;font-size:17px}} .b img{{width:0;height:0}}
-.fins{{display:flex;flex-wrap:wrap;gap:8px}} .fins button{{min-height:40px;padding:0 14px;border-radius:10px;border:1px solid #2A3244;
-background:transparent;color:#E6EBF2;font:inherit;font-size:15px}} .fins button[aria-checked=true]{{border-color:#5CE1E6;background:rgba(92,225,230,.12)}}
+.fins{{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px}}
+.fins button{{display:grid;justify-items:center;gap:8px;padding:12px 6px 10px;border-radius:14px;border:1px solid #1F2533;background:#10141C;color:#A3ADBE;font:inherit;font-size:14px}}
+.fins .sw{{width:44px;height:44px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)}}
+.fins .nm{{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+.fins button[aria-checked=true]{{color:#E6EBF2;border-color:#5CE1E6}} .fins button[aria-checked=true] .sw{{box-shadow:0 0 0 3px #10141C,0 0 0 5px #5CE1E6}}
 .n{{font-size:13px;color:#FFB547}} .f{{font-size:13px;color:#808A9D;margin-top:8px}}
 </style></head><body>
 <h1>{name}</h1><p>{html.escape(w['lead'])}</p>

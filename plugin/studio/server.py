@@ -726,7 +726,9 @@ def make_handler(studio: Studio, port_ref: list[int]):
                             p = files["usdz"].with_name(f"{a.name}_ar_{sl.finish_slug(f)}.usdz")
                             if p.is_file():
                                 per[f] = p
-                    out = studio.phone.link(a.name, files, str(body.get("lang", "en")), fins, shown, per)
+                    sw = body.get("swatches") if isinstance(body.get("swatches"), dict) else {}
+                    out = studio.phone.link(a.name, files, str(body.get("lang", "en")), fins, shown, per,
+                                            {k: str(v)[:40] for k, v in sw.items() if k in fins})
                     # The finishes an iPhone cannot pick yet (no USDZ of their own).
                     # (none when Studio makes them itself, with the user's Blender)
                     out["ios_missing"] = [] if phoneshare.blender() else [f for f in fins if f != shown and f not in per] if files.get("usdz") else []
