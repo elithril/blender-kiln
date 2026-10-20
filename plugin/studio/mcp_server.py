@@ -158,7 +158,7 @@ TOOLS = [
                 "required": ["name", "material"], "additionalProperties": False}},
             "shown_on_opening": {"type": "string", "description": "The finish the file shows by itself (default: the current material)"},
             "in_studio": {"type": "boolean", "description": "Hand it to Claude in Studio instead of doing it here"},
-            "iphone_files": {"type": "boolean", "description": "Also a USDZ per finish, so the phone page lets an iPhone pick one in AR (default: when the model has an AR USDZ)"},
+            "iphone_files": {"type": "boolean", "description": "Also export a USDZ per finish (default false: Studio's AR page makes them itself with Blender when needed)"},
             "root": ROOT_ARG}, "required": ["finishes"], "additionalProperties": False},
         "annotations": {"readOnlyHint": False, "destructiveHint": False},
     },
@@ -523,9 +523,7 @@ def add_finishes(args: dict) -> dict:
     shown = args.get("shown_on_opening")
     if shown and shown.lower() not in taken:
         raise ToolError(f"shown_on_opening: {shown} is not one of the finishes")
-    ios = args.get("iphone_files")
-    if ios is None:
-        ios = any(v.label.split(".")[0] == "ar" and v.path.suffix.lower() == ".usdz" for v in a.variants)
+    ios = bool(args.get("iphone_files"))
     task = sl.finish_task(project, a, rows, shown, ios=bool(ios))
     files = sl.finish_files(a)
     if args.get("in_studio"):

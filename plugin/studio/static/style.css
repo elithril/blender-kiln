@@ -1325,6 +1325,15 @@ svg.spark { width: 14px; height: 14px; fill: var(--new); stroke: none; flex: non
 #phone .set-head h3 { margin: 0; font-size: 15px; }
 #phone .set-head form { margin: 0; }
 #phone .ph-body { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 18px; padding: 18px; align-items: start; }
+#phone .ph-left { display: grid; gap: 10px; }
+#phone .ph-time { display: grid; gap: 6px; justify-items: center; }
+#phone .ph-time b { font: 600 28px/1 var(--mono); color: var(--text); letter-spacing: .02em; }
+#phone .ph-time .ph-bar { width: 100%; height: 4px; border-radius: 2px; background: var(--panel-3); overflow: hidden; }
+#phone .ph-time .ph-bar i { display: block; height: 100%; background: var(--accent); transition: width 1s linear; }
+#phone.expired .ph-qr { opacity: .15; }
+#phone.expired .ph-time b { color: var(--warn); font-size: 18px; }
+#phone .ph-lim { font-size: 12px; color: var(--text-2); line-height: 1.45; padding: 10px 12px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--line); }
+#phone .ph-lim ul { margin: 4px 0 0; padding-left: 16px; display: grid; gap: 3px; }
 #phone .ph-qr { width: 200px; height: 200px; border-radius: 10px; background: #fff; display: grid; place-items: center; overflow: hidden; font-size: 12px; color: #333; text-align: center; padding: 0; }
 #phone .ph-qr svg { width: 100%; height: 100%; display: block; }
 #phone .ph-how { display: grid; gap: 10px; font-size: 13px; color: var(--text-2); }

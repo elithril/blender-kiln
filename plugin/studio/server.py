@@ -59,7 +59,7 @@ class Studio:
         # Claude Code runs started from the page (worker.py): off until the project turns it on.
         self.worker = wk.Worker(project, self.emit)
         # A model in AR on the phone: a separate, read-only server, started on the first QR code.
-        self.phone = phoneshare.PhoneShare()
+        self.phone = phoneshare.PhoneShare(cache=project.data / "cache" / "ar")
         self.refresh(initial=True)
 
     # live events
@@ -728,7 +728,8 @@ def make_handler(studio: Studio, port_ref: list[int]):
                                 per[f] = p
                     out = studio.phone.link(a.name, files, str(body.get("lang", "en")), fins, shown, per)
                     # The finishes an iPhone cannot pick yet (no USDZ of their own).
-                    out["ios_missing"] = [f for f in fins if f != shown and f not in per] if files.get("usdz") else []
+                    # (none when Studio makes them itself, with the user's Blender)
+                    out["ios_missing"] = [] if phoneshare.blender() else [f for f in fins if f != shown and f not in per] if files.get("usdz") else []
                     return self._json(out)
                 if method == "POST" and rest == ["derive"]:
                     # Décliner: a new model from a copy of this one, then Claude makes the change.

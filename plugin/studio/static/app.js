@@ -1065,7 +1065,6 @@ function dcRow(i) {
 function openDecline(mode = 'copies') {
   const d = state.detail;
   dc.mode = mode;
-  dc.ios = undefined;
   dc.frows = [{ name: '', text: '' }];
   dc.rows = [dcRow(0)];
   dc.start = 'current';
@@ -1150,11 +1149,6 @@ function renderFinishes() {
   $('#dc-in').innerHTML = files.length
     ? `${files.map((x) => `<code>${esc(x.file.split('/').slice(-2).join('/'))}</code>`).join(' · ')}<br>${esc(t('The glTF files carry the finishes. The game, the iPhone and the print do not: make new models for them.'))}`
     : esc(t('No glTF output yet: the finishes go in the web file Claude makes.'));
-  // iPhone AR: a USDZ per finish (Quick Look shows one at a time), on by default when it has AR.
-  const hasUsdz = d.variants.some((x) => outputOf(x) === 'ar' && x.ext === '.usdz');
-  if (dc.ios === undefined) dc.ios = hasUsdz;
-  $('#dc-ios').innerHTML = `<button type="button" class="${dc.ios ? 'on' : ''}" data-dc-ios aria-pressed="${dc.ios}"><i aria-hidden="true">${dc.ios ? '✓' : '+'}</i>${esc(t('A USDZ per finish, to pick it on the phone'))}</button>`;
-  $('[data-dc-ios]').onclick = () => { dc.ios = !dc.ios; renderFinishes(); };
   renderDeclineFoot();
 }
 // A finish's name in a file name, as sl.finish_slug: "Noir mat" -> "noir-mat".
@@ -1165,8 +1159,7 @@ function finishAsk(d) {
   return [t('Add finishes to {name}: the same shape in other materials, in the same glTF files, as material variants (KHR_materials_variants; kiln\'s export-targets.md § Finishes).', { name: d.name }),
     have.length ? t('It has these finishes already: {list}. Keep them.', { list: have.join(', ') }) : t('Keep its material as it is as the first finish, named "{current}".', { current: base[0] }),
     `${t('The new finishes:')}\n${dc.frows.map((r) => `- ${r.name.trim()}: ${r.text.trim()}`).join('\n')}`,
-    t('Export again {files} with the finishes, the material shown on opening left as it is; leave the FBX, the USDZ and the print files (they carry none). Add the finishes to {log}.', { files: files.length ? files.join(', ') : `web/${d.name}_final.glb`, log: `${d.name}_log.md` }),
-    dc.ios ? t('For iPhone AR (Quick Look shows one finish per file): also export a USDZ per finish, new ones and those already there, beside ar/{name}_ar.usdz: ar/{name}_ar_<finish>.usdz, the finish in lower case, - for spaces, no accents (e.g. {example}), each with that finish\'s materials, with the AR export\'s settings.', { name: d.name, example: `ar/${d.name}_ar_${finishSlug(dc.frows[0]?.name || 'noyer')}.usdz` }) : ''].filter(Boolean).join('\n\n');
+    t('Export again {files} with the finishes, the material shown on opening left as it is; leave the FBX, the USDZ and the print files (they carry none). Add the finishes to {log}.', { files: files.length ? files.join(', ') : `web/${d.name}_final.glb`, log: `${d.name}_log.md` })].join('\n\n');
 }
 function renderDeclineFoot() {
   if (dc.mode === 'finishes') {
@@ -1253,7 +1246,7 @@ $('#dc-go').onclick = async () => {
 };
 
 // AR on the phone: a link Studio's phone share serves on the Wi-Fi (phoneshare.py), as a QR code.
-let qrLib = null;
+let qrLib = null, phoneTimer = null;
 async function openPhone() {
   const d = state.detail, dlg = $('#phone');
   let link;
@@ -1269,6 +1262,26 @@ async function openPhone() {
   $('#ph-url').textContent = link.url;
   $('#ph-when').textContent = [link.ios && t('iPhone and iPad: AR Quick Look'), link.android && t('Android: Scene Viewer'),
     t('valid until {time}', { time: new Date(link.expires * 1000).toLocaleTimeString(getLang() === 'fr' ? 'fr-FR' : 'en-US', { hour: '2-digit', minute: '2-digit' }) })].filter(Boolean).join(' · ');
+  // A countdown, big: when it ends the link no longer opens.
+  clearInterval(phoneTimer);
+  const total = (link.minutes || 15) * 60;
+  const tick = () => {
+    const left = Math.max(0, Math.round(link.expires - Date.now() / 1000));
+    $('#ph-left').textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+    $('#ph-bar').style.width = `${(100 * left) / total}%`;
+    $('#phone').classList.toggle('expired', !left);
+    if (!left) { clearInterval(phoneTimer); $('#ph-left').textContent = t('Expired'); }
+  };
+  tick();
+  phoneTimer = setInterval(tick, 1000);
+  // What AR shows of this model, and what it does not.
+  const st = d.variants[0]?.stats || {}, clips = (st.animations || []).map((a) => a.name), fins = finishesOf(d);
+  const lim = [clips.length > 1 && t('Animations: AR plays one, “{clip}”, in a loop ({n} in the model).', { clip: clips[0], n: clips.length }),
+    clips.length === 1 && t('Animation: “{clip}”, in a loop.', { clip: clips[0] }),
+    fins.length > 1 && t('Finishes: one at a time — picked on the phone before AR opens.'),
+    t('No notes, measures or comparison in AR: those stay in Studio.')].filter(Boolean);
+  $('#ph-lim').hidden = false;
+  $('#ph-lim').innerHTML = `<b>${esc(t('In AR'))}</b><ul>${lim.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
   // Finishes an iPhone cannot pick yet: a USDZ each, made by Claude when asked.
   const miss = link.ios_missing || [], box = $('#ph-miss');
   box.hidden = !miss.length;
@@ -1285,6 +1298,7 @@ async function openPhone() {
   }
   dlg.showModal();
 }
+$('#phone').addEventListener('close', () => clearInterval(phoneTimer));
 $('#ph-stop').onclick = async () => { try { await api('/api/phone/stop', { method: 'POST', body: {} }); } catch { /* closed anyway */ } $('#phone').close(); toast(esc(t('Sharing stopped: the link no longer opens.')), 'ok'); };
 
 const fmtSize = (n) => {

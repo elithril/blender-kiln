@@ -283,10 +283,14 @@ tried (Scene Viewer may want https for the file). The page shows only this phone
 button; on an iPhone with nothing to pick it goes straight to Quick Look (AR is one tap
 there: only a tap on a `rel="ar"` link opens AR itself). A model with finishes: the page
 offers them — Android gets a GLB of the one picked, made on the spot (`handoff.with_finishes`),
-iPhone the USDZ exported for it (`ar/<model>_ar_<finish>.usdz`, asked with the finishes:
-"A USDZ per finish"), and on an iPhone the page offers only the finishes that have one; Studio's AR dialog
-names those missing, with "Prepare them for iPhone" (a Claude request). Animation: the
-viewers play the file's own, in a loop, one clip (the active one) per file.
+iPhone a USDZ of it — exported (`ar/<model>_ar_<finish>.usdz`) or, most often, made by
+Studio itself in the background as the dialog opens: the finish's GLB, then the user's
+Blender headless (`tools/glb_to_usdz.py`), kept in `.kiln-studio/cache/ar/`, no Claude;
+without Blender, an iPhone sees only the finishes that have their file and the dialog
+offers "Prepare them for iPhone" (a Claude request). Animation: the
+viewers play the file's own, in a loop, one clip (the active one) per file. The dialog counts
+down the link's minutes, and says what AR shows of this model: one animation (which), one
+finish at a time, no notes or measures.
 
 **Variations** ("Variantes"; a kiln model only): new models from a copy of this one, always
 asked for by the user — "Create variations" (a button) on the selected model's row in the list, where they

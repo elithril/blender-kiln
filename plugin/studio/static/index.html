@@ -358,7 +358,6 @@
   </div>
   <div class="dc-opts" id="dc-opts-finishes" hidden>
     <span class="lab" data-i18n>In</span><span class="dc-in" id="dc-in"></span>
-    <span class="lab" data-i18n>iPhone AR</span><div class="dc-pills" id="dc-ios"></div>
   </div>
   <footer class="dc-foot">
     <div class="dc-sum"><div class="dc-facts" id="dc-facts"></div><span class="dc-est" id="dc-est"></span><span class="dc-err" id="dc-err" role="alert"></span></div>
@@ -369,7 +368,10 @@
 <dialog id="phone" aria-labelledby="ph-title">
   <header class="set-head"><h3 id="ph-title" data-i18n>See it on your phone</h3><form method="dialog"><button class="btn sm" data-i18n>Close</button></form></header>
   <div class="ph-body">
-    <div class="ph-qr" id="ph-qr" aria-label="QR code" data-i18n-attr="aria-label"></div>
+    <div class="ph-left">
+      <div class="ph-qr" id="ph-qr" aria-label="QR code" data-i18n-attr="aria-label"></div>
+      <div class="ph-time" id="ph-time" aria-live="off"><b id="ph-left">15:00</b><span class="ph-bar"><i id="ph-bar"></i></span></div>
+    </div>
     <div class="ph-how">
       <ol>
         <li data-i18n>Your phone on the same Wi-Fi as this computer.</li>
@@ -378,6 +380,7 @@
       </ol>
       <code id="ph-url"></code>
       <p class="dim" id="ph-when"></p>
+      <div class="ph-lim" id="ph-lim" hidden></div>
       <div class="ph-miss" id="ph-miss" hidden></div>
       <p class="dim ph-note" data-i18n>Only this model's AR files are shared, read-only, for a few minutes. The first time, macOS may ask to let Python take incoming connections: allow it.</p>
     </div>

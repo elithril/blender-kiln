@@ -25,6 +25,18 @@ from pathlib import Path
 from urllib.parse import quote
 
 MINUTES = 15
+TOOL = Path(__file__).resolve().parent.parent / "tools" / "glb_to_usdz.py"
+
+
+def blender() -> str | None:
+    """The user's Blender, to make a finish's USDZ (as tools/open_blender.py finds it)."""
+    import os
+    import shutil
+    for c in (os.environ.get("BLENDER"), "/Applications/Blender.app/Contents/MacOS/Blender",
+              str(Path.home() / "Applications/Blender.app/Contents/MacOS/Blender"), shutil.which("blender")):
+        if c and Path(c).exists():
+            return c
+    return None
 TYPES = {"usdz": "model/vnd.usdz+zip", "glb": "model/gltf-binary"}
 WORDS = {
     "en": {"title": "{name} in AR", "lead": "Open it in your room, on this phone.", "ios": "View in AR — iPhone, iPad",
@@ -52,8 +64,11 @@ def lan_ip() -> str | None:
 
 
 class PhoneShare:
-    def __init__(self, port: int = 0):
+    def __init__(self, port: int = 0, cache: Path | None = None):
         self.port = port
+        # A finish's USDZ, made here by Blender from its GLB (tools/glb_to_usdz.py), kept by content.
+        self.cache = Path(cache) if cache else None
+        self.making: dict[str, threading.Event] = {}
         self.srv: ThreadingHTTPServer | None = None
         self.links: dict[str, dict] = {}
         self.lock = threading.Lock()
@@ -80,6 +95,12 @@ class PhoneShare:
                                  "finishes": list(finishes or []) if len(finishes or []) > 1 else [],
                                  "shown": shown, "usdz_finishes": {k: Path(v) for k, v in (usdz_finishes or {}).items() if Path(v).is_file()},
                                  "made": {}}
+            l = self.links[token]
+        # An iPhone's finishes: each one's USDZ, made in the background when Blender is there.
+        if l["finishes"] and "glb" in files and blender() and self.cache:
+            for i, f in enumerate(l["finishes"]):
+                if f not in l["usdz_finishes"] and f != shown:
+                    self._make_usdz(l, i)
         return {"url": f"http://{ip}:{self.srv.server_address[1]}/ar/{token}/", "expires": until,
                 "ios": "usdz" in files, "android": "glb" in files, "minutes": MINUTES}
 
@@ -109,12 +130,56 @@ class PhoneShare:
             return None
         fin = l["finishes"][int(stem[6:])]
         if kind == "usdz":
-            f = l["usdz_finishes"].get(fin)
-            return f.read_bytes() if f else None
+            return self.usdz_for(l, int(stem[6:]))
         if fname not in l["made"]:
             import handoff
             l["made"][fname] = handoff.with_finishes(l["files"]["glb"], [fin], fin)
         return l["made"][fname]
+
+    def _usdz_key(self, l: dict, i: int) -> str:
+        import hashlib
+        g = l["files"]["glb"]
+        return hashlib.sha1(f"{g}|{g.stat().st_mtime}|{l['finishes'][i]}|{TOOL.stat().st_mtime}".encode()).hexdigest()[:16]
+
+    def _make_usdz(self, l: dict, i: int) -> None:
+        """The finish's GLB (that finish alone), then Blender: a USDZ, in the cache."""
+        key = self._usdz_key(l, i)
+        out = self.cache / f"{key}.usdz"
+        if out.is_file() or key in self.making:
+            return
+        ev = self.making[key] = threading.Event()
+
+        def run():
+            import subprocess
+            import tempfile
+            try:
+                self.cache.mkdir(parents=True, exist_ok=True)
+                with tempfile.TemporaryDirectory() as d:
+                    src = Path(d) / "finish.glb"
+                    src.write_bytes(self.file(l, f"model-{i}.glb"))
+                    tmp = Path(d) / "finish.usdz"
+                    subprocess.run([blender(), "-b", "--factory-startup", "--python", str(TOOL), "--", str(src), str(tmp)],
+                                   capture_output=True, timeout=600)
+                    if tmp.is_file():
+                        tmp.replace(out)
+            finally:
+                ev.set()
+                self.making.pop(key, None)
+        threading.Thread(target=run, daemon=True, name="usdz-finish").start()
+
+    def usdz_for(self, l: dict, i: int, wait: float = 240) -> bytes | None:
+        """A finish's USDZ: exported with the model, else made here (waiting for it if needed)."""
+        fin = l["finishes"][i]
+        if fin in l["usdz_finishes"]:
+            return l["usdz_finishes"][fin].read_bytes()
+        if not self.cache:
+            return None
+        key = self._usdz_key(l, i)
+        ev = self.making.get(key)
+        if ev:
+            ev.wait(wait)
+        out = self.cache / f"{key}.usdz"
+        return out.read_bytes() if out.is_file() else None
 
     def _start(self) -> None:
         if self.srv:
@@ -178,7 +243,9 @@ class PhoneShare:
         base = f"http://{host}/ar/{token}/"
         fins = l["finishes"]
         # Per finish: its USDZ when exported (else the default), its GLB made on demand.
-        usdz = [f"model-{i}.usdz" if f in l["usdz_finishes"] else "model.usdz" for i, f in enumerate(fins)]
+        made = bool(self.cache and blender() and "glb" in l["files"])
+        has = [f in l["usdz_finishes"] or made or f == l["shown"] for f in fins]
+        usdz = [f"model-{i}.usdz" if (f in l["usdz_finishes"] or made) and f != l["shown"] else "model.usdz" for i, f in enumerate(fins)]
         glbs = [f"model-{i}.glb" for i in range(len(fins))]
         intent = lambda f: (f"intent://arvr.google.com/scene-viewer/1.0?file={quote(base + f, safe='')}&mode=ar_preferred&title={quote(l['name'])}"
                             f"#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;"
@@ -193,7 +260,7 @@ class PhoneShare:
                   + "".join(f'<button role="radio" aria-checked="{"true" if i == cur else "false"}" data-i="{i}">{html.escape(f)}</button>' for i, f in enumerate(fins))
                   + "</div>" if fins else "")
         nousdz = html.escape(w["nousdz"])
-        data = json.dumps({"usdz": usdz, "glb": [intent(g) for g in glbs], "has": [f in l["usdz_finishes"] for f in fins], "cur": cur})
+        data = json.dumps({"usdz": usdz, "glb": [intent(g) for g in glbs], "has": has, "cur": cur})
         return f"""<!doctype html><html lang="{l['lang']}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(w['title'].format(name=l['name']))}</title>
 <style>

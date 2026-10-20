@@ -185,6 +185,20 @@ bpy.ops.export_scene.fbx(
 
 USDZ is a zip archive containing a USD file + textures.
 
+### From the AR GLB: `tools/glb_to_usdz.py` — use it
+
+```bash
+blender -b --factory-startup --python tools/glb_to_usdz.py -- ar/<name>_ar.glb ar/<name>_ar.usdz
+```
+
+It applies the recipe below and the three things it misses, each seen failing on a
+real model (2026-10-20): **vertex colours** — Quick Look shows only the material, so a
+model coloured by COLOR_0 came out white (the demo cat): they are baked to a texture on
+the UVs; **WebP** textures (a web GLB's) — not allowed in USDZ, converted to PNG;
+**Y up** and **the animation**, both off by default. Checked: the cat orange with its
+Idle loop, the stool's finishes, `usdchecker --arkit` clean on each. Studio's AR page
+runs it too, for a finish's USDZ.
+
 ### Blender exports it natively — start here
 
 Measured on Blender 5.0.1 with a full PolyHaven PBR material:
