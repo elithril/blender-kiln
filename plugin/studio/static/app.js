@@ -370,6 +370,15 @@ function groupsOf(items) {
   return groups;
 }
 
+// A declination right under its original when both are in the group (the original first).
+function nestDerived(items) {
+  const ids = new Set(items.map((a) => a.id)), kids = new Map(), out = [];
+  for (const a of items) { const p = a.derived?.from; if (p && ids.has(p)) { if (!kids.has(p)) kids.set(p, []); kids.get(p).push(a); } }
+  const put = (a, depth) => { out.push([a, depth]); for (const k of kids.get(a.id) || []) put(k, depth + 1); };
+  for (const a of items) if (!(a.derived?.from && ids.has(a.derived.from))) put(a, 0);
+  return out;
+}
+
 function groupHead(key, g) {
   const open = g.items.reduce((s, a) => s + counts(a).open, 0);
   const b = state.group === 'folders' && state.batches[key];
@@ -394,7 +403,7 @@ function renderList() {
       $('.ghead', sec).setAttribute('aria-expanded', String(!isClosed));
       store.set('kiln-studio:collapsed', [...state.closedGroups]);
     };
-    for (const a of g.items) $('.gbody', sec).appendChild(itemEl(a));
+    for (const [a, depth] of nestDerived(g.items)) { const el = itemEl(a); if (depth) el.classList.add('child'); $('.gbody', sec).appendChild(el); }
     list.appendChild(sec);
   }
   if (!items.length && state.assets.length) list.innerHTML = `<p class="empty-list">${esc(t('Nothing matches. Clear the search, tags or filter.'))}</p>`;
@@ -916,8 +925,16 @@ function renderOutputs(d, v) {
   // One "Download": a dialog to pick the outputs, with or without the sheet.
   const file = `<span class="out-sep" aria-hidden="true"></span>
     ${have.size ? `<button class="btn sm ghost out-dl" data-out-dl title="${esc(t('Pick the outputs to download, with a sheet saying what each file is for: ready to send.'))}"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"/></svg>${esc(t('Download'))}</button>` : ''}
+    ${d.kiln ? `<button class="btn sm ghost out-dl" data-decline title="${esc(t('New models from a copy of this one: another size, other colours, a version for printing…'))}"><svg viewBox="0 0 24 24"><path d="M6 3v12a3 3 0 0 0 3 3h9M15 15l3 3-3 3M6 9h6"/></svg>${esc(t('Make variations'))}</button>` : ''}
     <button class="btn icon sm ghost" data-out-reveal="${esc(v.file)}" title="${esc(t('Show in the Finder'))}" aria-label="${esc(t('Show in the Finder'))}"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></svg></button>`;
   el.innerHTML = `<span class="out-label">${esc(t('Outputs'))}</span>${chips}${file}`;
+  const from = d.derived, df = $('#derived-from');
+  df.hidden = !from;
+  if (from) {
+    const parent = state.byId.get(from.from);
+    df.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v12a3 3 0 0 0 3 3h9M15 15l3 3-3 3"/></svg><span>${esc(t('A variation of'))} ${parent ? `<button class="linkish" data-go="${esc(parent.id)}">${esc(parent.name)}</button>` : esc(from.from.split('/').pop())}</span><span class="q" title="${esc(from.text)}">· « ${esc(from.text)} »</span>`;
+    $$('[data-go]', df).forEach((b) => (b.onclick = () => go(b.dataset.go)));
+  }
   // Another file can be another layout (a print's parts on the bed): framed anew.
   $$('[data-out-v]', el).forEach((b) => (b.onclick = async () => {
     if (b.dataset.outV !== state.variant) await loadVariant(b.dataset.outV, { keepCamera: false });
@@ -926,8 +943,132 @@ function renderOutputs(d, v) {
   }));
   $$('[data-out-make]', el).forEach((b) => (b.onclick = () => makeOutput(b.dataset.outMake)));
   $$('[data-out-dl]', el).forEach((b) => (b.onclick = () => openDownload()));
+  $$('[data-decline]', el).forEach((b) => (b.onclick = () => openDecline()));
   $$('[data-out-reveal]', el).forEach((b) => (b.onclick = () => assetApi(state.id, '/reveal', { method: 'POST', body: { file: b.dataset.outReveal } }).catch((e) => toast(esc(e.message), 'warn'))));
 }
+// ── Décliner: new models from a copy of this one ─────────────────────────────
+// A card per declination: what changes, the new model's name, what it is for. The server
+// copies the source (sl.derive), then Claude makes the change, one run per declination,
+// as many at once as Settings → Claude allows.
+const DC_TARGETS = [['same', 'Same as the original'], ['web', 'Web (glTF)'], ['desktop', 'Unity / Unreal'], ['ar', 'AR'], ['print', '3D print']];
+const DC_STOP = new Set(['a', 'an', 'the', 'of', 'with', 'for', 'and', 'in', 'on', 'to', 'at', 'version', 'same', 'one',
+  'la', 'le', 'les', 'un', 'une', 'des', 'de', 'du', 'et', 'en', 'au', 'aux', 'avec', 'pour', 'sans', 'sur', 'meme', 'même']);
+const dc = { rows: [], start: 'current', outs: new Set(), notes: false, busy: false };
+function dcSlug(text) {
+  const words = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 1 && !DC_STOP.has(w));
+  return words.slice(0, 2).join('-');
+}
+function dcRow(i) {
+  return { text: '', name: `${state.detail.name}-${i + 1}`, target: 'same', auto: true };
+}
+function openDecline() {
+  const d = state.detail;
+  dc.rows = [dcRow(0)];
+  dc.start = 'current';
+  dc.notes = false;
+  // The outputs the original has are made again for each, by default.
+  dc.outs = new Set(d.variants.map(outputOf).filter((o) => o && o !== 'web'));
+  $('#dc-title').textContent = t('Variations of {name}', { name: d.name });
+  $('#dc-err').textContent = '';
+  renderDecline();
+  $('#decl').showModal();
+  $('#dc-rows textarea')?.focus();
+}
+function renderDecline() {
+  const d = state.detail;
+  $('#dc-rows').innerHTML = dc.rows.map((r, i) => `<div class="dc-card" data-i="${i}">
+    <div class="dc-card-head"><span>${esc(t('Variation {n}', { n: i + 1 }))}</span>${dc.rows.length > 1 ? `<button class="btn icon sm ghost" data-dc-del="${i}" title="${esc(t('Remove'))}" aria-label="${esc(t('Remove variation {n}', { n: i + 1 }))}"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>` : ''}</div>
+    <div class="dc-card-body">
+      <label class="f"><span>${esc(t('What changes'))}</span><textarea data-dc="text" rows="3" placeholder="${esc(t('E.g.: the same in a tall version, seat at 75 cm, with a footrest 30 cm from the floor'))}">${esc(r.text)}</textarea></label>
+      <div class="dc-side">
+        <label class="f"><span>${esc(t('Name'))}</span><input type="text" data-dc="name" value="${esc(r.name)}" spellcheck="false" autocomplete="off"></label>
+        <label class="f"><span>${esc(t('Made for'))}</span><span class="sel"><select data-dc="target">${DC_TARGETS.map(([k, l]) => `<option value="${k}"${r.target === k ? ' selected' : ''}>${esc(t(l))}</option>`).join('')}</select><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></label>
+      </div>
+    </div></div>`).join('');
+  $$('#dc-rows .dc-card').forEach((card) => {
+    const r = dc.rows[+card.dataset.i];
+    $('[data-dc="text"]', card).oninput = (e) => {
+      r.text = e.target.value;
+      // The name follows the words until the user writes one.
+      if (r.auto) { const sl = dcSlug(r.text); r.name = sl ? `${d.name}-${sl}` : dcRow(+card.dataset.i).name; $('[data-dc="name"]', card).value = r.name; }
+      renderDeclineFoot();
+    };
+    $('[data-dc="name"]', card).oninput = (e) => { r.name = e.target.value.trim(); r.auto = false; renderDeclineFoot(); };
+    $('[data-dc="target"]', card).onchange = (e) => (r.target = e.target.value);
+  });
+  $$('[data-dc-del]').forEach((b) => (b.onclick = () => { dc.rows.splice(+b.dataset.dcDel, 1); renderDecline(); }));
+  const pill = (on, label, attr, dis = false) => `<button type="button" class="${on ? 'on' : ''}" ${attr}${dis ? ' disabled' : ''} aria-pressed="${on}">${label}</button>`;
+  $('#dc-from').innerHTML = pill(dc.start === 'current', esc(t('The current version')), 'data-dc-from="current"')
+    + pill(dc.start === 'kept', esc(t('The kept version (previous)')), 'data-dc-from="kept"', !d.baseline);
+  // Web is always made (the final file); the others are asked for.
+  $('#dc-outs').innerHTML = OUTPUTS.map((o) => (o.key === 'web'
+    ? pill(true, `<i aria-hidden="true">✓</i>${esc(t(o.name))}`, `title="${esc(t('Always: the final file is the web one'))}"`, true)
+    : pill(dc.outs.has(o.key), `<i aria-hidden="true">${dc.outs.has(o.key) ? '✓' : '+'}</i>${esc(t(o.name))}`, `data-dc-out="${o.key}"`))).join('');
+  const open = d.counts?.open || 0;
+  $('#dc-notes').innerHTML = pill(!dc.notes, esc(t('Do not copy them')), 'data-dc-notes="0"')
+    + pill(dc.notes, esc(open ? tp(open, 'Copy its open note onto each', 'Copy the {n} open notes onto each') : t('No open note')), 'data-dc-notes="1"', !open);
+  $$('[data-dc-from]').forEach((b) => (b.onclick = () => { dc.start = b.dataset.dcFrom; renderDecline(); }));
+  $$('[data-dc-out]').forEach((b) => (b.onclick = () => { dc.outs.has(b.dataset.dcOut) ? dc.outs.delete(b.dataset.dcOut) : dc.outs.add(b.dataset.dcOut); renderDecline(); }));
+  $$('[data-dc-notes]').forEach((b) => (b.onclick = () => { dc.notes = b.dataset.dcNotes === '1'; renderDecline(); }));
+  renderDeclineFoot();
+}
+// What is wrong with a card, or ''.
+function declineProblem(r, i) {
+  if (!r.text.trim()) return t('Variation {n}: say what changes.', { n: i + 1 });
+  if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(r.name)) return t('Variation {n}: a name in lower case, digits, - and _.', { n: i + 1 });
+  if (state.assets.some((a) => a.name === r.name) || dc.rows.some((x, j) => j < i && x.name === r.name)) return t('Variation {n}: a model named {name} is already there.', { n: i + 1, name: r.name });
+  return '';
+}
+function renderDeclineFoot() {
+  const n = dc.rows.length, on = !!claude.status?.enabled, par = Math.min(n, claude.status?.parallel || 1);
+  $('#dc-facts').innerHTML = [[n, tp(n, 'model', 'models')], ...(on ? [[n, tp(n, 'request to Claude', 'requests to Claude')], [par, t('at a time')]] : [])]
+    .map(([k, l]) => `<span><b>${fmtN(k)}</b>${esc(l)}</span>`).join('');
+  const est = $('#dc-est');
+  est.hidden = !on;
+  if (on) { est.title = ESTIMATE_WHY(); estimateOf('derive').then((e) => (est.textContent = e?.source ? `${estimateText(e)} · ${t('each')}` : estimateText(e))); }
+  $('#dc-go').textContent = on ? tp(n, 'Launch {n} variation', 'Launch {n} variations') : tp(n, 'Make {n} copy', 'Make {n} copies');
+  $('#dc-go').disabled = dc.busy;
+}
+// What Claude is asked, for one declination (the user's words, then kiln's way).
+function declineAsk(d, r) {
+  const made = { same: t('the same use as {from}', { from: d.name }), web: t('the web'), desktop: t('Unity and Unreal'), ar: t('AR'),
+    print: t('3D printing, with kiln\'s print mode') }[r.target];
+  const src = dc.start === 'kept'
+    ? t('Studio copied the kept (previous) version of {from} as {name}_original.glb; there is no .blend: rebuild it from that file.', { from: d.name, name: r.name })
+    : t('Studio copied the source of {from} here: {name}.blend, {name}_original.glb, its build scripts and its log.', { from: d.name, name: r.name });
+  const outs = [...dc.outs].map((k) => outputAsk(k, r.name));
+  return [t('{name} is a variation of {from}, in its own folder. {src}', { name: r.name, from: d.name, src }),
+    t('Change it: {text}', { text: r.text.trim() }),
+    t('Made for: {made}. Work on this copy only, never on {from}. Save {name}.blend, export {name}_original.glb and {name}_final.glb with kiln\'s settings, and add the change to {name}_log.md.', { made, from: d.name, name: r.name }),
+    dc.notes ? t('The open notes of {from} were copied onto it: handle them too.', { from: d.name }) : '',
+    outs.length ? `${t('Then make its outputs:')} ${outs.join(' ')}` : ''].filter(Boolean).join('\n\n');
+}
+$('#dc-add').onclick = () => { dc.rows.push(dcRow(dc.rows.length)); renderDecline(); $$('#dc-rows textarea').at(-1)?.focus(); };
+$('#dc-go').onclick = async () => {
+  const d = state.detail, on = !!claude.status?.enabled;
+  const bad = dc.rows.map(declineProblem).find(Boolean);
+  $$('#dc-rows .dc-card').forEach((c, i) => c.classList.toggle('bad', !!declineProblem(dc.rows[i], i)));
+  if (bad) { $('#dc-err').textContent = bad; return; }
+  dc.busy = true; renderDeclineFoot(); $('#dc-err').textContent = '';
+  const made = [], asks = [];
+  for (const r of [...dc.rows]) {
+    const ask = declineAsk(d, r);
+    try {
+      const res = await assetApi(d.id, '/derive', { method: 'POST', body: { name: r.name, text: r.text.trim(), target: r.target, start: dc.start, notes: dc.notes, prompt: on ? ask : null, lang: getLang() } });
+      made.push(res.asset);
+      asks.push(`/kiln ${ask}`);
+      dc.rows.splice(dc.rows.indexOf(r), 1);
+    } catch (e) { $('#dc-err').textContent = `${r.name}: ${e.message}`; break; }
+  }
+  dc.busy = false;
+  await fetchAssets();
+  if (on) await claudeStatus();
+  if (!dc.rows.length) $('#decl').close(); else renderDecline();
+  if (!made.length) return;
+  if (on) toast(esc(tp(made.length, '{n} variation launched: it appears under {name} in the list.', '{n} variations launched: they appear under {name} in the list.', { name: d.name })), 'ok', 7000);
+  else { await copy(asks.join('\n\n')); toast(esc(tp(made.length, '{n} copy made. Its request is copied: paste it in Claude Code (Claude in Studio is off).', '{n} copies made. Their requests are copied: paste them in Claude Code, one at a time (Claude in Studio is off).')), 'ok', 9000); }
+};
+
 const fmtSize = (n) => {
   const fr = getLang() === 'fr', num = (x, d) => x.toLocaleString(fr ? 'fr-FR' : 'en-US', { maximumFractionDigits: d });
   return n >= 1048576 ? `${num(n / 1048576, 1)} ${fr ? 'Mo' : 'MB'}` : n >= 1024 ? `${num(Math.round(n / 1024), 0)} ${fr ? 'Ko' : 'KB'}` : `${n} ${fr ? 'o' : 'B'}`;
@@ -1725,6 +1866,17 @@ function renderDetailsNow() {
        <div class="btns"><button class="btn sm accent" data-act="choose">${esc(t('Compare and choose'))}</button><button class="btn sm ghost" data-act="snapshot" title="${esc(t('Replace it with the version shown now'))}">${esc(t('Keep this one instead'))}</button></div>`
     : `<p class="small dim" style="margin:0">${esc(t('Studio keeps one previous copy: the version your first note on it was made on, so a review pass can be compared and undone.'))}</p>
        <div class="btns"><button class="btn sm" data-act="snapshot">${esc(t('Keep this version now'))}</button></div>`}</div>`);
+  const kids = (d.derivations || []).map((id) => state.byId.get(id)).filter(Boolean);
+  if (d.derived || kids.length) {
+    const p = d.derived && state.byId.get(d.derived.from);
+    const made = d.derived && t(DC_TARGETS.find(([k]) => k === d.derived.target)?.[1] || 'Same as the original');
+    blocks.push(`<div class="block"><h3>${esc(t('Variations'))}</h3>${d.derived ? `<dl class="kv words">
+      <dt>${esc(t('A variation of'))}</dt><dd>${p ? `<button class="linkish" data-go="${esc(p.id)}">${esc(p.name)}</button>` : esc(d.derived.from)}</dd>
+      <dt>${esc(t('What changes'))}</dt><dd>${esc(d.derived.text)}</dd>
+      <dt>${esc(t('Made for'))}</dt><dd>${esc(made)}</dd>
+      <dt>${esc(t('Started from'))}</dt><dd>${esc(d.derived.start === 'kept' ? t('the kept version') : t('the current version'))} · ${esc(ago(d.derived.at))}</dd></dl>` : ''}
+      ${kids.length ? `<p class="small" style="margin:${d.derived ? '8px' : '0'} 0 4px;color:var(--text-2)">${esc(t('Its variations:'))}</p><ul class="files">${kids.map((k) => `<li><button class="linkish f" data-go="${esc(k.id)}">${esc(k.name)}</button></li>`).join('')}</ul>` : ''}</div>`);
+  }
   const files = d.files || [];
   if (files.length) {
     blocks.push(`<div class="block"><h3>${esc(t('Beside it'))}</h3><ul class="files">${files.map((f) => {
@@ -1740,6 +1892,7 @@ function renderDetailsNow() {
   $$('[data-copy]', tab).forEach((x) => (x.onclick = () => copy(x.dataset.copy)));
   $$('[data-img]', tab).forEach((x) => (x.onclick = () => lightbox([{ src: fileUrl(x.dataset.img), caption: x.dataset.img }])));
   $$('[data-text]', tab).forEach((x) => (x.onclick = () => textDialog(x.dataset.text.split('/').pop(), x.dataset.text)));
+  $$('[data-go]', tab).forEach((x) => (x.onclick = () => go(x.dataset.go)));
   $$('[data-untag]', tab).forEach((x) => (x.onclick = () => saveMeta({ tags: d.tags.filter((y) => y !== x.dataset.untag) })));
   const cat = $('#m-cat', tab);
   cat.onchange = () => saveMeta({ category: cat.value });
@@ -3219,5 +3372,8 @@ window.addEventListener('hashchange', fromHash);
   fromHash();
   // The fonts change the bar's width once they load.
   document.fonts?.ready.then(fitSoon);
+  // The top bar keeps clear of the Claude pill, whatever its width.
+  const pillEl = $('#cl-pill');
+  new ResizeObserver(() => document.documentElement.style.setProperty('--pill-w', pillEl.offsetWidth ? `${pillEl.offsetWidth + 12}px` : '0px')).observe(pillEl);
   window.__studio = { state, viewer, openAsset, setCompare, startPin, startGeneral, startTutorial, get detail() { return state.detail; } };
 })();

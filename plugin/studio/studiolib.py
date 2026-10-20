@@ -1466,6 +1466,95 @@ def import_file(project: Project, name: str, data: bytes, folder: str | None = N
     return project.rel(dst)
 
 
+# ── declinations: a new model from a copy of another ─────────────────────────
+
+DERIVE_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
+DERIVE_TARGETS = ("same", "web", "desktop", "ar", "print")
+
+
+def derive(project: Project, a: Asset, name: str, text: str, *, target: str = "same",
+           start: str = "current", copy_notes: bool = False) -> Asset:
+    """A declination of a kiln model: a new model beside it, from a copy of its source.
+
+    current: the .blend, _original.glb, the build scripts and the log, renamed; kept: the
+    one previous version Studio keeps (a GLB, no .blend). The outputs are not copied (they
+    would be wrong once the copy changes), nor the original's working folders. The link
+    goes in the catalog (`derived`), the change in the copy's log; Claude does the rest.
+    The original is never written to."""
+    if not a.kiln:
+        raise ValueError("only a kiln model can be declined (it needs its _original and .blend)")
+    name, text = str(name).strip(), str(text).strip()
+    if not DERIVE_NAME_RE.match(name):
+        raise ValueError(f"not a model name: {name!r} (lower case, digits, - and _)")
+    if not text:
+        raise ValueError("say what changes")
+    if target not in DERIVE_TARGETS:
+        raise ValueError(f"made for: one of {', '.join(DERIVE_TARGETS)}")
+    if start not in ("current", "kept"):
+        raise ValueError("start from current or kept")
+    src_dir = project.root / a.folder
+    dst = src_dir.parent / name
+    if dst.exists() or any(x.name == name for x in scan(project)):
+        raise ValueError(f"a model named {name} is already there")
+    old = a.name
+    tmp = Path(tempfile.mkdtemp(dir=src_dir.parent, prefix=f".{name}.", suffix=".tmp"))
+    try:
+        if start == "kept":
+            b = baseline(project, a.id)
+            if not b:
+                raise ValueError("no kept version of this model")
+            kept = project.root / b["file"]
+            shutil.copy2(kept, tmp / f"{name}_original{kept.suffix.lower()}")
+        else:
+            for f in sorted(src_dir.iterdir()):
+                if not f.is_file() or f.name.startswith("."):
+                    continue
+                if f.name == f"{old}.blend":
+                    shutil.copy2(f, tmp / f"{name}.blend")
+                elif f.name.startswith(f"{old}_original."):
+                    shutil.copy2(f, tmp / f.name.replace(old, name, 1))
+                elif f.suffix == ".py":
+                    shutil.copy2(f, tmp / f.name)   # the build scripts: Claude adapts them
+            if not any(tmp.glob(f"{name}_original.*")):
+                # No _original (a model made before kiln kept one): its main file stands in.
+                p = a.primary.path
+                shutil.copy2(p, tmp / f"{name}_original{p.suffix.lower()}")
+        log = src_dir / f"{old}_log.md"
+        head = log.read_text() if log.is_file() else f"# {old}\n"
+        made = {"same": "as the original", "web": "the web", "desktop": "Unity / Unreal", "ar": "AR",
+                "print": "3D printing"}[target]
+        (tmp / f"{name}_log.md").write_text(
+            head.rstrip() + f"\n\n## Declined from {old} ({now()[:10]})\n\n{text}\n\n"
+            f"Made for: {made}. Studio copied {'the kept version' if start == 'kept' else 'the source'} of {old}; "
+            "the outputs are to make again.\n")
+        os.replace(tmp, dst)
+    except BaseException:
+        shutil.rmtree(tmp, ignore_errors=True)
+        raise
+    # Scanned afresh: a server's project caches its scan.
+    new = next((x for x in scan(project) if x.id == project.rel(dst)), None)
+    if new is None:
+        raise ValueError(f"{name}: the copy is not a model Studio can read")
+    with Lock(project):
+        cat = load_catalog(project)
+        cat.setdefault("assets", {}).setdefault(new.id, {})["derived"] = {
+            "from": a.id, "text": text, "target": target, "start": start, "at": now()}
+        write_json(project.data / "catalog.json", cat)
+    if copy_notes:
+        v = new.primary
+        v.hash = v.hash or file_hash(v.path)
+        notes = [dict(n, thread=[], version={"variant": v.label, "file": v.rel, "hash": v.hash})
+                 for n in load_notes(project, a.id) if n.get("status") == "open"]
+        if notes:
+            _save_notes(project, new.id, notes)
+    return new
+
+
+def derivations(catalog: dict, asset_id: str) -> list[str]:
+    """The models declined from this one."""
+    return sorted(k for k, e in catalog.get("assets", {}).items() if (e.get("derived") or {}).get("from") == asset_id)
+
+
 # ── the example model: "See an example" on Studio's welcome screen ───────────
 
 EXAMPLE_SRC = Path(__file__).resolve().parent / "example"
@@ -1508,6 +1597,7 @@ def asset_summary(project: Project, a: Asset, catalog: dict) -> dict:
         "baseline": b and {"hash": b["hash"], "variant": b["variant"], "at": b["at"]},
         "pending_shots": len(pending_shots(notes, a)),
         "live": live_summary(load_live(project, a.id)) if a.kiln else None,
+        "derived": meta.get("derived"),
     }
 
 
@@ -1524,4 +1614,5 @@ def asset_detail(project: Project, a: Asset, catalog: dict) -> dict:
     versions = {e["hash"] for e in out["history"] if e.get("type") == "version"}
     out["thumbs"] = sorted(h for h in versions if has_thumb(project, a.id, h))
     out["live"] = load_live(project, a.id) if a.kiln else None
+    out["derivations"] = derivations(catalog, a.id)
     return out

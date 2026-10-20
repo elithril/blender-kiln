@@ -262,6 +262,20 @@ and "Add a sheet". One file alone without the sheet downloads as is; otherwise a
 and the sheet — LISEZ-MOI.md or README.md — with the size, each file's use and triangles, the outputs to
 redo, and the licences of the log; never the source nor kiln's working files.
 
+**Décliner** (variations; a kiln model only): new models from a copy of this one, always
+asked for by the user. A card per variation — what changes (free text), the new model's
+name (suggested from the words), what it is for (as the original, web, game, AR, print:
+the budgets follow) — as many as wanted. Options: start from the current version or the
+kept one (its GLB, no .blend), the outputs to make again (the original's, by default; web
+always), the open notes copied or not. `POST /api/asset/<id>/derive` (`sl.derive`) copies
+the source beside the original — `<name>.blend`, `<name>_original.glb`, the build scripts,
+the log with a "Declined from" section (its licences follow) — never the outputs nor the
+original's working folders, and records the link in `catalog.json` (`derived`); then one
+Claude run per variation (task `derive`, the outputs in the same run), as many at once as
+`claude_parallel`. With Claude off, the copies are made and the requests copied for
+Claude Code. The list shows a variation under its original; its header says "Declined
+from", and Details lists both ways. Finishes (materials in the same GLB) come next.
+
 The two side panels resize the view, and fold into 60 px rails (`[` the list, `]` the
 notes, `\` both); the view fits the model again once they have moved. On a narrow
 screen they lie over the view, one at a time, and the rails stay.

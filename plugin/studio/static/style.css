@@ -456,9 +456,17 @@ kbd { font: 500 10px/1 var(--mono); padding: 2px 5px; border-radius: 4px; border
 .pin .tip { display: none; }
 .pin:hover .tip, .pin:focus-visible .tip { display: block; position: absolute; left: 30px; bottom: 18px; transform: rotate(45deg); transform-origin: left bottom; width: max-content; max-width: 220px; background: var(--panel-2); border: 1px solid var(--line-2); color: var(--text); padding: 6px 8px; border-radius: 6px; font: 400 11.5px/1.35 var(--font); text-align: left; box-shadow: var(--shadow); }
 
-.topbar { position: absolute; top: 12px; left: 14px; right: 14px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; pointer-events: none; }
+/* clear of the Claude pill (top right; --pill-w set from its width): the outputs bar wraps instead */
+.topbar { position: absolute; top: 12px; left: 14px; right: calc(14px + var(--pill-w, 0px)); display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; pointer-events: none; }
 .topbar > * { pointer-events: auto; }
 .titlecol { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.kv.words dd { font-family: var(--font); }
+.derived-from { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2); min-width: 0; }
+.derived-from svg { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.derived-from .q { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-3); }
+/* a declination, under its original in the list */
+.item.child { margin-left: 22px; }
+.item.child::before { content: ""; position: absolute; left: -9px; top: -2px; bottom: 50%; width: 8px; border-left: 1px solid var(--line-2); border-bottom: 1px solid var(--line-2); border-bottom-left-radius: 6px; }
 .title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 /* Words straight on the view follow its background, whatever the page's theme. */
 #stage { --on-stage: #E6EBF2; --on-stage-2: #A3ADBE; --on-stage-3: #6E788B; }
@@ -1213,6 +1221,48 @@ svg.spark { width: 14px; height: 14px; fill: var(--new); stroke: none; flex: non
 .outputs .btn.icon svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .outputs .out-dl { gap: 5px; }
 .outputs .out-dl svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+/* Décliner: a card per declination (what changes, its name, what it is for), the options, one button */
+#decl { width: min(820px, calc(100vw - 24px)); max-height: calc(100vh - 48px); display: none; flex-direction: column; }
+#decl[open] { display: flex; }
+#decl .set-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+#decl .set-head h3 { margin: 0; font-size: 15px; }
+#decl .set-head form { margin: 0; }
+#decl .dc-head { display: grid; gap: 2px; font-size: 12px; }
+#decl .dc-body { padding: 14px 18px 4px; display: grid; gap: 10px; overflow-y: auto; min-height: 0; }
+#decl .dc-rows { display: grid; gap: 10px; }
+#decl .dc-card { border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); }
+#decl .dc-card.bad { border-color: color-mix(in srgb, var(--danger) 55%, var(--line)); }
+#decl .dc-card-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 6px 6px 12px; border-bottom: 1px solid var(--line); font-size: 12px; font-weight: 600; color: var(--text-2); }
+#decl .dc-card-body { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 12px; padding: 10px 12px 12px; align-items: start; }
+#decl .dc-side { display: grid; gap: 10px; }
+#decl label.f { display: grid; gap: 5px; min-width: 0; }
+#decl label.f > span { font: 600 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); }
+#decl textarea, #decl input[type="text"], #decl select { box-sizing: border-box; width: 100%; border-radius: 7px; border: 1px solid var(--line-2); background: var(--bg); color: var(--text); font: inherit; font-size: 12.5px; }
+#decl textarea { resize: vertical; min-height: 68px; padding: 8px 10px; line-height: 1.45; font-size: 13px; }
+#decl input[type="text"] { height: 32px; padding: 0 10px; }
+#decl .sel { position: relative; display: flex; }
+#decl select { -webkit-appearance: none; appearance: none; height: 32px; padding: 0 30px 0 10px; background: var(--panel-3); font-family: var(--font); }
+#decl .sel svg { position: absolute; right: 10px; top: 9px; width: 14px; height: 14px; fill: none; stroke: var(--text-2); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+#decl textarea:focus, #decl input:focus, #decl select:focus { outline: none; border-color: var(--accent); }
+#decl .dc-add { height: 38px; border-radius: 10px; border: 1px dashed var(--line-3); background: transparent; color: var(--text-2); font: inherit; font-size: 12.5px; cursor: pointer; }
+#decl .dc-add:hover { color: var(--text); background: var(--panel-3); }
+#decl .dc-opts { margin: 8px 18px 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 10px 14px; align-items: center; }
+#decl .dc-opts .lab { font-size: 12px; color: var(--text-2); }
+#decl .dc-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+#decl .dc-pills button { height: 28px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--line-2); background: transparent; color: var(--text-2); font: inherit; font-size: 12px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+#decl .dc-pills button i { font-style: normal; font-weight: 700; font-size: 10px; }
+#decl .dc-pills button.on { border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent); }
+#decl .dc-pills button:disabled { opacity: .45; cursor: not-allowed; }
+#decl .dc-foot { margin-top: 14px; display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-top: 1px solid var(--line); }
+#decl .dc-foot form { margin: 0; }
+#decl .dc-sum { flex: 1; min-width: 0; display: grid; gap: 6px; }
+#decl .dc-facts { display: flex; flex-wrap: wrap; gap: 6px; }
+#decl .dc-facts span { height: 22px; padding: 0 8px; border-radius: 6px; background: var(--panel-2); border: 1px solid var(--line); display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-2); white-space: nowrap; }
+#decl .dc-facts b { color: var(--text); font-weight: 600; }
+#decl .dc-est { font-size: 11.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: help; }
+#decl .dc-err { font-size: 12px; color: var(--danger); }
+#decl .dc-err:empty { display: none; }
+@media (max-width: 640px) { #decl .dc-card-body, #decl .dc-opts { grid-template-columns: minmax(0, 1fr); } }
 /* the download dialog: an output per row, its files under it; the sheet; one button */
 #dl { width: min(560px, calc(100vw - 24px)); }
 #dl .set-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--line); }

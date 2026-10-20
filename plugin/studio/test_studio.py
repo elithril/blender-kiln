@@ -536,6 +536,55 @@ assets:
 """
 
 
+class Derive(Base):
+    def setUp(self) -> None:
+        super().setUp()
+        d = self.tmp / "generated-assets" / "stool"
+        glb(d / "stool_original.glb", tris=4)
+        glb(d / "stool_final.glb", tris=2)
+        (d / "stool.blend").write_bytes(b"BLENDER")
+        (d / "stool.blend1").write_bytes(b"BLENDER")
+        (d / "build_stool.py").write_text("print('stool')\n")
+        (d / "stool_log.md").write_text("# stool\n\n## Licenses\n- Wood: Poly Haven, CC0\n")
+        glb(d / "game" / "stool_game.glb")
+        self.a = self.p.find("stool")
+
+    def test_a_declination_is_a_new_model_from_a_copy_of_the_source(self) -> None:
+        before = sorted(f.name for f in (self.tmp / "generated-assets" / "stool").rglob("*"))
+        n = sl.add_note(self.p, self.a, "legs too thin")
+        new = sl.derive(self.p, self.a, "stool-high", "Seat at 75 cm", target="print", copy_notes=True)
+        self.assertEqual(new.id, "generated-assets/stool-high")
+        d = self.tmp / new.id
+        self.assertEqual(sorted(f.name for f in d.iterdir()),
+                         ["build_stool.py", "stool-high.blend", "stool-high_log.md", "stool-high_original.glb"])
+        log = (d / "stool-high_log.md").read_text()
+        self.assertIn("Poly Haven, CC0", log)              # the licences follow
+        self.assertIn("## Declined from stool", log)
+        self.assertIn("Made for: 3D printing", log)
+        # The original is untouched; the link goes both ways.
+        self.assertEqual(sorted(f.name for f in (self.tmp / "generated-assets" / "stool").rglob("*")), before)
+        cat = sl.load_catalog(self.p)
+        self.assertEqual(cat["assets"][new.id]["derived"]["from"], self.a.id)
+        self.assertEqual(sl.derivations(cat, self.a.id), [new.id])
+        self.assertEqual(sl.asset_summary(self.p, new, cat)["derived"]["text"], "Seat at 75 cm")
+        # Its open notes, copied onto the new model's source, without their thread.
+        copied = sl.load_notes(self.p, new.id)
+        self.assertEqual([(x["id"], x["text"], x["version"]["variant"]) for x in copied], [(n["id"], "legs too thin", "original")])
+
+    def test_what_a_declination_refuses(self) -> None:
+        sl.derive(self.p, self.a, "stool-b", "Black")
+        for name, text, kw in [("stool-b", "again", {}), ("Stool B", "x", {}), ("stool-c", "  ", {}),
+                               ("stool-c", "x", {"target": "moon"}), ("stool-c", "x", {"start": "kept"})]:
+            with self.assertRaises(ValueError, msg=name):
+                sl.derive(self.p, self.a, name, text, **kw)
+        self.assertFalse(any(p.name.endswith(".tmp") for p in (self.tmp / "generated-assets").iterdir()))
+
+    def test_from_the_kept_version(self) -> None:
+        sl.take_baseline(self.p, self.a, self.a.variant("original"), reason="test")
+        new = sl.derive(self.p, self.a, "stool-old", "As it was", start="kept")
+        self.assertEqual(sorted(f.name for f in (self.tmp / new.id).iterdir()), ["stool-old_log.md", "stool-old_original.glb"])
+
+
 class Estimate(Base):
     def usage(self, *entries: dict) -> None:
         d = self.tmp / ".kiln-studio" / "claude"
@@ -964,6 +1013,18 @@ class Api(Base):
         z = zipfile.ZipFile(io.BytesIO(c.getresponse().read()))
         c.close()
         self.assertEqual(sorted(z.namelist()), ["crate/print/crate_print.3mf", "crate/print/crate_print_lid.stl"])
+
+    def test_decline_route(self) -> None:
+        (self.tmp / "generated-assets" / "crate" / "crate.blend").write_bytes(b"BLENDER")
+        self.studio.refresh()
+        code, r = self.req("POST", "/api/asset/generated-assets%2Fcrate/derive",
+                           {"name": "crate-red", "text": "Painted red", "prompt": "Make it red"})
+        self.assertEqual(code, 200, r)
+        self.assertEqual((r["asset"], r["job"]), ("generated-assets/crate-red", None))   # Claude off: no job
+        code, d = self.req("GET", "/api/asset/generated-assets%2Fcrate")
+        self.assertEqual(d["derivations"], ["generated-assets/crate-red"])
+        code, r = self.req("POST", "/api/asset/generated-assets%2Fcrate/derive", {"name": "crate-red", "text": "again"})
+        self.assertEqual(code, 400)
 
     def test_the_estimate_route(self) -> None:
         code, e = self.req("GET", "/api/claude/estimate?task=create.text")

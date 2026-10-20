@@ -744,7 +744,7 @@ class Worker:
                "key": self.store.canonical(key or thread_key(kind, asset, request)), "text": text, "lang": lang if lang in ("en", "fr") else "en",
                "state": "queued", "created": sl.now(), "deferred": deferred,
                # What the run is for, when its kind does not say (an output is a chat): for the estimates.
-               "task": task if task and re.match(r"^output\.(web|game|ar|print)$", task) else None}
+               "task": task if task and re.match(r"^(output\.(web|game|ar|print)|derive)$", task) else None}
         with self.cv:
             busy = [j for j in self.jobs.values() if j["key"] == job["key"] and j["state"] in ("queued", "running")]
             if busy and kind != "resume":

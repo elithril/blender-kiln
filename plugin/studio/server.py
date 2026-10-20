@@ -689,6 +689,17 @@ def make_handler(studio: Studio, port_ref: list[int]):
                 if method == "POST" and rest == ["snapshot"]:
                     return self._json(sl.take_baseline(project, a, a.variant(body.get("variant")),
                                                        reason="snapshot from Studio"))
+                if method == "POST" and rest == ["derive"]:
+                    # Décliner: a new model from a copy of this one, then Claude makes the change.
+                    new = sl.derive(project, a, str(body.get("name", "")), str(body.get("text", ""))[:4000],
+                                    target=str(body.get("target", "same")), start=str(body.get("start", "current")),
+                                    copy_notes=bool(body.get("notes")))
+                    studio.refresh()
+                    job = None
+                    if body.get("prompt") and project.settings()["claude_worker"]:
+                        job = studio.worker.submit("chat", asset=new.id, text=str(body["prompt"]), lang=str(body.get("lang", "en")),
+                                                   task="derive")
+                    return self._json({"asset": new.id, "job": job})
                 if method == "POST" and rest == ["reveal"]:
                     # Show one of the model's files in the Finder (or the file manager).
                     rel = str(body.get("file") or "")

@@ -109,6 +109,7 @@
           </div></div>
         </div>
       </div>
+      <div id="derived-from" class="derived-from" hidden></div>
       <div id="stats" class="stats" aria-live="polite"></div>
     </div>
   </div>
@@ -335,6 +336,23 @@
   <div class="pal-in"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="pal-q" type="text" placeholder="Type a command or a model" autocomplete="off" spellcheck="false" aria-label="Filter commands" aria-controls="pal-list" data-i18n-attr="placeholder,aria-label"><kbd>Esc</kbd></div>
   <ul id="pal-list" role="listbox" aria-label="Commands" data-i18n-attr="aria-label"></ul>
   <div class="pal-foot dim"><span><kbd>↑</kbd> <kbd>↓</kbd> <span data-i18n>to move</span></span><span><kbd>↵</kbd> <span data-i18n>to run</span></span><span><kbd>?</kbd> <span data-i18n>all the keys</span></span></div>
+</dialog>
+<dialog id="decl" aria-labelledby="dc-title">
+  <header class="set-head"><div class="dc-head"><h3 id="dc-title"></h3><span class="dim" data-i18n>Each variation starts from a copy of the model. The original is never changed.</span></div><form method="dialog"><button class="btn sm" data-i18n>Close</button></form></header>
+  <div class="dc-body">
+    <div class="dc-rows" id="dc-rows"></div>
+    <button type="button" class="dc-add" id="dc-add" data-i18n>+ Add a variation</button>
+  </div>
+  <div class="dc-opts">
+    <span class="lab" data-i18n>Start from</span><div class="dc-pills" id="dc-from"></div>
+    <span class="lab" data-i18n>Make the outputs again</span><div class="dc-pills" id="dc-outs"></div>
+    <span class="lab" data-i18n>Open notes</span><div class="dc-pills" id="dc-notes"></div>
+  </div>
+  <footer class="dc-foot">
+    <div class="dc-sum"><div class="dc-facts" id="dc-facts"></div><span class="dc-est" id="dc-est"></span><span class="dc-err" id="dc-err" role="alert"></span></div>
+    <form method="dialog"><button class="btn" value="cancel" data-i18n>Cancel</button></form>
+    <button class="btn accent" id="dc-go" type="button"></button>
+  </footer>
 </dialog>
 <dialog id="dl" aria-labelledby="dl-title">
   <header class="set-head"><h3 id="dl-title" data-i18n>Download</h3><form method="dialog"><button class="btn sm" data-i18n>Close</button></form></header>
