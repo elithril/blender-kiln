@@ -304,7 +304,10 @@ def shipped(work, patterns):
     skip = {"review", "test", "tmp", "_tmp", "intermediate", "intermediates", "concept"}
     out = []
     for p in sorted(work.rglob("*")):
-        if p.is_file() and not (skip & {x.lower() for x in p.relative_to(work).parts[:-1]}) \
+        dirs = p.relative_to(work).parts[:-1]
+        # Hidden folders are tools' state, not shipped: Studio keeps a copy of the model it was
+        # noted on in .kiln-studio/baseline/.
+        if p.is_file() and not (skip & {x.lower() for x in dirs}) and not any(x.startswith(".") for x in dirs) \
                 and any(fnmatch.fnmatch(p.name, pat) for pat in patterns):
             out.append(p)
     return out
@@ -444,7 +447,14 @@ def main():
             print(f"skip {b['id']}: already measured under '{label}' (delete the folder to rerun)")
             continue
         print(f"run  {b['id']} …", flush=True)
-        s = run_brief(b, outdir)
+        if b.get("kind") == "studio" and not (PLUGIN / "plugin" / "studio" / "studio.py").is_file():
+            print(f"skip {b['id']}: the skill under test has no Kiln Studio (3.0 and later)")
+            continue
+        if b.get("kind") == "studio":
+            import studio_drive   # the session is Studio's worker's, not one started here
+            s = studio_drive.run_studio_brief(b, outdir)
+        else:
+            s = run_brief(b, outdir)
         print(f"     exit={s['claude_exit']} turns={s['num_turns']} wall={s['wall_s']}s "
               f"cost≈${s['cost_usd_equiv']} finals={s['finals']}", flush=True)
 

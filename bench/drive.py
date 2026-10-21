@@ -126,6 +126,11 @@ def main():
             outdir = RUNS / label / b["id"]
             if (outdir / "result.json").exists():
                 continue
+            # run.py skips it too, without a result.json: counted here, it would be 3 failures.
+            plugin = Path(os.environ.get("BENCH_PLUGIN_DIR", BENCH.parent))
+            if b.get("kind") == "studio" and not (plugin / "plugin" / "studio" / "studio.py").is_file():
+                log(f"skip  {label} / {b['id']}: the skill under test has no Kiln Studio")
+                continue
             fails = waits = 0
             while True:
                 if stopping():
