@@ -1,7 +1,7 @@
 """What Studio can tell about the kiln setup on this machine, for its welcome screen.
 
 Standard library only. Each probe says what it found and how: "ok", "missing", or
-"unknown" when Studio cannot see it from here, never a guess (SKILL.md § /kiln setup is
+"unknown" when Studio cannot see it from here, never a guess (references/setup.md § /kiln setup is
 the full scan, run by Claude). Results are cached a minute: the probes run programs.
 """
 

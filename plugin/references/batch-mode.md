@@ -1,5 +1,22 @@
 # Batch Mode — Wizard, Runner & Manifest
 
+## Contents
+- /kiln batch — Batch Wizard
+  - Step 1 — Global Context
+  - Step 2 — Asset List
+  - Step 3 — Materials
+  - Step 4 — Recap & Adjustments
+  - Step 5 — Generate Manifest & Launch
+- /kiln batch run — Batch Runner
+  - Pre-flight
+  - Execution Loop
+  - Iron Rules (batch-specific)
+  - Batch Report
+  - End of Batch
+- Batch Manifest Format
+  - Status Values
+  - Editing the Manifest
+
 ## /kiln batch — Batch Wizard
 
 Launch with `/kiln batch`. The wizard collects all parameters upfront, generates a YAML manifest, then optionally launches the runner.

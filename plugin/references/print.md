@@ -4,6 +4,16 @@
 
 ---
 
+## Contents
+- Scope — the method follows the subject
+- Requirements
+- Printable from the brief
+- Figures: metaballs, then one voxel remesh
+- A model you bring
+- Like the photo, for print
+- The tool
+- What it does not check
+
 ## Scope — the method follows the subject
 
 Print mode models **simple objects and figures, each by its own method**:

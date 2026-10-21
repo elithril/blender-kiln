@@ -477,15 +477,26 @@ plugin/
     ├── ai-generation.md
     ├── animation.md
     ├── batch-mode.md
-    ├── setup-install.md
+    ├── blender-mcp.md
     ├── characters.md
     ├── cli-tools.md
+    ├── commands.md
     ├── export-targets.md
+    ├── log-format.md
     ├── naming-conventions.md
-    ├── sourcing-strategy.md
-    ├── texturing-strategy.md
+    ├── photo-projection.md
+    ├── pipeline-brief.md
+    ├── pipeline-import-cleanup.md
+    ├── pipeline-optimize-export.md
+    ├── pipeline-rig-animate.md
+    ├── pipeline-source.md
+    ├── print.md
     ├── reference-fidelity.md
+    ├── setup-install.md
+    ├── setup.md
+    ├── sourcing-strategy.md
     ├── studio.md
+    ├── texturing-strategy.md
     ├── topology-rules.md
     ├── uv-materials.md
     └── validation-checklist.md
@@ -495,9 +506,18 @@ plugin/
 
 | File | Content | Lines |
 |---|---|---|
-| `plugin/SKILL.md` | Main pipeline, iron rules, MCP tool surface, commands, setup | ~1,020 |
-| `plugin/references/characters.md` | Rigging patterns, animation-ready skeleton, an animated creature (one skin, charm, QuadriFlow first, lid weights, matcap), export gotchas, Blender 5.x | ~865 |
-| `plugin/references/animation.md` | Routes by subject, scripted-animation rules, quadruped cycles, humanoid presets (measured against UniMate), UniMate install / loops / prompts | ~270 |
+| `plugin/SKILL.md` | The router: commands, iron rules, the pipeline's skeleton (each phase's gates and the file to read before it), where everything else is | ~440 |
+| `plugin/references/pipeline-brief.md` | Pipeline [1] CONFIG (parameters, first launch) and [2] BRIEF | ~48 |
+| `plugin/references/pipeline-source.md` | Pipeline [3] SOURCE: marketplace preflight, choosing a method, print, concept art, a reference image per method, scripted and Geometry Nodes flows | ~160 |
+| `plugin/references/pipeline-import-cleanup.md` | Pipeline [4] IMPORT (pose measure, rename, framing) and [5] CLEANUP | ~110 |
+| `plugin/references/pipeline-rig-animate.md` | Pipeline [5c] RIG SELECTION (SkinTokens or Rigify, by measure) and [5d] ANIMATE (routes by subject) | ~96 |
+| `plugin/references/pipeline-optimize-export.md` | Pipeline [6] OPTIMIZE (auto preset, preview, outputs' folders) and [7] EXPORT | ~110 |
+| `plugin/references/commands.md` | Standalone commands: status, inspect, cleanup, texture, animate, optimize, convert, search, studio, help | ~220 |
+| `plugin/references/blender-mcp.md` | The Blender MCP's tools, and the official Blender Lab MCP's equivalents | ~88 |
+| `plugin/references/setup.md` | Dependencies, `/kiln setup` (detection, guided setup), `/kiln models` | ~160 |
+| `plugin/references/log-format.md` | The `{name}_log.md` template | ~58 |
+| `plugin/references/characters.md` | Rigging patterns, animation-ready skeleton, an animated creature (one skin, charm, QuadriFlow first, lid weights, matcap), export gotchas, Blender 5.x | ~990 |
+| `plugin/references/animation.md` | Routes by subject, scripted-animation rules, quadruped cycles, humanoid presets (measured against UniMate), UniMate install / loops / prompts | ~290 |
 | `plugin/tools/quadruped.py` | Procedural quadruped idle + walk, IK-planted, measured before export (legs bent, paws in step, exact loop), secondary motion (ears, tail wave, blinks), one GLB with every clip | ~370 |
 | `plugin/tools/presets.py` | Ready-made humanoid moves (22 motions, 43 Kimodo clips in `tools/motions/`) on a kiln-named rig: one GLB a clip per motion, measures, provenance | ~270 |
 | `plugin/tools/retarget.py` | The retarget behind it (adapted from image-to-3dlab, Apache-2.0): bones by name, feet planted, arms out of hips and belly, loops | ~850 |
@@ -505,31 +525,31 @@ plugin/
 | `plugin/tools/motion_loop.py` | Generated clip → seamless loop (pose + direction matched, drift removed in world axes, one clip with a closing key); keeps the sample that loops best | ~120 |
 | `plugin/tools/bind_rigid_parts.py` | Folds bone-parented parts (eyes, props) into the skin; reports a quadruped posture for routing | ~60 |
 | `plugin/tools/unimate.py` | Installs UniMate at the tested version, reports newer upstream, runs rigged GLB + prompt → animated GLBs | ~350 |
-| `plugin/references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~460 |
-| `plugin/references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~360 |
-| `plugin/references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~480 |
+| `plugin/references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~480 |
+| `plugin/references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~380 |
+| `plugin/references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~510 |
 | `plugin/tools/fidelity_check.py` | Renders a model under a studio HDRI and measures shape and material gaps against its reference | ~685 |
 | `plugin/tools/template_profile.py` | Reads a turned object's real profile off a 3D template (a generated mesh, a scan), to model from | ~120 |
-| `plugin/references/print.md` | 3D printing, the method by subject (primitives for objects, metaballs for figures): modelling for the printer from the brief (FDM / resin), what the check counts, what it does not, flattening a model you bring | ~500 |
+| `plugin/references/print.md` | 3D printing, the method by subject (primitives for objects, metaballs for figures): modelling for the printer from the brief (FDM / resin), what the check counts, what it does not, flattening a model you bring | ~550 |
 | `plugin/tools/print_check.py` | 3D printing check, FDM or resin: raw edge counts, held parts, walls, overhangs, loss against the original, PrusaSlicer as second arbiter | ~850 |
 | `plugin/tools/cutout.swift` | Cuts the subject out of a photo with macOS Vision (14+), local and free — the alpha `fidelity_check` needs | ~30 |
 | `plugin/tools/flatten.py` | Makes a model's nearly flat faces exactly flat and lays it on the bed — curves, bevels and slopes untouched, the input never overwritten | ~290 |
 | `plugin/tools/fit_coupon.py` | Writes the test print for a peg in a hole, diamond on its side or round standing up: one hole per clearance, one with a lead-in chamfer, the peg printed the way the model's is | ~235 |
 | `plugin/tools/review_renders.py` | The review renders without a connected Blender: matcap and colour (textures or vertex colours), opposite three-quarters, top and under, framed on the vertices; close-ups along the surface's normal, at the check's thin spots or where asked | ~285 |
 | `plugin/tools/uv_check.py` | UV check: used tile, overlap, stretch, collapsed and flipped faces; FAIL on a texture without UVs or collapsed UVs | ~180 |
-| `plugin/references/validation-checklist.md` | Geometry cleanup (welding that keeps the shading) + material export audit | ~290 |
-| `plugin/references/ai-generation.md` | Backend order (TRELLIS.2 first), licences, Hunyuan3D 2.x (on request), TRELLIS.2 local (measured), concept art (FLUX.1-schnell, nano-banana), free-quota and token rules | ~430 |
-| `plugin/references/export-targets.md` | GLB/FBX/USDZ settings, finishes (material variants), headless CLI, post-export checklist | ~300 |
-| `plugin/references/cli-tools.md` | gltf-transform, gltfpack, LOD workflow, metrics | ~210 |
-| `plugin/references/uv-materials.md` | UV unwrapping, the UV check, PBR channel packing | ~180 |
-| `plugin/references/naming-conventions.md` | Blender + GLTF name mapping + file conventions, outputs | ~180 |
-| `plugin/references/topology-rules.md` | Poly budgets, quad rules, edge flow | ~90 |
-| `plugin/references/setup-install.md` | Model selection, install commands, post-install validation | ~70 |
-| `plugin/references/sourcing-strategy.md` | PolyHaven (MCP or public API) + Sketchfab search patterns | ~120 |
-| `plugin/references/studio.md` | Kiln Studio: starting it, live view, checks, acting on the user's notes, work in progress, commands, storage, settings, create and import, the MCP server, Claude in Studio, outputs, variations, finishes, AR on the phone | ~550 |
+| `plugin/references/validation-checklist.md` | Geometry cleanup (welding that keeps the shading) + material export audit | ~320 |
+| `plugin/references/ai-generation.md` | Backend order (TRELLIS.2 first), licences, Hunyuan3D 2.x (on request), TRELLIS.2 local (measured), concept art (FLUX.1-schnell, nano-banana), free-quota and token rules | ~460 |
+| `plugin/references/export-targets.md` | GLB/FBX/USDZ settings, finishes (material variants), headless CLI, post-export checklist | ~360 |
+| `plugin/references/cli-tools.md` | gltf-transform, gltfpack, LOD workflow, metrics | ~230 |
+| `plugin/references/uv-materials.md` | UV unwrapping, the UV check, PBR channel packing | ~190 |
+| `plugin/references/naming-conventions.md` | Blender + GLTF name mapping + file conventions, outputs | ~190 |
+| `plugin/references/topology-rules.md` | Poly budgets, quad rules, edge flow | ~120 |
+| `plugin/references/setup-install.md` | Model selection, install commands, post-install validation | ~76 |
+| `plugin/references/sourcing-strategy.md` | PolyHaven (MCP or public API) + Sketchfab search patterns | ~140 |
+| `plugin/references/studio.md` | Kiln Studio: starting it, live view, checks, acting on the user's notes, work in progress, commands, storage, settings, create and import, the MCP server, Claude in Studio, outputs, variations, finishes, AR on the phone | ~590 |
 | `plugin/studio/` | Kiln Studio: local server and CLI (stdlib Python), checks, live view from Blender, three.js page, tests | ~5,800 |
 
-**Total: ~6,700 lines** of production-tested 3D pipeline knowledge.
+**Total: ~7,500 lines** of production-tested 3D pipeline knowledge.
 
 ## Continuous checks
 

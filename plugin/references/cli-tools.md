@@ -4,6 +4,29 @@
 
 ---
 
+## Contents
+- gltf-transform
+  - Inspect a GLB
+  - Texture Compression (KTX2/Basis)
+  - meshopt Compression
+  - Draco Compression
+  - Full Optimization Pipeline
+  - Reference Metrics
+  - Resize Textures
+  - Dedup (remove duplicate resources)
+- gltfpack
+  - Simplify Mesh
+  - Simplify to Target
+  - Generate LODs
+  - Full Optimization
+  - Compression Only (no simplification)
+- Reality Converter (USDZ — macOS only)
+  - Usage
+  - Alternative: usdzconvert (CLI)
+  - USDZ Constraints
+- Comparison: When to Use What
+- Before/After Reporting
+
 ## gltf-transform
 
 **Install:** `npm install -g @gltf-transform/cli`

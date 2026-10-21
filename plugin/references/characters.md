@@ -4,6 +4,48 @@
 
 ---
 
+## Contents
+- Current State in Kiln
+- T-Pose Requirements
+- Converting a pose to T-pose
+  - The method that works
+  - Three approaches that do not work
+  - Where to get a CC0 humanoid
+- Rigging Patterns
+  - 1. Joint Orientation
+  - 2. Twist Bones
+  - 3. Control Rig Architecture
+  - 4. FK/IK System
+  - 5. Facial Rigging (Blend Shapes / Shape Keys)
+  - 6. Weight Painting
+  - 7. Spine Deformation
+  - 8. Root Motion
+  - 9. Animation Retargeting
+  - 10. Blender 5.x — Bone Collections (replaces Bone Layers)
+  - 11. Blender 5.x — Layered Actions (Action Slots)
+  - 12. Mode Switching Gotchas
+  - 13. Corrective Blend Shapes (Corrective Smooth)
+- Anti-Patterns
+- Sharp Edges — Export Gotchas
+  - 🔴 Critique
+  - 🟠 Important
+  - 🟡 Attention
+- Validation Script
+- Auto-Rigging Tools
+  - Match the rig's density to the mesh's
+  - Animation-ready skeleton
+  - Rigify from Python
+  - Learned auto-rig: SkinTokens
+- An animated creature
+  - One skin
+  - Charm: eyes, eyelids, cheeks, pads
+  - Retopology: QuadriFlow first, then the weights
+  - Matcap before delivery — mandatory
+- Retopology Tools
+- Kiln Integration
+  - In the main pipeline
+  - Character-specific export
+
 ## Current State in Kiln
 
 Character **generation** works via the main pipeline (AI or scripted). T-pose is enforced by Iron Rule #13.

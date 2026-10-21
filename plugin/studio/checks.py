@@ -207,7 +207,7 @@ def _check(key: str, label: str, level: str, msg: list, *, fix: list | None = No
 
 
 def parse_log(path: Path | None) -> dict:
-    """`{name}_log.md` (SKILL.md § Log Format): sections of `- Key: value` bullets.
+    """`{name}_log.md` (references/log-format.md): sections of `- Key: value` bullets.
 
     Returns {"sections": {section: [bullet, ...]}, "config": {key: value}}, keys lowercased.
     """

@@ -4,6 +4,31 @@
 
 ---
 
+## Contents
+- Axis Orientation
+- glTF / GLB
+  - Blender Export Settings
+  - Fallback: Export Headless CLI
+  - Material Rules
+  - Channel Packing (ORM)
+  - Compression (applied in OPTIMIZE phase)
+  - Texture Resolution Guidelines
+  - Finishes (KHR_materials_variants)
+- FBX
+  - Blender Export Settings
+  - Unity Specifics
+  - Unreal Engine 5 Specifics
+- USDZ
+  - From the AR GLB: `tools/glb_to_usdz.py` — use it
+  - Blender exports it natively — start here
+  - If the native export is not enough
+  - USDZ Constraints
+- STL / 3MF (3D print)
+- Game and AR outputs without a session: `tools/export_outputs.py`
+- Multi-Target Export
+- Pre-Export Checklist
+- Post-Export Validation Checklist
+
 ## Axis Orientation
 
 | Context | Forward | Up |

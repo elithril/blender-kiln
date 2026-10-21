@@ -129,7 +129,7 @@ def _(root: Path):
 
 @case("tool table cites the rule next to the right one", "semantics")
 def _(root: Path):
-    p = root / "plugin" / "SKILL.md"
+    p = root / "plugin" / "references" / "blender-mcp.md"   # the tool table, out of SKILL.md since 3.0
     p.write_text(p.read_text().replace("| `get_object_info` | Rule 24.", "| `get_object_info` | Rule 23.", 1))
 
 

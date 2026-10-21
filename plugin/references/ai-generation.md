@@ -34,6 +34,27 @@ asks for it, quote that line and wait for a yes before any call.
 
 ---
 
+## Contents
+- MCP-Native Backend — Hunyuan3D, Rodin: on request only
+- Local Backend — Hunyuan3D-2 Mini
+  - Requirements
+  - Available Models
+  - Local API Flow
+  - Error Handling (Local)
+- HF Spaces Backend — Hunyuan3D 2.x (on request only, licence above)
+  - Setup
+  - API — verified signature
+- Free cloud quota — the real ceiling
+  - Whose account pays the quota — say it, every session
+- TRELLIS.2 — locally on Apple Silicon (measured)
+  - Install — five fixes the project's `setup.sh` does not make
+  - Licences — run it MIT-only
+  - Its Space, for reference
+- Concept Art
+  - Default — FLUX.1-schnell HF Space
+  - When the quota is spent
+  - Not the default any more
+
 ## MCP-Native Backend — Hunyuan3D, Rodin: on request only
 
 The Blender MCP addon ships 3D generation, but only for Hunyuan3D (Tencent Cloud

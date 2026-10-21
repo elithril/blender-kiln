@@ -4,6 +4,22 @@
 
 ---
 
+## Contents
+- UV Unwrapping
+  - Seam Placement
+  - Auto Unwrap (quick)
+  - Check the UVs — `tools/uv_check.py`
+  - Texel Density
+  - UV Packing
+  - UDIM vs Single UV
+- PBR Material Setup
+  - Principled BSDF (the only shader for glTF)
+  - Metallic/Roughness Workflow
+  - ORM Packing (single texture)
+- Texture Resolution per Use Case
+  - Web Optimization
+- Common Material Values
+
 ## UV Unwrapping
 
 ### Seam Placement

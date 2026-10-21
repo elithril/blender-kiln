@@ -1,5 +1,19 @@
 # Sourcing Strategy Reference
 
+## Contents
+- Preflight — rule 23, before the first search
+- Overview
+- PolyHaven
+  - Without the MCP integration — the public API
+  - Search flow
+- Sketchfab
+  - Search flow
+  - License awareness
+- Search Result Presentation
+- Link Opening
+- Refinement Loop
+- After download — rules 24 and 25
+
 ## Preflight — rule 23, before the first search
 
 ```
