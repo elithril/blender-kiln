@@ -58,10 +58,10 @@ def flags(brief, m):
 def row(bid, s):
     b = BRIEFS.get(bid, {"expect": {}, "path": "?"})
     tc = s.get("tool_calls", {})
-    # Each MCP names its capture tools differently: ahujasid's get_viewport_screenshot,
-    # the Lab server's get_screenshot_of_* and render_viewport_to_path.
+    # Each MCP names its capture tools differently: mcp-for-blender's look (get_viewport_screenshot
+    # up to 2.1.3), the Lab server's get_screenshot_of_* and render_viewport_to_path.
     shots = sum(n for k, n in tc.items()
-                if k.endswith("get_viewport_screenshot") or "screenshot_of" in k or k.endswith("render_viewport_to_path"))
+                if k.endswith(("__look", "get_viewport_screenshot", "render_viewport_to_path")) or "screenshot_of" in k)
     sess = (f"{s['claude_exit']} | {s['num_turns']} | {round(s['wall_s'] / 60, 1)} min | "
             f"${round(s['cost_usd_equiv'] or 0, 2)} | {sum(tc.values())} | {shots}")
     if not s["measures"]:
@@ -76,6 +76,11 @@ def row(bid, s):
 
 def table(label, res):
     print(f"### {label}\n")
+    # What ran: a label mixing servers or skill commits is not one measurement.
+    for k in ("mcp", "skill", "blender"):
+        seen = sorted({str(s.get(k) or "?").strip() for s in res.values()})
+        print(f"- {k}: {', '.join(seen)}")
+    print()
     print("| Brief | Exit | Turns | Wall | Cost ≈ | Tool calls | Screenshots | GLB | Tris | Size | Findings |")
     print("|---|---|---:|---:|---:|---:|---:|---|---:|---:|---|")
     for bid, s in res.items():
