@@ -331,10 +331,11 @@ launch, and on `/kiln setup` or `/kiln models`: `references/setup.md`. A local m
 
 ## Standalone commands
 
-They work without the pipeline. Read the command's section in `references/commands.md`,
-then do it:
+They work without the pipeline. Read the command's section in `references/commands.md`
+**and the file in the third column, before running anything** — the commands, settings and
+traps are there, not in the section:
 
-| Command | Section | Also read |
+| Command | Section | Read too, before acting |
 |---|---|---|
 | `/kiln status` | § /kiln status | — |
 | `/kiln inspect` | § /kiln inspect | `print.md` for a print |
