@@ -66,12 +66,38 @@ def api(base, path, body=None, timeout=30):
         return json.loads(r.read() or b"null")
 
 
-def page(cmd, *args, env=None):
-    """studio_page.py in its own uvx environment; its one STUDIO_PAGE line."""
-    r = subprocess.run(["uvx", "--with", PLAYWRIGHT, "python", "-I", str(R.BENCH / "studio_page.py"), cmd, *map(str, args)],
-                       capture_output=True, text=True, timeout=300, env=env)
-    line = next((l for l in r.stdout.splitlines() if l.startswith("STUDIO_PAGE ")), None)
-    return json.loads(line[len("STUDIO_PAGE "):]) if line else {"error": (r.stdout + r.stderr)[-1500:]}
+class Page:
+    """studio_page.py in its own uvx environment, open for the whole run like a user's page."""
+
+    def __init__(self, base, asset, obj, text, shots):
+        self.stop = shots / ".stop"
+        self.stop.unlink(missing_ok=True)
+        self.proc = subprocess.Popen(["uvx", "--with", PLAYWRIGHT, "python", "-I", str(R.BENCH / "studio_page.py"),
+                                      base, asset, obj, text, str(shots), str(self.stop)],
+                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        self.tail = []
+
+    def _line(self, tag):
+        for line in self.proc.stdout:   # the script has its own timeouts: it always prints or ends
+            if line.startswith(tag + " "):
+                return json.loads(line[len(tag) + 1:])
+            self.tail = (self.tail + [line])[-30:]
+        return {"error": "".join(self.tail)[-1500:] or f"studio_page.py ended without {tag}"}
+
+    def noted(self):
+        return self._line("STUDIO_PAGE")
+
+    def close(self):
+        if self.proc.poll() is not None:
+            return {"error": "the page had already closed"}
+        self.stop.touch()
+        out = self._line("STUDIO_PAGE_AFTER")
+        try:
+            self.proc.wait(60)
+        except subprocess.TimeoutExpired:
+            self.proc.kill()
+        self.stop.unlink(missing_ok=True)
+        return out
 
 
 def sha(p):
@@ -165,7 +191,7 @@ def run_studio_brief(brief, outdir):
                            cwd=work, env=env, stdout=srv_log, stderr=subprocess.STDOUT, start_new_session=True)
     rec = {"approvals": [], "proposals": [], "jobs": [], "page": {}}
     t0 = time.time()
-    code = 0
+    code, pg = 0, None
     try:
         for _ in range(60):
             try:
@@ -180,7 +206,8 @@ def run_studio_brief(brief, outdir):
 
         # 3. The user's gestures in the page.
         shots = outdir / "shots"
-        rec["page"]["note"] = page("note", base, asset, st["object"], st["note"], shots)
+        pg = Page(base, asset, st["object"], st["note"], shots)
+        rec["page"]["note"] = pg.noted()
         if rec["page"]["note"].get("error"):
             raise RuntimeError(f"the page: {rec['page']['note']['error'][:300]}")
 
@@ -216,12 +243,14 @@ def run_studio_brief(brief, outdir):
                        for j in api(base, "/api/claude")["jobs"] if j.get("key") == key]
         rec["thread"] = api(base, f"/api/claude/thread?key={quote(key, safe='')}")["messages"][-60:]
         rec["detail"] = api(base, f"/api/asset/{quote(asset, safe='')}")
-        rec["page"]["after"] = page("after", base, asset, shots)
+        rec["page"]["after"] = pg.close()
     except Exception as e:   # a run that cannot be driven is a finding, recorded, not a crash
         rec["error"] = f"{type(e).__name__}: {e}"
         code = "driver-error"
     finally:
         wall = round(time.time() - t0, 1)
+        if pg and pg.proc.poll() is None:   # an error on the way: the page goes too
+            pg.proc.kill()
         srv.send_signal(signal.SIGTERM)   # Studio's bye(): the worker stops its run and its Blender
         try:
             srv.wait(30)
