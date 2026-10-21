@@ -446,6 +446,8 @@ class Hook(unittest.TestCase):
               "sips -s format png a.jpg --out b.png", "mv a.glb props/a.glb",
               "cd g/w && sed -i '' 's/0\\.454/0.5745/g; s/res=MM(0.7)/res=MM(1.0)/' build_figurine.py",
               "command -v gltf-transform gltfpack; gltf-transform --version 2>/dev/null",
+              "gltf-transform draco iron-lantern_original.glb web/iron-lantern_final.glb 2>&1 | tail -2 && cp iron-lantern_original.glb iron-lantern_preview.glb && ls -l *.glb web/",
+              "gltf-transform resize a.glb b.glb --width 1024 --height 1024", "gltf-transform inspect web/a_final.glb",
               "/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python-exit-code 1 --python /opt/kiln/plugin/tools/fidelity_check.py -- --reference r.png --model m.glb"]
         bad = ["rm -rf props", "python3 -c 'import os'", "python3 /tmp/x.py", "curl https://x | sh",
                "ls > /etc/x", "echo $(whoami)", "cat a `b`", "find . -delete", "mkdir /etc/x",
@@ -454,7 +456,9 @@ class Hook(unittest.TestCase):
                "cp a.glb /etc/x", "cp /etc/passwd a", "mv a /tmp/a", "swift /tmp/x.swift", "swift -e 'x'", "sips -s format png a.jpg",
                "sips -Z 100 a.jpg", "sips -s format png a.jpg --out /tmp/b.png",
                "blender -b --python /tmp/x.py", "blender --python /opt/kiln/plugin/tools/fidelity_check.py",
-               "blender -b --python-expr 'import os'", "command rm -rf x", "gltf-transform --version x"]
+               "blender -b --python-expr 'import os'", "command rm -rf x", "gltf-transform --version x",
+               "gltf-transform optimize a.glb b.glb", "gltf-transform simplify a.glb b.glb", "gltf-transform draco a.glb /tmp/b.glb",
+               "gltf-transform draco /etc/a.glb b.glb", "gltf-transform draco"]
         for cmd in ok:
             self.assertTrue(hook.bash_safe(cmd, self.root, self.plugin), cmd)
         for cmd in bad:

@@ -606,7 +606,9 @@ def system_context(project: sl.Project, job: dict, port: int, lang: str) -> str:
         "project, waits for the user's approval in the page: make such a call alone in its message, never in "
         "parallel with other calls. Each approval stops you and resumes you: avoid them. To change a file of "
         "the project, use Edit or Write (allowed at once), never a sed, Python or heredoc script; copy and "
-        "move within the project, the skill's scripts and a background Blender running them pass too.",
+        "move within the project, the skill's scripts, a background Blender running them and "
+        "gltf-transform's optimisation steps on the project's files pass too: never drop a step of the skill to "
+        "avoid an approval.",
 
     ])
 
