@@ -78,7 +78,8 @@ engines = [i.identifier for i in
            bpy.types.RenderSettings.bl_rna.properties["engine"].enum_items]
 docs = "\n".join(p.read_text() for p in
                  [ROOT / "SKILL.md"] + sorted((ROOT / "references").glob("*.md")))
-for ident in sorted(set(re.findall(r"\bBLENDER_[A-Z_]+\b", docs))):
+# Not followed by "=": `BLENDER_MCP_SAFE_MODE=1` is an environment variable, not an engine.
+for ident in sorted(set(re.findall(r"\bBLENDER_[A-Z_]+\b(?!=)", docs))):
     if ident not in engines:
         fail("engines", f"docs name render engine {ident}, which does not exist: {engines}")
 else:
