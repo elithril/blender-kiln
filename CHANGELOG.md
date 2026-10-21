@@ -6,6 +6,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — SKILL.md is a router; the detail is read when its phase starts (3.0)
+
+- **`SKILL.md`: 1,299 → ~440 lines, ~19k → ~6k tokens** (characters / 4), under the
+  Agent Skills guide's 500 lines. It keeps the commands and their routing, **the 26 Iron
+  Rules word for word and numbered as before**, and the pipeline's skeleton: per phase what
+  it produces, its gates and the rules it applies, the print branch, and the file to read in
+  full before it starts — with a checklist to copy and tick. Its body's first ~5,000 tokens,
+  what Claude Code re-attaches after a compaction, now hold the rules and the whole pipeline;
+  before, a long session lost everything past the first phases.
+- **Nine references, each linked from SKILL.md (one level)**: `pipeline-brief.md` ([1], [2]),
+  `pipeline-source.md` ([3]), `pipeline-import-cleanup.md` ([4], [5]),
+  `pipeline-rig-animate.md` ([5c], [5d]), `pipeline-optimize-export.md` ([6], [7]),
+  `commands.md` (the standalone commands), `blender-mcp.md` (the tool surface, the Blender Lab
+  MCP's equivalents), `setup.md` (dependencies, `/kiln setup`, `/kiln models`), `log-format.md`.
+  Their text is SKILL.md's, moved line for line: a comparison of every line of the old file
+  against the new set finds none missing but the three fixed below.
+- **A table of contents** at the head of every reference over 100 lines (20 files), sections
+  and subsections, as the guide asks: a partial read still sees the file's scope.
+- Fixed while moving: [7] EXPORT and `/kiln convert` said a USDZ comes from Reality Converter
+  or usdzconvert, against Dependencies and `export-targets.md` — it is `tools/glb_to_usdz.py`
+  in Blender; [5b] TEXTURING now sits in the diagram's order, before [5c]. Two "above/below"
+  pointers name their file.
+- The code's pointers follow: `studio/checks.py` (the log format), `studio/setup_status.py`
+  (the setup scan), `tools/verify_blender.py` (PHASE 5c's rig tiers). README's structure table
+  and layout list every reference with its size.
+
 ### Added — ready-made humanoid moves (3.0)
 
 - **`tools/presets.py`**: `list` the 22 motions (43 clips: 21 in two takes, a woman's walk),

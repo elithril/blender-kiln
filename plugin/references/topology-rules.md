@@ -1,5 +1,20 @@
 # Topology Rules Reference
 
+## Contents
+- Fundamental Rules
+  - Quads vs Triangles
+  - Edge Flow
+  - Mesh Cleanliness
+- Poly Budgets by Platform
+- Detail Tiers (blender-kiln)
+- Decimation Strategy
+  - When to decimate
+  - Blender Python decimation
+  - Decimate modes
+  - Rules
+- LOD Pipeline
+- Post-AI-Generation Cleanup Priority
+
 ## Fundamental Rules
 
 ### Quads vs Triangles

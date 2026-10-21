@@ -15,6 +15,14 @@ source of what this asset looks like.
 | detailed, hero asset, character | all of it, plus the extra views of § 1, each measured |
 | **print** (any tier) | § 1–3 and § 5, rounds until the gaps stop closing — `print.md` § Like the photo, for print; § 4 shrinks to one flat colour per region (no texture reaches a print) |
 
+## Contents
+- 1. Inventory the details before modeling
+- 2. Measure the silhouette
+- 3. Check that every part is attached
+- 4. Materials from the reference, not from memory
+- 5. Review against the reference — measured, twice at most
+- 6. General rules
+
 ## 1. Inventory the details before modeling
 
 List every identity-defining detail visible in the image, and the part it belongs

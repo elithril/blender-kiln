@@ -2,6 +2,28 @@
 
 > Cross-reference: `references/uv-materials.md` for UV unwrapping, PBR channel packing, and the `create_pbr_material()` helper.
 
+## Contents
+- When This Applies
+- Strategy 1 — Geometric Analysis + PolyHaven (recommended for props)
+  - Step 1: Geometric Analysis
+  - Step 2: Create Material Slots
+  - Step 3: Visual Labeling
+  - Step 4: User Validation
+  - Step 5: PolyHaven Texture Search
+  - Step 6: Apply Textures
+  - Step 7: Iterate
+- Strategy 2 — Procedural Blender Materials
+  - Shader Recipes (Principled BSDF)
+  - GLTF Export Compatibility of Principled BSDF Properties
+  - GLTF Export Compatibility of TEXTURE MAPS
+- Strategy 2b — Bake Procedural to Image Textures
+  - When to use
+  - Bake Workflow
+  - After the bake
+- Strategy 3 — Assisted Manual Texturing
+- Strategy 4 — Try Another Space
+- Choosing a Strategy
+
 ## When This Applies
 - Mesh is white/untextured (AI generation without texture)
 - Materials are insufficient or missing

@@ -8,6 +8,17 @@
 fold a knee, whatever drives it: on such a rig, both generators measured here gave
 unusable motion (MoCapAnything V2, and UniMate's earlier v2 checkpoint).
 
+## Contents
+- Pick the route from the subject
+- Rules for scripted animation
+- Quadrupeds — `tools/quadruped.py`
+- Humanoid presets — `tools/presets.py`
+- UniMate
+  - Install and keep it current
+  - Run it
+  - Prompting — measured on a four-legged test rig
+  - Speed — measured, M4 Pro, one 2 s clip
+
 ## Pick the route from the subject
 
 | Subject | Route | Measured |

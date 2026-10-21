@@ -115,7 +115,7 @@ for op_name, expected in TIERS.items():
     deform = sum(1 for b in rig.data.bones if b.use_deform)
     if deform != expected:
         fail("rigtiers", f"{op_name} now yields {deform} deform bones, "
-                         f"PHASE 5c in SKILL.md says {expected}")
+                         f"PHASE 5c (references/pipeline-rig-animate.md) says {expected}")
     else:
         ok(f"rigtiers: {op_name} = {deform} deform bones")
     # A fresh rig must still default to IK, or the documented trap is stale.

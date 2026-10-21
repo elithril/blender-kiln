@@ -12,6 +12,20 @@ jsDelivr: the page's one outside request, so the browser needs a network connect
 
 ---
 
+## Contents
+- 1. Start it
+- 2. Live view — the model as it is built
+- 3. Checks — kiln's rules, read off the file
+- 4. `/kiln studio [asset]` — act on the user's notes
+- 5. Work — which models you are on
+- 6. Commands
+- 7. What the user sees
+- 8. Storage
+- 9. Settings — the project's, and the user's
+- 10. Create and Import — models the user brings or asks for
+- 11. The kiln-studio MCP server — what the user is looking at, and driving Studio
+- 12. Claude in Studio — the page asks, a worker runs
+
 ## 1. Start it
 
 ```bash

@@ -4,6 +4,25 @@
 
 ---
 
+## Contents
+- Geometry
+  - Merge by Distance — and keep the shading
+  - Recalculate Normals
+  - Remove Loose
+  - Degenerate Dissolve
+  - Check Manifold
+- Transforms
+  - Apply All Transforms
+  - Set Origin
+- Scale Verification
+- Naming
+  - Clean Orphans
+- Materials Check
+- Material Export Audit (pre-export GLTF)
+- Poly Count Check
+  - Decimate (if needed)
+- Execution Order
+
 ## Geometry
 
 ### Merge by Distance — and keep the shading
