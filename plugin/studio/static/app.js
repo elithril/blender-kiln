@@ -1293,7 +1293,6 @@ async function openPhone() {
     t('No notes, measures or comparison in AR: those stay in Studio.')].filter(Boolean);
   $('#ph-lim').hidden = false;
   $('#ph-lim').innerHTML = `<b>${esc(t('In AR'))}</b><ul>${lim.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
-  setTimeout(() => tip('ar', '#phone .ph-how ol'), 50);
   // Finishes an iPhone cannot pick yet: a USDZ each, made by Claude when asked.
   const miss = link.ios_missing || [], box = $('#ph-miss');
   box.hidden = !miss.length;
@@ -3042,9 +3041,6 @@ const TIPS = {
   download: { title: 'What to send',
     points: ['Everything ticked goes in **one zip**', '**The sheet** tells whoever receives it what each file is for'],
     act: 'Untick what not to send.' },
-  ar: { title: 'See it in AR',
-    points: ['The phone must be on **the same Wi-Fi**', 'The link lasts **15 minutes**; nothing else of the project is reachable'],
-    act: 'Scan the code with the phone\'s camera.' },
   palette: { title: 'The finishes of this file',
     points: ['**A dot per finish**, its colour', 'With the pill selected, **← →** go through them'],
     act: 'Pick one to see it.' },

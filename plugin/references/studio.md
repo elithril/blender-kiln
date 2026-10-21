@@ -555,7 +555,7 @@ kiln's bench (2.2.0 baseline: a create from a brief 3–5 min, $1.02–1.54; fro
 told apart from other chats by the task the page sends (`output.print`…).
 
 **Tips** (one line each, shown once): the first time a feature is opened — variations,
-finishes, the download, AR, the finish palette, a message queued for Claude, compare, a
+finishes, the download, the finish palette, a message queued for Claude, compare, a
 pin — a tip says what it does and how. Inside a window, a line above its content, covering
 nothing; elsewhere, beside what it is about. Never during the tutorial, one at a time;
 "Got it" (or closing the window) and it does not come back. Seen tips live in the browser
