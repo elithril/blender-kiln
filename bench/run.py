@@ -19,7 +19,11 @@ from pathlib import Path
 BENCH = Path(__file__).resolve().parent
 REPO = BENCH.parent
 BLENDER = os.environ.get("BLENDER", "/Applications/Blender.app/Contents/MacOS/Blender")
-MCP_VERSION = os.environ.get("BENCH_MCP_VERSION", "2.0.0")
+# ahujasid's server, by its own name. `blender-mcp` 2.0.0 is only a shim that installs
+# `mcp-for-blender>=2.0.0` UNPINNED: "blender-mcp==2.0.0" ran 2.1.9 on 2026-10-16 and 2.2.2 on
+# 2026-10-21, with a different bundled addon each time. The real package, pinned, for both halves.
+MCP_PACKAGE = "mcp-for-blender"
+MCP_VERSION = os.environ.get("BENCH_MCP_VERSION", "2.2.2")
 # Which Blender MCP the session drives: "ahujasid" (PyPI blender-mcp) or "lab",
 # the official Blender Lab server — whose package is ALSO named blender-mcp, so
 # it is always run from its git checkout, never resolved by name.
@@ -65,11 +69,11 @@ def sh(cmd, **kw):
 
 def bundled_addon():
     """The addon that ships inside the pinned server package, so both halves match."""
-    out = sh(["uvx", "--from", f"blender-mcp=={MCP_VERSION}", "python", "-c",
+    out = sh(["uvx", "--from", f"{MCP_PACKAGE}=={MCP_VERSION}", "python", "-c",
               "import blender_mcp, os; print(os.path.join(os.path.dirname(blender_mcp.__file__), 'bundled', 'addon.py'))"])
     p = Path(out.strip().splitlines()[-1])
     if not p.is_file():
-        sys.exit(f"no bundled addon in blender-mcp {MCP_VERSION}: {p}")
+        sys.exit(f"no bundled addon in {MCP_PACKAGE} {MCP_VERSION}: {p}")
     return p
 
 
@@ -189,7 +193,7 @@ def run_brief(brief, outdir):
         server = {"command": "uvx", "args": ["--from", str(LAB_DIR / "mcp"), "blender-mcp"],
                   "env": {"BLENDER_PATH": BLENDER}}
     else:
-        server = {"command": "uvx", "args": [f"blender-mcp=={MCP_VERSION}"]}
+        server = {"command": "uvx", "args": ["--from", f"{MCP_PACKAGE}=={MCP_VERSION}", MCP_PACKAGE]}
     # Named "blender" either way: the skill's allowed-tools is mcp__blender__*.
     (outdir / "mcp.json").write_text(json.dumps({"mcpServers": {"blender": server}}))
 
@@ -245,7 +249,7 @@ def run_brief(brief, outdir):
     usage = result.get("usage", {})
     session = {
         "brief": brief["id"],
-        "mcp": MCP if MCP != "lab" else f"lab@{sh(['git', '-C', str(LAB_DIR), 'rev-parse', '--short', 'HEAD']).strip()}",
+        "mcp": f"{MCP_PACKAGE}=={MCP_VERSION}" if MCP != "lab" else f"lab@{sh(['git', '-C', str(LAB_DIR), 'rev-parse', '--short', 'HEAD']).strip()}",
         "blender": sh([BLENDER, "--version"]).splitlines()[0],
         "skill": sh(["git", "-C", str(PLUGIN), "rev-parse", "--short", "HEAD"]).strip()
                  + " " + sh(["git", "-C", str(PLUGIN), "branch", "--show-current"]).strip(),

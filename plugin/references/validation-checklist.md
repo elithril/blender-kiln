@@ -305,7 +305,7 @@ bpy.ops.object.modifier_apply(modifier="Decimate")
 10. Clean orphans
 11. Materials check
 12. Poly count check → decimate if needed (interactive)
-13. `get_viewport_screenshot()` → final validation
+13. `look(mode="angles", target=[name])` → final validation (rule 2)
 
 **Auto mode:** steps 1-11 automatic, step 12 always interactive.
 

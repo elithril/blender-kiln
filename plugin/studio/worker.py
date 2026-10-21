@@ -51,7 +51,10 @@ PLUGIN = HERE.parent
 HOOK = HERE / "approval_hook.py"
 BLENDER_START = HERE / "worker_blender.py"
 RESERVED_PORT = 9876
-MCP_VERSION = "2.0.0"   # ahujasid's blender-mcp, the server and its bundled add-on together
+# ahujasid's server and its bundled add-on together, pinned by their real name: `blender-mcp`
+# 2.0.0 is a shim that installs the latest `mcp-for-blender`, so "blender-mcp==2.0.0" pinned nothing.
+MCP_PACKAGE = "mcp-for-blender"
+MCP_VERSION = "2.2.2"
 JOB_KINDS = ("chat", "notes", "create", "answer", "resume", "setup")
 SETUP_KEY = "setup"
 STATES = ("queued", "running", "waiting", "done", "failed", "stopped")
@@ -269,7 +272,7 @@ def mcp_config(project: sl.Project, port: int, kind: str) -> dict:
         blender = {"command": "uvx", "args": ["--from", str(d / "mcp"), "blender-mcp"],
                    "env": {"BLENDER_MCP_PORT": str(port), "BLENDER_PATH": blender_binary() or ""}}
     else:
-        blender = {"command": "uvx", "args": [f"blender-mcp=={MCP_VERSION}"],
+        blender = {"command": "uvx", "args": ["--from", f"{MCP_PACKAGE}=={MCP_VERSION}", MCP_PACKAGE],
                    "env": {"BLENDER_PORT": str(port)}}
     studio = {"command": sys.executable, "args": [str(HERE / "mcp_server.py")],
               "env": {"KILN_STUDIO_ROOT": str(project.root)}}
@@ -359,12 +362,12 @@ class Blender:
         return {"state": state, "port": port, "ours": alive, "message": self.message}
 
     def _addon(self) -> Path:
-        out = subprocess.run(["uvx", "--from", f"blender-mcp=={MCP_VERSION}", "python", "-c",
+        out = subprocess.run(["uvx", "--from", f"{MCP_PACKAGE}=={MCP_VERSION}", "python", "-c",
                               "import blender_mcp, os; print(os.path.join(os.path.dirname(blender_mcp.__file__), 'bundled', 'addon.py'))"],
                              capture_output=True, text=True, timeout=300)
         p = Path((out.stdout.strip().splitlines() or [""])[-1])
         if out.returncode != 0 or not p.is_file():
-            raise WorkerError(f"could not fetch blender-mcp {MCP_VERSION}'s add-on with uvx: {out.stderr.strip()[-300:]}")
+            raise WorkerError(f"could not fetch {MCP_PACKAGE} {MCP_VERSION}'s add-on with uvx: {out.stderr.strip()[-300:]}")
         return p
 
     def ensure(self) -> str:

@@ -6,6 +6,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — mcp-for-blender's current tools; the server pinned for real (3.0)
+
+- **ahujasid's server is `mcp-for-blender`** (renamed from `blender-mcp` in September 2026),
+  and since 2.1.9 it serves **nine tools instead of thirty-six**: `look` (framed views),
+  `get_scene_info` (now with sizes, ground contact and mesh health), `search_assets` /
+  `import_asset` (PolyHaven, Sketchfab, Poly Pizza), `generate_3d` (paid providers),
+  `get_addon_status` (which libraries and generators are on), `execute_blender_code`,
+  telemetry. kiln's rules named the old ones: rule 2's `get_viewport_screenshot`, rule 24's
+  `get_object_info`, rule 23's `get_polyhaven_status` — none exist on the current server.
+  Rules 2, 14, 22, 23 and 24 now name the current tools and what they demand is unchanged;
+  `references/blender-mcp.md` maps every need to the current tool, the old surface
+  (mcp-for-blender 2.1.3 and earlier, still installed by many — `blender-mcp` 1.x too) and
+  the Blender Lab MCP, and says how to tell them apart. Rule 24 no longer claims
+  `get_scene_info` carries no dimensions: on the current server it does.
+- **The pin pinned nothing.** `blender-mcp` 2.0.0 is a shim requiring `mcp-for-blender>=2.0.0`,
+  so the bench's and Kiln Studio's `blender-mcp==2.0.0` drove whichever version was current:
+  2.1.9 for the 2.2.0 baseline (2026-10-16), 2.2.2 on 2026-10-21, a different bundled add-on
+  each time. Both now pin `mcp-for-blender==2.2.2`, server and add-on, and each bench result
+  records it. **The 2.2.0 baseline must be run again on it** before comparing 3.0 against it.
+- References follow: the marketplace preflight (`get_addon_status()` → `libraries`), PolyHaven
+  textures through `import_asset(..., apply_to=...)`, Sketchfab through `import_asset(...,
+  target_size=...)`, MCP generation through `generate_3d` (never by default), batch preflight,
+  install commands (`uvx mcp-for-blender install-addon`). [4] IMPORT's sketch cited rule 23 for
+  the dimensions check: rule 24. Safe mode (`BLENDER_MCP_SAFE_MODE=1`) is named: it refuses
+  `exec(open(...))` and `sys`, which kiln's build scripts and live view use.
+
 ### Changed — SKILL.md is a router; the detail is read when its phase starts (3.0)
 
 - **`SKILL.md`: 1,299 → ~440 lines, ~19k → ~6k tokens** (characters / 4), under the

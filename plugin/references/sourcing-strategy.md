@@ -17,18 +17,19 @@
 ## Preflight — rule 23, before the first search
 
 ```
-get_polyhaven_status()  →  {"enabled": bool, "message": "..."}
-get_sketchfab_status()  →  {"enabled": bool, "message": "..."}
+get_addon_status()  →  "libraries": {"polyhaven": "on" | "off", "sketchfab": …, "polypizza": …}
 ```
 
-Both integrations are **OFF in a default addon install**. While off, the addon
-does not register `search_polyhaven_assets` / `search_sketchfab_models` at all,
-so calling them returns `Unknown command type: <name>` — which looks like a
-version mismatch and sends the user hunting for the wrong problem.
+The libraries are **OFF in a default addon install**. On `mcp-for-blender` 2.1.9 and later,
+`search_assets` on one that is off answers with the fix — the MCP for Blender panel in the 3D
+Viewport sidebar (press N if hidden), and the box to tick: print it verbatim, then offer another
+source or the creation path.
 
-If `enabled` is false, print the `message` field verbatim. It names the exact
-fix: the BlenderMCP panel in the 3D Viewport sidebar (press N if hidden), and the
-checkbox to tick. Then offer the other marketplace, or the creation path.
+Older servers (`get_polyhaven_status()` exists): call `get_polyhaven_status()` /
+`get_sketchfab_status()` first. While an integration is off, the addon does not register
+`search_polyhaven_assets` / `search_sketchfab_models` at all, so calling them returns
+`Unknown command type: <name>` — which looks like a version mismatch and sends the user
+hunting for the wrong problem. If `enabled` is false, print the `message` field verbatim.
 
 Never surface `Unknown command type` to the user.
 
@@ -40,7 +41,7 @@ Search existing marketplaces before generating. Present ~10 results with links. 
 - Fully free, CC0 (public domain)
 - No authentication needed
 - Types: HDRIs, textures, 3D models
-- MCP tools: `search_polyhaven_assets`, `download_polyhaven_asset`, `set_texture`, `get_polyhaven_categories`
+- MCP tools: `search_assets(source="polyhaven")`, `import_asset(source="polyhaven")` (older servers: `search_polyhaven_assets`, `download_polyhaven_asset`, `set_texture`, `get_polyhaven_categories`)
 - Categories: wood, metal, rock, fabric, brick, plaster, terrain, floor, roofing, aerial
 
 ### Without the MCP integration — the public API
@@ -69,7 +70,7 @@ and a visible credit to Poly Haven for the content (2.5). Write
 
 ### Search flow
 1. Extract keywords from brief (material, style, era)
-2. `search_polyhaven_assets` with keywords — or the API above when the MCP has no PolyHaven tools
+2. `search_assets(source="polyhaven", query=…)` (older: `search_polyhaven_assets`) — or the API above when the MCP has no PolyHaven tools
 3. Present results with name, type, link
 4. Links format: `https://polyhaven.com/a/{asset_name}`
 
@@ -77,14 +78,14 @@ and a visible credit to Poly Haven for the content (2.5). Write
 - Mix of free and paid models
 - REQUIRES API token for downloads (free account)
 - Token setup: https://sketchfab.com/settings/password → "API Token"
-- MCP tools: `search_sketchfab_models`, `get_sketchfab_model_preview`, `download_sketchfab_model`
+- MCP tools: `search_assets(source="sketchfab", previews=N)`, `import_asset(source="sketchfab", target_size=…)` (older servers: `search_sketchfab_models`, `get_sketchfab_model_preview`, `download_sketchfab_model`)
 
 ### Search flow
-1. `search_sketchfab_models` with query, downloadable=true, count=10
+1. `search_assets(source="sketchfab", query=…, limit=10)` (older: `search_sketchfab_models` with downloadable=true, count=10)
 2. Filter results for free/downloadable only
 3. Present results with: name, poly count, link, license
 4. Links format: `https://sketchfab.com/3d-models/{slug}-{uid}`
-5. `download_sketchfab_model` with target_size to normalize dimensions
+5. `import_asset(source="sketchfab", id=<uid>, target_size=…)` — required there: library models come at arbitrary scale (older: `download_sketchfab_model` with target_size)
 
 ### License awareness
 - PolyHaven: always CC0, no attribution needed
@@ -126,7 +127,7 @@ A PolyHaven or Sketchfab import arrives under the source file's own name
 downstream reads it:
 
 ```
-get_object_info(name)  → world_bounding_box, to verify 1 unit = 1 m (rule 24)
+get_scene_info(fields=["size"])  → world bounding box, to verify 1 unit = 1 m (rule 24; older servers: get_object_info(name))
 rename                 → SM_PascalCase + SM_..._Mesh data-block (rule 25)
 ```
 

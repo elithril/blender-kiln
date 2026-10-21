@@ -10,11 +10,11 @@
 
 ```
 get_scene_info() → import via execute_blender_code
-→ get_object_info(name) → verify world_bounding_box   (rules 14, 23)
+→ get_scene_info(fields=["size", "ground"]) → verify the box   (rules 14, 24)
 → RENAME to SM_PascalCase, data-block to SM_..._Mesh   (rule 15)
 → center + normalize scale if needed (1 unit = 1 meter)
 → alert if dimensions seem wrong ("Asset is 0.002m tall. Scale issue?")
-→ frame the viewport, THEN get_viewport_screenshot     (rule 2)
+→ look(mode="angles", target=[name])     (rules 2, 22)
 ```
 
 **Measure the pose (rule 13) — characters only.** Do it here, before anything
@@ -51,8 +51,9 @@ obj.name = "SM_ClassicNightstand"
 obj.data.name = "SM_ClassicNightstand_Mesh"
 ```
 
-**Frame before you screenshot.** `get_viewport_screenshot` captures the viewport
-as it is aimed. On a wide-angle view a 0.7 m prop is a handful of pixels at the
+**Frame before you screenshot.** `look(mode="angles", target=[name])` frames the target
+itself. A viewport capture — `look()` in its default viewport mode, or
+`get_viewport_screenshot` on older servers — captures the viewport as it is aimed. On a wide-angle view a 0.7 m prop is a handful of pixels at the
 origin, so the screenshot rule 2 relies on shows an apparently empty scene — which
 reads as "the operation deleted everything". Frame the subject first:
 

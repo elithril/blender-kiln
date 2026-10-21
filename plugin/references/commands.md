@@ -69,7 +69,7 @@ Clean up a mesh already open in Blender (or import one first).
 1. `get_scene_info()` — identify what's in the scene
 2. Ask user which object(s) to clean, or "all"
 3. Load `references/validation-checklist.md` — execute full cleanup sequence
-4. `get_viewport_screenshot()` after each step
+4. `look()` after each step (rule 2)
 5. If poly count high: propose decimate (always interactive)
 
 **For a print** — a model the user made and wants to print (`/kiln cleanup model.stl`): not the
@@ -91,7 +91,7 @@ Texture an untextured mesh (white mesh from AI generation, or any mesh without m
    - Geometric analysis + PolyHaven PBR
    - Procedural Blender materials
    - Assisted manual texturing
-6. `get_viewport_screenshot()` after applying materials
+6. `look(shading="material")` after applying materials (rule 2)
 
 **Note on monolithic meshes (AI-generated):** the geometric analysis clusters faces by normal direction, position, and curvature. This works on single-object meshes — it will identify zones (e.g. "top faces = seat", "vertical faces = legs") even without object separation. Results may need manual adjustment for complex shapes.
 

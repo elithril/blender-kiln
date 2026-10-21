@@ -61,8 +61,8 @@ Concrete gaps, roughly in order of value:
 Required to work on the skill itself:
 
 - **Blender 4.x+** (developed against 5.0, CI runs 5.2 LTS) with the
-  [Blender MCP](https://github.com/ahujasid/blender-mcp) addon. Install the addon
-  with `uvx blender-mcp install-addon` — `addon_utils.enable()` is not enough, it
+  [Blender MCP](https://github.com/ahujasid/mcp-for-blender) addon. Install the addon
+  with `uvx mcp-for-blender install-addon` — `addon_utils.enable()` is not enough, it
   leaves property groups incomplete and failures name nothing relevant.
 - **Python 3.10+** for `plugin/tools/`. No dependencies.
 

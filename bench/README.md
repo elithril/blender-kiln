@@ -109,8 +109,11 @@ Stated here so no result is read as more than it is:
 - **Permissions are bypassed** (`--permission-mode bypassPermissions`) and the
   session loads **no user settings** (`--setting-sources project`), so no
   personal CLAUDE.md, hook or memory colours the result.
-- **Versions are pinned**: `blender-mcp` 2.0.0 with the addon it bundles (1.7),
-  installed into a throwaway Blender profile. Blender itself is whatever the
+- **Versions are pinned**: `mcp-for-blender` 2.2.2 (ahujasid's server, renamed from
+  `blender-mcp`) with the addon it bundles, installed into a throwaway Blender profile; each
+  result records `mcp-for-blender==<version>`. Until 2026-10-21 the pin read `blender-mcp==2.0.0`,
+  a shim that installs the latest `mcp-for-blender`: runs before that date drove whichever
+  version was current (2.1.9 on 2026-10-16), not 2.0.0. Blender itself is whatever the
   machine has — recorded in `blender.log`.
 - **The machine's Hugging Face token is used.** `gradio_client` sends the locally
   saved token by default, so every Space call in these runs counted against a
