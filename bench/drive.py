@@ -21,6 +21,7 @@ where it stopped.
   not only the text: on 16 Oct "You've hit your session limit · resets 7:20pm" got past the
   text pattern and 28 sessions were recorded as results. The wait lasts until the reset the
   rate-limit event announces (resetsAt), 5 min past it, or LIMIT_WAIT_S when none is given.
+- BENCH_SKIP=<id>[,<id>]: leave those briefs for a later start (the label stays resumable).
 - Every session gets BENCH_TIMEOUT_S (default here 5400 s, recorded in result.json): the
   rig and print briefs run longer than the first six.
 """
@@ -118,9 +119,13 @@ def main():
     RUNS.mkdir(exist_ok=True)
     PID.write_text(str(os.getpid()))
     os.environ.setdefault("BENCH_TIMEOUT_S", "5400")
-    briefs = [b for b in json.loads((BENCH / "briefs.json").read_text())["briefs"] if not b.get("disabled")]
+    # BENCH_SKIP=id,id: briefs left for a later start of the same label (ai-mushrooms when the day's
+    # free ZeroGPU quota is spent: a run on an empty quota measures the quota, not the skill).
+    skip = {x.strip() for x in os.environ.get("BENCH_SKIP", "").split(",") if x.strip()}
+    briefs = [b for b in json.loads((BENCH / "briefs.json").read_text())["briefs"]
+              if not b.get("disabled") and b["id"] not in skip]
     log(f"driver {os.getpid()} start: {sys.argv[1:]} plugin={os.environ.get('BENCH_PLUGIN_DIR', '(this checkout)')} "
-        f"timeout={os.environ['BENCH_TIMEOUT_S']}s briefs={len(briefs)}")
+        f"timeout={os.environ['BENCH_TIMEOUT_S']}s briefs={len(briefs)}" + (f" skip={sorted(skip)}" if skip else ""))
     for label, mcp in pairs:
         for b in briefs:
             outdir = RUNS / label / b["id"]
