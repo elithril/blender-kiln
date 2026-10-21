@@ -212,7 +212,9 @@ log line (rule 7). Copy this checklist into your reply and tick it as you go:
 
 Every phase: `get_scene_info()` before it (rule 1); a framed screenshot after it when it
 changed geometry or materials (rules 2, 22); its line and the Checkpoint in `{name}_log.md`
-before the next one (rule 7, template `references/log-format.md`).
+before the next one (rule 7, template `references/log-format.md`). Before the first .blend
+save, whatever the phase: `bpy.context.preferences.filepaths.save_version = 0`, or a
+`.blend1` backup is left beside it to ask about.
 
 **Print set in CONFIG** changes [3], [5], [6] and [7]: `references/print.md` too, and the
 print branch of each phase file.
