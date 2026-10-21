@@ -129,8 +129,8 @@ def _(root: Path):
 
 @case("tool table cites the rule next to the right one", "semantics")
 def _(root: Path):
-    p = root / "plugin" / "SKILL.md"
-    p.write_text(p.read_text().replace("| `get_object_info` | Rule 24.", "| `get_object_info` | Rule 23.", 1))
+    p = root / "plugin" / "references" / "blender-mcp.md"   # the tool table, out of SKILL.md since 3.0
+    p.write_text(p.read_text().replace("| `look` | Rule 2,", "| `look` | Rule 3,", 1))
 
 
 @case("headless export fallback loses --python-exit-code", "exitcode")

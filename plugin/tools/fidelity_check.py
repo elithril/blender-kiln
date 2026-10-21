@@ -17,17 +17,23 @@ render under a studio HDRI — scales it to the reference's height, and compares
 - the model's own materials: metal whose base colour is too dark to be physical, a
   metallic mask in scattered hard-edged islands (camouflage), metal painted mostly as
   non-metal; and per band the grain (in the JSON only — information, not a gap);
+- face details: openings, cuts and dark marks inside the outline, which the silhouette
+  cannot see (a back wall plugs a carved eye) — where they sit, then each one alone;
 - joints: every end of a long part that touches another, rendered up close to be looked at.
 
 Prints one JSON line (`FIDELITY {...}`) and a ranked list of the largest gaps, and writes
-`overlay.png` (red: reference only, cyan: model only) and `side_by_side.png` into --out.
+`overlay.png` (red: reference only, cyan: model only), `face_overlay.png` (the same for
+the face details, model slid to the photo's) and `side_by_side.png` into --out, with the
+same JSON as `fidelity.json` (plus the view, the paths and the model's hash) and one line
+per run appended to `fidelity_log.jsonl` — Kiln Studio shows them beside the model when
+--out is a `review*/` folder in the asset's output folder.
 
 Why: reviewing by eye over-corrects — too bright and blotchy, then grey and flat. These
 numbers do not. They are only as good
 as the match between the two views: the reference's camera and light are unknown, so
 read differences of a few percent as noise, and large ones as the fix list.
 """
-import bpy, json, math, os, sys
+import bpy, hashlib, json, math, os, sys, time
 import numpy as np
 from mathutils import Matrix, Vector
 
@@ -330,6 +336,7 @@ def render(sc, lo, hi, path, engine, hdri=None, samples=64):
         sc.view_settings.view_transform = "Standard"                                     # like a plain photo
     sc.render.filepath = path
     bpy.ops.render.render(write_still=True)
+    return cam.data.ortho_scale / sc.render.resolution_y          # metres per render pixel
 
 
 def load(path):
@@ -339,6 +346,11 @@ def load(path):
     m = a[..., 3] > 0.5
     if not m.any():
         sys.exit(f"fidelity_check: {path} has no opaque pixel — a reference needs alpha")
+    if m.all():
+        # a phone photo on its table: the background is measured as object — a pumpkin read
+        # 0.62 instead of 0.93, with exit 0. Refuse rather than measure the wrong thing.
+        sys.exit(f"fidelity_check: {path} has no transparent pixel — cut the object out first "
+                 "(reference-fidelity.md § 2, Cut the photo out)")
     ys, xs = np.where(m)
     return a[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
 
@@ -403,6 +415,145 @@ def material(a):
     return out
 
 
+def erode(m, n):
+    m = m.copy()
+    for _ in range(n):
+        m[1:] &= m[:-1].copy(); m[:-1] &= m[1:].copy(); m[:, 1:] &= m[:, :-1].copy(); m[:, :-1] &= m[:, 1:].copy()
+    return m
+
+
+def dilate(m, n):
+    return ~erode(~m, n)
+
+
+def components(m):
+    """4-connected labels of a boolean image, and their count."""
+    lab = np.zeros(m.shape, np.int32); n = 0
+    for y0, x0 in zip(*np.nonzero(m)):
+        if lab[y0, x0]:
+            continue
+        n += 1; lab[y0, x0] = n; stack = [(y0, x0)]
+        while stack:
+            y, x = stack.pop()
+            for yy, xx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                if 0 <= yy < m.shape[0] and 0 <= xx < m.shape[1] and m[yy, xx] and not lab[yy, xx]:
+                    lab[yy, xx] = n; stack.append((yy, xx))
+    return lab, n
+
+
+def filled(m):
+    """The silhouette with its holes filled: everything not reached from the border."""
+    lab, _ = components(~m)
+    border = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))) - {0}
+    return ~np.isin(lab, list(border))
+
+
+FACE_DARK = 0.6      # darker than 0.6 x the fitted body light: an opening, a carved or painted detail
+FACE_TOL = 0.02      # tolerance of the F-score, and the offset worth reporting: 2 % of the height
+
+
+def face_details(a):
+    """The details seen on the object's face: openings, cuts, dark painted or carved marks.
+
+    A pixel is a detail when it is much darker than the body AROUND it, or when the
+    background shows through (a hole in the alpha inside the outline, or a bright
+    colourless patch on a coloured body — a photo's white background seen through an
+    opening). "Around it" is a smooth light field fitted to the body (quadratic in log
+    luminance, the darker pixels trimmed), so the photo's light falloff and exposure cancel;
+    a local mean would sink inside a large opening. Thin lines (rib grooves, the photo's
+    texture) are removed by an opening of 1/80 of the height, and the outline's own rim by
+    an erosion of 1/40: shading at the edge is not a detail."""
+    rgb, m = a[..., :3], a[..., 3] > 0.5; H = a.shape[0]
+    F = filled(m)
+    L = rgb @ np.array([0.2126, 0.7152, 0.0722]); lg = np.log(np.maximum(L, 1e-3))
+    yy, xx = np.mgrid[0:H, 0:a.shape[1]] / H
+    A = np.stack([np.ones_like(yy), yy, xx, yy * yy, xx * xx, yy * xx], -1)
+    body = m.copy()
+    for _ in range(4):
+        c = np.linalg.lstsq(A[body], lg[body], rcond=None)[0]
+        res = lg - A @ c; body = m & (res > np.log(FACE_DARK)) & (res < np.log(2.0))
+    mx, mn = rgb.max(-1), rgb.min(-1)
+    sat = np.where(mx > 1e-4, (mx - mn) / np.maximum(mx, 1e-4), 0)
+    d = (m & (res < np.log(FACE_DARK))) | (F & ~m)
+    if body.any() and np.median(sat[body]) > 0.25:                 # a coloured body: white shows through
+        d |= m & (sat < 0.4 * np.median(sat[body])) & (res > np.log(1.2))
+    d &= erode(F, max(2, H // 40))
+    r = max(1, H // 80)
+    return dilate(erode(d, r), r), F
+
+
+def chamfer(A, B):
+    """Mean symmetric distance between the outlines of two masks, in pixels."""
+    ea, eb = np.argwhere(A & ~erode(A, 1)), np.argwhere(B & ~erode(B, 1))
+    if not len(ea) or not len(eb):
+        return None
+    d = np.sqrt(((ea[:, None, :].astype(np.float32) - eb[None, :, :]) ** 2).sum(-1))
+    return float((d.min(1).mean() + d.min(0).mean()) / 2)
+
+
+def face(ref, mod, mm_px):
+    """Compare the details on the face of the reference and of the colour render.
+
+    Silhouette IoU is blind to them: a back wall plugs an opening, ribs leave the outline
+    alone. Placement and shape are measured apart: the model's details are first slid
+    (up to 8 % of the height) to where they overlap the photo's best — that shift is the
+    `offset`, a gap of its own — then compared: IoU, F-score within 2 % of the height,
+    outline distance. Each detail of the photo (eye, nose, mouth...) is scored alone."""
+    HA = min(ref.shape[0], 320)                                     # analysis height: cost is quadratic
+    k = ref.shape[0] / HA; mm_px = mm_px * k
+    R, FR = face_details(fit(ref, HA)); M, FM = face_details(fit(mod, HA))
+    W = max(R.shape[1], M.shape[1]); R, FR, M, FM = (pad_to(x, W) for x in (R, FR, M, FM))
+    out = dict(ref_share=float(R.sum() / FR.sum()), model_share=float(M.sum() / FM.sum()))
+    if not R.any():
+        out["note"] = "no detail found on the reference's face"
+        return out, R, M, FR | FM
+    iou0 = float((R & M).sum() / (R | M).sum())
+    def shift(X, dy, dx):                                           # no wrap-around: what leaves the frame is gone
+        h, w = X.shape; o = np.zeros_like(X)
+        o[max(dy, 0):h + min(dy, 0), max(dx, 0):w + min(dx, 0)] = X[max(-dy, 0):h + min(-dy, 0), max(-dx, 0):w + min(-dx, 0)]
+        return o
+    best, S = (0.0, 0, 0), round(0.08 * HA)
+    def search(ys, xs):
+        nonlocal best
+        for dy in ys:
+            for dx in xs:
+                Ms = shift(M, dy, dx); v = float((R & Ms).sum() / (R | Ms).sum())
+                if v > best[0] or (v == best[0] and abs(dy) + abs(dx) < abs(best[1]) + abs(best[2])):
+                    best = (v, dy, dx)
+    if M.any():
+        search(range(-S, S + 1, 2), range(-S, S + 1, 2))                 # coarse, then the pixel around it
+        search(range(best[1] - 1, best[1] + 2), range(best[2] - 1, best[2] + 2))
+    iou, dy, dx = best; Ms = shift(M, dy, dx)
+    t = max(1, round(FACE_TOL * HA))
+    p = (Ms & dilate(R, t)).sum() / max(Ms.sum(), 1); r = (R & dilate(Ms, t)).sum() / R.sum()
+    ch = chamfer(R, Ms)
+    out.update(iou=iou, iou_unaligned=iou0, f=float(2 * p * r / max(p + r, 1e-9)), precision=float(p), recall=float(r),
+               chamfer_mm=None if ch is None else ch * mm_px, chamfer=None if ch is None else ch / HA,
+               offset_mm=[dy * mm_px, -dx * mm_px], offset=[dy / HA, -dx / HA],      # model vs photo: + = higher, + = right
+               bands=[None if not (R[s].any() or Ms[s].any()) else float((R[s] & Ms[s]).sum() / (R[s] | Ms[s]).sum())
+                      for s in (slice(i * HA // BANDS, (i + 1) * HA // BANDS) for i in range(BANDS))])
+    # Each detail of the photo, alone: a feature map, not a score (features_mean weighs a
+    # nose like a mouth, where the IoU weighs them by area). Its IoU is taken in a box
+    # around it, so a neighbour's error does not count against it.
+    lab, n = components(R); feats = []
+    g = round(0.03 * HA); near = dilate(R, g)
+    for i in range(1, n + 1):
+        C = lab == i
+        if C.sum() < 0.002 * FR.sum():
+            continue
+        ys, xs = np.nonzero(C)
+        box = np.zeros_like(C); box[max(0, ys.min() - g):ys.max() + g + 1, max(0, xs.min() - g):xs.max() + g + 1] = True
+        Mb = Ms & box
+        feats.append(dict(at=[float(ys.mean() / HA), float((xs.mean() - W / 2) / HA)], size=float(C.sum() / FR.sum()),
+                          iou=float((C & Mb).sum() / (C | Mb).sum()), area=float(Mb.sum() / C.sum())))
+    labm, nm = components(Ms)
+    extra = [dict(at=[float(np.nonzero(labm == i)[0].mean() / HA), float((np.nonzero(labm == i)[1].mean() - W / 2) / HA)],
+                  size=float((labm == i).sum() / FR.sum()))
+             for i in range(1, nm + 1) if (labm == i).sum() >= 0.002 * FR.sum() and not (near & (labm == i)).any()]
+    out.update(features_mean=float(np.mean([f["iou"] for f in feats])) if feats else None, features=feats, extra=extra)
+    return out, R, Ms, FR | FM
+
+
 def save(arr, path):
     arr = np.ascontiguousarray(arr[::-1])
     img = bpy.data.images.new(os.path.basename(path), arr.shape[1], arr.shape[0], alpha=True)
@@ -418,10 +569,11 @@ def main():
     nmesh, metals = len(meshes), dark_metals(meshes)
     sil, col = os.path.join(o["out"], "_silhouette.png"), os.path.join(o["out"], "_colour.png")
     render(sc, lo, hi, sil, "BLENDER_WORKBENCH")
-    render(sc, lo, hi, col, "CYCLES", hdri=o["hdri"], samples=int(o["samples"]))
+    m_px = render(sc, lo, hi, col, "CYCLES", hdri=o["hdri"], samples=int(o["samples"]))
 
     ref = load(o["reference"]); H = ref.shape[0]
-    mod_s, mod_c = fit(load(sil), H), fit(load(col), H)
+    raw_c = load(col)
+    mod_s, mod_c = fit(load(sil), H), fit(raw_c, H)
     W = max(ref.shape[1], mod_s.shape[1], mod_c.shape[1])
     R, M = pad_to(ref[..., 3] > 0.5, W), pad_to(mod_s[..., 3] > 0.5, W)
     iou = float((R & M).sum() / (R | M).sum())
@@ -434,6 +586,7 @@ def main():
                           full_width=float((mf[s].mean() - rf[s].mean()) / max(rf[s].mean(), 1)),
                           core_width=float((mc[s].mean() - rc[s].mean()) / max(rc[s].mean(), 1))))
     mref, mmod = material(ref), material(mod_c)
+    fc, FR, FM, fbase = face(ref, mod_c, m_px * raw_c.shape[0] / H * 1000)
 
     # Shape gaps are LOCAL: a band whose width is off, or a band clearly wrong. Overall IoU
     # is not a target — a real object scores well under 1 against its own photo, and a model
@@ -462,6 +615,23 @@ def main():
             if abs(d) > tol:
                 note = " — light-dependent: check the material, do not tune to it" if k in ("lum", "highlights") else ""
                 gaps.append((abs(d) / tol / 10, f"band {i + 1}: {k} {m[k]:.3f} vs reference {r[k]:.3f} ({d:+.3f}){note}"))
+    # Face details: where they sit, then each one alone. The overall IoU is information
+    # (like the silhouette's); a misplaced face and a wrong or missing detail are the gaps.
+    if "offset" in fc and max(map(abs, fc["offset"])) > FACE_TOL:
+        dz, dx = fc["offset"]; dzm, dxm = fc["offset_mm"]
+        where = " and ".join(w for w in (f"{abs(dzm):.1f} mm {'higher' if dzm > 0 else 'lower'}" if abs(dz) > FACE_TOL else "",
+                                          f"{abs(dxm):.1f} mm {'right' if dxm > 0 else 'left'}" if abs(dx) > FACE_TOL else "") if w)
+        gaps.append((max(abs(dz), abs(dx)) * 40, f"face: the details sit {where} than in the photo ({dz:+.1%} / {dx:+.1%} of the height) — "
+                     "check --elevation first (a camera above lowers what is on the front), then where the features were placed"))
+    for f_ in fc.get("features", []):
+        y, x = f_["at"]
+        if f_["iou"] < 0.5:
+            what = "missing" if f_["area"] < 0.2 else ("too small" if f_["area"] < 0.67 else "too large" if f_["area"] > 1.5 else "wrong shape")
+            gaps.append((60 * f_["size"] * (1 - f_["iou"]), f"face: the detail at {y:.0%} from the top, {x:+.0%} across ({f_['size']:.1%} of the face) "
+                         f"is {what} — IoU {f_['iou']:.2f}, model area {f_['area']:.0%} of the photo's; red/cyan in face_overlay.png"))
+    for e_ in fc.get("extra", []):
+        gaps.append((60 * e_["size"], f"face: a detail at {e_['at'][0]:.0%} from the top, {e_['at'][1]:+.0%} across ({e_['size']:.1%} of the face) "
+                     "is not in the photo — cyan in face_overlay.png"))
     # Grain (model vs photo) stays in the JSON, never in the gap list: a threshold on it
     # flagged a real object against its own photo, so as a gap it misleads.
     for r in metals:
@@ -490,16 +660,35 @@ def main():
     ov = np.zeros((H, W, 4), np.float32); ov[..., 3] = 1
     ov[..., 0] = R * 0.95; ov[..., 1] = M * 0.85; ov[..., 2] = M * 0.95
     save(ov, os.path.join(o["out"], "overlay.png"))
+    fo = np.zeros(FR.shape + (4,), np.float32); fo[..., 3] = 1; fo[..., :3] = 0.22 * fbase[..., None]
+    fo[FR & ~FM, :3] = (0.95, 0.1, 0.1); fo[FM & ~FR, :3] = (0.1, 0.85, 0.95); fo[FR & FM, :3] = 0.95
+    save(fo, os.path.join(o["out"], "face_overlay.png"))
     bg = lambda a: np.concatenate([a[..., :3] * a[..., 3:4] + 0.25 * (1 - a[..., 3:4]), np.ones_like(a[..., :1])], -1)
     save(np.concatenate([bg(pad_to(ref, W)), np.ones((H, 12, 4), np.float32), bg(pad_to(mod_c, W))], 1),
          os.path.join(o["out"], "side_by_side.png"))
 
     ends = contact_ends(meshes)
     joints = render_joints(sc, ends, os.path.join(o["out"], "joints"), (lo + hi) / 2) if ends else []
-    print("FIDELITY " + json.dumps(dict(tris=tris, meshes=nmesh, iou=iou, shape=shape, material=dict(reference=mref, model=mmod), metals=metals,
-                                        joints=joints, gaps=[g[1] for g in gaps])))
+    result = dict(tris=tris, meshes=nmesh, iou=iou, shape=shape, material=dict(reference=mref, model=mmod), metals=metals,
+                  face=fc, joints=joints, gaps=[g[1] for g in gaps])
+    print("FIDELITY " + json.dumps(result))
+    # The same, kept beside the images: Kiln Studio reads it, and the log keeps every round
+    # (two correction rounds at most, reference-fidelity.md § 5), to show where they went.
+    with open(o["model"], "rb") as f:
+        model_hash = hashlib.sha1(f.read()).hexdigest()[:12]   # as Kiln Studio hashes a model
+    at = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime())
+    saved = dict(result, at=at, model=os.path.abspath(o["model"]), model_hash=model_hash,
+                 reference=os.path.abspath(o["reference"]), view=VIEW, elevation=ELEVATION, azimuth=AZIMUTH,
+                 max_tris=int(o["max-tris"]) if "max-tris" in o else None)
+    with open(os.path.join(o["out"], "fidelity.json"), "w") as f:
+        json.dump(saved, f, indent=1)
+    with open(os.path.join(o["out"], "fidelity_log.jsonl"), "a") as f:
+        f.write(json.dumps(dict(at=at, iou=round(iou, 4), gaps=len(gaps), model=os.path.basename(o["model"]),
+                                model_hash=model_hash, view=VIEW)) + "\n")
     print(f"\n{tris:,} tris in {nmesh} meshes · silhouette IoU {iou:.3f} (information, not a target: "
-          f"a real object scores well under 1 against its own photo) — gaps to close, largest first:")
+          f"a real object scores well under 1 against its own photo)"
+          + (f" · face details IoU {fc['iou']:.2f} after sliding them {fc['offset'][0]:+.1%} / {fc['offset'][1]:+.1%} (unslid {fc['iou_unaligned']:.2f})"
+             if "iou" in fc else "") + " — gaps to close, largest first:")
     for _, g in gaps[:12]:
         print("  -", g)
     if not gaps:

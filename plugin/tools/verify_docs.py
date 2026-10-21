@@ -167,6 +167,17 @@ for m in re.finditer(r"\| `(?:plugin/)?references/([\w.-]+)` \|[^|]+\| ~(\d+) \|
     if abs(actual - claimed) / max(claimed, 1) > 0.15:
         fail("counts", f"references/{name}: README says ~{claimed}, actual {actual}")
 
+# The tools' rows drifted the same way, unchecked: fidelity_check.py said ~245 at 685 lines.
+for m in re.finditer(r"\| `plugin/tools/([\w.-]+)` \|[^|]+\| ~(\d+) \|", README.read_text()):
+    name, claimed = m.group(1), int(m.group(2))
+    tool = PLUGIN / "tools" / name
+    if not tool.exists():
+        fail("counts", f"README lists tools/{name}, which does not exist")
+        continue
+    actual = len(tool.read_text().split("\n"))
+    if abs(actual - claimed) / max(claimed, 1) > 0.15:
+        fail("counts", f"tools/{name}: README says ~{claimed}, actual {actual}")
+
 m = re.search(r"\*\*Total: ~([\d,]+) lines\*\*", README.read_text())
 if m:
     claimed = int(m.group(1).replace(",", ""))
@@ -216,7 +227,7 @@ else:
 # existed nowhere, and outside the plugin directory besides.
 for doc in DOCS:
     base = REPO if doc == README else PLUGIN
-    for m in re.finditer(r"`((?:\.\./|plugin/|references/|examples/|tools/|docs/)[\w./-]+\.\w+)`", doc.read_text()):
+    for m in re.finditer(r"`((?:\.\./|plugin/|references/|examples/|tools/|studio/|docs/)[\w./-]+\.\w+)`", doc.read_text()):
         rel = m.group(1)
         if rel.startswith("../"):
             fail("paths", f"{doc.name} references {rel} — outside the plugin directory")

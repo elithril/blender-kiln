@@ -6,15 +6,20 @@
   },
   "metadata": {
     "description": "3D asset production pipeline for Claude Code, from a text brief or a photo to a rigged, animated GLB, powered by Blender MCP.",
-    "version": "2.2.0",
+    "version": "2.3.0",
     "license": "MIT",
     "homepage": "https://github.com/elithril/blender-kiln",
     "category": "3d-modeling",
     "tags": [
       "blender",
       "blender-mcp",
-      "3d",
+      "claude-code",
       "3d-assets",
+      "image-to-3d",
+      "text-to-3d",
+      "photo-to-3d",
+      "game-assets",
+      "procedural-modeling",
       "gltf",
       "glb",
       "usdz",
@@ -22,11 +27,11 @@
       "texturing",
       "pbr",
       "rigging",
+      "animation",
+      "text-to-motion",
       "optimization",
       "hunyuan3d",
-      "threejs",
-      "animation",
-      "text-to-motion"
+      "threejs"
     ]
   },
   "plugins": [

@@ -1,5 +1,20 @@
 # Topology Rules Reference
 
+## Contents
+- Fundamental Rules
+  - Quads vs Triangles
+  - Edge Flow
+  - Mesh Cleanliness
+- Poly Budgets by Platform
+- Detail Tiers (blender-kiln)
+- Decimation Strategy
+  - When to decimate
+  - Blender Python decimation
+  - Decimate modes
+  - Rules
+- LOD Pipeline
+- Post-AI-Generation Cleanup Priority
+
 ## Fundamental Rules
 
 ### Quads vs Triangles
@@ -11,7 +26,8 @@
 ### Edge Flow
 - Edge loops must follow muscle/joint lines on characters
 - Critical loops: eyes, mouth, shoulders, elbows, knees
-- Poles (vertices with 3 or 5+ edges): keep away from deformation zones
+- Poles (vertices with 3 or 5+ edges): keep away from deformation zones — except the four a
+  limb's junction ring always carries (`characters.md` § Retopology: QuadriFlow first)
 - 5-edge poles preferred over 3-edge poles
 
 ### Mesh Cleanliness
@@ -38,6 +54,11 @@
 | lightweight | 3-8K tris | 300-1.5K | 50-300 |
 | balanced | 8-20K tris | 1.5-5K | 300-1.5K |
 | detailed | 20-80K tris | 5-15K | 1.5-5K |
+
+**The tier decides, the platform table above is only the default when no tier is set**: a web
+hero at 18K reads "over" the platform line and "in" the balanced tier — the tier wins. A brief
+that asks for the best quality or no triangle limit is **detailed** (or custom), and is not
+proposed a reduction past twice its top: the user lifted the limit.
 
 These are SOFT ranges — a guide, not a cap. Up to twice the top is fine when the
 triangles go where they show (round parts, wires): report the count and where it goes,

@@ -4,6 +4,31 @@
 
 ---
 
+## Contents
+- Axis Orientation
+- glTF / GLB
+  - Blender Export Settings
+  - Fallback: Export Headless CLI
+  - Material Rules
+  - Channel Packing (ORM)
+  - Compression (applied in OPTIMIZE phase)
+  - Texture Resolution Guidelines
+  - Finishes (KHR_materials_variants)
+- FBX
+  - Blender Export Settings
+  - Unity Specifics
+  - Unreal Engine 5 Specifics
+- USDZ
+  - From the AR GLB: `tools/glb_to_usdz.py` — use it
+  - Blender exports it natively — start here
+  - If the native export is not enough
+  - USDZ Constraints
+- STL / 3MF (3D print)
+- Game and AR outputs without a session: `tools/export_outputs.py`
+- Multi-Target Export
+- Pre-Export Checklist
+- Post-Export Validation Checklist
+
 ## Axis Orientation
 
 | Context | Forward | Up |
@@ -30,8 +55,8 @@ bpy.ops.export_scene.gltf(
     export_apply=False,            # ⚠️ NEVER True — Array modifiers balloon file size (1MB → 56MB)
     export_yup=True,               # convert to Y-up (glTF convention)
     export_texcoords=True,
-    export_normals=True,
-    export_colors=True,
+    export_normals=True,          # vertex colours: the default (export_vertex_color='MATERIAL');
+                                  # export_colors is gone in Blender 5.2 and fails the call
     export_materials='EXPORT',
     export_image_format='AUTO',    # PNG for lossless, JPEG for lossy
     export_draco_mesh_compression_enable=False,  # apply Draco later via gltf-transform
@@ -106,6 +131,43 @@ glTF packs AO/Roughness/Metallic into one texture:
 
 ---
 
+### Finishes (KHR_materials_variants)
+
+Finishes are one shape in several materials (oak, walnut, matte black) in **one** glTF
+file: a website switches from one to the other without loading again (three.js,
+model-viewer). Studio asks for them ("Variations" → "Finishes of this model") and shows
+a picker in the view. Only glTF carries them: FBX, USDZ and the print files keep the
+default material (make a separate model for those — a variation).
+
+Blender 5.2's exporter writes them from its own data, **through its operators only**
+(assigning `variant_idx` or `gltf2_variant_mesh_data` directly crashed Blender 5.2.2):
+
+```python
+prefs = bpy.context.preferences.addons["io_scene_gltf2"].preferences
+prefs.KHR_materials_variants_ui = True          # registers the variant data; the export needs it on
+sc = bpy.data.scenes[0]
+finishes = [("Oak", {obj: [mat_oak, ...]}), ("Walnut", {obj: [mat_walnut, ...]})]   # per object, per slot
+for i, (name, per_obj) in enumerate(finishes):
+    bpy.ops.scene.gltf2_variant_add()
+    sc.gltf2_KHR_materials_variants_variants[i].name = name
+    sc.gltf2_active_variant = i
+    for obj, mats in per_obj.items():
+        for slot, m in zip(obj.material_slots, mats):
+            slot.material = m
+        bpy.context.view_layer.objects.active = obj
+        bpy.ops.scene.gltf2_assign_to_variant()   # records this object's slots for variant i
+# Put back the finish shown first (the file's own material), then export as usual.
+```
+
+- The first finish is the model's current material, under its name ("Current" when it
+  has none); the one shown first is the materials left on the slots at export.
+- Same slots, same UVs for every finish: only the material changes. A finish that needs
+  other geometry is a variation, not a finish.
+- Check after export: `extensionsUsed` holds `KHR_materials_variants`, the root
+  `extensions.KHR_materials_variants.variants` lists the names, each primitive has a
+  `mappings` entry per finish. Draco and the variants live together.
+- Log the finishes (names, materials) in `<name>_log.md`.
+
 ## FBX
 
 **For Unity and Unreal Engine.**
@@ -148,6 +210,20 @@ bpy.ops.export_scene.fbx(
 
 USDZ is a zip archive containing a USD file + textures.
 
+### From the AR GLB: `tools/glb_to_usdz.py` — use it
+
+```bash
+blender -b --factory-startup --python tools/glb_to_usdz.py -- ar/<name>_ar.glb ar/<name>_ar.usdz
+```
+
+It applies the recipe below and the three things it misses, each seen failing on a
+real model (2026-10-20): **vertex colours** — Quick Look shows only the material, so a
+model coloured by COLOR_0 came out white (the demo cat): they are baked to a texture on
+the UVs; **WebP** textures (a web GLB's) — not allowed in USDZ, converted to PNG;
+**Y up** and **the animation**, both off by default. Checked: the cat orange with its
+Idle loop, the stool's finishes, `usdchecker --arkit` clean on each. Studio's AR page
+runs it too, for a finish's USDZ.
+
 ### Blender exports it natively — start here
 
 Measured on Blender 5.0.1 with a full PolyHaven PBR material:
@@ -160,8 +236,18 @@ bpy.ops.wm.usd_export(
     export_textures_mode='NEW',       # copies textures into the archive
     relative_paths=True,
     convert_world_material=False,     # see the gotcha below — this matters
+    export_animation=True,            # an animated model: OFF by default, the USDZ is then still
+    convert_orientation=True,         # ARKit wants Y up: usdchecker --arkit fails on Z up
+    export_global_forward_selection='NEGATIVE_Z',
+    export_global_up_selection='Y',
 )
 ```
+
+**Animation:** `export_animation` is off by default — checked on Blender 5.2.2: with
+kiln's settings an animated cube and a rigged bone came out still (no time samples);
+with it on, the cube's `xformOp:translate` and the bone's `SkelAnimation` (24 keys) are
+there. AR Quick Look plays the file's animation in a loop, with no choice of clip: the
+one the scene has active is the one seen. Several clips to show in AR: a USDZ per clip.
 
 What that produced: a 1.86 MB archive holding the `.usdc` plus **four JPEG maps**,
 and a complete preview-surface graph — 1 `UsdPreviewSurface`, 4 `UsdUVTexture`,
@@ -198,6 +284,25 @@ record what it was, so the next person does not reinstall them on faith.
 
 ---
 
+## STL / 3MF (3D print)
+
+Everything for print — export in mm (`global_scale=1000`), 3MF only when its extension is
+installed, and `tools/print_check.py` on the file — is in `references/print.md`, rule 9 of
+§ Printable from the brief and § The tool. The glTF material rules above do not apply: an
+STL carries geometry only.
+
+## Game and AR outputs without a session: `tools/export_outputs.py`
+
+```bash
+python3 tools/export_outputs.py <model folder> game ar
+```
+
+From `<name>_original.glb`: `game/<name>_game.fbx` (`tools/glb_to_fbx.py`, the FBX settings
+above, read back: same size as the GLB) and `ar/<name>_ar.glb` + `ar/<name>_ar.usdz`
+(`tools/glb_to_usdz.py`, `usdchecker --arkit` clean). Deterministic, a few seconds, a line
+in the log; a failed check writes nothing. Studio's "+ Game" / "+ AR" run it. Prefer it to
+a hand-written export script for these two targets.
+
 ## Multi-Target Export
 
 When export target is "multi":
@@ -206,12 +311,12 @@ When export target is "multi":
 3. Export USDZ from the same scene with `bpy.ops.wm.usd_export` — no CLI
    conversion needed, and it carries more maps than the GLB
 
-Each format saved in the output folder:
+Each format in its output folder (`naming-conventions.md` § Outputs):
 ```
 generated-assets/wooden-chair/
-├── wooden-chair_final.glb
-├── SM_WoodenChair_final.fbx
-└── wooden-chair_final.usdz
+├── web/   wooden-chair_final.glb
+├── game/  wooden-chair_game.fbx
+└── ar/    wooden-chair_ar.usdz, wooden-chair_ar.glb
 ```
 
 ---

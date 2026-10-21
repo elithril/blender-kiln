@@ -45,9 +45,10 @@ Concrete gaps, roughly in order of value:
   Sketchfab sourcing. The first two consume credits and the third needs an API
   key, which is why they are untested — if you have access, running them once and
   reporting what actually happens is the most useful thing you can do here.
-- **Token cost.** `plugin/SKILL.md` is around 15.7k tokens on invoke, up 50% over the
-  audit. The measured tables it now carries could move into `plugin/references/`, where
-  loading is lazy, without losing the decisions.
+- **Token cost.** `plugin/SKILL.md` is a router of ~440 lines (~6k tokens on invoke, down
+  from ~19k): the commands, the iron rules and each phase's gates, the detail in
+  `plugin/references/`, read when the phase starts. Keep it that way — a new rule or a
+  measured table goes in the phase's reference, the router only says when to read it.
 - **The FK/IK, twist-bone and facial-rigging sections** of
   `plugin/references/characters.md` need an actual animated character and a human eye on
   the deformation. A synthetic rig cannot judge them.
@@ -60,8 +61,8 @@ Concrete gaps, roughly in order of value:
 Required to work on the skill itself:
 
 - **Blender 4.x+** (developed against 5.0, CI runs 5.2 LTS) with the
-  [Blender MCP](https://github.com/ahujasid/blender-mcp) addon. Install the addon
-  with `uvx blender-mcp install-addon` — `addon_utils.enable()` is not enough, it
+  [Blender MCP](https://github.com/ahujasid/mcp-for-blender) addon. Install the addon
+  with `uvx mcp-for-blender install-addon` — `addon_utils.enable()` is not enough, it
   leaves property groups incomplete and failures name nothing relevant.
 - **Python 3.10+** for `plugin/tools/`. No dependencies.
 

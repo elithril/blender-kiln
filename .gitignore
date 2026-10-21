@@ -27,3 +27,4 @@ __pycache__/
 # Local scratch
 *.local.md
 tmp/
+examples/print/out/

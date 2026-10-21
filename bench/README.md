@@ -2,15 +2,24 @@
 
 The gallery proves the scripted path. Nothing proved the skill: no end-to-end
 session driven by `/kiln` had ever been measured. This bench runs the skill on
-six fixed briefs — one per pipeline path — and measures the GLB it ships, so a
+fixed briefs — one per pipeline path — and measures the GLB it ships, so a
 change to the skill, the MCP server, the generation backend or the model can be
-judged against a recorded baseline instead of argued about.
+judged against a recorded baseline instead of argued about. Since 3.0 it also runs the
+character, animation, repair and print paths (`briefs.json`; each new brief lists what it
+records under `record`).
 
 ```bash
-python3 bench/test_measure.py          # the instrument first: seeded defects, 10/10 expected
-python3 bench/run.py baseline          # all six briefs
+python3 bench/test_measure.py          # the instrument first: seeded defects, 23/23 expected
+python3 bench/run.py baseline          # every enabled brief
 python3 bench/run.py lot2 ai-mushrooms # one brief under a new label
+python3 bench/run.py --remeasure baseline   # the measures again, on a label already run
+BENCH_PLUGIN_DIR=<checkout> nohup python3 bench/drive.py v220-ahujasid:ahujasid v220-lab:lab &
 ```
+
+`drive.py` runs whole labels unattended, one session at a time, resumable: it skips what
+has a `result.json`, waits while port 9876 is taken, and sets aside a session the
+subscription's usage limit cut short (`bench/runs/_aborted/`) to run it again. Log:
+`bench/runs/_driver.log`; stop after the current brief with `touch bench/runs/_driver.stop`.
 
 Results go to `bench/runs/<label>/<brief>/` (git-ignored, hundreds of MB): the
 transcript, the Blender log, the session's output folder, and `result.json`.
@@ -41,10 +50,34 @@ production log, which is written by the session being judged:
 | `rigs[]`: dead deform bones, unweighted vertices, max influences | the checks of `references/characters.md` |
 | `rigs[].stretch_p99`, `stretch_max` | a deformation probe: every deform bone bent 25°, edge stretch measured. Catches a rig that validates and produces mush |
 
+| `clips[]`: name, duration, `loop_closes`, `seam`, `seam_vs_step`, `blink` | read from the file's own animation channels, not Blender's import: a web player plays the file. A loop closes when its last key repeats the first on every channel (three.js wraps at the last key) |
+| `single_skin`, `skinned_mesh_objects` | one mesh carries the body, not a mesh per part (`characters.md`) |
+| `rigs[].bent` (`skin_intersect.py`) | the rig study's bent pose — thighs 60° forward, knees and elbows 75° — and the rest area of the skin that then crosses itself, minus what crossed at rest: `inter` (a limb through another part) and `fold` (a crease folding on itself), in mm² and % of the skin. Limbs found by name (kiln's, Rigify's, the usual spellings), parts by hierarchy |
+| `rigs[].hand_bones`, `finger_bones` | what the rig did about the hands |
+| `input_measures` | the same measures on the file a repair brief started from: before → after |
+| `print_check` | the bench's own copy of `plugin/tools/print_check.py` (this checkout, the same for every label — 2.2.0 has none) on the shipped STL/3MF, with PrusaSlicer when installed: one figure in several colours as an assembly, separate parts each alone; a FAIL on a floating part is sliced again with supports (`needs_supports`) |
+| `artifacts` | what the skill's tools reported about themselves (`quadruped-report.json`: ear and tail lag, blinks; `photo_project.json`: SSIM from the photo's view) — read, never trusted over the file |
+
 **On the session**, from the `stream-json` transcript: turns, wall time,
 tokens, tool calls by name (screenshots included), and the CLI's
 equivalent-API cost — not billed on a subscription, but the only comparable
-measure of how much quota a run consumes.
+measure of how much quota a run consumes. `signals.py` reads what the session ran (only
+tools that run or write code count — a Read of `autorig.py` is not a rig): the rig route
+(SkinTokens' autorig, Rigify, a scripted armature), `quadruped.py`, a matcap look, the photo
+projection proposed (its own words) and run, what it said about a fused hand, the
+print_check verdicts it saw, and whether it ended on a question nobody could answer.
+
+## Inputs
+
+Everything a brief names lives in `bench/runs/_refs/` (git-ignored), each with its source:
+
+| File | Source | Licence |
+|---|---|---|
+| `Lantern_01.png`, `ammo_box.png`, `WoodenChair_01.png`, `gt/` | Poly Haven (`gt/*/files.txt`) | CC0 |
+| `trellis/lantern_trellis.glb` | a local TRELLIS.2 generation from `Lantern_01.png` | MIT model, CC0 photo |
+| `hunyuan/hunyuan_demo_1.glb` | a Hunyuan3D-2 demo output (rig study, 2026-10-16) | Tencent Hunyuan 3D 2.0 Community License — **its territory excludes the EU, the UK and South Korea**: bench-internal, never published; a rig of it is a derivative, check before publishing `generated-humanoid-rig` |
+
+`SOURCE.txt` beside each holds its sha256.
 
 ## Traps the instrument had to get past
 
@@ -76,11 +109,24 @@ Stated here so no result is read as more than it is:
 - **Permissions are bypassed** (`--permission-mode bypassPermissions`) and the
   session loads **no user settings** (`--setting-sources project`), so no
   personal CLAUDE.md, hook or memory colours the result.
-- **Versions are pinned**: `blender-mcp` 2.0.0 with the addon it bundles (1.7),
-  installed into a throwaway Blender profile. Blender itself is whatever the
+- **Versions are pinned**: `mcp-for-blender` 2.2.2 (ahujasid's server, renamed from
+  `blender-mcp`) with the addon it bundles, installed into a throwaway Blender profile; each
+  result records `mcp-for-blender==<version>`. Until 2026-10-21 the pin read `blender-mcp==2.0.0`,
+  a shim that installs the latest `mcp-for-blender`: runs before that date drove whichever
+  version was current (2.1.9 on 2026-10-16), not 2.0.0. Blender itself is whatever the
   machine has — recorded in `blender.log`.
 - **The machine's Hugging Face token is used.** `gradio_client` sends the locally
   saved token by default, so every Space call in these runs counted against a
   free logged-in account's ZeroGPU quota (3.5 min a day), not the anonymous one.
+- **Standing answers.** A headless session cannot answer: a question ends the run. A brief
+  that must get past a proposal gives its answer in the prompt, word for word the same for
+  every version (`ref-ammo-box-project`: yes to every optional step; `print-bayonet-box`:
+  carry on if it would send the lid to a CAD tool). The original `ref-ammo-box` stays
+  unanswered, to record whether the skill proposes at all; `ref-lantern` is the negative
+  control (a photo with no markings: nothing should be proposed).
+- **Timeout 5400 s** a session under `drive.py` (3600 s under `run.py` alone, as the first
+  labels ran): the rig and print briefs run longer. Recorded as `timeout_s`.
+- **A disabled brief** (`studio-note-roundtrip`, pending the Studio redesign) is listed and
+  never run.
 - **One run per brief.** A model is not deterministic; a single difference
   between two labels is a lead, not a verdict.
