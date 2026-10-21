@@ -126,7 +126,15 @@ Stated here so no result is read as more than it is:
   control (a photo with no markings: nothing should be proposed).
 - **Timeout 5400 s** a session under `drive.py` (3600 s under `run.py` alone, as the first
   labels ran): the rig and print briefs run longer. Recorded as `timeout_s`.
-- **A disabled brief** (`studio-note-roundtrip`, pending the Studio redesign) is listed and
-  never run.
+- **The Studio brief** (`studio-note-roundtrip`, 3.0 and later; a skill without Studio skips it)
+  runs through Kiln Studio, not a `claude -p` of the bench's own (`studio_drive.py`): a fixed
+  model (`fixtures/studio/iron-lantern`, the 3.0 lantern of 2026-10-21), the note pinned on its
+  ring in the real page by headless Chromium (`studio_page.py`, Playwright 1.64.0), "Work on it
+  with Claude" pressed, and Studio's own worker doing the work on its own Blender (port 9879).
+  The bench plays the user: a held-back tool call is allowed when free, denied when it can spend
+  money, each one recorded; approvals go through the page's endpoint, not a click. Measured:
+  the ring 2x (±15 %), the other parts within 2 mm, the ring still on the roof, the note
+  addressed, a new version; the page's screenshots land in `shots/`. Its numbers stand alone:
+  2.2.0 has no Studio to compare with.
 - **One run per brief.** A model is not deterministic; a single difference
   between two labels is a lead, not a verdict.

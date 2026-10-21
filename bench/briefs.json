@@ -328,18 +328,34 @@
     },
     {
       "id": "studio-note-roundtrip",
-      "path": "Kiln Studio: a note written in Studio, read back by the session",
+      "path": "Kiln Studio: a note pinned in the page, handled by Studio's own Claude worker",
       "kind": "studio",
       "tier": "balanced",
-      "disabled": "pending — Kiln Studio is being redesigned (2026-10-16); the brief is written when its note format is settled",
-      "expect": {},
+      "studio": {
+        "fixture": "studio/iron-lantern",
+        "object": "SM_IronLantern_Ring",
+        "note": "The top ring is too small to hang it: make it twice as big, still attached to the roof.",
+        "scale": 2.0,
+        "tolerance": 0.15,
+        "attached_to": "SM_IronLantern_Roof",
+        "others_mm": 2.0,
+        "standing_answer": "Yes, go ahead."
+      },
+      "expect": {
+        "textures": false,
+        "rig": false
+      },
       "record": [
-        "the note reaches the session",
-        "the change it asks for lands on the asset"
+        "the ring's scale against the 2x asked (median of its three bounds)",
+        "every other part unchanged (2 mm)",
+        "the ring still touching the roof",
+        "the note answered and marked addressed, a new version exported",
+        "approvals the worker asked for (free allowed, paid denied) and proposals answered",
+        "the page's screenshots, before and after (shots/)"
       ],
-      "prompt": "/kiln (pending)"
+      "prompt": "(Studio) The top ring is too small to hang it: make it twice as big, still attached to the roof."
     }
   ],
   "_answers": "A headless session cannot answer a question: one it asks ends the run. A brief that must get past a proposal says its answer up front, as a standing answer in the prompt, word for word the same for every version measured (ref-ammo-box-project). The original brief stays as it was, so it records whether the skill proposes when nobody has answered (ref-ammo-box), and ref-lantern is the negative control: a photo with no markings, where nothing should be proposed.",
-  "_fields": "inputs: files under runs/_refs measured before the session, to compare with what it ships. finals: the shipped-file patterns (default *_final.glb). print: {process, assembly} runs the bench's print_check on the shipped STL/3MF. disabled: the reason a brief is not run."
+  "_fields": "inputs: files under runs/_refs measured before the session, to compare with what it ships. finals: the shipped-file patterns (default *_final.glb). print: {process, assembly} runs the bench's print_check on the shipped STL/3MF. disabled: the reason a brief is not run. studio: a brief run through Kiln Studio (studio_drive.py) — fixture under bench/fixtures, the note pinned on object, what its change must measure; prompt is then only the note, for reading."
 }
