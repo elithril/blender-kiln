@@ -22,7 +22,7 @@
         "textures": true,
         "rig": false
       },
-      "prompt": "/kiln A cluster of three stylized fantasy mushrooms with spotted caps, for a forest scene. Type: prop. Style: stylized. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. 3D backend: hf-spaces. Create it by AI generation."
+      "prompt": "/kiln A cluster of three stylized fantasy mushrooms with spotted caps, for a forest scene. Type: prop. Style: stylized. Export: glTF. Detail tier: balanced. Mode: auto. Storage: compact. 3D backend: hf-spaces. Create it by AI generation. Standing answer, given in advance because nobody can answer during this run: for every choice you would propose (for example how far to decimate the generated mesh, or whether to delete debris), take the option you recommend, say which one, and carry on to the final file."
     },
     {
       "id": "polyhaven-chair",
@@ -356,6 +356,6 @@
       "prompt": "(Studio) The top ring is too small to hang it: make it twice as big, still attached to the roof."
     }
   ],
-  "_answers": "A headless session cannot answer a question: one it asks ends the run. A brief that must get past a proposal says its answer up front, as a standing answer in the prompt, word for word the same for every version measured (ref-ammo-box-project). The original brief stays as it was, so it records whether the skill proposes when nobody has answered (ref-ammo-box), and ref-lantern is the negative control: a photo with no markings, where nothing should be proposed.",
+  "_answers": "A headless session cannot answer a question: one it asks ends the run. A brief that must get past a proposal says its answer up front, as a standing answer in the prompt, word for word the same for every version measured (ref-ammo-box-project; ai-mushrooms since 2026-10-21, whose decimation is always proposed — rule 6 — so without it the AI route never reached a final file). The original brief stays as it was, so it records whether the skill proposes when nobody has answered (ref-ammo-box), and ref-lantern is the negative control: a photo with no markings, where nothing should be proposed.",
   "_fields": "inputs: files under runs/_refs measured before the session, to compare with what it ships. finals: the shipped-file patterns (default *_final.glb). print: {process, assembly} runs the bench's print_check on the shipped STL/3MF. disabled: the reason a brief is not run. studio: a brief run through Kiln Studio (studio_drive.py) — fixture under bench/fixtures, the note pinned on object, what its change must measure; prompt is then only the note, for reading."
 }

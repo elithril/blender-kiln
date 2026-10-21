@@ -401,7 +401,7 @@ def measure_into(brief, outdir, session):
     if brief.get("print"):
         # test pieces (a coupon, a ring cut to try the lock) are the session's, not the model
         files = [p for p in shipped(work, ["*.stl", "*.3mf"])
-                 if not re.search(r"(^test_|coupon|essai|_test\b)", p.stem, re.I)]
+                 if not re.search(r"(^test_|coupon|essai|_test\b|fit[-_]?test)", p.stem, re.I)]
         session["print_files"] = [str(p.relative_to(work)) for p in files]
         pr = brief["print"]
         session["print_check"] = (print_check(files, pr.get("process", "fdm"), pr.get("assembly", False))

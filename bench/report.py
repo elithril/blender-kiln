@@ -65,6 +65,11 @@ def row(bid, s):
     sess = (f"{s['claude_exit']} | {s['num_turns']} | {round(s['wall_s'] / 60, 1)} min | "
             f"${round(s['cost_usd_equiv'] or 0, 2)} | {sum(tc.values())} | {shots}")
     if not s["measures"]:
+        pc = s.get("print_check")
+        if s.get("print_files") and pc:
+            # A print brief ships STL/3MF: its verdict is the bench's print_check, not a GLB.
+            sup = " (PASS with supports)" if pc.get("verdict") != "PASS" and pc.get("verdict_with_supports") == "PASS" else ""
+            return [f"| {bid} | {sess} | {len(s['print_files'])} STL/3MF | — | — | print_check **{pc.get('verdict')}**{sup} |"]
         return [f"| {bid} | {sess} | — | — | — | **no *_final.glb shipped** |"]
     rows = []
     for m in s["measures"]:
