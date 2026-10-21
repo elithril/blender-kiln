@@ -16,7 +16,8 @@ Safe, allowed at once:
 - Edit / Write / NotebookEdit inside the project folder;
 - Bash commands made only of the skill's own Python scripts and read-only commands
   (`sed -n` printing lines included), the skill's Swift scripts, `sips` reading a size or
-  writing a copy in the project, `cp` / `mv` / `ditto` into the project, and a background
+  writing a copy in the project, `gltf-transform`'s optimisation steps on the project's files
+  (never `optimize`), `cp` / `mv` / `ditto` into the project, and a background
   Blender running one of the skill's scripts.
 Anything else is deferred (with KILN_APPROVALS=all: allowed, but for a write outside the
 project, sudo or rm outside it; with KILN_APPROVALS=auto: left to Claude Code's auto mode, but
@@ -41,6 +42,7 @@ READ_ONLY = {"ls", "cat", "head", "tail", "wc", "file", "stat", "grep", "rg", "e
              "true", "printf", "diff", "shasum", "md5", "sha256sum", "tree"}
 # Blender MCP tools that can spend credits (rule 5): never automatic.
 PAID = re.compile(r"^mcp__blender__(generate_|poll_|import_generated_asset)")
+GLTF_TRANSFORM_STEPS = {"inspect", "validate", "draco", "meshopt", "webp", "ktx2", "resize", "dedup", "prune"}
 HARMLESS_REDIRECTS = re.compile(r"\s*(?:2>&1|&>\s*/dev/null|[12]?>\s*/dev/null)")
 
 
@@ -138,6 +140,17 @@ def bash_safe(cmd: str, root: Path, plugin: Path) -> bool:
             if len(paths) < 2 or not _inside(paths[-1], root, cwd):
                 return False
             if not all(_inside(a, root, cwd) or _inside(a, plugin, cwd) for a in paths[:-1]):
+                return False
+            continue
+        if name == "gltf-transform":
+            # The skill's own optimisation steps (cli-tools.md) on the project's files; never
+            # `optimize`, whose simplify destroys geometry (rule 20). On 2026-10-21 a session
+            # dropped this step for Blender's exporter only to avoid the approval.
+            sub = next((a for a in argv[1:] if not a.startswith("-")), None)
+            if sub not in GLTF_TRANSFORM_STEPS:
+                return False
+            files = [a for a in argv[2:] if re.search(r"\.(glb|gltf)$", a, re.I)]
+            if not files or not all(_inside(f, root, cwd) for f in files):
                 return False
             continue
         if name == "sips":

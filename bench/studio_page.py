@@ -1,12 +1,12 @@
 """The Studio page, driven the way a user drives it: headless Chromium through Playwright.
 
-    uvx --with playwright==1.64.0 python -I bench/studio_page.py note URL ASSET OBJECT TEXT SHOTS
-    uvx --with playwright==1.64.0 python -I bench/studio_page.py shots URL ASSET SHOTS
+    uvx --with playwright==1.64.0 python -I bench/studio_page.py URL ASSET OBJECT TEXT SHOTS STOP
 
-note: opens the model, starts a pin, clicks the screen point where OBJECT shows (a point the
-page's own picking says lands on OBJECT), types TEXT, saves, then presses "Work on it with
-Claude". shots: the page once the work is done. Both save PNGs into SHOTS (the release's
-visuals come from there) and print one line `STUDIO_PAGE {...}`.
+Opens the model, starts a pin, clicks the screen point where OBJECT shows (a point the page's
+own picking says lands on OBJECT), types TEXT, saves, presses "Work on it with Claude" and
+prints `STUDIO_PAGE {...}`. Then stays open, as a user's page does, until the file STOP exists:
+a last screenshot, `STUDIO_PAGE_AFTER {...}`. PNGs go into SHOTS (the release's visuals come
+from there).
 
 Run by studio_drive.py, never by the session under test.
 """
@@ -70,13 +70,18 @@ def open_page(pw, url, asset):
     return browser, page, errors
 
 
-def note(url, asset, obj, text, shots):
+def session(url, asset, obj, text, shots, stop):
+    """The note and the ask, then the page left open while Claude works — as a user leaves it:
+    the session turns it to the note's camera and opens Compare through Studio, which needs an
+    open page. Ends when the driver creates STOP, with a last screenshot of the live page."""
     with sync_playwright() as pw:
         browser, page, errors = open_page(pw, url, asset)
         page.screenshot(path=str(shots / "01-model.png"))
         found = page.evaluate(FIND, obj)
         if not found.get("at"):
-            return {"error": found.get("error") or f"{obj} shows nowhere a click reaches it", "find": found, "page_errors": errors}
+            report({"error": found.get("error") or f"{obj} shows nowhere a click reaches it", "find": found,
+                    "page_errors": errors})
+            return
         page.evaluate("() => window.__studio.startPin()")
         page.mouse.click(*found["at"])
         page.wait_for_selector("#composer:not([hidden])", timeout=10_000)
@@ -91,26 +96,27 @@ def note(url, asset, obj, text, shots):
             page.click("[data-ask-notes]", timeout=20_000)
             page.wait_for_timeout(3000)
             page.screenshot(path=str(shots / "04-asked.png"))
-        browser.close()
-        return {"find": found, "note": {k: n.get(k) for k in ("id", "kind", "text", "anchor", "camera", "version")},
-                "page_errors": errors}
-
-
-def after(url, asset, shots):
-    with sync_playwright() as pw:
-        browser, page, errors = open_page(pw, url, asset)
+        report({"find": found, "note": {k: n.get(k) for k in ("id", "kind", "text", "anchor", "camera", "version")},
+                "page_errors": list(errors)})
+        # Waiting with Playwright's own wait, not a blocking read: the page's events keep flowing.
+        while not stop.exists():
+            page.wait_for_timeout(1000)
+        page.wait_for_timeout(2000)
         page.screenshot(path=str(shots / "05-after.png"))
         d = page.evaluate("() => window.__studio.detail")
+        report({"counts": d.get("counts"), "page_errors": errors}, "STUDIO_PAGE_AFTER")
         browser.close()
-        return {"counts": d.get("counts"), "page_errors": errors}
+
+
+def report(out, tag="STUDIO_PAGE"):
+    print(f"{tag} " + json.dumps(out), flush=True)
 
 
 if __name__ == "__main__":
-    cmd, args = sys.argv[1], sys.argv[2:]
-    shots = Path(args[-1])
+    url, asset, obj, text, shots, stop = sys.argv[1:7]
+    shots = Path(shots)
     shots.mkdir(parents=True, exist_ok=True)
     try:
-        out = note(*args[:4], shots) if cmd == "note" else after(*args[:2], shots)
+        session(url, asset, obj, text, shots, Path(stop))
     except Exception as e:   # a page that would not do it is a finding: report it, never hang
-        out = {"error": f"{type(e).__name__}: {e}"}
-    print("STUDIO_PAGE " + json.dumps(out))
+        report({"error": f"{type(e).__name__}: {e}"})
