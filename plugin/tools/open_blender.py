@@ -11,7 +11,7 @@ the add-on's server (tools/blender_mcp_start.py) and waits until the port answer
 answering: says so and opens nothing. On a failure, kiln stops and asks the user.
 
 Exit 0 when the port answers; 1 with the reason otherwise (no Blender found, the add-on
-not installed — `uvx blender-mcp install-addon` —, or no answer in time). Standard library.
+not installed — `uvx mcp-for-blender install-addon` —, or no answer in time). Standard library.
 """
 from __future__ import annotations
 
@@ -81,7 +81,7 @@ def main() -> int:
             return 0
         time.sleep(1)
     print(f"BLENDER opened, but nothing answers on port {a.port} after {a.timeout:.0f} s: is the "
-          "Blender MCP add-on installed (`uvx blender-mcp install-addon`)? Blender's console says why.")
+          "Blender MCP add-on installed (`uvx mcp-for-blender install-addon`)? Blender's console says why.")
     return 1
 
 

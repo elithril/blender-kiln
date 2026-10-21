@@ -14,9 +14,11 @@
 ## Dependencies
 
 **Required:**
-- `blender-mcp` — Blender must be open with MCP server started (port 9876);
-  `tools/open_blender.py` opens it behind the user's windows with the server started.
-  Install the addon with `uvx blender-mcp install-addon`; `addon_utils.enable()`
+- `mcp-for-blender` (ahujasid's server, formerly `blender-mcp`) — Blender must be open with
+  its MCP server started (port 9876); `tools/open_blender.py` opens it behind the user's
+  windows with the server started. MCP config: `uvx mcp-for-blender` (`uvx blender-mcp`
+  still works: a shim to the same). Its tools changed in October 2026:
+  `references/blender-mcp.md`. Install the addon with `uvx mcp-for-blender install-addon`; `addon_utils.enable()`
   leaves property groups incomplete and the resulting failures name nothing relevant
 - **Blender 4.4 or newer.** Layered actions arrived in 4.4 and the animation paths
   here go through `action.layers[].strips[].channelbag()`, which does not exist
@@ -84,7 +86,7 @@ Auto-rig     {✅ SkinTokens, tested version / ⚠️ damaged or untested versio
 | Platform / GPU (macOS) | `system_profiler SPDisplaysDataType` | Reports **no VRAM** on Apple Silicon — memory is unified. Use `sysctl -n hw.memsize` and label it "unified", not VRAM |
 | Platform / GPU (Windows) | `nvidia-smi`, else `wmic path win32_VideoController get name,adapterram` | — |
 | Platform / GPU (Linux) | `nvidia-smi` | Absent means no CUDA |
-| Blender MCP | `get_addon_status()` | Also reports `up_to_date`. If false, `uvx blender-mcp install-addon`. A raw port check (`lsof -nP -iTCP:9876`) only proves something is listening |
+| Blender MCP | `get_addon_status()` | Also reports `up_to_date`. If false, `uvx mcp-for-blender install-addon`. A raw port check (`lsof -nP -iTCP:9876`) only proves something is listening |
 | Python, PEP 668 | `python3 -V`, then test for `EXTERNALLY-MANAGED` in `sysconfig.get_paths()['stdlib']` | Homebrew and most Linux distros ship one. It makes every bare `pip3 install` fail — see below |
 | Models | `du -sh ~/.hunyuan3d/models/*` | Path is the default from `references/setup-install.md`; absent directory means none installed |
 | Device | `nvidia-smi` → cuda. Else `platform.machine() == 'arm64'` on Darwin → mps *probable* | `torch.backends.mps.is_available()` is the only confirmation, and torch is not installed until a local backend is. Report "unknown" rather than guessing |

@@ -4,8 +4,8 @@ its server on $KILN_MCP_PORT (default 9876), in the user's own Blender and prefe
     Blender --python tools/blender_mcp_start.py
 
 Nothing is saved to the preferences (the add-on is enabled for this session only when it
-was off). The add-on is ahujasid's blender-mcp (module `blender_mcp`), installed with
-`uvx blender-mcp install-addon`.
+was off). The add-on is ahujasid's mcp-for-blender (formerly blender-mcp; module `blender_mcp`),
+installed with `uvx mcp-for-blender install-addon`.
 """
 import os
 import sys
@@ -18,7 +18,7 @@ PORT = int(os.environ.get("KILN_MCP_PORT", "9876"))
 if "blender_mcp" not in bpy.context.preferences.addons:
     addon_utils.enable("blender_mcp", default_set=True, persistent=False)
 if "blender_mcp" not in bpy.context.preferences.addons:
-    print("KILN: the Blender MCP add-on is not installed (uvx blender-mcp install-addon)", file=sys.stderr, flush=True)
+    print("KILN: the Blender MCP add-on is not installed (uvx mcp-for-blender install-addon)", file=sys.stderr, flush=True)
 else:
     scene = bpy.context.scene
     if hasattr(scene, "blendermcp_port"):

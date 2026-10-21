@@ -175,21 +175,22 @@ Execute a batch manifest autonomously. Zero interaction during execution.
    MCP-server-side aggregation over the addon's `get_addon_info` command, so it
    answers even when the addon is too old to have that command — it reports
    `up_to_date: false` instead. If it does, tell the user to run
-   `uvx blender-mcp install-addon` and re-enable the addon, then stop: an
+   `uvx mcp-for-blender install-addon` and re-enable the addon, then stop: an
    outdated addon is missing commands the batch may need, and rule 28 means you
    cannot ask about it later.
 5. **Validate every integration the manifest needs, BEFORE starting.** Rule 27
    forbids prompting once the loop is running, so a missing integration must be
    caught here or the batch burns hours failing asset by asset:
 
-   | Any asset with | Check |
-   |---|---|
-   | `method: marketplace` | `get_polyhaven_status()` and `get_sketchfab_status()` |
-   | `method: ai` + `config.backend: mcp` (Hunyuan3D, on request only) | `get_hunyuan3d_status()` |
-   | Rodin generation | `get_hyper3d_status()` |
+   | Any asset with | `mcp-for-blender` ≥ 2.1.9 | Older servers |
+   |---|---|---|
+   | `method: marketplace` | `get_addon_status()` → `libraries` | `get_polyhaven_status()` and `get_sketchfab_status()` |
+   | `method: ai` + `config.backend: mcp` (Hunyuan3D, on request only) | `get_addon_status()` → `generators` | `get_hunyuan3d_status()` |
+   | Rodin generation | `get_addon_status()` → `generators` | `get_hyper3d_status()` |
 
-   If a needed integration is off, ABORT the batch and print the `message` field
-   from the status call — it names the checkbox and the sidebar panel. Do not
+   If a needed integration is off, ABORT the batch and say which box to tick — the
+   MCP panel of the 3D Viewport sidebar (press N); on older servers print the
+   status call's `message` field, which names it. Do not
    start and hope. Ticking the box takes effect immediately; the addon's message
    says to restart the connection, but that is not required (verified).
 
@@ -301,8 +302,9 @@ For each asset where `status` is `pending`, `failed`, or `redo` (in manifest ord
      Save in batch-folder/asset-name/ per storage mode.
      Save .blend file.
 
-4. Take final viewport screenshot:
-   get_viewport_screenshot() → save to {asset-name}/{name}_screenshot.png
+4. Take the final look, and keep it as a file:
+   look(mode="angles", target=[name]) → see it (older servers: get_viewport_screenshot)
+   tools/review_renders.py {name}_final.glb --out {asset-name}/review → the files kept
 
 4b. IF reference image exists — Visual comparison:
     Compare the final screenshot against the reference image.

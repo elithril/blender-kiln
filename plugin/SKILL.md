@@ -69,7 +69,8 @@ nothing and the user gets no response.
  1. ALWAYS get_scene_info() before each PHASE of the pipeline. Headless (no
     Blender connected, rule 2): the build script prints the scene's objects
     instead, and the log carries that line.
- 2. ALWAYS get_viewport_screenshot() after each significant modification — at
+ 2. ALWAYS look at the model after each significant modification — `look()`
+    (older servers: get_viewport_screenshot(); `references/blender-mcp.md`) — at
     minimum once at the end of every phase that changed geometry or materials
     (SOURCE/IMPORT, CLEANUP, TEXTURING, OPTIMIZE if it re-imports), framed per
     rule 22, and from TWO opposite angles after TEXTURING. A numeric check does
@@ -134,7 +135,7 @@ nothing and the user gets no response.
     the exception. See PHASE 4 for the measurement and
     references/characters.md for the conversion.
 14. ALWAYS respect 1 Blender unit = 1 meter. Verify dimensions after import
-    with get_object_info() — see rule 24.
+    — see rule 24.
 15. ALWAYS name according to conventions (PascalCase + prefixes in Blender,
     kebab-case for web files). See references/naming-conventions.md.
 16. ALWAYS save the .blend file in the asset output folder — and never over the
@@ -161,19 +162,23 @@ nothing and the user gets no response.
     `blender --background "scene.blend" --python-exit-code 1 --python-expr "..."`.
     Without `--python-exit-code 1` a failed export still exits 0 — measured.
     See references/export-targets.md for the full command.
-22. ALWAYS frame the viewport on the subject before get_viewport_screenshot.
-    An unframed view renders a 0.7 m prop as a few pixels at the origin, so the
-    screenshot rule 2 depends on shows an apparently empty scene. See PHASE 4.
+22. ALWAYS frame the subject before looking at it: `look(mode="angles",
+    target=[name])` frames itself; a viewport capture (`look()` in viewport mode,
+    get_viewport_screenshot) does not — frame the viewport first. An unframed
+    view renders a 0.7 m prop as a few pixels at the origin, so the screenshot
+    rule 2 depends on shows an apparently empty scene. See PHASE 4.
 23. ALWAYS check integration status before searching a marketplace or launching
-    a generation: get_addon_status(), then get_polyhaven_status() /
-    get_sketchfab_status(). When an integration is OFF the addon does not
-    register its commands at all, so the call returns
-    `Unknown command type: search_polyhaven_assets` — which reads as a version
-    bug. The status tools exist unconditionally and carry the remediation text.
-    Surface THAT, never the raw error.
-24. ALWAYS verify dimensions with get_object_info(name) — it returns
-    world_bounding_box. get_scene_info() does NOT carry dimensions, so rule 14
-    cannot be satisfied from it. Headless: measure on the vertices in world
+    a generation: get_addon_status() — its `libraries` and `generators` say on or
+    off. A source switched off answers search_assets with where to tick it: show
+    the user that message. Older servers (get_polyhaven_status() /
+    get_sketchfab_status() exist): an integration OFF has no commands at all, so
+    the call returns `Unknown command type: search_polyhaven_assets` — which reads
+    as a version bug; the status tools carry the remediation text. Surface THAT,
+    never the raw error.
+24. ALWAYS verify dimensions: get_scene_info(fields=["size", "ground"]) — the
+    world bounding box, and whether it stands on the ground. Older servers:
+    get_object_info(name) → world_bounding_box, their get_scene_info() carries
+    no dimensions, so rule 14 cannot be satisfied from it. Headless: measure on the vertices in world
     space (`matrix_world @ v.co`), never on `bound_box` — a turned object's box
     is larger than the object (a windmill read 104.8 mm for 90.0); for a print,
     `print_check`'s dimensions are the measure.
@@ -248,8 +253,8 @@ and when CONFIG's Live view is off. `references/studio.md` § 2 has the rest.
 ### [3] SOURCE — `references/pipeline-source.md`
 
 - Ask: **"Search marketplaces or create from scratch?"**
-- Marketplace: rule 23 preflight before the first search (`get_polyhaven_status()`,
-  `get_sketchfab_status()`); an integration OFF → show its `message`, never the raw error.
+- Marketplace: rule 23 preflight before the first search (`get_addon_status()` →
+  `libraries`); a library OFF → show the server's message on where to tick it, never a raw error.
 - Creation: recommend a method from type and style, **say why, let the user choose**. A
   character: ask whether it will be rigged (T-pose, rule 13). AI generation is optional,
   TRELLIS.2 first, never paid (rule 5); Hunyuan3D only on request, licence shown.
@@ -258,8 +263,8 @@ and when CONFIG's Live view is off. `references/studio.md` § 2 has the rest.
 
 ### [4] IMPORT and [5] CLEANUP — `references/pipeline-import-cleanup.md`
 
-- IMPORT: `get_object_info` → dimensions (rules 14, 24), rename (rules 15, 25), 1 unit =
-  1 m, frame, screenshot. A character: **measure the pose** (rule 13).
+- IMPORT: `get_scene_info(fields=["size", "ground"])` → dimensions (rules 14, 24), rename
+  (rules 15, 25), 1 unit = 1 m, `look(mode="angles")`. A character: **measure the pose** (rule 13).
 - CLEANUP: `references/validation-checklist.md` § Execution Order (rule 10). Past 2× the
   tier's top → **propose** decimate with before/after, even in auto mode (rule 6). Thin parts
   are never decimated. Print: its own sequence, no merge, `print_check --reference`.
@@ -312,14 +317,18 @@ Project left 1.7% of its surface on collapsed UVs, unseen.
 
 ## Blender MCP
 
-- First call of a session: `get_addon_status()` (reachable, `up_to_date`).
-- **A disabled integration does not fail, it disappears**: its tools answer `Unknown command
-  type`. The `get_*_status` tools are always there and carry the fix (rule 23).
+ahujasid's server is `mcp-for-blender` (formerly `blender-mcp`). Since 2.1.9 it serves nine
+tools; the rules name them: `get_addon_status`, `get_scene_info` (with `size`, `ground`,
+`topology` fields), `look` (framed views, rules 2 and 22), `execute_blender_code`,
+`search_assets` / `import_asset` (PolyHaven, Sketchfab, Poly Pizza), `generate_3d` (paid
+providers, rule 5), and telemetry, left off.
+
+- First call of a session: `get_addon_status()` — `up_to_date`, and which `libraries` and
+  `generators` are on (rule 23).
 - Always go through the MCP tools, never the addon's raw socket.
-- **On the official Blender Lab MCP** (no `get_addon_status`): read
-  `references/blender-mcp.md` before the first phase — its tools have other names, and none
-  for marketplaces or generation.
-- The full tool table: `references/blender-mcp.md`.
+- **Other tools than these** — `get_viewport_screenshot`, `get_object_info` (mcp-for-blender
+  2.1.3 or older), or `get_objects_summary` (the official Blender Lab MCP): read
+  `references/blender-mcp.md` before the first phase. It maps every rule to their names.
 
 ## Setup and dependencies
 

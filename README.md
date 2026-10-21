@@ -163,21 +163,21 @@ either way, same 2,202 triangles, same three materials.
 
 <img src="docs/images/mcp-panel.webp" alt="The BlenderMCP sidebar panel with all four integrations unchecked" width="215" align="right" />
 
-All four integrations ship **off**, as shown here. That matters more than it
-looks: while an integration is off, the addon does not register its commands at
-all, so a search does not come back "disabled" — it comes back
+All the integrations ship **off**, as shown here. **Iron rule 23** has kiln check them
+before any search or generation: on `mcp-for-blender` 2.1.9 and later, `get_addon_status()`
+lists each library and generator as on or off, and a search on one that is off says which box
+to tick. Older servers are harsher: while an integration is off, the addon does not register
+its commands at all, so a search does not come back "disabled" — it comes back
 
 ```
 Unknown command type: search_polyhaven_assets
 ```
 
-which reads like a version mismatch and sends you hunting for the wrong problem.
-
-`get_polyhaven_status`, `get_sketchfab_status`, `get_hunyuan3d_status` and
-`get_hyper3d_status` are registered unconditionally and return the fix step by
-step — including the Sketchfab API key, which nothing else surfaces. **Iron rule
-23** requires checking them first. Tick the boxes in the BlenderMCP panel of the
-3D Viewport sidebar (press <kbd>N</kbd> if hidden), then reconnect.
+which reads like a version mismatch. There, `get_polyhaven_status`, `get_sketchfab_status`,
+`get_hunyuan3d_status` and `get_hyper3d_status` are registered unconditionally and return the
+fix step by step — including the Sketchfab API key, which nothing else surfaces. Tick the boxes
+in the MCP panel of the 3D Viewport sidebar (press <kbd>N</kbd> if hidden); no reconnection
+needed.
 
 <br clear="all" />
 
@@ -205,7 +205,7 @@ service and no paid API.
 >
 > They were **not** produced by running the skill. The skill drives Blender over
 > MCP and its core loop is interactive: `get_scene_info()` before each phase
-> (rule 1), `get_viewport_screenshot()` after each modification (rule 2), and a
+> (rule 1), a framed `look()` after each modification (rule 2), and a
 > prompt before anything destructive (rule 6). None of that is exercised here —
 > this is `blender --background --python`, the scripted-modeling path only. Treat
 > the gallery as reference output and a conventions check, not as end-to-end
@@ -398,7 +398,8 @@ project's `.kiln-studio/`, ready to commit with the models.
 ### Required
 
 - **Blender 4.4 or newer**, with the [Blender MCP](https://github.com/ahujasid/mcp-for-blender)
-  addon running (port 9876). Install the addon with `uvx blender-mcp install-addon`.
+  addon running (port 9876). Install the addon with `uvx mcp-for-blender install-addon`
+  (the server was named `blender-mcp` before September 2026; that name still works).
 
   **4.4 is a hard floor, not a preference.** Layered actions arrived in 4.4, and the
   animation code here reaches F-curves through `action.layers[].strips[].channelbag()`;
@@ -513,7 +514,7 @@ plugin/
 | `plugin/references/pipeline-rig-animate.md` | Pipeline [5c] RIG SELECTION (SkinTokens or Rigify, by measure) and [5d] ANIMATE (routes by subject) | ~96 |
 | `plugin/references/pipeline-optimize-export.md` | Pipeline [6] OPTIMIZE (auto preset, preview, outputs' folders) and [7] EXPORT | ~110 |
 | `plugin/references/commands.md` | Standalone commands: status, inspect, cleanup, texture, animate, optimize, convert, search, studio, help | ~220 |
-| `plugin/references/blender-mcp.md` | The Blender MCP's tools, and the official Blender Lab MCP's equivalents | ~88 |
+| `plugin/references/blender-mcp.md` | The Blender MCP's tools: mcp-for-blender's current nine, the old surface, the official Blender Lab MCP's equivalents | ~140 |
 | `plugin/references/setup.md` | Dependencies, `/kiln setup` (detection, guided setup), `/kiln models` | ~160 |
 | `plugin/references/log-format.md` | The `{name}_log.md` template | ~58 |
 | `plugin/references/characters.md` | Rigging patterns, animation-ready skeleton, an animated creature (one skin, charm, QuadriFlow first, lid weights, matcap), export gotchas, Blender 5.x | ~990 |
@@ -628,7 +629,7 @@ The skill enforces 31 rules (26 core + 5 batch-specific). Key ones, by their rea
 number — the full text is in `plugin/SKILL.md` and `plugin/references/batch-mode.md`:
 
 - **Rule 1** — always `get_scene_info()` before each phase
-- **Rule 2** — always `get_viewport_screenshot()` at the end of every phase that
+- **Rule 2** — always `look()` at the model at the end of every phase that
   changed geometry or materials, two angles after texturing
 - **Rule 4** — never hard-cap poly count: alert if out of range, never block
 - **Rule 5** — never spend money: a free service that answers HTTP 402 has stopped
@@ -640,8 +641,8 @@ number — the full text is in `plugin/SKILL.md` and `plugin/references/batch-mo
 - **Rule 20** — never `gltf-transform optimize`: use individual steps
 - **Rule 22** — frame the viewport before screenshotting it, or the shot shows an
   apparently empty scene
-- **Rule 23** — always check integration status before searching a marketplace: a
-  disabled integration answers `Unknown command type`, not "disabled"
+- **Rule 23** — always check integration status before searching a marketplace: on older
+  servers a disabled integration answers `Unknown command type`, not "disabled"
 - **Rule 25** — rename every import to the naming convention, whatever its source
 - **Rule 26** — never pick a rig without measuring vertices ÷ deform bones: a
   Rigify human needs ~3,200 vertices to be worth it

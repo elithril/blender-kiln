@@ -18,16 +18,16 @@ Load `references/sourcing-strategy.md`.
 **Preflight (rule 23) — do this BEFORE the first search:**
 
 ```
-get_polyhaven_status()   → {"enabled": false, "message": "...press N..."}
-get_sketchfab_status()   → {"enabled": false, "message": "..."}
+get_addon_status()   → "libraries": {"polyhaven": "off", "sketchfab": "on", "polypizza": "off"}
 ```
 
-Both are OFF in a default addon install. While OFF, `search_polyhaven_assets`
-and `search_sketchfab_models` are **not registered as commands** — they answer
-`Unknown command type`, not "disabled". If either is off, show the `message`
-field verbatim (it names the BlenderMCP sidebar panel and the N shortcut) and
-offer to continue on the other source or switch to the creation path. Never
-report the raw `Unknown command type` error to the user.
+Libraries are OFF in a default addon install. Searching one that is off answers with where to
+tick it ("Poly Haven is switched off. Ask the user to tick it in the MCP for Blender sidebar
+(press N in the 3D Viewport)."): show that message verbatim and offer to continue on another
+source or switch to the creation path. **Older servers** (`get_polyhaven_status()` exists):
+call `get_polyhaven_status()` / `get_sketchfab_status()` first — while OFF, their search
+commands are not registered and answer `Unknown command type`, not "disabled"; show the status
+tool's `message`, never the raw error (`references/blender-mcp.md`).
 
 - Search PolyHaven + Sketchfab with brief keywords
 - Present ~10 results (name, poly count, link)
@@ -134,7 +134,7 @@ If nano-banana MCP is available, offer it as an alternative (supports iterative 
   character's body is ONE skin, its eyes, nose and eyelids apart (`characters.md` § An
   animated creature)
 - Materials assigned per object from creation
-- `get_viewport_screenshot` for iterative validation
+- `look` for iterative validation (rule 2)
 
 **Geometry Nodes flow:**
 
