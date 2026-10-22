@@ -21,6 +21,8 @@ where it stopped.
   not only the text: on 16 Oct "You've hit your session limit · resets 7:20pm" got past the
   text pattern and 28 sessions were recorded as results. The wait lasts until the reset the
   rate-limit event announces (resetsAt), 5 min past it, or LIMIT_WAIT_S when none is given.
+- Memory: a brief starts only with BENCH_MIN_FREE_RIG % free (character briefs, default 40) or
+  BENCH_MIN_FREE % (others, default 25); below, the driver waits and logs "memory low".
 - BENCH_SKIP=<id>[,<id>]: leave those briefs for a later start (the label stays resumable).
 - Every session gets BENCH_TIMEOUT_S (default here 5400 s, recorded in result.json): the
   rig and print briefs run longer than the first six.
@@ -45,6 +47,22 @@ def log(msg):
     with open(LOG, "a") as f:
         f.write(line + "\n")
     print(line, flush=True)
+
+
+# Free memory before a brief starts (macOS memory_pressure). A rig brief runs SkinTokens, ~7 GB per
+# mesh, next to Blender: on 2026-10-21 a session killed for memory voided its run. Below the floor
+# the driver waits, a minute at a time, and logs it once.
+MIN_FREE = {"character": int(os.environ.get("BENCH_MIN_FREE_RIG", "40")),
+            "default": int(os.environ.get("BENCH_MIN_FREE", "25"))}
+
+
+def free_memory_pct():
+    try:
+        out = subprocess.run(["memory_pressure"], capture_output=True, text=True, timeout=30).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    m = re.search(r"free percentage:\s*(\d+)%", out)
+    return int(m.group(1)) if m else None
 
 
 def port_open():
@@ -145,6 +163,15 @@ def main():
                     while port_open():
                         time.sleep(300)
                     log(f"port {PORT} free again")
+                floor = MIN_FREE.get(b.get("kind"), MIN_FREE["default"])
+                free = free_memory_pct()
+                if free is not None and free < floor:
+                    log(f"memory low — waiting: {free}% free, {b['id']} needs {floor}%")
+                    while (free := free_memory_pct()) is not None and free < floor:
+                        if stopping():
+                            return
+                        time.sleep(60)
+                    log(f"memory ok again: {free}% free")
                 if outdir.exists() and not (outdir / "result.json").exists():
                     shutil.rmtree(outdir)          # a partial folder from a killed run
                 log(f"run   {label} / {b['id']} (mcp={mcp})")
