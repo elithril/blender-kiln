@@ -166,6 +166,35 @@ def sandbox_for(brief, outdir):
     return box, refs, skill, work
 
 
+def close_orphans(box):
+    """Blenders a session started from its sandbox and left open, closed; what still holds the port, named.
+
+    run.py stops only the Blender it started. On 2026-10-21 a 3.0 session lost its MCP and reopened
+    one with tools/open_blender.py (its command line names the sandbox's blender_mcp_start.py): left
+    on 9876, it held the next label 50 min. A listener not started from the sandbox is the user's,
+    never touched."""
+    closed = []
+    for pid in subprocess.run(["pgrep", "-f", str(box)], capture_output=True, text=True).stdout.split():
+        exe = subprocess.run(["ps", "-o", "comm=", "-p", pid], capture_output=True, text=True).stdout.strip()
+        if os.path.basename(exe).lower() != "blender":
+            continue
+        cmd = subprocess.run(["ps", "-o", "command=", "-p", pid], capture_output=True, text=True).stdout.strip()
+        try:
+            os.kill(int(pid), 15)
+            closed.append(cmd[:300])
+        except OSError:
+            pass
+    for _ in range(20):
+        if not port_open():
+            break
+        time.sleep(0.5)
+    held = None
+    if port_open():
+        pids = subprocess.run(["lsof", "-tnP", f"-iTCP:{PORT}", "-sTCP:LISTEN"], capture_output=True, text=True).stdout.split()
+        held = subprocess.run(["ps", "-o", "command=", "-p", pids[0]], capture_output=True, text=True).stdout.strip()[:300] if pids else "?"
+    return {"closed": closed, "port_still_held_by": held}
+
+
 def audit(transcript):
     """Tool calls that reached outside the sandbox, toward anything that holds an answer."""
     hits = []
@@ -226,6 +255,10 @@ def run_brief(brief, outdir):
             except subprocess.TimeoutExpired:
                 blender.kill()
 
+    orphans = close_orphans(box)
+    if orphans["closed"] or orphans["port_still_held_by"]:
+        print(f"     orphan Blender(s) closed: {len(orphans['closed'])}; port {PORT} still held by: "
+              f"{orphans['port_still_held_by']}", flush=True)
     if skill_fingerprint() != before:
         sys.exit(f"{brief['id']}: the session modified tracked files of the repository — "
                  "the measurement is void. See `git status` before anything else.")
@@ -268,6 +301,7 @@ def run_brief(brief, outdir):
         "final_text": (result.get("result") or "")[-2000:],
         "sandbox": str(box),
         "contamination": leaks,
+        "orphan_blenders": orphans,
     }
 
     session["timeout_s"] = TIMEOUT_S
