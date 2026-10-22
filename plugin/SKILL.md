@@ -79,6 +79,7 @@ nothing and the user gets no response.
     <skill>/tools/open_blender.py` — the user's own Blender, behind their windows,
     its MCP add-on serving on 9876, exit 0 once it answers — and say so in one line.
     (Inside Kiln Studio the worker's Blender is always open: never run it there.)
+    A Blender open without its server: it opens nothing (exit 1).
     When it fails (exit 1), stop and ask: tell the user what it said and offer to
     build headless. Headless, or when the open Blender is the user's (rule 16):
     say so in the report — never "in your Blender" —, and render the same views
@@ -99,7 +100,8 @@ nothing and the user gets no response.
     other pre-existing object is the user's — hide it, never delete it.
     A headless script started with `--factory-startup` gets that Cube too: begin
     it with `bpy.ops.wm.read_factory_settings(use_empty=True)` — a 2 m Cube saved
-    into a print's parts .blend made `--reference` fail by 40 %.
+    into a print's parts .blend made `--reference` fail by 40 %. Only there: through
+    the MCP it resets the live Blender and turns its MCP add-on off.
     Print's remesh-then-decimate (`references/print.md` rule 3) is the build
     method, not a destruction of the user's mesh: logged, not proposed. Same for
     a reduction the brief itself asks for, on a mesh the session built.

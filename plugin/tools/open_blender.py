@@ -8,10 +8,14 @@
 kiln runs it on its own when the Blender MCP does not answer (SKILL.md rule 2): it opens the
 user's Blender, behind their windows, with their own preferences and add-ons, then starts
 the add-on's server (tools/blender_mcp_start.py) and waits until the port answers. Already
-answering: says so and opens nothing. On a failure, kiln stops and asks the user.
+answering: says so and opens nothing. A Blender already open whose add-on does not answer:
+says so and opens nothing either — a second one would leave the first, and the user's work in
+it, aside (on 2026-10-21 a session that had stopped its own add-on opened one and left both).
+On a failure, kiln stops and asks the user.
 
-Exit 0 when the port answers; 1 with the reason otherwise (no Blender found, the add-on
-not installed — `uvx mcp-for-blender install-addon` —, or no answer in time). Standard library.
+Exit 0 when the port answers; 1 with the reason otherwise (a Blender open without its server,
+no Blender found, the add-on not installed — `uvx mcp-for-blender install-addon` —, or no
+answer in time). Standard library.
 """
 from __future__ import annotations
 
@@ -36,6 +40,26 @@ def answers(port: int) -> bool:
         return False
 
 
+def open_blenders(ps_output: str | None = None) -> list[str]:
+    """Blender windows already running: not a headless one (-b, kiln's scripts), not Kiln
+    Studio's worker (worker_blender.py, on its own port)."""
+    if ps_output is None:
+        try:
+            ps_output = subprocess.run(["ps", "-axo", "command="], capture_output=True, text=True,
+                                       timeout=10).stdout
+        except (OSError, subprocess.SubprocessError):
+            return []   # no ps (Windows): open as before
+    found = []
+    for line in ps_output.splitlines():
+        args = line.split()
+        if not args or os.path.basename(args[0]).lower() not in ("blender", "blender.exe"):
+            continue
+        if {"-b", "--background"} & set(args) or "worker_blender.py" in line:
+            continue
+        found.append(line.strip()[:200])
+    return found
+
+
 def find_blender() -> tuple[str, list[str]] | None:
     """(how, command prefix): the app on macOS, else a blender executable."""
     env = os.environ.get("BLENDER")
@@ -58,6 +82,11 @@ def main() -> int:
     if answers(a.port):
         print(f"BLENDER already answers on port {a.port}: nothing opened.")
         return 0
+    if open_blenders():
+        print(f"BLENDER is open, but its MCP add-on does not answer on port {a.port} (stopped, or "
+              "turned off by a factory-settings reset): start it in that Blender (sidebar N → "
+              "BlenderMCP → Connect), or close Blender and run this again. Nothing opened.")
+        return 1
     found = find_blender()
     if not found:
         print("BLENDER not found: install it (blender.org), or set $BLENDER to its executable.")
