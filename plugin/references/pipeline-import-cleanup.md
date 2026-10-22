@@ -94,6 +94,11 @@ thinner than the body. A simplifier breaks them whatever the budget, and silhoue
 holes it leaves. Rebuild each as a curve with a round bevel along the
 high-poly's centreline; decimate the body only. **After decimating, compare open and
 non-manifold edge counts with before, and look at a close render of every thin part.**
+More than before is a failed decimation: undo it, never split the fused edges to hide them.
+On a closed shell (after a voxel remesh), decimate with Blender's Collapse: measured on a
+115,600-tri remeshed shell to 5,400, Collapse stayed closed (0 / 0); meshoptimizer
+(`gltfpack -si`) stalled at 13,900, and with `-sa` reached it with 54 non-manifold and 35
+open edges. v3.0's bench repair of a TRELLIS GLB shipped 326 open edges that way.
 
 **A creature to animate:** its voxel skin goes through QuadriFlow (merge by distance first),
 then the weights are checked on fixed poses before any loop is built by hand
