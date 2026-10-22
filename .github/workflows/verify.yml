@@ -36,6 +36,9 @@ jobs:
       - name: Check the humanoid presets' catalogue and licence trail (no Blender)
         run: python3 plugin/tools/test_presets.py
 
+      - name: open_blender — what counts as a Blender already open
+        run: python3 plugin/tools/test_open_blender.py
+
       - name: Kiln Studio — scan, stats, notes, history, HTTP API
         run: python3 plugin/studio/test_studio.py
 
