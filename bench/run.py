@@ -380,8 +380,13 @@ def print_check(files, process, assembly):
         rec["files"][f.name] = one([f])
     # An assembly (one figure, a file per colour) is judged together: one colour alone is not
     # printable. Separate prints (a box and its lid) are judged each on its own.
-    if assembly and len(files) > 1:
-        rec["assembly"] = one(files)
+    # A 3MF next to the per-colour STLs holds those same parts: judged together, every colour was
+    # counted twice (v300's fox, 2026-10-22: "overlap" 53,210 mm³ = the whole figure). The STLs are
+    # the assembly; the 3MF keeps its own line in files.
+    parts = [f for f in files if f.suffix.lower() == ".stl"] if any(f.suffix.lower() == ".3mf" for f in files) else files
+    if assembly and len(parts) > 1:
+        rec["assembly"] = one(parts)
+        rec["assembly_files"] = [f.name for f in parts]
         judged = [rec["assembly"]]
     else:
         judged = list(rec["files"].values())
