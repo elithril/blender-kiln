@@ -9,6 +9,8 @@ test writes its own tiny HDRI. Cases:
 
 - a model measured against its own render: IoU near 1, no shape gap;
 - the same model 20 % wider: the width gap is reported, and close to +20 %;
+- its lower body 14 % wider, a camera 15° above: told as the photo's perspective, last; with no
+  elevation, a shape gap (3.0's lantern narrowed its tubes for such a gap and lost 0.05 IoU);
 - a texture that is not loaded: refused, exit 1 — it would render black;
 - a reference with no transparency (a phone photo on its white table): refused, exit 1 —
   measured as it was, a pumpkin scored 0.62 instead of 0.93, with exit 0;
@@ -56,6 +58,10 @@ img.pixels = [0.8, 0.8, 0.8, 1.0] * (16 * 8)
 img.filepath_raw = f"{d}/env.hdr"; img.file_format = "HDR"; img.save()
 vase(1.0); export(f"{d}/vase.glb"); bpy.ops.wm.save_as_mainfile(filepath=f"{d}/vase.blend")
 vase(1.2); export(f"{d}/vase_wide.glb")
+vase(1.0)
+for o in bpy.context.scene.objects:
+    if o.location.z < 0.2: o.scale.x = 1.14   # the lower body 14 % wider: a photo's perspective
+export(f"{d}/vase_foot.glb")
 # the reference: the vase's own silhouette, front, orthographic, alpha — as a photo would be
 vase(1.0)
 cam = bpy.data.objects.new("c", bpy.data.cameras.new("c")); bpy.context.scene.collection.objects.link(cam)
@@ -64,6 +70,10 @@ cam.location = (0, -2, 0.225); cam.rotation_euler = (math.pi / 2, 0, 0); bpy.con
 sc = bpy.context.scene; sc.render.engine = "BLENDER_WORKBENCH"; sc.render.film_transparent = True
 sc.render.resolution_x = sc.render.resolution_y = 512; sc.render.image_settings.color_mode = "RGBA"
 sc.render.filepath = f"{d}/ref.png"; bpy.ops.render.render(write_still=True)
+# the same vase photographed from 15 deg above (still orthographic: only the elevation differs)
+e = math.radians(15); cam.location = (0, -2 * math.cos(e), 0.225 + 2 * math.sin(e)); cam.rotation_euler = (math.pi / 2 - e, 0, 0)
+sc.render.filepath = f"{d}/ref_high.png"; bpy.ops.render.render(write_still=True)
+cam.location = (0, -2, 0.225); cam.rotation_euler = (math.pi / 2, 0, 0)
 # a model whose texture points nowhere
 fresh(); bpy.ops.mesh.primitive_cube_add(); o = bpy.context.object
 m = bpy.data.materials.new("lost"); m.use_nodes = True
@@ -208,6 +218,15 @@ with tempfile.TemporaryDirectory() as d:
     mean_w = sum(b["full_width"] for b in body) / len(body)
     check("20 % wider: width gap reported", any("width +" in g for g in wide["gaps"]), wide["gaps"][:2])
     check("20 % wider: measured close to +20 %", 0.15 < mean_w < 0.25, round(mean_w, 3))
+
+    _, foot_high, _ = measure(d, f"{d}/vase_foot.glb", "--elevation", "15", ref="ref_high.png")
+    _, foot_flat, _ = measure(d, f"{d}/vase_foot.glb")
+    persp = [g for g in foot_high["gaps"] if "perspective" in g]
+    check("base 14 % wider, camera 15 deg above: told as perspective, listed last",
+          bool(persp) and foot_high["gaps"][-1] in persp and not any(g.startswith("band") and "check the overlay" in g
+                                                                     for g in foot_high["gaps"]), foot_high["gaps"][-2:])
+    check("the same base, no elevation given: a shape gap", any("check the overlay" in g for g in foot_flat["gaps"])
+          and not any("perspective" in g for g in foot_flat["gaps"]), foot_flat["gaps"][:2])
 
     r, _, _ = measure(d, f"{d}/lost.blend", check=False)
     check("unloaded texture: refused with exit 1", r.returncode == 1 and "textures not loaded" in (r.stdout + r.stderr),

@@ -38,6 +38,7 @@ import numpy as np
 from mathutils import Matrix, Vector
 
 BANDS = 5
+PERSPECTIVE_MAX = 0.15   # lower bands this much wider, camera above: the photo's perspective, not a gap
 VIEW = "front"
 ELEVATION = 0.0
 AZIMUTH = 0.0
@@ -600,7 +601,19 @@ def main():
         sl = slice(i * H // BANDS, (i + 1) * H // BANDS)
         solid = rc[sl].mean() > 0.15 * body
         off = max(abs(b["full_width"]), abs(b["core_width"]) if solid else 0.0)
-        if off > 0.08 or (solid and b["iou"] < 0.5):
+        # The lower half reading WIDER than a photo taken from above is the photo's perspective,
+        # not the model: a high, close camera narrows what is far from it, this render is
+        # orthographic. On the bench lantern (ellipses 9-24 deg) the lowest bands read +7 to +12 %;
+        # 2.2.0 left them and scored 0.900 against the real object, 3.0 narrowed the tubes to
+        # match and scored 0.849. Listed last, said for what it is, never a target.
+        perspective = (ELEVATION > 0 and b["band"] > BANDS / 2 and b["full_width"] > 0
+                       and off <= PERSPECTIVE_MAX and (not solid or b["core_width"] > -0.02))
+        if (off > 0.08 or (solid and b["iou"] < 0.5)) and perspective:
+            gaps.append((-0.5, f"band {b['band']}/{BANDS} (1 = top): width {b['full_width']:+.0%}, core "
+                               f"{b['core_width']:+.0%} — expected from the photo's perspective (a camera "
+                               f"{ELEVATION:g} deg above narrows the base in the photo, not in this orthographic "
+                               f"render): not a shape gap, never narrow the model to match it"))
+        elif off > 0.08 or (solid and b["iou"] < 0.5):
             gaps.append((off * 4 + max(0.0, 0.5 - b["iou"]),
                          f"band {b['band']}/{BANDS} (1 = top): width {b['full_width']:+.0%}, core "
                          f"{b['core_width']:+.0%}, IoU {b['iou']:.2f} — check the overlay there"))
