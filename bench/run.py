@@ -167,16 +167,17 @@ def sandbox_for(brief, outdir):
 
 
 def close_orphans(box):
-    """Blenders a session started from its sandbox and left open, closed; what still holds the port, named.
+    """What a session started from its sandbox and left running, closed; what still holds the port, named.
 
     run.py stops only the Blender it started. On 2026-10-21 a 3.0 session lost its MCP and reopened
-    one with tools/open_blender.py (its command line names the sandbox's blender_mcp_start.py): left
-    on 9876, it held the next label 50 min. A listener not started from the sandbox is the user's,
-    never touched."""
+    Blender with tools/open_blender.py (its command line names the sandbox's blender_mcp_start.py):
+    left on 9876, it held the next label 50 min. By 2026-10-22 every 3.0 session had also left the
+    Kiln Studio server it starts at EXPORT (the sandbox's studio/studio.py): 23 of them. Any process
+    whose command line names the sandbox is the session's. A listener not started from it is the
+    user's, never touched."""
     closed = []
     for pid in subprocess.run(["pgrep", "-f", str(box)], capture_output=True, text=True).stdout.split():
-        exe = subprocess.run(["ps", "-o", "comm=", "-p", pid], capture_output=True, text=True).stdout.strip()
-        if os.path.basename(exe).lower() != "blender":
+        if int(pid) == os.getpid():
             continue
         cmd = subprocess.run(["ps", "-o", "command=", "-p", pid], capture_output=True, text=True).stdout.strip()
         try:
