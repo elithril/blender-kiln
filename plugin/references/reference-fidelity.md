@@ -431,7 +431,11 @@ both images, then fix the listed gaps.
 Read it with its limits:
 
 - **The reference's camera and light are unknown.** A frontal orthographic render cannot
-  match a slightly high perspective shot at the base; a few percent is noise.
+  match a high, close perspective shot at the base: the lower bands read wider than the photo
+  — on the bench lantern +7 to +12 % (ellipses 9° to 24°). The tool lists those as "expected
+  from the photo's perspective", last. **Never narrow the base or the side tubes to match
+  them:** widths measured with the elevation (§ 2) are the real ones. 2.2.0 left a +9 % base
+  and scored 0.900 against the real object; 3.0 pulled the tubes in for +12 % and scored 0.849.
 - **Know which numbers depend on the light.** Saturation, grain and shape hold across
   lights; **luminance and highlights depend on the photo's unknown light: alarms, never
   targets.** When luminance is off, fix the MATERIAL (dark metal, the palette), never the
