@@ -99,6 +99,10 @@ On a closed shell (after a voxel remesh), decimate with Blender's Collapse: meas
 115,600-tri remeshed shell to 5,400, Collapse stayed closed (0 / 0); meshoptimizer
 (`gltfpack -si`) stalled at 13,900, and with `-sa` reached it with 54 non-manifold and 35
 open edges. v3.0's bench repair of a TRELLIS GLB shipped 326 open edges that way.
+**When Collapse at the tier's top damages thin parts, decimate less** — up to the 2× the Poly
+check allows — or rebuild those parts; never go back to `-sa`. The same repair, both on
+2026-10-23: one session called Collapse at 4,600 tris crumpled and shipped `-sa` (840
+non-manifold, 641 open); the other kept Collapse at 9,000 (0 / 0, wires intact).
 
 **A creature to animate:** its voxel skin goes through QuadriFlow (merge by distance first),
 then the weights are checked on fixed poses before any loop is built by hand

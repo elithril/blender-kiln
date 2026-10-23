@@ -111,8 +111,8 @@ gltfpack -i input.glb -o output.glb -si 0.5
 ```
 `-si 0.5` = simplify to 50% of original faces. Keeps the look, not the topology: it stops
 short of the target on a closed mesh, and `-sa` reaches it by opening it (open and
-non-manifold edges). For a mesh that must stay closed, decimate in Blender (Collapse) —
-`pipeline-import-cleanup.md` § Poly check.
+non-manifold edges): never `-sa` on a mesh that ships. For a mesh that must stay closed,
+decimate in Blender (Collapse) — `pipeline-import-cleanup.md` § Poly check.
 
 ### Simplify to Target
 ```bash
