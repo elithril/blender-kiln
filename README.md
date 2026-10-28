@@ -184,8 +184,8 @@ the input is never overwritten.
 
 - **Printed, four of them.** The forge, the lighthouse, the Art Deco box and the windmill were
   printed as kiln exported them, on a Bambu Lab P1S in PLA ([photos](#3d-printing--models-that-actually-print)).
-  [À COMPLÉTER: does the bayonet lid lock and hold upside down? which clearance hole of the fit
-  test slid right?] The rest was checked by PrusaSlicer 2.9.6 and by renders, not on a bed.
+  The box's bayonet lid turns and locks as designed. The fit test print was not printed; the
+  rest was checked by PrusaSlicer 2.9.6 and by renders, not on a bed.
 - **FDM, checked with PrusaSlicer's default profile.** No resin slicing, no orientation search,
   no support generation, no build-volume check.
 - **Scaled down in the slicer, a model loses its thin walls.** `print_check` says how far —
