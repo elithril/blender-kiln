@@ -1,12 +1,3 @@
-<!--
-DRAFT README for blender-kiln 3.0 — not committed. Written against:
-  release/3.0 @ 47fe14a, origin/feat/print-check @ ebf0027 (PR #26), origin/kiln-studio @ a183996 (PR #27),
-  origin/bench-results (summary.json of final-ahujasid, final-lab, ref-kiln-v15, ref-kiln-v15gen).
-Placeholders: [GIF: …], [PHOTO: …], [SCREENSHOT: …], [TO MEASURE], [TO RERUN AFTER MERGE], [TO WRITE].
-Line counts and test counts in "Skill structure" / "Continuous checks" must be regenerated after
-both PRs are merged: verify_docs.py checks them (±15 %).
--->
-
 <p align="center">
   <img src="blender-kiln-logo.png" alt="blender-kiln logo" width="200" />
 </p>
@@ -33,6 +24,9 @@ the server behind Claude's Blender connector.
 
 <sub>Cited in <a href="https://arxiv.org/abs/2606.01057"><i>3DCodeBench: Benchmarking Agentic Procedural 3D Modeling Via Code</i></a> (Google DeepMind, USC, 2026), §1.</sub>
 
+<!-- [À DÉCIDER: this hero shows kiln 2.0's GLBs and 2.0's scores (0.897 / 0.950 / 0.750). The 3.0 bench scored
+0.885 / 0.936 / 0.720 on the same three photos (within run-to-run spread). Keep it labelled 2.0, or replace it
+with 3.0 renders picked by Nicolas.] -->
 <p align="center">
   <img src="docs/images/photo-to-asset.webp" alt="Three reference photos — a hurricane lantern, an ammo box, a gothic chair — and below each, the GLB kiln 2.0 shipped from it, turning" width="100%" />
 </p>
@@ -72,9 +66,7 @@ missing — see [Requirements](#requirements). Then, for example:
 | **Kiln Studio** — new | a local page to look at every model, pin notes on it and watch Claude address them ([Kiln Studio](#kiln-studio)) |
 | **Organic characters** — new | creatures and figures built as one skin, rigged by a learned auto-rig (SkinTokens) for humanoids and generated meshes, ready-made humanoid moves ([Organic characters](#organic-characters)) |
 
-<p align="center">
-  [GIF: a model coming out of <code>/kiln animate</code> — e.g. the cat's walk or the dragon's wing flap, looped, ~4 s, under 3 MB]
-</p>
+<!-- [VISUAL — à choisir: one animation from /kiln animate, curated — a user's or a picked bench run] -->
 
 ## Your GLB came out of a generator?
 
@@ -291,12 +283,10 @@ matter: a session made a cartoon dragon from one flat drawing, in four colour pa
 same way. So print mode builds a stylised figure that way, and says at CONFIG that a
 realistic likeness of a real animal or person is out of reach of scripted modelling.
 
-<p align="center">
-  [PHOTO: the windmill, printed — body and sails assembled, on the bed or on a table, with the printer and filament named in the caption]<br>
-  [PHOTO: the teapot, printed and painted, beside the museum photo]<br>
-  [PHOTO: a colour figure (the dragon or the fox), printed in its four filaments]
-</p>
-<!-- These photos do not exist yet. Until they do, keep the "None of these models has been printed yet" limit below. -->
+<!-- [PHOTOS — shooting 2026-10-28: the four objects kiln modelled for print on 2026-10-13, printed by a
+colleague on a Bambu Lab P1S in PLA, no touch-up — the forge of the logo (3 parts, 70 mm), the lighthouse
+(50 mm), the Art Deco box with a bayonet lid (Ø 62 mm), the windmill (2 parts, 90 mm). Caption: "Printed on a
+Bambu Lab P1S, PLA, 0.2 mm layers, as kiln exported them".] -->
 
 ### A model you made: flatten it, then check it
 
@@ -317,8 +307,10 @@ the input is never overwritten.
 
 ### Limits
 
-- **None of these models has been printed yet.** Everything here was checked by PrusaSlicer
-  2.9.6 and by renders, not on a bed. [UPDATE once the photos above exist]
+- **Printed, four of them.** The forge, the lighthouse, the Art Deco box and the windmill were
+  printed as kiln exported them, on a Bambu Lab P1S in PLA ([photos](#3d-printing)).
+  [À COMPLÉTER: does the bayonet lid lock and hold upside down? which clearance hole of the fit
+  test slid right?] The rest was checked by PrusaSlicer 2.9.6 and by renders, not on a bed.
 - **FDM, checked with PrusaSlicer's default profile.** No resin slicing, no orientation search,
   no support generation, no build-volume check.
 - **Scaled down in the slicer, a model loses its thin walls.** `print_check` says how far —
@@ -336,37 +328,48 @@ The teapot photo is the Auckland War Memorial Museum's, CC BY 4.0, via Wikimedia
 
 ## Kiln Studio
 
-<p align="center">
-  <img src="docs/images/studio.webp" width="100%" alt="Kiln Studio: a lantern in the browser, a note pinned on its glass with the before and after views, Claude's reply, and the model list on the left" />
-</p>
-<!-- docs/images/studio.webp exists on the kiln-studio branch. [SCREENSHOT: optional second capture — the live view mid-build, phases shown above the model, or the Checks tab] -->
+<!-- [VISUAL — à choisir: a real Studio session from the bench — the note pinned on the lantern's ring, Claude at
+work, the ring twice as big with Claude's reply (bench/runs/v300final-*/studio-note-roundtrip/shots/, quota
+banner masked) — or a user's own capture] -->
 
-A local page for looking at what kiln made and telling it what to change.
-`/kiln studio` starts it (or reuses the one running) on your project folder; every
-`.glb .gltf .fbx .obj` under it shows up, and kiln's `_original` … `_final` stages are one
-model you can switch between.
+A local page for looking at what kiln made, telling it what to change, and asking Claude from
+the page itself. `/kiln studio` starts it on your project folder (or reuses the one running):
+every `.glb .gltf .fbx .obj .usdz .3mf .stl` under it shows up, and kiln's `_original` …
+`_final` stages are one model you can switch between.
 
 - **Look** — Lit, Unlit, Clay, Normals, UV checker, Faces (back faces red), wireframe, sizes in
-  metres, bones, animation clips with a scrubber.
+  metres, bones, animation clips with a scrubber; the previous version beside the current one.
 - **Annotate** — pin a note on a spot (it records the point in Blender coordinates, the object
   and material hit, the camera, a screenshot and a close-up) or write one about the whole model.
-- **Iterate** — run `/kiln studio` in Claude Code: Claude reads the open notes, changes the
-  model, re-exports and replies on each one. The page reloads the model as the file changes and
-  renders the note's view again beside its screenshot: each note carries its before and after.
-  One previous version is kept, so a pass can be undone; only you can mark a note resolved.
-- **Watch it built** — once the brief is confirmed, the page opens the model kiln is building
-  and reloads it after each phase.
-- **See what kiln is on** — when a command works through several models, each gets a dot in
-  the list: waiting, in progress, done.
+- **Ask Claude from the page** — with "Ask Claude from Studio" on, the page runs Claude Code
+  itself (`claude -p`, on its own Blender, never yours): "Work on them with Claude" addresses
+  every open note, a conversation per model and one for the project, *New model* asks for a model
+  from a sentence or a photo. Safe calls pass; anything else waits for your OK in the page, and
+  paid generation always asks. Measured on the bench: a note asking for a ring twice as big,
+  addressed in one pass — ×1.9, nothing else moved, the note answered — for $0.69 of
+  API-equivalent usage (official Lab MCP: $0.73). Or run `/kiln studio` in your terminal: Claude
+  reads the open notes, changes the model, re-exports and replies on each.
+- **Outputs** — Web, Game, AR and 3D print for each model. Game (FBX) and AR (a GLB and a USDZ
+  that passes `usdchecker --arkit`) are made by Studio itself, in seconds, without Claude.
+  *Download* zips the outputs you pick with a sheet: each file's size and use, the licences.
+- **On your phone** — a QR code shows the model in AR on an iPhone (AR Quick Look), on the same
+  Wi-Fi, through a read-only link that expires after 15 minutes. Android: not tried yet.
+- **Variations and finishes** — new models from a copy of this one ("the same in rusted iron"),
+  one Claude run each, several at once if you allow it; finishes are kept in one file
+  (`KHR_materials_variants`) and the AR view lets you pick one.
 - **Check** — the Checks tab reads the file in plain words, each with how to fix it: triangles
-  against the detail tier, size and ground contact, texture sizes, compression on `_final`, the
-  licences the log records, and the fidelity measure against the reference photo.
+  against the detail tier, size and ground contact, texture sizes, compression, the licences
+  the log records, and the fidelity measure against the reference photo.
+- **Watch it built** — once the brief is confirmed, the page opens the model kiln is building
+  and reloads it after each phase; a dot per model shows what kiln is on.
+- Every command by name (⌘K), seven themes (high contrast among them), English and French, a
+  playable tutorial on an example model, a tip the first time you meet each feature.
 
-**No extra API key, no extra service.** Studio is a Python standard-library server bound to
-`127.0.0.1`; it never calls a model itself. Claude acts on your notes inside your Claude Code
-session when you run `/kiln studio`, on the same plan or API key as the rest of the session.
-Notes live in the project's `.kiln-studio/`, ready to commit with the models.
-[`references/studio.md`](plugin/references/studio.md) is the reference.
+**No extra service.** Studio is a Python standard-library server bound to `127.0.0.1`; only
+the phone link reaches your local network. Claude runs on the account you choose in Settings —
+your Claude subscription by default; another Claude account or an API key are supported but
+**not yet tested with a real one**. Notes live in the project's `.kiln-studio/`, ready to commit
+with the models. [`references/studio.md`](plugin/references/studio.md) is the reference.
 
 ## Animate
 
@@ -401,7 +404,27 @@ model author's own robot dog — so a quadruped never goes to it.
 
 ### Organic characters
 
-[TO WRITE: the organic-characters work bundled in 3.0 — what it makes, how it was measured, its limits, one image. No source for it was found on origin/feat/print-check or origin/kiln-studio beyond the "eight web and animation sessions" fixes in the 2.3.0 changelog (one skin for a stylised character, a hand-built Mixamo-named quadruped skeleton).]
+<!-- [VISUAL — à choisir: one rigged character walking, from a user or a curated bench run] -->
+
+A character is built as **one skin** — families of metaballs or overlapping volumes, joined by
+a single voxel remesh — so it bends without seams at the shoulders, hips and neck. Then:
+
+- **A learned auto-rig.** A humanoid, or a mesh kiln did not build (a generated one), is rigged
+  by [SkinTokens](https://github.com/VAST-AI-Research/SkinTokens) (MIT, runs locally) and handed
+  back with kiln's skeleton: Mixamo names, weights cleaned, eyelid and ear bones added. A
+  quadruped kiln built keeps its own rig, which walked better. On the bench, skin crossing skin
+  when the character bends: **3.15 % → 0 %** on a low-poly villager, **1.34 % → 0 %** on a chibi,
+  **0.74 % → 0.45 %** on a generated humanoid, against 2.2.0's rig.
+- **Ready-made humanoid moves.** `tools/presets.py` puts 22 motions (walk, run, jump, dance…;
+  43 clips, NVIDIA Kimodo, commercial use allowed) on a kiln-named humanoid, with the feet
+  planted, the arms kept out of the body, and `--loop` for a closed in-place cycle.
+- **Looped clips that close** — one clip per file, the last key equal to the first; a walk loop
+  for a game, beside the whole take.
+
+Limits, measured: the auto-rig was compared on one pose of two humanoids, and runs differ; a
+generated humanoid with a hand fused to its hip keeps skin through skin on its arms; SkinTokens
+needs about 5.6 GB on disk and 7 GB of memory per mesh. `references/characters.md` has every
+table.
 
 ## Gallery
 
@@ -417,15 +440,36 @@ interactive run of the skill: treat them as reference output and a conventions c
 
 ## Running over Blender MCP
 
+The skill drives a live Blender through the [Blender MCP](https://github.com/ahujasid/mcp-for-blender)
+addon. Below is `SM_Barrel` built, cleaned and exported inside a running Blender
+session — object named to convention, sitting on Z=0, ready to export:
+
+<p align="center">
+  <img src="docs/images/mcp-viewport.webp" alt="A barrel built by the kiln pipeline inside a live Blender session, with the BlenderMCP panel visible in the sidebar" width="88%" />
+</p>
+
+The MCP pass and the headless scripted pass agree **to the byte** — 111.9 kB GLB
+either way, same 2,202 triangles, same three materials.
+
+### Check the integrations before you search
+
 <img src="docs/images/mcp-panel.webp" alt="The BlenderMCP sidebar panel with all four integrations unchecked" width="215" align="right" />
 
-The skill drives a live Blender. On ahujasid's addon, **all four integrations ship off**, and
-while one is off the addon does not register its commands at all: a search answers
-`Unknown command type: search_polyhaven_assets`, which reads like a version mismatch. kiln
-checks `get_polyhaven_status`, `get_sketchfab_status`, `get_hunyuan3d_status` and
-`get_hyper3d_status` first (rule 23). Tick the boxes in the BlenderMCP panel of the 3D
-Viewport sidebar (<kbd>N</kbd>), then reconnect. On the official Lab MCP, which has no Poly
-Haven tools, kiln reaches Poly Haven through its public API.
+All the integrations ship **off**, as shown here. **Iron rule 23** has kiln check them
+before any search or generation: on `mcp-for-blender` 2.1.9 and later, `get_addon_status()`
+lists each library and generator as on or off, and a search on one that is off says which box
+to tick. Older servers are harsher: while an integration is off, the addon does not register
+its commands at all, so a search does not come back "disabled" — it comes back
+
+```
+Unknown command type: search_polyhaven_assets
+```
+
+which reads like a version mismatch. There, `get_polyhaven_status`, `get_sketchfab_status`,
+`get_hunyuan3d_status` and `get_hyper3d_status` are registered unconditionally and return the
+fix step by step — including the Sketchfab API key, which nothing else surfaces. Tick the boxes
+in the MCP panel of the 3D Viewport sidebar (press <kbd>N</kbd> if hidden); no reconnection
+needed.
 
 <br clear="all" />
 
@@ -440,8 +484,8 @@ Haven tools, kiln reaches Poly Haven through its public API.
 | `/kiln models` | List/switch the optional AI backends |
 | `/kiln status` | Show current pipeline state |
 | `/kiln search` | Search PolyHaven/Sketchfab |
-| `/kiln inspect` | Inspect a 3D file (stats, poly count, materials, bbox); print mode: `print_check`'s verdict |
-| `/kiln cleanup` | Clean up a mesh in Blender; print mode: `flatten.py`, then `print_check` |
+| `/kiln inspect` | Inspect a 3D file (stats, poly count, materials, bbox) |
+| `/kiln cleanup` | Cleanup a mesh in Blender |
 | `/kiln texture` | Texture an untextured mesh |
 | `/kiln animate` | Animate a rigged asset — routed by subject ([Animate](#animate)) |
 | `/kiln optimize` | Optimize a GLB with gltf-transform/gltfpack |
@@ -467,38 +511,235 @@ git clone https://github.com/elithril/blender-kiln.git ~/.claude/skills/blender-
 ```
 
 Restart Claude Code, then run `/kiln setup`. The skill itself lives in `plugin/`; the
-repository root links `SKILL.md`, `references` and `tools` to it. On Windows, enable symlinks
-in git (`core.symlinks`) or install as a plugin.
+repository root links `SKILL.md`, `references` and `tools` to it, so a clone works as a
+skill directory as it is. On Windows, enable symlinks in git (`core.symlinks`) or install
+as a plugin.
+
+### Layout
+
+A plugin install ships only `plugin/` — about 0.7 MB:
+
+```
+plugin/
+├── .claude-plugin/plugin.json
+├── SKILL.md
+├── LICENSE
+├── tools/                        # fidelity_check, print_check, cutout, template_profile, quadruped, presets (+ motions/), retarget, motion_measure, motion_loop, bind_rigid_parts, unimate (+ patch), checks
+├── studio/                       # Kiln Studio: studio.py (CLI), server.py, studiolib.py, checks.py, blender_live.py, static/ (the page), tests
+└── references/
+    ├── ai-generation.md
+    ├── animation.md
+    ├── batch-mode.md
+    ├── blender-mcp.md
+    ├── characters.md
+    ├── cli-tools.md
+    ├── commands.md
+    ├── export-targets.md
+    ├── log-format.md
+    ├── naming-conventions.md
+    ├── photo-projection.md
+    ├── pipeline-brief.md
+    ├── pipeline-import-cleanup.md
+    ├── pipeline-optimize-export.md
+    ├── pipeline-rig-animate.md
+    ├── pipeline-source.md
+    ├── print.md
+    ├── reference-fidelity.md
+    ├── setup-install.md
+    ├── setup.md
+    ├── sourcing-strategy.md
+    ├── studio.md
+    ├── texturing-strategy.md
+    ├── topology-rules.md
+    ├── uv-materials.md
+    └── validation-checklist.md
+```
 
 ## Skill structure
 
-[TO RERUN AFTER MERGE: union of both branches' tables — print-check adds `references/print.md`,
-`print_check.py`, `cutout.swift`, `flatten.py`, `fit_coupon.py`, `review_renders.py` and new line counts
-for `reference-fidelity.md` / `fidelity_check.py`; kiln-studio adds `references/studio.md` and `plugin/studio/`.
-The two branches disagree on the total (~5,500 vs ~5,300 lines) and on `fidelity_check.py`. Regenerate
-from the merged tree; `verify_docs.py` fails past ±15 %.]
+| File | Content | Lines |
+|---|---|---|
+| `plugin/SKILL.md` | The router: commands, iron rules, the pipeline's skeleton (each phase's gates and the file to read before it), where everything else is | ~440 |
+| `plugin/references/pipeline-brief.md` | Pipeline [1] CONFIG (parameters, first launch) and [2] BRIEF | ~48 |
+| `plugin/references/pipeline-source.md` | Pipeline [3] SOURCE: marketplace preflight, choosing a method, print, concept art, a reference image per method, scripted and Geometry Nodes flows | ~160 |
+| `plugin/references/pipeline-import-cleanup.md` | Pipeline [4] IMPORT (pose measure, rename, framing) and [5] CLEANUP | ~110 |
+| `plugin/references/pipeline-rig-animate.md` | Pipeline [5c] RIG SELECTION (SkinTokens or Rigify, by measure) and [5d] ANIMATE (routes by subject) | ~96 |
+| `plugin/references/pipeline-optimize-export.md` | Pipeline [6] OPTIMIZE (auto preset, preview, outputs' folders) and [7] EXPORT | ~110 |
+| `plugin/references/commands.md` | Standalone commands: status, inspect, cleanup, texture, animate, optimize, convert, search, studio, help | ~220 |
+| `plugin/references/blender-mcp.md` | The Blender MCP's tools: mcp-for-blender's current nine, the old surface, the official Blender Lab MCP's equivalents | ~140 |
+| `plugin/references/setup.md` | Dependencies, `/kiln setup` (detection, guided setup), `/kiln models` | ~160 |
+| `plugin/references/log-format.md` | The `{name}_log.md` template | ~58 |
+| `plugin/references/characters.md` | Rigging patterns, animation-ready skeleton, an animated creature (one skin, charm, QuadriFlow first, lid weights, matcap), export gotchas, Blender 5.x | ~990 |
+| `plugin/references/animation.md` | Routes by subject, scripted-animation rules, quadruped cycles, humanoid presets (measured against UniMate), UniMate install / loops / prompts | ~290 |
+| `plugin/tools/quadruped.py` | Procedural quadruped idle + walk, IK-planted, measured before export (legs bent, paws in step, exact loop), secondary motion (ears, tail wave, blinks), one GLB with every clip | ~370 |
+| `plugin/tools/presets.py` | Ready-made humanoid moves (22 motions, 43 Kimodo clips in `tools/motions/`) on a kiln-named rig: one GLB a clip per motion, measures, provenance | ~270 |
+| `plugin/tools/retarget.py` | The retarget behind it (adapted from image-to-3dlab, Apache-2.0): bones by name, feet planted, arms out of hips and belly, loops | ~850 |
+| `plugin/tools/motion_measure.py` | Measures an animated humanoid GLB: foot slide, floor, skin through skin, arm through body, loop seam | ~230 |
+| `plugin/tools/motion_loop.py` | Generated clip → seamless loop (pose + direction matched, drift removed in world axes, one clip with a closing key); keeps the sample that loops best | ~120 |
+| `plugin/tools/bind_rigid_parts.py` | Folds bone-parented parts (eyes, props) into the skin; reports a quadruped posture for routing | ~60 |
+| `plugin/tools/unimate.py` | Installs UniMate at the tested version, reports newer upstream, runs rigged GLB + prompt → animated GLBs | ~350 |
+| `plugin/references/batch-mode.md` | Batch wizard, runner, iron rules 22-26, manifest format | ~480 |
+| `plugin/references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~380 |
+| `plugin/references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~510 |
+| `plugin/tools/fidelity_check.py` | Renders a model under a studio HDRI and measures shape and material gaps against its reference | ~685 |
+| `plugin/tools/template_profile.py` | Reads a turned object's real profile off a 3D template (a generated mesh, a scan), to model from | ~120 |
+| `plugin/references/print.md` | 3D printing, the method by subject (primitives for objects, metaballs for figures): modelling for the printer from the brief (FDM / resin), what the check counts, what it does not, flattening a model you bring | ~550 |
+| `plugin/tools/print_check.py` | 3D printing check, FDM or resin: raw edge counts, held parts, walls, overhangs, loss against the original, PrusaSlicer as second arbiter | ~850 |
+| `plugin/tools/cutout.swift` | Cuts the subject out of a photo with macOS Vision (14+), local and free — the alpha `fidelity_check` needs | ~30 |
+| `plugin/tools/flatten.py` | Makes a model's nearly flat faces exactly flat and lays it on the bed — curves, bevels and slopes untouched, the input never overwritten | ~290 |
+| `plugin/tools/fit_coupon.py` | Writes the test print for a peg in a hole, diamond on its side or round standing up: one hole per clearance, one with a lead-in chamfer, the peg printed the way the model's is | ~235 |
+| `plugin/tools/review_renders.py` | The review renders without a connected Blender: matcap and colour (textures or vertex colours), opposite three-quarters, top and under, framed on the vertices; close-ups along the surface's normal, at the check's thin spots or where asked | ~285 |
+| `plugin/tools/uv_check.py` | UV check: used tile, overlap, stretch, collapsed and flipped faces; FAIL on a texture without UVs or collapsed UVs | ~180 |
+| `plugin/references/validation-checklist.md` | Geometry cleanup (welding that keeps the shading) + material export audit | ~320 |
+| `plugin/references/ai-generation.md` | Backend order (TRELLIS.2 first), licences, Hunyuan3D 2.x (on request), TRELLIS.2 local (measured), concept art (FLUX.1-schnell, nano-banana), free-quota and token rules | ~460 |
+| `plugin/references/export-targets.md` | GLB/FBX/USDZ settings, finishes (material variants), headless CLI, post-export checklist | ~360 |
+| `plugin/references/cli-tools.md` | gltf-transform, gltfpack, LOD workflow, metrics | ~230 |
+| `plugin/references/uv-materials.md` | UV unwrapping, the UV check, PBR channel packing | ~190 |
+| `plugin/references/naming-conventions.md` | Blender + GLTF name mapping + file conventions, outputs | ~190 |
+| `plugin/references/topology-rules.md` | Poly budgets, quad rules, edge flow | ~120 |
+| `plugin/references/setup-install.md` | Model selection, install commands, post-install validation | ~76 |
+| `plugin/references/sourcing-strategy.md` | PolyHaven (MCP or public API) + Sketchfab search patterns | ~140 |
+| `plugin/references/studio.md` | Kiln Studio: starting it, live view, checks, acting on the user's notes, work in progress, commands, storage, settings, create and import, the MCP server, Claude in Studio, outputs, variations, finishes, AR on the phone | ~590 |
+| `plugin/studio/` | Kiln Studio: local server and CLI (stdlib Python), checks, live view from Blender, three.js page, tests | ~5,800 |
+
+**Total: ~7,500 lines** of production-tested 3D pipeline knowledge.
 
 ## Continuous checks
 
-`plugin/tools/verify_docs.py` runs on every push and checks that this documentation is still
-true: rule numbering and citations, line counts, referenced files, README images, the manifest,
-the command forms. `plugin/tools/verify_blender.py` re-checks, weekly, what needed Blender to
-establish. `plugin/tools/unimate.py drift` checks weekly that kiln's patch still applies to
-UniMate's upstream. Seeded test suites: `test_verify_docs.py` **24/24**, `test_fidelity_check.py`
-[TO RERUN AFTER MERGE: 34/34 on print-check, 29/29 on kiln-studio], `test_print_check.py` **67/67**,
-`test_flatten.py` **22/22**, `test_fit_coupon.py` **18/18**, `test_review_renders.py` **10/10**,
-`test_template_profile.py` **4/4**, `plugin/studio/test_studio.py` [TO RERUN: the changelog
-says 44 tests] — figures as stated on each branch, not re-run for this draft.
+`plugin/tools/verify_docs.py` runs on every push (`.github/workflows/verify.yml`) and
+checks that this documentation is still true — text only, no Blender, a few
+seconds:
+
+- iron rules form one unbroken 1..N sequence across `plugin/SKILL.md` and `batch-mode.md`
+- every cited `rule N` exists **and means what the citation claims**
+- the rule count above matches reality, and every line count in the structure
+  table is within 15% of the file it describes
+- every referenced file exists, and none point outside the plugin directory
+- every README image resolves
+- no bare `pip install` (it fails on any PEP 668 Python)
+- the plugin manifest is valid and its `source` is a real directory
+- documented commands use the invocable `/kiln <sub>` form
+
+`plugin/tools/test_verify_docs.py` seeds each of those regressions and asserts the
+checker catches it — **24/24** (20 seeded regressions, 4 that must stay silent). Every case is a mistake that was actually made
+here, including two renumberings that left a reference pointing at the wrong rule.
+
+`plugin/tools/verify_blender.py` (`.github/workflows/blender.yml`, weekly and on demand)
+re-checks what needed Blender to establish — the documented `bpy` API still exists,
+the Principled sockets the docs name are real, Rigify's deform-bone counts still
+match the tiers PHASE 5c routes on, geometry nodes still need the modifier applied
+before export, USDZ still exports natively into a conforming archive, and rule 10's weld —
+the code in `validation-checklist.md`, run as written — still keeps a faceted mesh's shading
+and closes the tear a split-edge mesh opens at its first pose; on synthetic rigs built in the check,
+the quadruped walk stays bent and in step, a bone-parented part follows its bone once folded,
+and a clip cut mid-swing loops back to its exact period. It also fails on any
+Blender `DeprecationWarning` reached by the docs or the gallery — its first run
+surfaced `Material.use_nodes`, slated for removal in 6.0. Each check guards a
+shipped bug; this notices when a Blender release makes one wrong again.
+
+`plugin/tools/unimate.py drift` (`.github/workflows/unimate-drift.yml`, weekly) clones
+UniMate's upstream HEAD and checks kiln's patch still applies to it — the text-to-motion
+model of phase 5d is a research project that changed its pipeline, checkpoints and licence
+within days of kiln first measuring it.
+
+`plugin/tools/test_fidelity_check.py` runs in the same workflow and seeds what the review tool
+claims to measure — a model against its own render (IoU 0.998), the same model 20 % wider
+(measured +20.3 %), an unloaded texture (refused), a `.blend` (warned), the triangle range
+(kept under twice its top, a reduction proposed past it), dark metal (reported; the same
+colour as non-metal, silent), metal in hard scattered islands (reported; one soft region,
+silent), metal painted mostly as non-metal (reported), grain measured but never listed as a gap,
+joint close-ups (a rod resting on a sphere rendered; sunk or free,
+not), `--view` and `--azimuth` on a 2 x 1 x 1 box, the face measure, and a photo with no
+transparency (refused), and the measure saved for Kiln Studio
+(`fidelity.json` with the model's hash, one log line per run) — **36/36**. Its first run caught the tool framing views by
+height only: anything wider than tall was clipped, a box measured 1:1 instead of 2:1.
+`plugin/tools/test_print_check.py` builds the meshes a print can fail on — open, inverted,
+floating, too thin, a cavity, a loss against the original, a carved cup against its closed
+reference, the smallest scale of a 2 mm plate — and checks each verdict, with PrusaSlicer
+when it is there, and an assembly of colour parts — **67/67**.
+`plugin/tools/test_flatten.py` seeds what flattening must and must not touch: a jittered top
+made flat, a cylinder, a sphere, a dome, a wave, a 5° slope, a 0.2 mm step and a 0.2 mm bevel
+left alone, a tilted model laid on the bed — **22/22**; each case after the first was added
+when a real model broke the tool.
+`plugin/tools/test_fit_coupon.py` reads the coupon's holes and peg back from the STLs, not
+from the tool's report — each size to the micron, both parts closed, diamond and round —
+**18/18**.
+`plugin/tools/test_review_renders.py` renders a seeded block and reads the images back: one
+per view and mode, the subject spanning the frame, a close-up aimed at nothing refused, a
+close-up at negative coordinates read as a value, a rigged GLB framed without its bone sphere,
+a texture and vertex colours shown in colour, a close-up behind a taller part seen along its
+normal — **12/12**.
+`plugin/tools/test_uv_check.py` seeds the unwraps the UV check must and must not flag: a clean
+Smart UV Project sphere as .blend and GLB (silent), no UV with and without a texture, stacked,
+collapsed, stretched and mirrored UVs — **9/9**.
+`plugin/tools/test_template_profile.py` reads a seeded turned part back through
+`template_profile.py` — radii, a free rod, a rod pressed against the body — **4/4**.
 
 ## Iron rules
 
-[KEEP the current section as is, after checking on the merged tree: print-check changes rules 7 and 16
-and adds print rules 5–7 in `print.md`; the rule count (31) must be re-read.]
+The skill enforces 31 rules (26 core + 5 batch-specific). Key ones, by their real
+number — the full text is in `plugin/SKILL.md` and `plugin/references/batch-mode.md`:
+
+- **Rule 1** — always `get_scene_info()` before each phase
+- **Rule 2** — always `look()` at the model at the end of every phase that
+  changed geometry or materials, two angles after texturing
+- **Rule 4** — never hard-cap poly count: alert if out of range, never block
+- **Rule 5** — never spend money: a free service that answers HTTP 402 has stopped
+  being free, so switch source; never remove a watermark
+- **Rule 6** — never silently destroy: decimate, simplify, delete are always proposed
+- **Rule 7** — always keep the `.blend` file
+- **Rule 18** — never `export_apply=True` for glTF: modifiers balloon file size
+- **Rule 19** — always run the material export audit before a glTF export
+- **Rule 20** — never `gltf-transform optimize`: use individual steps
+- **Rule 22** — frame the viewport before screenshotting it, or the shot shows an
+  apparently empty scene
+- **Rule 23** — always check integration status before searching a marketplace: on older
+  servers a disabled integration answers `Unknown command type`, not "disabled"
+- **Rule 25** — rename every import to the naming convention, whatever its source
+- **Rule 26** — never pick a rig without measuring vertices ÷ deform bones: a
+  Rigify human needs ~3,200 vertices to be worth it
+- **Rule 30** — between batch assets, clear the scene by removing datablocks, never
+  with `read_homefile()`
 
 ## Output
 
-[KEEP the current section as is; add the print outputs: `{name}_{part}.stl`, `{name}_{part}_parts.blend`,
-test pieces in `test/` as `test_{what}.stl`, `PRINT.md` for a colour figure — from print-check's CHANGELOG.]
+Two storage modes, configurable at pipeline start:
+
+**Compact (default)** — minimal footprint, .blend is the recovery point:
+```
+generated-assets/
+└── wooden-chair/
+    ├── wooden-chair_original.glb
+    ├── wooden-chair_final.glb
+    ├── wooden-chair.blend
+    └── wooden-chair_log.md
+```
+
+**Full** — all intermediate files for debug/comparison:
+```
+generated-assets/
+└── wooden-chair/
+    ├── wooden-chair_original.glb
+    ├── wooden-chair_clean.glb
+    ├── wooden-chair_textured.glb
+    ├── wooden-chair_optimized.glb
+    ├── wooden-chair_final.glb
+    ├── wooden-chair.blend
+    └── wooden-chair_log.md
+```
+
+**Batch mode** — assets grouped under a batch folder with manifest and report:
+```
+generated-assets/
+└── batch-corporate-office-2026-04-02/
+    ├── batch-manifest.yaml
+    ├── batch-report.md
+    ├── desk/
+    ├── chair/
+    └── keyboard/
+```
+
+At the end of a multi-asset session, Kiln proposes a cleanup of intermediate files with per-asset size breakdown.
 
 ## Contributing
 
