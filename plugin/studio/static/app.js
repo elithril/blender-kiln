@@ -857,7 +857,7 @@ function renderWelcome() {
   // With Claude on, the form above is the way to create: the Create card would say it twice.
   const cards = welcomeCards.filter((c) => !(claude.status?.enabled && c.key === 'create')).map((c) => `<button class="wcard" data-w="${c.key}">${c.icon}<b>${esc(t(c.title))}</b><span>${esc(t(c.text))}</span></button>`).join('');
   el.innerHTML = `<div class="welcome">
-    <div class="wlogo" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M16 3c3 6 9 8 9 16a9 9 0 0 1-18 0c0-5 3-7 4-11 1 3 3 4 3 4s-1-5 2-9z"/></svg></div>
+    <div class="wlogo" aria-hidden="true"><img src="/static/icon-96.png" alt=""></div>
     ${claude.status?.enabled ? `<p class="big">${esc(t('What do you want to make?'))}</p>
     <p>${esc(t('Describe a model in your words — what it is, its style, its size. Claude builds it in Studio\'s Blender and you watch it appear here.'))}</p>
     <form class="whero" id="w-hero"><textarea id="w-brief" rows="3" required placeholder="${esc(t('A sturdy oak barrel with iron hoops, worn, for a tavern game'))}" aria-label="${esc(t('Brief'))}"></textarea>

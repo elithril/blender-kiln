@@ -335,7 +335,7 @@ kbd { font: 500 10px/1 var(--mono); padding: 2px 5px; border-radius: 4px; border
 .lhead { padding: 10px 10px 8px; display: flex; flex-direction: column; gap: 7px; border-bottom: 1px solid var(--line); flex: none; }
 .row1 { display: flex; align-items: center; gap: 6px; }
 .logo { width: 22px; height: 22px; flex: none; display: grid; place-items: center; }
-.logo svg { width: 20px; height: 20px; }
+.logo img { width: 22px; height: 22px; }
 .search { flex: 1; min-width: 0; position: relative; display: flex; align-items: center; }
 .search input { width: 100%; height: 30px; border-radius: 7px; border: 1px solid var(--line-2); background: var(--bg); padding: 0 28px 0 28px; font-size: 12.5px; color: var(--text); }
 .search input::placeholder { color: var(--text-3); }
@@ -837,7 +837,6 @@ dialog::backdrop { background: var(--backdrop); backdrop-filter: blur(2px); }
 .cnt.new { color: var(--new-ink); background: var(--new); }
 .ghead .gl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 #stages[hidden] { display: none !important; }
-.logo svg path { fill: var(--accent); }
 
 /* command palette (⌘K) */
 #palette { width: min(560px, calc(100vw - 24px)); padding: 0; margin-top: 12vh; }
@@ -887,8 +886,7 @@ dialog::backdrop { background: var(--backdrop); backdrop-filter: blur(2px); }
 
 /* welcome: an empty project */
 #empty .welcome { max-width: 620px; text-align: left; margin: auto; padding: 8px 0; }
-.welcome .wlogo svg { width: 34px; height: 34px; }
-.welcome .wlogo path { fill: var(--accent); }
+.welcome .wlogo img { width: 40px; height: 40px; display: block; }
 .welcome .big { font-size: 20px; margin: 8px 0 6px; }
 .welcome > p, #empty .welcome p { color: var(--text-2); margin: 0 0 16px; max-width: none; }
 #empty .welcome .setup p, #empty .welcome > p.small { margin: 0; }
