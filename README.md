@@ -24,14 +24,11 @@ the server behind Claude's Blender connector.
 
 <sub>Cited in <a href="https://arxiv.org/abs/2606.01057"><i>3DCodeBench: Benchmarking Agentic Procedural 3D Modeling Via Code</i></a> (Google DeepMind, USC, 2026), §1.</sub>
 
-<!-- [À DÉCIDER: this hero shows kiln 2.0's GLBs and 2.0's scores (0.897 / 0.950 / 0.750). The 3.0 bench scored
-0.885 / 0.936 / 0.720 on the same three photos (within run-to-run spread). Keep it labelled 2.0, or replace it
-with 3.0 renders picked by Nicolas.] -->
 <p align="center">
-  <img src="docs/images/photo-to-asset.webp" alt="Three reference photos — a hurricane lantern, an ammo box, a gothic chair — and below each, the GLB kiln 2.0 shipped from it, turning" width="100%" />
+  <img src="docs/images/photo-to-asset.webp" alt="Three reference photos — a hurricane lantern, an ammo box, a gothic chair — and below each, the GLB kiln 3.0 shipped from it, turning" width="100%" />
 </p>
 <p align="center"><sub>From one photo each, no marketplace, no AI generation: scripted in Blender, textured from CC0 scans,
-measured against the real object. Shape scores against the real assets: <b>0.897</b>, <b>0.950</b>, <b>0.750</b> —
+measured against the real object. Shape scores against the real assets: <b>0.885</b>, <b>0.936</b>, <b>0.720</b> —
 <a href="docs/benchmarks.md">how they are measured</a>.</sub></p>
 
 ## Quickstart
@@ -61,9 +58,10 @@ Every model comes out clean, named, at real size, on the ground, compressed for 
 
 ### Kiln Studio — look at your models, pin a note, let Claude fix it
 
-<!-- [VISUAL — à choisir: a real Studio session from the bench — the note pinned on the lantern's ring, Claude at
-work, the ring twice as big with Claude's reply (bench/runs/v300final-*/studio-note-roundtrip/shots/, quota
-banner masked) — or a user's own capture] -->
+<p align="center">
+  <img src="docs/images/studio.webp" width="100%" alt="Kiln Studio: six models in the list, an iron lantern open with a note pinned on its ring, the before and after views, and Claude's reply: the ring twice as big" />
+</p>
+<p align="center"><sub>A real session from the 3.0 bench: the note was pinned in the page, Claude made the change and replied on it.</sub></p>
 
 A local page that shows every model in your project. Pin a note on a spot — *"the ring is too
 small to hang it"* — press **Work on it with Claude**, and the change lands in the model, with
