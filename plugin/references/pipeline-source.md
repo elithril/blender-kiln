@@ -136,7 +136,8 @@ If nano-banana MCP is available, offer it as an alternative (supports iterative 
   character's body is ONE skin, its eyes, nose and eyelids apart (`characters.md` § An
   animated creature)
 - Materials assigned per object from creation
-- `look` for iterative validation (rule 2)
+- `look` for iterative validation (rule 2); then the review rounds — `references/review-rounds.md`,
+  the intent (palette, materials, finishes) written in the log before the first primitive
 
 **Geometry Nodes flow:**
 

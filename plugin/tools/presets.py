@@ -97,6 +97,8 @@ def parse(argv):
     an.add_argument("--stiff-fingers", action="store_true", help="fingers follow the hand rigidly")
     an.add_argument("--calm", action="store_true", help="a calmer gait for walk, walk_woman, run, sneak: "
                     "hips, spine and head swing less (retarget.CALM) — for a chibi or a big head")
+    an.add_argument("--blink", action="store_true", help="blinks in every clip, on the eye bones LeftEye/RightEye "
+                    "(squashed along the face's up axis; LeftEyeShine/RightEyeShine shrink) — characters.md")
     an.add_argument("--no-measure", action="store_true", help="skip the measures JSON (faster)")
     an.add_argument("--no-fix", default="", help="leave out kiln's corrections, for comparison: feet,arms")
     return ap.parse_args(argv)
@@ -128,6 +130,27 @@ def cmd_animate(args, argv) -> int:
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+# Blinks (characters.md § Charm): 3 frames closing, 1 held, 4 opening at 24 fps — resampled to the
+# clip's rate; one in a walk or a run, three in an idle with a double, one in any other clip of 2 s+.
+BLINK = (0.35, 0.8, 1.0, 1.0, 0.75, 0.45, 0.2, 0.05)
+BLINK_AT = {"idle": (0.25, 0.62), "walk": (0.6,), "walk_woman": (0.6,), "run": (0.6,), "sneak": (0.6,)}
+
+
+def blink_frames(name: str, n: int, fps: float, looped: bool) -> list[float]:
+    """How shut the eyes are on each of n frames (0 open, 1 shut). A loop's blinks stay clear of its seam."""
+    curve = [BLINK[min(len(BLINK) - 1, int(i * 24 / fps))] for i in range(round(len(BLINK) * fps / 24))]
+    at = BLINK_AT.get(name, (0.5,) if n / fps >= 2 else ())
+    starts = [round(a * n) for a in at]
+    if name == "idle" and starts:
+        starts.append(starts[-1] + len(curve) + 2)      # a double
+    k = [0.0] * n
+    for s0 in starts:
+        for i, v in enumerate(curve):
+            if 0 <= s0 + i < n - (2 if looped else 0):
+                k[s0 + i] = max(k[s0 + i], v)
+    return k
 
 
 def blender_animate(args) -> int:  # pragma: no cover - needs bpy
@@ -181,6 +204,12 @@ def blender_animate(args) -> int:  # pragma: no cover - needs bpy
     proxy = R.build_proxy(rig, mapping, R.BODY_ROLES, R.BODY_PERCENTILE, R.MAX_SWING_DEG) if arms_kiln else \
         R.build_proxy(rig, mapping, R.UPSTREAM_BODY_ROLES, R.UPSTREAM_BODY_PERCENTILE, 180.0)
 
+    eyes = [s + "Eye" for s in ("Left", "Right") if s + "Eye" in bones]
+    if args.blink and len(eyes) != 2:
+        sys.exit("presets: --blink needs the bones LeftEye and RightEye (characters.md § Blink on flat eyes)")
+    if args.blink:   # the eye bone's own axis that the face's up runs along: the squash axis
+        mw = arm.matrix_world @ bones["LeftEye"].matrix_local
+        squash = max(range(3), key=lambda i: abs(mw.col[i].z))
     sc = bpy.context.scene
     sc.render.fps, sc.render.fps_base = 30, 1
     for pb in arm.pose.bones:
@@ -223,6 +252,16 @@ def blender_animate(args) -> int:  # pragma: no cover - needs bpy
                 pb.keyframe_insert("rotation_quaternion", frame=t)
                 if parents[b] is None:
                     pb.keyframe_insert("location", frame=t)
+        if args.blink:
+            blinks = blink_frames(name, len(frames), fps, looped)
+            for side in ("Left", "Right"):
+                pe, ps = arm.pose.bones[side + "Eye"], arm.pose.bones.get(side + "EyeShine")
+                for t in range(len(frames)):
+                    k = blinks[t]
+                    sc_ = [1.0, 1.0, 1.0]; sc_[squash] = 1.0 - 0.9 * k
+                    pe.scale = sc_; pe.keyframe_insert("scale", frame=t)
+                    if ps:
+                        g = max(0.0, 1.0 - 2.0 * k); ps.scale = (g, g, g); ps.keyframe_insert("scale", frame=t)
         track = ad.nla_tracks.new()
         track.name = clip
         strip = track.strips.new(clip, 0, act)
@@ -231,7 +270,8 @@ def blender_animate(args) -> int:  # pragma: no cover - needs bpy
         ad.action = None
         report[clip] = dict(frames=len(frames), seconds=round((len(frames) - 1) / fps, 2),
                             hip_scale=round(info["hip_scale"], 3), arm_swing=swings, feet=feet,
-                            loop=loop, calm=calmed)
+                            loop=loop, calm=calmed, blinks=args.blink and sum(
+                                1 for t in range(1, len(frames)) if blinks[t] >= 1.0 > blinks[t - 1]))
         prov.append(dict(clip=clip, preset=preset["id"], take=take, prompt=preset["prompt"],
                          made_with=preset["made_with"], seed=preset["seed"], speed=args.speed,
                          looped=bool(looped), root_speed_m_s=loop and loop["root_speed_m_s"],
@@ -240,6 +280,10 @@ def blender_animate(args) -> int:  # pragma: no cover - needs bpy
     for pb in arm.pose.bones:
         pb.matrix_basis = Matrix.Identity(4)
     sc.frame_start, sc.frame_end = 0, max(r["frames"] for r in report.values()) - 1
+    # the meshes at the scene's root, their Armature modifier kept: under the armature's node, the glTF
+    # validator reports NODE_SKINNED_MESH_NON_ROOT on every one (pipeline-optimize-export.md)
+    for o in [o for o in bpy.data.objects if o.type == "MESH" and o.parent == arm]:
+        m = o.matrix_world.copy(); o.parent = None; o.matrix_world = m
     bpy.ops.export_scene.gltf(filepath=str(path), export_format="GLB", export_animations=True,
                               export_animation_mode="NLA_TRACKS", export_force_sampling=True)
     print(f"presets: {path} — clips {[t.name for t in ad.nla_tracks]}")

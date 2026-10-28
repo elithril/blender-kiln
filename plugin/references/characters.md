@@ -1009,14 +1009,31 @@ painted-on eyes, **blink by squashing the eye**. Build the highlights as their o
 `LeftEyeShine`, at the same place, the highlights 100 % on it. Blink: the eye bone scaled to 10 %
 along the face's up axis — measure which of the bone's axes that is; on the mascot, Z — and the
 shine bone to nothing by mid-blink, or the highlights leave a white streak on the closed line.
-Same timing as § Charm.
+Same timing as § Charm. `tools/presets.py --blink` keys it in every clip it writes.
+
+### Design sheet first
+
+Before the first metaball, in the log — the mascot's was its brief; the bench's chibi, built without
+one, came out a plain child in an orange T-shirt and blue shorts:
+
+- **Role and signature**: who it is (a blacksmith, a courier, a gardener) and one shape that makes the
+  silhouette (a flame lock, a hood's point, a backpack).
+- **Palette**: 3 to 5 colours with roles (skin, main garment, secondary, accent, metal/light), from
+  the brand when there is one (the mascot's: the logo's slate and ember).
+- **Costume in layers**: a base garment, an over-garment or apron, a belt or strap; **four materials
+  at least** (cloth, leather, metal, glass, wood…).
+- **A prop or an accessory** that says the role (a hammer, goggles, a satchel).
+- **Three finishes at least**: cuffs, a buckle, stitching, a bow, an emblem.
+
+In an interactive session, show it to the user before building; in auto mode, decide it and log it.
 
 ### Review rounds, and what to look for
 
-**Three rounds at least, until none of the list below is seen**; the mascot took five before the
-user's validation and one after. Each round: a review sheet of six renders under the studio
-light — front, both three-quarters, side, back, **and the head close up** — and these questions,
-each a fault one of its rounds had:
+**Five rounds at least** (`references/review-rounds.md`, `tools/review_sheet.py`), until none of the
+list below is seen and every line of the design sheet shows; the mascot took five before the user's
+validation and one after. The bench's chibi, with these rules but two rounds, shipped a stair-stepped
+hair edge at the temples and a plain back. Each round: `tools/review_sheet.py` — front, both three-quarters, side, back, **and the head close
+up**, in the rest pose — and these questions, each a fault one of its rounds had:
 
 - Does the hair read as hair from the back and the side — or a helmet, horns, straw, a bald nape?
 - Does anything float or stick out — a lid, a nose in the side view, a strap off the hair?
@@ -1024,6 +1041,7 @@ each a fault one of its rounds had:
 - Is every accessory big enough to read at the size it will be shown (goggles at 3 mm of strap
   read as a line; a hammer head 120 mm long on a 1 m figure, small)?
 - Is the silhouette recognisable from the front without colour — one signature shape?
+- Does every line of the design sheet show — each material, the prop, each finish?
 
 Then the matcap of § Matcap before delivery, at rest and mid-walk. The mascot's budget: 27,300
 triangles, 1.8× the web hero's top, spent on the hair (6,500) and the face — reported, kept

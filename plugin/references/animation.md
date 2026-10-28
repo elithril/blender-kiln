@@ -157,6 +157,14 @@ humanoid whose right hand is fused to its hip:
    **before** the feet are locked. On the mascot's walk_loop: hips 4.7° roll, 5.4° yaw, 11.6 mm sway;
    head 1.1° roll, 1.1° yaw; slide 1.1 mm/s, seam 0.9×. **Use it on a chibi or any big-headed
    character**; its report line carries each value before and after.
+6. **`--blink`** — blinks in every clip, keyed on the eye bones `LeftEye` / `RightEye` (`characters.md`
+   § Blink on flat eyes): the eye squashed along the face's up axis (read off the bone), the
+   `…EyeShine` highlights shrunk to nothing; 3 frames closing, 1 held, 4 opening at 24 fps, resampled
+   to the clip's rate; one in a walk or a run, three in an idle with a double, one in any other clip
+   of 2 s or more, none on a loop's seam. Refused on a rig without the eye bones. **A character with
+   eyes blinks: add it** — the 3.0 bench's chibi built the bones and keyed no blink, "not asked".
+7. **The meshes are written at the scene's root**, their Armature modifier kept: under the armature's
+   node the glTF validator reported `NODE_SKINNED_MESH_NON_ROOT` on every one.
 
 **Measured** with `tools/motion_measure.py`, the same measure on every route (method in its
 docstring): standing-foot slide (mm/s), deepest skin under the floor (mm), arm through body
