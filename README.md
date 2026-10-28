@@ -333,6 +333,14 @@ On the bench, a raw TRELLIS output went from 191,520 triangles and 11.4 MB, full
 
 </details>
 
+### No Blender open — built in the background, several at once
+
+Blender closed, or busy with your own work: kiln builds in a background Blender instead, saves
+the `.blend` there and renders its own check views (two opposite three-quarters, top and under)
+— the look is never skipped, and the report says the model was built headless. `/kiln batch`
+makes a series from one manifest, unattended (three props in 7.8 minutes on the bench), and
+Kiln Studio runs variations up to four at once (Settings → At once).
+
 ## Measured, not claimed
 
 Each rebuild from a photo is scored against the real 3D object it was photographed from — an
