@@ -6,6 +6,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — what the 3.0 bench found (3.0)
+
+The full bench (2.2.0 and 3.0 on `mcp-for-blender` 2.2.2, 3.0 on the Lab MCP too, October 2026)
+found these in 3.0; each brief it touched was run again after the fix.
+
+- **The photo's perspective is not a shape gap.** `fidelity_check` renders orthographic; on a
+  photo taken from above and close, the lower bands read wider than the photo. A 3.0 session
+  pulled the lantern's side tubes in to match and moved away from the real object (0.900 on
+  2.2.0 → 0.849). With `--elevation` > 0, a lower band up to 15 % wider is now listed last as
+  the photo's perspective, never to narrow; the three lantern briefs went to 0.885, 0.917 and
+  0.946 (`test_fidelity_check.py` 38/38).
+- **Decimation keeps a closed shell closed.** A repair of a TRELLIS GLB decimated with
+  `gltfpack -si -sa` and shipped 840 non-manifold edges. A worse edge count is now a failed
+  decimation; on a closed shell, Blender's Collapse; when it damages thin parts, decimate less
+  (up to 2× the tier) or rebuild them, never `-sa`. Measured on a 115,600-triangle shell:
+  Collapse 0 / 0, `-si -sa` 54 / 35. The repair now ships 9,000 triangles, 0 / 0.
+- **Rule 6: `read_factory_settings` only in a headless Blender kiln started** — through the
+  MCP it reset the live Blender and turned its add-on off.
+- **`tools/open_blender.py` opens no second Blender** beside a Blender whose add-on does not
+  answer: it says how to start the add-on and stops (`test_open_blender.py`, in CI).
+- **Kiln Studio: `gltf-transform`'s steps pass without an approval** — a session had skipped
+  the compression to avoid one (18.3 kB instead of 15.7 kB).
+
 ### Changed — mcp-for-blender's current tools; the server pinned for real (3.0)
 
 - **ahujasid's server is `mcp-for-blender`** (renamed from `blender-mcp` in September 2026),

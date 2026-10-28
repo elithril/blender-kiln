@@ -1,4 +1,4 @@
-ôté<p align="center">
+<p align="center">
   <img src="blender-kiln-logo.png" alt="blender-kiln logo" width="200" />
 </p>
 
@@ -85,7 +85,7 @@ every `.glb .gltf .fbx .obj .usdz .3mf .stl` under it shows up, and kiln's `_ori
   itself (`claude -p`, on its own Blender, never yours): "Work on them with Claude" addresses
   every open note, a conversation per model and one for the project, *New model* asks for a model
   from a sentence or a photo. Safe calls pass; anything else waits for your OK in the page, and
-  paid generation always asks. Measured on the bench: a note asking for a ring twice as big,
+  paid generation asks unless you set it to Auto in Settings. Measured on the bench: a note asking for a ring twice as big,
   addressed in one pass — ×1.9, nothing else moved, the note answered — for $0.69 of
   API-equivalent usage (official Lab MCP: $0.73). Or run `/kiln studio` in your terminal: Claude
   reads the open notes, changes the model, re-exports and replies on each.
@@ -183,7 +183,7 @@ the input is never overwritten.
 ### Limits
 
 - **Printed, four of them.** The forge, the lighthouse, the Art Deco box and the windmill were
-  printed as kiln exported them, on a Bambu Lab P1S in PLA ([photos](#3d-printing)).
+  printed as kiln exported them, on a Bambu Lab P1S in PLA ([photos](#3d-printing--models-that-actually-print)).
   [À COMPLÉTER: does the bayonet lid lock and hold upside down? which clearance hole of the fit
   test slid right?] The rest was checked by PrusaSlicer 2.9.6 and by renders, not on a bed.
 - **FDM, checked with PrusaSlicer's default profile.** No resin slicing, no orientation search,
@@ -303,7 +303,7 @@ table.
 
 Bring the file a generator gave you: kiln inspects it, repairs it, lightens it and converts it.
 On the bench, a raw TRELLIS output went from 191,520 triangles and 11.4 MB, full of holes, to
-9,000 triangles, 0.64 MB, closed — in 16 minutes.
+9,000 triangles, 0.63 MB, closed — in 16 minutes.
 
 <details>
 <summary><b>The commands, and what was measured</b></summary>
@@ -316,17 +316,18 @@ On the bench, a raw TRELLIS output went from 191,520 triangles and 11.4 MB, full
 | `/kiln texture` | textures a white or untextured mesh — Poly Haven CC0 scans first, procedural second; works on a single fused mesh by grouping faces |
 | `/kiln optimize model.glb` | textures resized and converted to WebP, Draco geometry compression, or gltfpack simplification and LODs — each shown before/after, kept only if you say so |
 | `/kiln convert` | GLB ↔ FBX, OBJ → GLB, to USDZ, with the material export audit before any glTF export |
-| `/kiln animate` | folds bone-parented parts into the skin, checks the rig can bend where asked, then animates ([Animate](#animate)) |
+| `/kiln animate` | folds bone-parented parts into the skin, checks the rig can bend where asked, then animates ([Animate](#animate-and-characters-that-bend)) |
 
 - **A generator's GLB, repaired end to end** (bench brief `repair-trellis-glb`, a raw TRELLIS
   output): 191,520 triangles, 11.4 MB, 13,732 non-manifold and 10,220 open edges → **9,000
-  triangles, 0.64 MB, 0 and 0**, the thin bail and ring rebuilt as tubes, the rest closed and
-  decimated with Blender's Collapse — 16 minutes, $3.89 of API-equivalent usage. On the official
+  triangles, 0.63 MB, 0 and 0**: the glass globe, too thin to survive a remesh, refilled with a
+  lathe shape fitted to its profile, the whole closed by a voxel remesh and decimated with
+  Blender's Collapse — 16 minutes, $3.89 of API-equivalent usage. On the official
   Lab MCP: the same 0 and 0, 0.93 MB.
 - **A generated lantern finished as a game asset** (`ref-lantern-trellis`): shape kept, surface
   rebuilt, **0.946** against the real lantern's 3D model (2.2.0: 0.934 — [how it is scored](#measured-not-claimed)).
 - **From a sentence, through the free Hugging Face Spaces** (`ai-mushrooms`): a FLUX.1-schnell
-  concept, then TRELLIS.2 (MIT, 89 s of GPU), decimated to 8,991 triangles, textured, shipped at
+  concept, then TRELLIS.2 (MIT, one 89 s call), decimated to 8,991 triangles, textured, shipped at
   279 KB — 12 minutes, $3.80. kiln 2.2.0 went to Hunyuan3D-2 for the same brief, whose licence
   excludes the EU, the UK and South Korea; 3.0 uses it only when asked.
 
@@ -346,7 +347,7 @@ asset the session never sees. Blender 5.2.2, Opus 5.5, one run each, October 202
 | Gothic chair, from a photo | 0.637 | **0.720** | 449 KB | $6.64 |
 
 Across the whole bench, 3.0 against 2.2.0: both prints pass the printability check (2.2.0: one of
-two), rigged characters no longer pass skin through skin, and a note in Kiln Studio is addressed
+two), the humanoids kiln builds no longer pass skin through skin when they bend, and a note in Kiln Studio is addressed
 in one pass. It costs about 40 % more usage, for the new checks and the work they do.
 
 <details>
@@ -371,7 +372,7 @@ in one pass. It costs about 40 % more usage, for the new checks and the work the
 <sub>Shape score: mean silhouette overlap with the real asset from front, back, sides and top
 (`bench/gt_compare.py`); openwork views left out for the chair. Size is assumed when a brief gives
 none, and a single photo does not give it: every lantern came out 20 to 50 % taller than the real
-one. One run per brief, and runs of the same skill differ by about ±0.02. 3.0 costs about 40 %
+one. One run per brief, and runs of the same skill differ by about ±0.02–0.03. 3.0 costs about 40 %
 more than 2.2.0: the new checks (render reviews, UV, printability), the learned auto-rig, closed
 loops and the photo projection are extra work in the session. Three photo briefs and the
 generator repair were re-run after fixes the bench itself found — what changed and why is in the
@@ -380,13 +381,15 @@ generator repair were re-run after fixes the bench itself found — what changed
 **Close, not identical, on purpose.** kiln stops at a few dollars of API-equivalent usage per object.
 [img2threejs](https://github.com/img2threejs/img2threejs), which rebuilds an image as Three.js
 code through eight vision-reviewed passes, keeps finer surface detail: on the same lantern its
-likeness was comparable — 0.866 against kiln's 0.861 — at about three times the usage, estimated on
+likeness was comparable — 0.866 against kiln v7's 0.861 (2.0 era) — at about three times the usage, estimated on
 a run stopped after three of its eight passes
 ([benchmarks § 4](docs/benchmarks.md#4-kiln-against-an-image-to-code-tool)).
 
 What did not improve is published too: the [benchmarks](docs/benchmarks.md) — fifteen
 versions of one lantern, what each fix broke, how the bench was kept honest — and every
-number, render and GLB under 1 MB on the [`bench-results`](https://github.com/elithril/blender-kiln/tree/bench-results) branch.
+number, render and GLB under 1 MB on the [`bench-results`](https://github.com/elithril/blender-kiln/tree/bench-results) branch, except the
+humanoid derived from Hunyuan3D, whose licence keeps it out.
+<!-- [À FAIRE avant la sortie: publier v220-mcp222-ahujasid, v300final-ahujasid et v300final-lab sur bench-results (bench/publish.py) — sur feu vert] -->
 
 ### How long it takes
 
@@ -401,13 +404,15 @@ An interactive session adds your answers.
 | PBR texturing (crate) | 6.3 min | 7.0 min |
 | Rigged character (villager) | 7.1 min | 6.5 min |
 | Batch brief (three props) | 7.8 min | 8.6 min |
-| AI brief (FLUX + TRELLIS.2 Spaces) | 12.3 min | 16.6 min |
+| AI brief (FLUX + TRELLIS.2 Spaces) | 12.3 min | 16.6 min¹ |
 | **Rebuild from a photo** (lantern / ammo box / chair) | 18.3 / 15.3 / 23.0 min | 19.1 / 19.1 / 16.7 min |
 | A generator's GLB repaired (TRELLIS lantern) | 16.0 min | 15.0 min |
 | Humanoid rigged and walking (chibi) | 12.8 min | 9.3 min |
 | Quadruped walk and idle (cat) | 12.9 min | 21.6 min |
 | 3D print: a 4-colour figurine / a box with a bayonet lid | 16.6 / 6.3 min | 10.9 / 7.2 min |
 | Kiln Studio: a pinned note addressed | 1.4 min | 1.5 min |
+
+<sub>¹ The free Hugging Face quota was spent that day: the session fell back to scripted modelling, as the skill says to, and paid for nothing.</sub>
 
 Single steps, measured where stated:
 
@@ -416,7 +421,7 @@ Single steps, measured where stated:
 | UniMate, one clip | 18 s on an M4 Pro | CHANGELOG 2.1.0 |
 | UniMate install | 77 s with warm package caches; several minutes the first time | `references/animation.md` |
 | Local TRELLIS.2, one model | 5–7 min on an M4 Pro, 24 GB | benchmarks § 7 |
-| TRELLIS.2 HF Space, one generation | 89 s of GPU quota (a free account gets about 3.5 min a day: one concept image plus one model) | bench, October 2026 |
+| TRELLIS.2 HF Space, one generation | 89 s for the call; it reserves 60–120 s of the free ZeroGPU quota (about 3.5 min a day on a free account: one concept image plus one model) | bench, October 2026 |
 | Concept art, FLUX.1-schnell Space | 5.6 s an image | CHANGELOG |
 | Stylised print figure (cartoon dragon, four colour parts) | 23 min, one v2.2 session | `references/print.md` |
 | A print object from a brief (end to end) | 6 to 17 min — a box with a bayonet lid, a 4-colour figurine | bench, October 2026 |
@@ -431,7 +436,7 @@ Single steps, measured where stated:
 | | Needed | Notes |
 |---|---|---|
 | **Claude Code** | yes | with a Claude subscription (Pro, Max) or an API key — usage, see [above](#measured-not-claimed) |
-| **Blender** | **4.4 or newer** | hard floor: the animation code uses layered actions (4.4+). Measured on **5.0** locally and **5.2 LTS** in CI; the bench ran 5.2.2. 4.4–4.5 satisfy the API but are untested |
+| **Blender** | **4.4 or newer** | hard floor: the animation code uses layered actions (4.4+). Measured on **5.0** locally and on the current stable release in CI (5.2 LTS); the bench ran 5.2.2. 4.4–4.5 satisfy the API but are untested |
 | **A Blender MCP server** | yes, one of the two | [ahujasid's `mcp-for-blender`](https://github.com/ahujasid/mcp-for-blender) (addon on port 9876, `uvx mcp-for-blender install-addon`; the bench pinned 2.2.2) or the [official Blender Lab MCP](https://projects.blender.org/lab/blender_mcp) |
 | **GPU** | no | the default path is Claude scripting Blender: no AI model, nothing to install |
 | **Python 3** | yes | the tools and Kiln Studio use the standard library only |
@@ -446,8 +451,9 @@ Single steps, measured where stated:
 | Sketchfab API token | optional | free account, for marketplace downloads |
 | **3D printing:** PrusaSlicer | optional | second arbiter for `print_check` (`--slicer`); measured with 2.9.6 |
 | **3D printing:** macOS 14+ | optional | `tools/cutout.swift` cuts a photo's subject out with macOS Vision, locally |
-| **Kiln Studio:** a browser | yes, for Studio | with a network connection: three.js 0.186.1 loads from jsDelivr. No extra API key — see [Kiln Studio](#kiln-studio) |
+| **Kiln Studio:** a browser | yes, for Studio | with a network connection: three.js 0.186.1 loads from jsDelivr. No extra API key — see [Kiln Studio](#kiln-studio--look-at-your-models-pin-a-note-let-claude-fix-it) |
 | Local TRELLIS.2 | optional, never required | measured on an M4 Pro with 24 GB: 31 GB of weights, 19.5–22.5 GB of memory at peak |
+| SkinTokens (learned auto-rig) | optional | offered by `/kiln setup`, asked first: about 5.6 GB, MIT, Apple Silicon through kiln's patch; 35–54 s and about 7 GB of memory per mesh |
 | UniMate (text-to-motion) | optional | 3.2 GB on disk; upstream is NVIDIA-only, kiln's patch runs it on Apple Silicon (measured on an M4 Pro) and CPU |
 
 The bench ran on an Apple M4 Pro with 24 GB of memory, macOS, Blender 5.2.2.
@@ -507,15 +513,17 @@ as a plugin.
 
 ### Layout
 
-A plugin install ships only `plugin/` — about 0.7 MB:
+A plugin install ships only `plugin/` — about 5 MB (2.2 MB of ready-made motions, 1.4 MB of Studio's page):
 
 ```
 plugin/
 ├── .claude-plugin/plugin.json
 ├── SKILL.md
 ├── LICENSE
-├── tools/                        # fidelity_check, print_check, cutout, template_profile, quadruped, presets (+ motions/), retarget, motion_measure, motion_loop, bind_rigid_parts, unimate (+ patch), checks
-├── studio/                       # Kiln Studio: studio.py (CLI), server.py, studiolib.py, checks.py, blender_live.py, static/ (the page), tests
+├── NOTICE                        # third-party code and licences kiln adapts (image-to-3dlab, SkinTokens patch, …)
+├── .mcp.json                     # the kiln-studio MCP server: what you look at in Studio, from Claude Code
+├── tools/                        # checks: fidelity_check, print_check, uv_check, review_renders, check_usdz · build: template_profile, flatten, fit_coupon, photo_project, cutout · rig and motion: autorig, quadruped, presets (+ motions/), retarget, motion_measure, motion_loop, bind_rigid_parts, unimate (+ patch) · export: export_outputs, glb_to_fbx, glb_to_usdz · Blender: open_blender, blender_mcp_start · verify_docs, verify_blender
+├── studio/                       # Kiln Studio: studio.py (CLI), server.py, studiolib.py, checks.py, worker.py (Claude from the page) + approval_hook.py, mcp_server.py, phoneshare.py (AR by QR code), handoff.py (downloads), blender_live.py, static/ (the page), tests
 └── references/
     ├── ai-generation.md
     ├── animation.md
@@ -601,7 +609,7 @@ needed.
 | `/kiln inspect` | Inspect a 3D file (stats, poly count, materials, bbox) |
 | `/kiln cleanup` | Cleanup a mesh in Blender |
 | `/kiln texture` | Texture an untextured mesh |
-| `/kiln animate` | Animate a rigged asset — routed by subject ([Animate](#animate)) |
+| `/kiln animate` | Animate a rigged asset — routed by subject ([Animate](#animate-and-characters-that-bend)) |
 | `/kiln optimize` | Optimize a GLB with gltf-transform/gltfpack |
 | `/kiln convert` | Convert between formats (GLB↔USDZ↔FBX) |
 | `/kiln studio` | Open Kiln Studio; act on the notes pinned there (`/kiln studio <asset>`) |
@@ -650,6 +658,9 @@ interactive run of the skill: treat them as reference output and a conventions c
 | `plugin/references/texturing-strategy.md` | 4 strategies + shader recipes + bake workflow | ~380 |
 | `plugin/references/reference-fidelity.md` | From a reference image: detail inventory, silhouette, attachment, measured materials, measured review | ~510 |
 | `plugin/tools/fidelity_check.py` | Renders a model under a studio HDRI and measures shape and material gaps against its reference | ~685 |
+| `plugin/references/photo-projection.md` | Projecting the photo's own markings onto the textures: when to offer it, the method, its measures and limits | ~100 |
+| `plugin/tools/photo_project.py` | Puts the photo's pixels on the base colour where the photo sees the model squarely, with a confidence per texel; refuses under 0.95 IoU | ~750 |
+| `plugin/tools/autorig.py` | The learned auto-rig: SkinTokens installed at a pinned commit, run, and its skeleton handed back with kiln's names, weights cleaned, lids and ears | ~965 |
 | `plugin/tools/template_profile.py` | Reads a turned object's real profile off a 3D template (a generated mesh, a scan), to model from | ~120 |
 | `plugin/references/print.md` | 3D printing, the method by subject (primitives for objects, metaballs for figures): modelling for the printer from the brief (FDM / resin), what the check counts, what it does not, flattening a model you bring | ~550 |
 | `plugin/tools/print_check.py` | 3D printing check, FDM or resin: raw edge counts, held parts, walls, overhangs, loss against the original, PrusaSlicer as second arbiter | ~850 |
@@ -668,9 +679,9 @@ interactive run of the skill: treat them as reference output and a conventions c
 | `plugin/references/setup-install.md` | Model selection, install commands, post-install validation | ~76 |
 | `plugin/references/sourcing-strategy.md` | PolyHaven (MCP or public API) + Sketchfab search patterns | ~140 |
 | `plugin/references/studio.md` | Kiln Studio: starting it, live view, checks, acting on the user's notes, work in progress, commands, storage, settings, create and import, the MCP server, Claude in Studio, outputs, variations, finishes, AR on the phone | ~590 |
-| `plugin/studio/` | Kiln Studio: local server and CLI (stdlib Python), checks, live view from Blender, three.js page, tests | ~5,800 |
+| `plugin/studio/` | Kiln Studio: local server and CLI (stdlib Python), checks, live view from Blender, the Claude worker and its approvals, phone AR, downloads, three.js page, tests | ~7,100 Python + ~2,200 tests |
 
-**Total: ~7,500 lines** of production-tested 3D pipeline knowledge.
+**Total: ~7,600 lines** of SKILL.md and references — the production knowledge Claude reads.
 
 </details>
 <details>
@@ -682,7 +693,7 @@ seconds:
 
 - iron rules form one unbroken 1..N sequence across `plugin/SKILL.md` and `batch-mode.md`
 - every cited `rule N` exists **and means what the citation claims**
-- the rule count above matches reality, and every line count in the structure
+- the rule count below matches reality, and every line count in the structure
   table is within 15% of the file it describes
 - every referenced file exists, and none point outside the plugin directory
 - every README image resolves
@@ -712,7 +723,7 @@ UniMate's upstream HEAD and checks kiln's patch still applies to it — the text
 model of phase 5d is a research project that changed its pipeline, checkpoints and licence
 within days of kiln first measuring it.
 
-`plugin/tools/test_fidelity_check.py` runs in the same workflow and seeds what the review tool
+`plugin/tools/test_fidelity_check.py` runs in `blender.yml` and seeds what the review tool
 claims to measure — a model against its own render (IoU 0.998), the same model 20 % wider
 (measured +20.3 %), an unloaded texture (refused), a `.blend` (warned), the triangle range
 (kept under twice its top, a reduction proposed past it), dark metal (reported; the same
@@ -721,7 +732,7 @@ silent), metal painted mostly as non-metal (reported), grain measured but never 
 joint close-ups (a rod resting on a sphere rendered; sunk or free,
 not), `--view` and `--azimuth` on a 2 x 1 x 1 box, the face measure, and a photo with no
 transparency (refused), and the measure saved for Kiln Studio
-(`fidelity.json` with the model's hash, one log line per run) — **36/36**. Its first run caught the tool framing views by
+(`fidelity.json` with the model's hash, one log line per run), and a lower body 14 % wider under a camera 15° above, told as the photo's perspective — **38/38**. Its first run caught the tool framing views by
 height only: anything wider than tall was clipped, a box measured 1:1 instead of 2:1.
 `plugin/tools/test_print_check.py` builds the meshes a print can fail on — open, inverted,
 floating, too thin, a cavity, a loss against the original, a carved cup against its closed
@@ -779,28 +790,21 @@ number — the full text is in `plugin/SKILL.md` and `plugin/references/batch-mo
 
 Two storage modes, configurable at pipeline start:
 
-**Compact (default)** — minimal footprint, .blend is the recovery point:
+**Compact (default)** — minimal footprint, the `.blend` is the recovery point; one folder per use:
 ```
 generated-assets/
 └── wooden-chair/
     ├── wooden-chair_original.glb
-    ├── wooden-chair_final.glb
+    ├── wooden-chair_preview.glb     (a copy of _original: opens in macOS Quick Look)
     ├── wooden-chair.blend
-    └── wooden-chair_log.md
+    ├── wooden-chair_log.md
+    ├── web/    wooden-chair_final.glb                         (a website: Draco, WebP)
+    ├── game/   wooden-chair_game.fbx                          (Unity, Unreal)
+    ├── ar/     wooden-chair_ar.usdz, wooden-chair_ar.glb      (iPhone and Vision Pro, Android)
+    └── print/  wooden-chair_print.3mf, wooden-chair_print_seat.stl, …   (3D printing)
 ```
-
-**Full** — all intermediate files for debug/comparison:
-```
-generated-assets/
-└── wooden-chair/
-    ├── wooden-chair_original.glb
-    ├── wooden-chair_clean.glb
-    ├── wooden-chair_textured.glb
-    ├── wooden-chair_optimized.glb
-    ├── wooden-chair_final.glb
-    ├── wooden-chair.blend
-    └── wooden-chair_log.md
-```
+A folder is made only when its output is asked for. **Full** storage also keeps the
+intermediate stages at the root (`_clean`, `_textured`, `_optimized`).
 
 **Batch mode** — assets grouped under a batch folder with manifest and report:
 ```

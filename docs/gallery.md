@@ -1,6 +1,6 @@
 # Gallery — measurements and method
 
-The fifteen reference props of the README, and what building them measured. Back to the [README](../README.md#gallery).
+The fifteen reference props of the README, and what building them measured. Back to the [README](../README.md#reference).
 
 ### What the OPTIMIZE phase actually buys
 
