@@ -26,6 +26,9 @@ otherwise `Loop` (tools/motion_loop.py), else the active one.
   rest areas); arm_body = the part where an arm/hand triangle crosses a torso/head one.
 - seam: pose step across the loop point (last frame -> first, horizontal root travel removed)
   over the mean frame step. A clip whose last key equals its first is measured last-1 -> first.
+- knee_pops: frames where a knee's bend spikes by KNEE_POP_DEG or more against both neighbours,
+  either way — the leg pulled to full reach for one frame, or bent back between two straight ones. Read by eye as knees that
+  "tremblent" on a mascot no other measure flagged (2026-10-28: 36 -> 4 -> 20 deg of bend).
 """
 import json
 import math
@@ -36,6 +39,8 @@ import time
 import bpy
 import numpy as np
 from mathutils.bvhtree import BVHTree
+
+KNEE_POP_DEG = 8.0
 
 
 def clip_fps(clip, name=None):
@@ -152,10 +157,15 @@ def measure(clip, out_json=None, rigf=None, name=None, every=1):
     frames = list(range(f0, f1 + 1))
     bypair = {}
     footd = {k: [] for k in feet}; low = []; hips = []; Vs = []; skin = []
+    knees = {sd: [] for sd in ("Left", "Right") if sd + "UpLeg" in PB and sd + "Leg" in PB}
     for k, f in enumerate(frames):
         sc.frame_set(f); V = evaluated()
         V = V / S
         hips.append(np.array((rig.matrix_world @ PB["Hips"].head)[:]) / S)
+        for sd in knees:
+            u = (PB[sd + "UpLeg"].tail - PB[sd + "UpLeg"].head).normalized()
+            l = (PB[sd + "Leg"].tail - PB[sd + "Leg"].head).normalized()
+            knees[sd].append(math.degrees(math.acos(max(-1.0, min(1.0, u.dot(l))))))
         low.append(float(V[:, 2].min()))
         for sd, idx in feet.items():
             footd[sd].append(V[idx].copy())
@@ -206,6 +216,13 @@ def measure(clip, out_json=None, rigf=None, name=None, every=1):
     if np.linalg.norm(pose(last) - pose(0), axis=1).mean() < 1e-4: last = n - 2   # closing key == key 0
     seam = float(np.linalg.norm(pose(0) - pose(last), axis=1).mean() / (np.mean(steps[:last]) + 1e-12))
 
+    pops = {}
+    for sd, a in knees.items():
+        a = np.array(a)
+        d0, d1 = a[1:-1] - a[:-2], a[2:] - a[1:-1]           # a one-frame spike, either way
+        pops[sd] = [int(frames[t + 1]) for t in range(len(d0))
+                    if abs(d0[t]) >= KNEE_POP_DEG and abs(d1[t]) >= KNEE_POP_DEG and d0[t] * d1[t] < 0]
+
     lows = np.array(low) - floor
     res = dict(clip=clip, name=act.name, clip_scale=round(S, 3), fps=fps, frames=n, seconds=round((n - 1) / fps, 2), height_m=round(height, 3),
                ground_speed_m_s=round(float(np.linalg.norm(gv)), 3),
@@ -223,7 +240,9 @@ def measure(clip, out_json=None, rigf=None, name=None, every=1):
                          worst_arm_body_mm2=round(float(np.max([b for _, b in skin])), 1),
                          by_pair_mean_mm2={k: round(v / len(skin), 0) for k, v in sorted(bypair.items(), key=lambda x: -x[1])[:5]},
                          arm_body_frames_pct=round(100 * float(np.mean([b > 1 for _, b in skin])), 1)),
-               seam_x_step=round(seam, 2), measure_s=round(time.time() - t0, 1))
+               seam_x_step=round(seam, 2),
+               knee_pops=dict(count=sum(len(v) for v in pops.values()), frames=pops),
+               measure_s=round(time.time() - t0, 1))
     if out_json:
         json.dump(res, open(out_json, "w"), indent=1)
     return res

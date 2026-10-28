@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added — what kiln's mascot taught (3.0)
 - **Review rounds for every asset** (`references/review-rounds.md`): the intent in the log before the
   first primitive (a palette with roles, three materials at least, three finishes), then rounds —
-  **3 at least for a prop (8 at most); 6 at least and no cap for a character or a showcase brief, then
+  **3 at least for a prop (8 at most); 6 at least (12 at most) for a character or a showcase brief, then
   rounds on its motion**, auto mode included — each a
   `tools/review_sheet.py` sheet looked at and a written critique of three defects or more with their
   fixes, until a round finds nothing; from a photo, reshaping to the photo keeps its two correction
@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   latch plate off-centre after eight rounds of paint). The 3.0 bench's chibi, two looks and shipped, was
   "pas très quali"; kiln's mascot, six rounds on the model, three on the motion and a design sheet, was
   validated.
+- **A fresh reviewer each round** (`review-rounds.md` § The fresh reviewer): a new subagent given the
+  brief, the sheets and the lists — not the log or the scripts — reports every defect, blocking or
+  detail. The builder, reading its own sheets, had written "nothing found" over a chair's holed
+  rosette and a mascot's hair flame read as horns. Characters: twelve rounds at most.
+- **Knees that snapped** (`retarget.py` `SOFT_REACH`, `motion_measure.py` `knee_pops`): the foot lock
+  pulled a leg straight for one frame and bent it on the next, 1.4-2 times a second on both mascots;
+  a leg's reach now eases from 93 % of its length — none left, the slide still under 50 mm/s.
 - **`tools/review_sheet.py`**: six views under a studio light, a close-up of the top, a rigged model in
   its rest pose, framed on its vertices, the exposure moved one stop at most (pushed to a fixed
   brightness, a dark lantern's colours shifted and a session made its glass opaque), and a second

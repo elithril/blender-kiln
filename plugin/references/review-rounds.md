@@ -6,6 +6,7 @@
 - Why rounds, and how many
 - Before building: the intent
 - One round
+- The fresh reviewer
 - What to look for — every asset
 - What to look for — a character
 - From a photo: the shape stays, the surface goes on
@@ -22,13 +23,13 @@ each one found is in `characters.md` § A stylised humanoid.
 | The asset | Rounds, at least | Stop |
 |---|---:|---|
 | A prop, an object, a scene piece | **3** | a round finds nothing from the lists below |
-| A character, a mascot, a creature — or any brief that says showcase, hero, vitrine, high quality | **6**, no cap | the same, every line of the design sheet shows — then rounds on the motion (below) |
+| A character, a mascot, a creature — or any brief that says showcase, hero, vitrine, high quality | **6**, twelve at most | the same, every line of the design sheet shows — then rounds on the motion (below) |
 | From a photo | the proportions: **2** correction rounds at most (`reference-fidelity.md` § 5); then **3** rounds on the surface, the finish **and the assembly** | the same |
 | Print | `print.md`'s own rounds | `print_check` PASS and the gaps stop closing |
 
 **Auto mode does not shorten them**: nobody is there to say it looks wrong, so the rounds are the
-only eye. A round that finds a defect is followed by another. A prop stops at eight: at the cap,
-ship and list in the hand-over what is still wrong. **A character has no cap** — the mascot's
+only eye. A round that finds a blocking defect is followed by another. A prop stops at eight, a
+character at twelve: at the cap, ship and list in the hand-over what is still wrong. The mascot's
 quality is the bar, and it took six rounds on the model and three on the motion. A defect that
 comes back after two fixes is the method's, not the dose's: rebuild that part another way (the
 mascot's lids, re-weighted twice, were replaced by a squash blink).
@@ -59,12 +60,43 @@ shorts, one material, nothing in its hands):
 2. **Look at both** (Read the PNGs), every tile, as the person who will use the asset. The clay sheet
    first: paint hides a part out of place — a dark olive ammo box went through eight rounds with its
    latch plate off-centre, seen on the side tile only once the paint was gone (3.0 bench, 2026-10-28).
-3. **Write the critique in the log before changing anything**: at least three numbered defects, each
-   with where, in which tile, and the fix — or "nothing found", with what was checked. "Looks good" is
-   not a round.
+3. **Have it read by a fresh reviewer** (below), then **write the critique in the log before changing
+   anything**: the reviewer's defects and yours, numbered, each with where, in which tile, and the
+   fix — or "nothing found", with what was checked. "Looks good" is not a round.
 4. Fix them — **all the round lists**, when they touch different parts or regions; two changes to the
    same material region go one per round (`reference-fidelity.md` § 5: together, they regressed the
    surface while each read "applied"). Rebuild, export, and start the next round.
+
+## The fresh reviewer
+
+The session that builds a model reads its sheets as its author: it sees what it meant to make. On
+the 3.0 bench, with these rounds, it wrote "nothing found" over a chair whose rosette had black
+holes, a mascot whose hair flame read as three horns — the very defect `characters.md` names — and
+its locks as strips with the scalp between them, and skin-coloured patches on the shoulders its own
+log later called "visible since round 1". Each round is therefore read by **a new subagent that knows
+nothing of the build** — the Task (Agent) tool, a general-purpose agent, a fresh one every round:
+
+- **Give it only**: the brief as the user wrote it, the reference photo if there is one, the paths of
+  this round's sheets (`round{n}.png`, `round{n}_clay.png`, the close-ups) — and from a photo
+  `side_by_side.png` — and the lists of this file (every asset; a character's). **Not** the log, the
+  scripts, the intent you wrote, or what the last round fixed: it judges what is on the image.
+- **Ask it for**: every defect it sees, each with the tile, where, and **blocking** (a person using
+  the asset would notice it in the views it will be seen in) or **detail**; and its verdict in one
+  line — would this be shown to the user as is?
+- **Use it**: every blocking defect is fixed this round or argued in the log with what was checked
+  (the reviewer can be wrong — a shadow read as a hole); details are fixed when cheap. A round whose
+  reviewer finds nothing blocking, and your own reading neither, ends the rounds.
+- **The motion too**: for a motion round, give it strips of frames (front and side, every 2nd frame
+  of the loop, `characters.md` § Matcap before delivery) and the measures, and ask the same.
+
+A prompt that works:
+
+```
+You review a 3D asset as its future user would, from images only. The brief: "<brief>".
+Images: <paths>. Check, tile by tile: <the lists>. Report every defect: tile, where, blocking or
+detail, and one line: would you show this to the user as is? Do not guess at intentions; judge
+what you see.
+```
 
 ## What to look for — every asset
 
@@ -91,9 +123,9 @@ accessories big enough to read, the design sheet's every line. Then the matcap a
 
 **Then rounds on the motion**, once rigged and animated, the same way — render the clips (a GIF or a
 strip of frames from the front and the side), look, write the defects, fix, again until a round finds
-nothing: lids or parts that fly off the head, hips that roll, a head that bobs, feet that slide, a hand
-through the body, a prop that leaves the hand. Measure what can be measured (`tools/motion_measure.py`,
-`animation.md`). The mascot: lids that "flew", hips that rolled, then a head that moved once the hips
+nothing: lids or parts that fly off the head, hips that roll, a head that bobs, feet that slide, knees
+that snap straight for a frame, a hand through the body, a prop that leaves the hand. Measure what can
+be measured (`tools/motion_measure.py`, `animation.md`: `knee_pops` at 0). The mascot: lids that "flew", hips that rolled, then a head that moved once the hips
 were calmed — three rounds, each seen on the clip, none in the numbers alone.
 
 ## From a photo: the proportions stay, the assembly is always fixed

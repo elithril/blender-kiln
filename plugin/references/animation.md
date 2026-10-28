@@ -169,8 +169,11 @@ humanoid whose right hand is fused to its hip:
 **Measured** with `tools/motion_measure.py`, the same measure on every route (method in its
 docstring): standing-foot slide (mm/s), deepest skin under the floor (mm), arm through body
 (mm² per frame, rest crossings subtracted), loop seam (× the mean frame step; walk and run:
-the `_loop` clips, jump and dance are one-shots, their seam is the take's own end). Targets: < 50 mm/s,
-< 5 mm, < 500 mm², ≤ 1.2×. UniMate: the comparison study's samples (`--loop` for walk and run).
+the `_loop` clips, jump and dance are one-shots, their seam is the take's own end), knee pops (a knee
+snapping straight, or bent, for one frame by 8° or more). Targets: < 50 mm/s,
+< 5 mm, < 500 mm², ≤ 1.2×, no knee pop. The pops came from the foot lock pulling a leg to full reach on
+one frame — the knees of both mascots "tremblaient", 1.4-2 a second; `retarget.py` now eases a leg's
+reach from 93 % of its length (`SOFT_REACH`): none left on either. UniMate: the comparison study's samples (`--loop` for walk and run).
 
 | Character | Move | UniMate | Upstream presets | **`presets.py`** |
 |---|---|---|---|---|

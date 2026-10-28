@@ -550,6 +550,12 @@ ROLL_SET_MM = 3.0        # the points a foot rolls on: within 3 mm of its lowest
 FLOOR_MARGIN = 0.001     # the lowest sole point sits this far above the rest floor
 EDGE_EASE = 6            # frames over which a correction eases in and out, at a clip's ends
 REACH = 0.9995           # a leg straighter than this share of its length cannot be solved
+# Past SOFT_REACH of its length, a leg's reach eases toward REACH instead of stopping dead: clamped
+# hard, a foot planted a little too far pulled the knee straight on one frame and bent it on the
+# next — knees that "tremblent" (kiln's mascot and the bench's, 1.4-2 spikes of 8+ deg a second,
+# tools/motion_measure.py knee_pops). The gap left is what lock_feet lowers the hips for. On the
+# bench mascot's walk: hard 7 spikes, from 0.97 2, 0.95 1, 0.93 none — the slide 36 -> 42 mm/s.
+SOFT_REACH = 0.93
 # A knee posed straighter than 5 degrees bends toward the thigh's front; past 25 degrees, in the
 # plane it was posed in. Taken from the pose alone, the plane of a near-straight leg is noise:
 # the child's walk flipped its knee 130-155 degrees from one frame to the next at heel strike
@@ -656,7 +662,10 @@ def two_bone(H, K0, A0, A, L1, L2, ahead=None):
     d_vec = A - H
     d = float(np.linalg.norm(d_vec))
     u = d_vec / max(d, 1e-9)
-    d = min(max(d, abs(L1 - L2) + 1e-6), REACH * (L1 + L2))
+    d = max(d, abs(L1 - L2) + 1e-6)
+    soft, hard = SOFT_REACH * (L1 + L2), REACH * (L1 + L2)
+    if d > soft:
+        d = soft + (hard - soft) * (1 - np.exp(-(d - soft) / (hard - soft)))
     p = (K0 - H) - ((K0 - H) @ u) * u
     if np.linalg.norm(p) < 1e-6:
         p = (A0 - H) - ((A0 - H) @ u) * u
