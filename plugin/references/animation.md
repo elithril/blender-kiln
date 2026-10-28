@@ -117,7 +117,7 @@ woman's walk, 2.1 MB in `tools/motions/`. The rig needs kiln's names (`reference
 `{asset}_animated.glb`, **one clip per motion, named as asked**, a `.measures.json`
 (`tools/motion_measure.py` on every clip of the file written) and a `.provenance.json` (preset,
 take, prompt, file hash, licences). `--speed 1.25` plays faster; `--no-fix feet,arms` gives the
-upstream behaviour back, for comparison.
+upstream behaviour back, for comparison. `--calm` calms a walk or a run (item 5 below).
 
 **Licences.** The clips: *Licensed by NVIDIA Corporation under the NVIDIA Open Model License*;
 NVIDIA claims no ownership of the outputs; commercial use allowed. The data and the retarget
@@ -148,6 +148,15 @@ humanoid whose right hand is fused to its hip:
    keyed equal to frame 0 (rule 5 of § Rules for scripted animation), the hips' travel taken
    out; the root speed to move the character at is recorded. One-shots are kept whole, not
    looped.
+5. **`--calm`** (walk, walk_woman, run, sneak) — a calmer gait. Kimodo's walk swings the pelvis
+   18.8° of roll and 13.5° of yaw peak to peak, about twice a human walk; on a chibi with short legs
+   and wide hips it reads as a waddle (the user, on kiln's mascot; the 3.0 bench's chibi: the same
+   numbers). Calming the hips alone made the head roll 12.2° instead of 4.3° — the spine had been
+   compensating — so `retarget.calm` scales the hips' roll ×0.25 and yaw ×0.4, their side sway ×0.5,
+   the spine's and neck's own turns ×0.4 and the head's roll and yaw in the world ×0.25 (pitch ×0.7),
+   **before** the feet are locked. On the mascot's walk_loop: hips 4.7° roll, 5.4° yaw, 11.6 mm sway;
+   head 1.1° roll, 1.1° yaw; slide 1.1 mm/s, seam 0.9×. **Use it on a chibi or any big-headed
+   character**; its report line carries each value before and after.
 
 **Measured** with `tools/motion_measure.py`, the same measure on every route (method in its
 docstring): standing-foot slide (mm/s), deepest skin under the floor (mm), arm through body

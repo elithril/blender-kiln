@@ -818,6 +818,81 @@ LOOP_MOVING = 0.7        # a window moving less than 0.7 x the clip's median ste
 STILL_SPEED = 0.05       # m/s on a 1.7 m human: an in-place cycle slower than this stands still
 
 
+# ── a calmer gait (kiln) ────────────────────────────────────────────────────────────────
+# Kimodo's walk swings the pelvis 18.8 deg of roll and 13.5 deg of yaw peak to peak — about twice
+# a human walk; on a chibi with short legs and wide hips it reads as a waddle (measured on kiln's
+# mascot and on the 3.0 bench's chibi: identical). Calming the hips alone made it worse: the head
+# rolled 12.2 deg instead of 4.3, the spine had been compensating. So the hips' roll and yaw, their
+# side sway, the spine's and neck's own turns and the head's roll and yaw in the world are scaled
+# down together; the feet are put back by lock_feet afterwards. On the mascot (2026-10-28): hips
+# 4.7 deg roll / 5.4 yaw / 11.5 mm sway, head 1.1 deg roll / 1.0 yaw — "beaucoup mieux".
+CALM = dict(roll=0.25, yaw=0.4, sway=0.5, spine=0.4, head=0.25, head_pitch=0.7)
+CALM_CHAIN = ("Spine", "Spine1", "Spine2", "Neck")
+GAITS = ("walk", "walk_woman", "run", "sneak")
+
+
+def _ypr(r) -> tuple[float, float, float]:
+    """(yaw, pitch, roll) of r = Ry(yaw) Rx(pitch) Rz(roll), in the character frame (left, up, forward)."""
+    return (float(np.arctan2(r[0, 2], r[2, 2])), float(np.arcsin(np.clip(-r[1, 2], -1, 1))),
+            float(np.arctan2(r[1, 0], r[1, 1])))
+
+
+def _from_ypr(yaw, pitch, roll) -> np.ndarray:
+    cy, sy, cp, sp, cr, sr = np.cos(yaw), np.sin(yaw), np.cos(pitch), np.sin(pitch), np.cos(roll), np.sin(roll)
+    ry = np.array([[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]])
+    rx = np.array([[1, 0, 0], [0, cp, -sp], [0, sp, cp]])
+    rz = np.array([[cr, -sr, 0], [sr, cr, 0], [0, 0, 1]])
+    return ry @ rx @ rz
+
+
+def calm(rig: Rig, frames, k=CALM) -> tuple[list, dict]:
+    """The frames with a calmer pelvis, spine and head (see CALM above), and what it changed:
+    peak-to-peak hips roll and yaw, head roll and yaw (deg), hips side sway (mm), before -> after."""
+    axes = character_frame(rig.heads, rig.up)
+    left = axes[:, 0]
+    rest = {b: rig.rest[b][:3, :3] for b in rig.order}
+    root = rig.root
+
+    def off_rest(world, b):
+        return _ypr(axes.T @ world @ rest[b].T @ axes)
+
+    def scaled(world, b, ky, kp, kr):
+        y, p, r = off_rest(world, b)
+        return axes @ _from_ypr(y * ky, p * kp, r * kr) @ axes.T @ rest[b]
+
+    side0 = float(np.mean([f[1] @ left for f in frames]))
+    chain = [b for b in rig.order if b in CALM_CHAIN]
+    out = []
+    for wr, pos in frames:
+        new = dict(wr)
+        new[root] = scaled(wr[root], root, k["yaw"], 1.0, k["roll"])
+        pos = pos - ((pos @ left) - side0) * (1 - k["sway"]) * left
+        for b in chain:
+            p = rig.parents[b]
+            q0 = rest[p].T @ rest[b]
+            delta = (wr[p].T @ wr[b]) @ q0.T
+            new[b] = new[p] @ exp_rot(log_rot(delta) * k["spine"]) @ q0
+        if "Head" in new:
+            new["Head"] = scaled(wr["Head"], "Head", k["head"], k["head_pitch"], k["head"])
+        out.append((new, pos))
+
+    def ptp(fr, b, i):
+        v = [np.degrees(off_rest(f[0][b], b)[i]) for f in fr]
+        return round(float(max(v) - min(v)), 1)
+
+    def sway(fr):
+        v = [f[1] @ left * 1000 for f in fr]
+        return round(float(max(v) - min(v)), 1)
+
+    info = {"hips_roll_deg": [ptp(frames, root, 2), ptp(out, root, 2)],
+            "hips_yaw_deg": [ptp(frames, root, 0), ptp(out, root, 0)],
+            "hips_sway_mm": [sway(frames), sway(out)]}
+    if "Head" in rest:
+        info["head_roll_deg"] = [ptp(frames, "Head", 2), ptp(out, "Head", 2)]
+        info["head_yaw_deg"] = [ptp(frames, "Head", 0), ptp(out, "Head", 0)]
+    return out, info
+
+
 def rig_height(rig: Rig) -> float:
     z = rig.points @ rig.up
     return float(z.max() - z.min())

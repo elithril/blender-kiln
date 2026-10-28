@@ -18,6 +18,8 @@ kiln child's joints, a skin of tubes and box feet, 100% to one bone each):
   move it at recorded; the jump, a one-shot, kept whole and not looped;
 - arms: the jump's hands and forearms, which hang into the wide hips, cross the body < 500 mm²,
   where upstream's clearance (--no-fix arms: torso, neck and head only) leaves > 500;
+- --calm: the walk_loop's hips roll at most 0.3x and yaw 0.5x the take's, the head rolls no more,
+  and the feet still hold (slide < 50 mm/s, < 5 mm under the floor, seam <= 1.2x);
 - a rig missing a leg bone is refused, naming it.
 """
 import json
@@ -252,6 +254,17 @@ def main():
         j, rj = meas["jump"]["skin"]["mean_arm_body_mm2"], raws.get("jump", {}).get("skin", {}).get("mean_arm_body_mm2")
         check(f"arms out of the hips: jump {j} mm² of arm through body (upstream's clearance: {rj} mm²)",
               rj is not None and j < 500 < rj)
+        calm = subprocess.run([sys.executable, str(HERE / "presets.py"), "animate", "--asset", str(rig), "--motion", "walk",
+                               "--loop", "--calm", "--out", str(tmp / "calm")], capture_output=True, text=True, env=env)
+        line = next((l for l in calm.stdout.splitlines() if l.startswith("presets: walk_loop {")), "")
+        c = json.loads(line.split(" ", 2)[2]).get("calm") if line else None
+        cm = json.loads((tmp / "calm" / "SK_Test_rigged_animated.measures.json").read_text()).get("walk_loop", {}) \
+            if calm.returncode == 0 else {}
+        check(f"--calm: walk_loop hips roll {c and c['hips_roll_deg']} deg, yaw {c and c['hips_yaw_deg']}, head roll "
+              f"{c and c.get('head_roll_deg')}; slide {cm.get('foot_slide', {}).get('mm_s')} mm/s, seam {cm.get('seam_x_step')}x",
+              c is not None and c["hips_roll_deg"][1] <= 0.3 * c["hips_roll_deg"][0]
+              and c["hips_yaw_deg"][1] <= 0.5 * c["hips_yaw_deg"][0] and c["head_roll_deg"][1] <= c["head_roll_deg"][0]
+              and cm["foot_slide"]["mm_s"] < 50 and cm["floor"]["below_mm"] < 5 and cm["seam_x_step"] <= 1.2)
     bad_run = subprocess.run([sys.executable, str(HERE / "presets.py"), "animate", "--asset", str(bad),
                               "--motion", "walk", "--out", str(tmp)], capture_output=True, text=True, env=env)
     check("a rig without LeftFoot is refused, naming it", bad_run.returncode != 0 and "LeftFoot" in bad_run.stdout + bad_run.stderr,

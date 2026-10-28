@@ -95,6 +95,8 @@ def parse(argv):
     an.add_argument("--speed", type=float, default=1.0, help="play faster (>1) or slower (<1)")
     an.add_argument("--take", choices=("A", "B"), default="A")
     an.add_argument("--stiff-fingers", action="store_true", help="fingers follow the hand rigidly")
+    an.add_argument("--calm", action="store_true", help="a calmer gait for walk, walk_woman, run, sneak: "
+                    "hips, spine and head swing less (retarget.CALM) — for a chibi or a big head")
     an.add_argument("--no-measure", action="store_true", help="skip the measures JSON (faster)")
     an.add_argument("--no-fix", default="", help="leave out kiln's corrections, for comparison: feet,arms")
     return ap.parse_args(argv)
@@ -204,6 +206,9 @@ def blender_animate(args) -> int:  # pragma: no cover - needs bpy
         tread, loop = None, None
         if looped:
             frames, contacts, tread, loop = R.cut_loop(rig, frames, contacts, fps, mapping)
+        calmed = None
+        if args.calm and name in R.GAITS:          # before the feet are locked: they go back where they stood
+            frames, calmed = R.calm(rig, frames)
         swings = R.clear_arms(rig, frames, proxy, cyclic=looped,
                               upper_points=R.UPPER_ARM_POINTS if arms_kiln else ()) if proxy else {}
         feet = R.lock_feet(rig, frames, fps, contacts, cyclic=looped, tread=tread) if "feet" not in skip else {}
@@ -226,7 +231,7 @@ def blender_animate(args) -> int:  # pragma: no cover - needs bpy
         ad.action = None
         report[clip] = dict(frames=len(frames), seconds=round((len(frames) - 1) / fps, 2),
                             hip_scale=round(info["hip_scale"], 3), arm_swing=swings, feet=feet,
-                            loop=loop)
+                            loop=loop, calm=calmed)
         prov.append(dict(clip=clip, preset=preset["id"], take=take, prompt=preset["prompt"],
                          made_with=preset["made_with"], seed=preset["seed"], speed=args.speed,
                          looped=bool(looped), root_speed_m_s=loop and loop["root_speed_m_s"],

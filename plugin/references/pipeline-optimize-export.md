@@ -71,6 +71,15 @@ By target:
     Print → STL, global_scale=1000 (mm); 3MF too if the extension is installed
 ```
 
+**Read the validator's whole output** (`gltf-transform validate`): its warnings come as a table,
+and a filter on the words "error" and "warning" hides it. **`NODE_SKINNED_MESH_NON_ROOT`, one per
+skinned mesh**, is Blender's default — the meshes under the armature's node; the 3.0 bench's
+chibi carried 7 of them and its log said 0 warnings. Before the export, unparent the meshes
+(keep their transform and their Armature modifier): no warning. **A clip re-exported from Blender
+keeps its own frame rate**: set the scene to it (30 for `tools/presets.py`) before importing —
+at Blender's default 24 the export resampled a 30 fps walk and its locked feet slid 6.5 mm/s
+instead of 1.1.
+
 **An animated creature:** no hand-over before the matcap review, close up, at rest and mid-walk
 (`references/characters.md` § Matcap before delivery) — on the cat it found four faults the
 measures had missed.

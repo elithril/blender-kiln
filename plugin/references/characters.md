@@ -41,6 +41,12 @@
   - Charm: eyes, eyelids, cheeks, pads
   - Retopology: QuadriFlow first, then the weights
   - Matcap before delivery — mandatory
+- A stylised humanoid — a mascot, a chibi
+  - Hair: locks, never a shell
+  - Face and hands
+  - Clothes and props on a rigged body
+  - Blink on flat eyes: squash, not a lid
+  - Review rounds, and what to look for
 - Retopology Tools
 - Kiln Integration
   - In the main pipeline
@@ -836,7 +842,8 @@ four on a cartoon creature unless the brief says otherwise:
 - **A big head and big eyes with highlights.** The cat: eyes 34 mm on a 0.40 m figure,
   60% of their depth out of the skin, two emissive highlights each, lit from the same side.
   The dog: eyes 44 mm visible, head radius raised 106 → 122 mm, body unchanged.
-- **Real eyelids**, one upper lid per eye: a shell over the eye (a spherical cap at 1.085 ×
+- **Real eyelids** — on round eyes that stand out of the head (the cat, the dog); on flat, painted-on
+  eyes a lid floats in front of the face: squash instead (§ A stylised humanoid). One upper lid per eye: a shell over the eye (a spherical cap at 1.085 ×
   the eye's radius, 1.2 mm thick, on the cat), one bone per lid, `LeftEyelid` /
   `RightEyelid`, parented to `Head`. **Blink by turning the bone, not by a shape key** —
   the dog's lids came back intact from its Draco GLB, identical to the plain one, and
@@ -932,6 +939,95 @@ blender -b --factory-startup --python-exit-code 1 --python tools/review_renders.
 Look at the rest pose and at two or three frames of the walk (the elbows and knees bent).
 In the hand-over, name what stays — a soft crease under the jaw, the contact line of a
 separate eye — and say it was left on purpose.
+
+## A stylised humanoid — a mascot, a chibi
+
+What kiln's own mascot took, built from the brief over six review rounds (2026-10-28, `scripts/` of
+the asset and its log): the method of § An animated creature (one metaball skin, QuadriFlow,
+`tools/autorig.py`, `tools/presets.py`), and below, what it did not say. The 3.0 bench's chibi, built
+from that section alone, had a hair shell and mitten stumps; the user called the bench's models
+"pas très quali". Build all of this unless the brief says otherwise.
+
+### Hair: locks, never a shell
+
+- **A smooth shell over the skull reads as a helmet**, and cones on it as horns (round 1). Build
+  **a thin cap** (solidified 10 mm) whose edge sits high on the forehead, above the ears and
+  **low at the nape** — a cap ending at the back of the skull left the nape bald (round 2) —
+  then **locks over it**: each a tube lying on the head's ellipsoid, running from the crown down
+  and round, lifting off the head toward its tip, which flicks out.
+- **Chunky, not straw**: width about 0.4 × the head's radius at the root (80 mm on a 200 mm head),
+  section half as thick, the width held then rounded off near the tip (`(1 - t^1.8)^0.6`) —
+  locks 50 mm wide tapering linearly read as straw (round 2). 8 sides, 10 segments.
+- **About 25 locks**: 5 bangs swept to one side, 3 per side over the ears, 8 at the back to the
+  nape, 5 on the crown — and **one signature lock** (the mascot's: two big swoops rising and
+  curling back, a flame) that makes the silhouette. Two tones, the under-locks a shade darker,
+  for depth (round 4).
+- Anything worn on the hair (goggles, a cap, a band) goes on the hair's ellipsoid at a fixed
+  radius, not ray-cast onto the locks: cast on them, the strap was as bumpy as they are.
+
+### Face and hands
+
+- **Eyes** as § Charm, plus an iris in their lower half; **brows**: a short bent tube on the skin,
+  the outer end a little higher (cheerful), the hair's colour a shade darker.
+- **Mouth: an open smile** — the lower half of a flattened ellipsoid, flat side up, sunk in the
+  skin, a tongue low inside. A small one with the tongue near its edge read as a tongue
+  sticking out (round 2); 46 × 32 mm on a 200 mm head read as a smile.
+- **Nose: small** — a 16 mm bump; at 24 mm it stuck out in the side view (round 1).
+- **Hands: a flatter palm with a thumb** — an ellipsoid wider than thick and a capsule pointing
+  forward and up, stiffness 4 so the metaball keeps it apart. Round mittens read as stumps
+  (rounds 1-4). SkinTokens found the thumb (three `…HandX1..X3` bones).
+
+### Clothes and props on a rigged body
+
+- **A garment that lies on the body** (an apron, a bib, a tabard) is **projected**: a grid over its
+  outline in the front view, each point ray-cast onto the skin and lifted 6 mm, then solidified —
+  its outline stays clean. **Cuffs, collars, bands**: a ring round the limb, its radius ray-cast
+  **from the front** (cast from above, the sleeve's ray hit the head and the ring came out 0.6 m
+  wide). **One object per limb** (each cuff its own), so each follows its limb.
+- **`tools/autorig.py` gives every separate part 100 % to the bone nearest its centre**: right
+  for the head's parts, wrong for anything lying across a joint — the apron went rigid on
+  `Spine2`, a sleeve cuff on the forearm, the hammer on the thumb's last bone. After it, give
+  such parts the skin's weights (a Data Transfer modifier, vertex groups, nearest face
+  interpolated), restricted to the bones of their region (an apron: `Hips`…`Neck`; a sleeve:
+  shoulder, arm, forearm; a boot cuff: up-leg, leg, foot), at most 4, normalised; and a prop held
+  in a hand 100 % to that hand. Removing a vertex's groups one by one shifts `v.groups` under the
+  loop: collect the indices first.
+- **A prop in the hand**, modelled in the T-pose so that it reads right with the arm down: the
+  hammer's handle along Y (forward), its head along X — once the arm hangs, the handle points
+  forward and the head stands up. **A one-handed move with the prop hand** (`wave`) puts the
+  prop through the head: 1,400-1,990 mm² of arm through body; leave that move out or wave the
+  other hand.
+
+### Blink on flat eyes: squash, not a lid
+
+A lid shell (§ Charm) over a flat eye has to bulge to cover the highlights, and then reads as a
+disc floating in front of the face — "on a l'impression qu'elles volent" (the user). On a chibi's
+painted-on eyes, **blink by squashing the eye**. Build the highlights as their own objects
+(`SK_X_ShineL`…), not joined to the eye. Pass the eyes to the rig as lids —
+`tools/autorig.py rig … --lids SK_X_EyeL SK_X_EyeR`: each gets a bone at its centre, parented to
+`Head`, the eye 100 % on it — and rename those bones `LeftEye` / `RightEye`. Add a child of each,
+`LeftEyeShine`, at the same place, the highlights 100 % on it. Blink: the eye bone scaled to 10 %
+along the face's up axis — measure which of the bone's axes that is; on the mascot, Z — and the
+shine bone to nothing by mid-blink, or the highlights leave a white streak on the closed line.
+Same timing as § Charm.
+
+### Review rounds, and what to look for
+
+**Three rounds at least, until none of the list below is seen**; the mascot took five before the
+user's validation and one after. Each round: a review sheet of six renders under the studio
+light — front, both three-quarters, side, back, **and the head close up** — and these questions,
+each a fault one of its rounds had:
+
+- Does the hair read as hair from the back and the side — or a helmet, horns, straw, a bald nape?
+- Does anything float or stick out — a lid, a nose in the side view, a strap off the hair?
+- Do the hands read as hands (a thumb), and the mouth as a smile?
+- Is every accessory big enough to read at the size it will be shown (goggles at 3 mm of strap
+  read as a line; a hammer head 120 mm long on a 1 m figure, small)?
+- Is the silhouette recognisable from the front without colour — one signature shape?
+
+Then the matcap of § Matcap before delivery, at rest and mid-walk. The mascot's budget: 27,300
+triangles, 1.8× the web hero's top, spent on the hair (6,500) and the face — reported, kept
+(rule 4).
 
 ## Retopology Tools
 

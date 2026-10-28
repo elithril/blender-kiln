@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — what kiln's mascot taught (3.0)
+- **`tools/presets.py --calm`** (walk, walk_woman, run, sneak): Kimodo's walk swings the pelvis 18.8°
+  of roll and 13.5° of yaw, about twice a human walk — a waddle on a chibi. `retarget.calm` scales the
+  hips' roll and yaw, their side sway, the spine's turns and the head's roll and yaw together, before
+  the feet are locked (calming the hips alone made the head roll 12.2° instead of 4.3°). On the
+  mascot: hips 4.7° roll, head 1.1°, slide 1.1 mm/s. `test_presets.py` checks it (14/14).
+- **`references/characters.md` § A stylised humanoid**: hair as chunky locks over a thin cap, never a
+  shell; an open smile, a small nose, a flat palm with a thumb; clothes projected on the body, cuffs
+  sized from the front, one object per limb; skin weights for the parts autorig makes rigid (an
+  apron on `Spine2`, a hammer on the thumb's tip); a squash blink on flat eyes instead of a floating
+  lid; three review rounds at least, with the questions each of the mascot's six rounds answered.
+- **Export**: read the glTF validator's whole output — `NODE_SKINNED_MESH_NON_ROOT` was on every
+  skinned mesh (the bench's chibi logged "0 warnings" with 7): unparent the meshes before export; keep
+  a re-exported clip at its own frame rate (at 24 fps a 30 fps walk's locked feet slid 6.5 mm/s).
+
 ### Changed — mcp-for-blender's current tools; the server pinned for real (3.0)
 
 - **ahujasid's server is `mcp-for-blender`** (renamed from `blender-mcp` in September 2026),

@@ -60,6 +60,8 @@ IF type = character or creature   # decided before the style lines above, which 
       for print, `print.md` § Figures), never separate parts glued on, never one family
       per region on a skin that bends; realistic / detailed → recommend AI. Sessions read "cartoon → scripted" and
       "character → AI" as a contradiction on every mascot.
+    → a stylised HUMANOID (a mascot, a chibi): `characters.md` § A stylised humanoid too —
+      hair as locks, clothes projected, face and hands, three review rounds at least
     → ASK: "Will this character need rigging/animation?"
       IF yes → force T-pose in concept image prompt
               → record it: the RIG SELECTION gate in PHASE 5c depends on it
