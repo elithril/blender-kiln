@@ -298,10 +298,11 @@ Project left 1.7% of its surface on collapsed UVs, unseen.
 - Before the first primitive, **the intent** in the log: a palette with roles, the materials (three at
   least on an object of several parts), three finishes; a character, its design sheet.
 - After building and texturing, before rigging or optimizing: **rounds** — `tools/review_sheet.py`
-  (six views under a studio light, a close-up), looked at, a written critique of three defects or more
-  with their fixes, then the fixes. **3 rounds at least, 5 for a character or a showcase brief**, until
-  a round finds nothing; **auto mode does not shorten them**. From a photo: the shape keeps its two
-  correction rounds, the next rounds are on the surface and the finish.
+  (six views and a close-up, exposed on the model, in colour and in clay), both sheets looked at, a
+  written critique of three defects or more with their fixes, then the fixes. **3 rounds at least, 5
+  for a character or a showcase brief**, until a round finds nothing; **auto mode does not shorten
+  them**. From a photo: reshaping to the photo keeps its two correction rounds; a part off-centre or
+  out of line is a build error, fixed at any round.
 
 ### [5c] RIG and [5d] ANIMATE — `references/pipeline-rig-animate.md`
 

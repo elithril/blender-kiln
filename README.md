@@ -512,7 +512,7 @@ plugin/
 | `plugin/references/pipeline-brief.md` | Pipeline [1] CONFIG (parameters, first launch) and [2] BRIEF | ~48 |
 | `plugin/references/pipeline-source.md` | Pipeline [3] SOURCE: marketplace preflight, choosing a method, print, concept art, a reference image per method, scripted and Geometry Nodes flows | ~160 |
 | `plugin/references/pipeline-import-cleanup.md` | Pipeline [4] IMPORT (pose measure, rename, framing) and [5] CLEANUP | ~130 |
-| `plugin/references/review-rounds.md` | Review rounds for every asset: the intent before building, 3 rounds at least (a character 5), what to look for, the log | ~95 |
+| `plugin/references/review-rounds.md` | Review rounds for every asset: the intent before building, 3 rounds at least (a character 5), what to look for, the log | ~110 |
 | `plugin/references/pipeline-rig-animate.md` | Pipeline [5c] RIG SELECTION (SkinTokens or Rigify, by measure) and [5d] ANIMATE (routes by subject) | ~96 |
 | `plugin/references/pipeline-optimize-export.md` | Pipeline [6] OPTIMIZE (auto preset, preview, outputs' folders) and [7] EXPORT | ~110 |
 | `plugin/references/commands.md` | Standalone commands: status, inspect, cleanup, texture, animate, optimize, convert, search, studio, help | ~220 |
@@ -538,7 +538,7 @@ plugin/
 | `plugin/tools/cutout.swift` | Cuts the subject out of a photo with macOS Vision (14+), local and free — the alpha `fidelity_check` needs | ~30 |
 | `plugin/tools/flatten.py` | Makes a model's nearly flat faces exactly flat and lays it on the bed — curves, bevels and slopes untouched, the input never overwritten | ~290 |
 | `plugin/tools/fit_coupon.py` | Writes the test print for a peg in a hole, diamond on its side or round standing up: one hole per clearance, one with a lead-in chamfer, the peg printed the way the model's is | ~235 |
-| `plugin/tools/review_sheet.py` | The review sheet of a round: six views under a studio light and a close-up, a rigged model at rest, framed on its vertices | ~175 |
+| `plugin/tools/review_sheet.py` | The review sheet of a round: six views and a close-up, exposed on the model, in colour and in clay; a rigged model at rest, framed on its vertices | ~225 |
 | `plugin/tools/review_renders.py` | The review renders without a connected Blender: matcap and colour (textures or vertex colours), opposite three-quarters, top and under, framed on the vertices; close-ups along the surface's normal, at the check's thin spots or where asked | ~285 |
 | `plugin/tools/uv_check.py` | UV check: used tile, overlap, stretch, collapsed and flipped faces; FAIL on a texture without UVs or collapsed UVs | ~180 |
 | `plugin/references/validation-checklist.md` | Geometry cleanup (welding that keeps the shading) + material export audit | ~320 |

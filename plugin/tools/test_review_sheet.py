@@ -5,6 +5,8 @@
 
 - a 0.3 m crate 5 m off the origin, as a GLB: exit 0, six tiles at the --res asked and the
   3 x 2 sheet, every tile's subject over 10 % of it — framed on the vertices, not on the origin;
+- painted near-black: both sheets (colour, clay) exposed to a subject median of 0.3-0.6 — a dark
+  ammo box read as a black block under the fixed light;
 - a missing model: exit 1, no traceback.
 """
 import os, subprocess, sys, tempfile
@@ -37,18 +39,26 @@ def main():
     subprocess.run([BLENDER, "-b", "--factory-startup", "--python-exit-code", "1", "--python-expr",
                     "import bpy; bpy.ops.wm.read_factory_settings(use_empty=True); "
                     "bpy.ops.mesh.primitive_cube_add(size=0.3, location=(5, 3, 0.15)); "
+                    "m = bpy.data.materials.new('dark'); m.use_nodes = True; "
+                    "next(n for n in m.node_tree.nodes if n.type == 'BSDF_PRINCIPLED').inputs['Base Color'].default_value = (0.02, 0.025, 0.015, 1); "
+                    "bpy.context.object.data.materials.append(m); "
                     f"bpy.ops.export_scene.gltf(filepath={glb!r}, export_format='GLB')"],
                    check=True, capture_output=True)
     out = os.path.join(tmp, "sheet.png")
     r = subprocess.run([BLENDER, "-b", "--factory-startup", "--python-exit-code", "1", "--python", TOOL, "--",
                         glb, "--out", out, "--res", "200"], capture_output=True, text=True)
     views = [l.split() for l in r.stdout.splitlines() if l.startswith("VIEW ")]
-    check("a crate 5 m off the origin: exit 0, six views and the sheet",
-          r.returncode == 0 and len(views) == 6 and os.path.exists(out), r.stdout[-400:] + r.stderr[-400:])
+    clay = out[:-4] + "_clay.png"
+    check("a crate 5 m off the origin: exit 0, six views on each sheet, both sheets",
+          r.returncode == 0 and len(views) == 12 and os.path.exists(out) and os.path.exists(clay),
+          r.stdout[-400:] + r.stderr[-400:])
     if r.returncode == 0:
-        check("each tile at the --res asked, the sheet 3 x 2 of them",
-              all(png_size(v[2]) == (200, 200) for v in views) and png_size(out) == (600, 400),
-              [png_size(v[2]) for v in views] + [png_size(out)])
+        check("each tile at the --res asked, each sheet 3 x 2 of them",
+              all(png_size(v[2]) == (200, 200) for v in views) and png_size(out) == png_size(clay) == (600, 400),
+              [png_size(v[2]) for v in views] + [png_size(out), png_size(clay)])
+        med = [float(l.split()[-1]) for l in r.stdout.splitlines() if l.startswith("EXPOSURE ")]
+        check(f"a near-black crate exposed to be seen (subject median {med})",
+              len(med) == 2 and all(0.3 <= m <= 0.6 for m in med), r.stdout[-400:])
         cov = [float(v[4]) for v in views]
         check(f"the crate fills every tile (subject {min(cov):.0f}-{max(cov):.0f} %)", min(cov) > 10, cov)
     r = subprocess.run([BLENDER, "-b", "--factory-startup", "--python-exit-code", "1", "--python", TOOL, "--",

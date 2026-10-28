@@ -23,7 +23,7 @@ each one found is in `characters.md` § A stylised humanoid.
 |---|---:|---|
 | A prop, an object, a scene piece | **3** | a round finds nothing from the lists below |
 | A character, a mascot, a creature — or any brief that says showcase, hero, vitrine, high quality | **5** | the same, and every line of the design sheet shows |
-| From a photo | the shape: **2** correction rounds at most (`reference-fidelity.md` § 5); then **3** rounds on the surface and the finish | the same |
+| From a photo | the proportions: **2** correction rounds at most (`reference-fidelity.md` § 5); then **3** rounds on the surface, the finish **and the assembly** | the same |
 | Print | `print.md`'s own rounds | `print_check` PASS and the gaps stop closing |
 
 **Auto mode does not shorten them**: nobody is there to say it looks wrong, so the rounds are the
@@ -47,15 +47,20 @@ shorts, one material, nothing in its hands):
 
 ## One round
 
-1. Render the sheet: `blender -b --factory-startup --python-exit-code 1 --python tools/review_sheet.py
+1. Render the sheets: `blender -b --factory-startup --python-exit-code 1 --python tools/review_sheet.py
    -- MODEL --out review/round{n}.png` — front, both three-quarters, side, back and a close-up of the
    top (a character's head), under a studio light, a rigged model in its rest pose, framed on its
-   vertices. `tools/review_renders.py` (matcap) is for the geometry; this one is for how it looks.
-2. **Look at it** (Read the PNG), every tile, as the person who will use the asset.
+   vertices, exposed on the model. Two sheets: `round{n}.png` in colour, for how it looks, and
+   `round{n}_clay.png`, every material replaced by light clay, for how it is built.
+2. **Look at both** (Read the PNGs), every tile, as the person who will use the asset. The clay sheet
+   first: paint hides a part out of place — a dark olive ammo box went through eight rounds with its
+   latch plate off-centre, seen on the side tile only once the paint was gone (3.0 bench, 2026-10-28).
 3. **Write the critique in the log before changing anything**: at least three numbered defects, each
    with where, in which tile, and the fix — or "nothing found", with what was checked. "Looks good" is
    not a round.
-4. Fix them, rebuild, export, and start the next round.
+4. Fix them — **all the round lists**, when they touch different parts or regions; two changes to the
+   same material region go one per round (`reference-fidelity.md` § 5: together, they regressed the
+   surface while each read "applied"). Rebuild, export, and start the next round.
 
 ## What to look for — every asset
 
@@ -67,6 +72,10 @@ shorts, one material, nothing in its hands):
 - **Finishes**: each one the intent lists, visible in the close-up.
 - **Colour**: the palette holds — no stray saturated colour, the accent used once or twice.
 - **Nothing floats, nothing pokes through**: parts enter one another; straps follow surfaces.
+- **Assembly** (the clay sheet): on a symmetric object, what sits on its axis is centred on it — a
+  latch, a handle, a badge; parts the real object lines up are lined up — brackets under the plate
+  they hold, rivets along their strip; nothing sticks past the outline that the brief or the
+  reference does not show. Check it on the side and back tiles, square-on.
 - **The back and the underside**: not left plain or open because the front was the brief.
 
 ## What to look for — a character
@@ -76,13 +85,20 @@ straw, bald nape, stair-stepped edge at the temples), face (eyes, brows, smile, 
 accessories big enough to read, the design sheet's every line. Then the matcap at rest and mid-walk
 (`characters.md` § Matcap before delivery).
 
-## From a photo: the shape stays, the surface goes on
+## From a photo: the proportions stay, the assembly is always fixed
 
-`reference-fidelity.md` § 5 stops the shape at two correction rounds: pushed further, a lantern's
-posts were narrowed to fit the photo's perspective and moved away from the real object (0.900 →
-0.849). The rounds after them change **surface and finish only** — materials against the photo's
-crops, wear, bevels, the details of the inventory — and measure the shape again at the end: a drop
-of more than 0.01 is undone.
+`reference-fidelity.md` § 5 stops **reshaping to the photo** at two correction rounds: pushed
+further, a lantern's posts were narrowed to fit the photo's perspective and moved away from the real
+object (0.900 → 0.849). What it stops is changing a part's size or proportion to raise the score.
+
+It does not freeze the geometry. A part off-centre, out of line with its neighbour, or sticking out
+is a build error, not a proportion: fix it at any round, the clay sheet shows it. The ammo box that
+read the cap as "no more geometry" spent its six later rounds on paint and rust and shipped its
+latch plate off-centre (3.0 bench, 2026-10-28).
+
+So the rounds after the two go on **surface, finish and assembly** — materials against the photo's
+crops, wear, bevels, the details of the inventory, every part where it belongs — and measure the
+shape again at the end: a drop of more than 0.01 is undone.
 
 ## The log
 

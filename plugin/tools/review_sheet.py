@@ -9,11 +9,17 @@ round of references/review-rounds.md looks at.
 - a studio light (key, fill, rim) on a dark floor, EEVEE, Khronos PBR Neutral, perspective: the
   colours, materials and finish a person judges, which the orthographic matcap/colour renders of
   tools/review_renders.py are not made for (those check the geometry);
+- the exposure set on the model, not on the light: a dark olive ammo box under the fixed light read
+  as a black block, its latch and brackets unseen through eight rounds (3.0 bench, 2026-10-28). The
+  subject's median brightness is brought to ~0.45 whatever its paint;
+- a second sheet, SHEET_clay.png: the same six views with every material replaced by light clay —
+  where a part is off-centre, out of line or sticking out shows there, not under the paint;
 - a rigged model is shown in its REST pose and framed on its vertices: framed on its active clip, a
   walk that travels left the character a few pixels in a corner (kiln's mascot, 2026-10-28);
 - each tile's framing is checked: a subject whose projected box covers under 1 % of it is an error, exit 1.
 
-Writes SHEET.png (3 x 2 tiles) and SHEET_{view}.png; prints SHEET <path> and one VIEW line per tile.
+Writes SHEET.png and SHEET_clay.png (3 x 2 tiles each) and their SHEET[_clay]_{view}.png tiles;
+prints one EXPOSURE line per sheet, one VIEW line per tile and one SHEET <path> per sheet.
 """
 import math, os, sys
 
@@ -114,12 +120,12 @@ def camera(sc, pts, azim, elev, margin=1.08, lens=72.0):
     cam.rotation_euler = (c - cam.location).to_track_quat("-Z", "Y").to_euler()
 
 
-def render(sc, path, res):
+def render(sc, path, res, samples=48):
     sc.render.engine = "BLENDER_EEVEE"
     sc.render.resolution_x = sc.render.resolution_y = res
     sc.render.image_settings.file_format = "PNG"; sc.render.image_settings.color_mode = "RGBA"
     sc.render.filepath = path
-    sc.eevee.taa_render_samples = 48
+    sc.eevee.taa_render_samples = samples
     for attr, val in (("use_shadows", True), ("use_raytracing", True)):
         if hasattr(sc.eevee, attr):
             setattr(sc.eevee, attr, val)
@@ -128,6 +134,45 @@ def render(sc, path, res):
     except TypeError:
         sc.view_settings.view_transform = "Standard"
     bpy.ops.render.render(write_still=True)
+
+
+def pixels(path):
+    im = bpy.data.images.load(path); w, h = im.size
+    a = np.array(im.pixels[:], dtype=np.float32).reshape(h, w, 4); bpy.data.images.remove(im)
+    return a
+
+
+def expose(sc, pts, base, target=0.45):
+    """Set the exposure so the subject's median brightness (display values) reads ~target: the floor
+    hidden, the background transparent, the front view at low resolution; twice, the tone curve bends."""
+    floor = bpy.data.objects["review_floor"]; floor.hide_render = True
+    sc.render.film_transparent = True; sc.view_settings.exposure = 0.0
+    camera(sc, pts, math.radians(VIEWS[0][1]), math.radians(VIEWS[0][2]))
+    probe, med = base + "_exposure.png", None
+    for _ in range(3):
+        render(sc, probe, 160, samples=8)
+        a = pixels(probe); m = a[..., 3] > 0.5
+        if not m.any():
+            break
+        med = float(np.median(a[..., :3][m] @ np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)))
+        if abs(med - target) < 0.03:
+            break                                      # display ~ linear^(1/2.2): one stop moves it by 2^(1/2.2)
+        sc.view_settings.exposure = float(np.clip(sc.view_settings.exposure + 2.2 * math.log2(target / max(med, 1e-3)), -2, 5))
+    os.remove(probe)
+    floor.hide_render = False; sc.render.film_transparent = False
+    return sc.view_settings.exposure, med
+
+
+def clay(sc):
+    m = bpy.data.materials.new("review_clay"); m.use_nodes = True
+    b = next(n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
+    b.inputs["Base Color"].default_value = (0.62, 0.6, 0.57, 1); b.inputs["Roughness"].default_value = 0.55
+    for o in bpy.data.objects:
+        if o.type == "MESH" and o.name != "review_floor":
+            if not o.material_slots:
+                o.data.materials.append(m)
+            for slot in o.material_slots:
+                slot.link = "OBJECT"; slot.material = m
 
 
 def coverage(sc, pts):
@@ -153,25 +198,28 @@ def main():
         x, y, z, s = (float(v) / 1000 for v in o["close"].split(","))
         close = np.array([[x - s / 2, y - s / 2, z - s / 2], [x + s / 2, y + s / 2, z + s / 2]])
     out = o["out"]; base = out[:-4] if out.endswith(".png") else out
-    paths, bad = [], []
-    for name, az, el in VIEWS + (("close", -72, 8),):
-        camera(sc, close if name == "close" else pts, math.radians(az), math.radians(el),
-               margin=1.15 if name == "close" else 1.08)
-        p = f"{base}_{name}.png"; render(sc, p, o["res"]); paths.append(p)
-        cov = coverage(sc, pts)
-        print(f"VIEW {name} {p} subject {cov * 100:.0f} %")
-        if cov < 0.01:
-            bad.append(name)
-    tiles = []
-    for p in paths:
-        im = bpy.data.images.load(p); w, h = im.size
-        tiles.append(np.array(im.pixels[:], dtype=np.float32).reshape(h, w, 4)); bpy.data.images.remove(im)
-    sheet = np.concatenate([np.concatenate(tiles[3:], 1), np.concatenate(tiles[:3], 1)], 0)  # bottom-up rows
-    img = bpy.data.images.new("review_sheet", w * 3, h * 2, alpha=True)
-    img.pixels.foreach_set(sheet.ravel()); img.filepath_raw = base + ".png"; img.file_format = "PNG"; img.save()
-    print(f"SHEET {base}.png")
+    bad = []
+    for kind in ("colour", "clay"):
+        if kind == "clay":
+            clay(sc)
+        stem = base if kind == "colour" else base + "_clay"
+        ev, med = expose(sc, pts, stem)
+        print(f"EXPOSURE {kind} {ev:+.2f} stops, subject median {med if med is not None else 0:.2f}")
+        paths = []
+        for name, az, el in VIEWS + (("close", -72, 8),):
+            camera(sc, close if name == "close" else pts, math.radians(az), math.radians(el),
+                   margin=1.15 if name == "close" else 1.08)
+            p = f"{stem}_{name}.png"; render(sc, p, o["res"]); paths.append(p)
+            cov = coverage(sc, pts)
+            print(f"VIEW {name} {p} subject {cov * 100:.0f} %")
+            if cov < 0.01:
+                bad.append(f"{kind} {name}")
+        tiles = [pixels(p) for p in paths]; h, w = tiles[0].shape[:2]
+        sheet = np.concatenate([np.concatenate(tiles[3:], 1), np.concatenate(tiles[:3], 1)], 0)  # bottom-up rows
+        img = bpy.data.images.new("review_sheet_" + kind, w * 3, h * 2, alpha=True)
+        img.pixels.foreach_set(sheet.ravel()); img.filepath_raw = stem + ".png"; img.file_format = "PNG"; img.save()
+        print(f"SHEET {stem}.png")
     if bad:
         sys.exit(f"review_sheet: nothing in view on {', '.join(bad)} — check the model's place and size")
-
 
 main()

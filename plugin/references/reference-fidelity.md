@@ -471,8 +471,10 @@ Read it with its limits:
   closing (`print.md` § Like the photo, for print, rule 6). **One material problem per round** — the largest the review shows —
   then measure again; fixing several at once regresses the surface while every fix reads
   "applied". At 16–32 samples and 512 px bakes during review; 1024 only for the final bake.
-  **After them, the review rounds go on** (`references/review-rounds.md`): three more on the surface
-  and the finish only, the shape measured again at the end — a drop of more than 0.01 is undone.
+  The cap is on **reshaping to the photo** — a part's size or proportion changed to raise the score.
+  A part off-centre, out of line or sticking out is a build error, fixed at any round.
+  **After them, the review rounds go on** (`references/review-rounds.md`): three more on the surface,
+  the finish and the assembly, the shape measured again at the end — a drop of more than 0.01 is undone.
 - **Tick the inventory at the final review**, line by line, on an enlarged crop of the
   reference next to the same crop of the render: present and right, or not. Numbers see
   silhouettes and colours, not whether a detail is still there.

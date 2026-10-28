@@ -11,11 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   first primitive (a palette with roles, three materials at least, three finishes), then rounds —
   **3 at least for a prop, 5 for a character or a showcase brief**, auto mode included — each a
   `tools/review_sheet.py` sheet looked at and a written critique of three defects or more with their
-  fixes, until a round finds nothing; from a photo the shape keeps its two correction rounds and the
-  next ones work on the surface and the finish. The 3.0 bench's chibi, two looks and shipped, was
+  fixes, until a round finds nothing; from a photo, reshaping to the photo keeps its two correction
+  rounds and the next ones work on the surface, the finish and the assembly — a part off-centre or out
+  of line is fixed at any round (a test ammo box read the cap as "no more geometry" and shipped its
+  latch plate off-centre after eight rounds of paint). The 3.0 bench's chibi, two looks and shipped, was
   "pas très quali"; kiln's mascot, five rounds and a design sheet, was validated.
 - **`tools/review_sheet.py`**: six views under a studio light, a close-up of the top, a rigged model in
-  its rest pose, framed on its vertices (`test_review_sheet.py`, 4/4).
+  its rest pose, framed on its vertices, exposed on the model (a near-black box is brought to a median
+  of ~0.45), and a second sheet in clay for the assembly (`test_review_sheet.py`, 5/5).
 - **`characters.md` § Design sheet first**: role and signature shape, palette, costume in layers with
   four materials, a prop, three finishes — shown to the user, or logged in auto mode.
 - **`tools/presets.py --blink`**: blinks in every clip on the eye bones (a squash and the highlights
