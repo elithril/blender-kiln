@@ -15,20 +15,23 @@
 
 A session that looks once, judges it "fine" and ships, ships what the user calls ugly. Measured on the
 3.0 bench's chibi child: built with the rules alone, two looks, shipped; the user: "pas très quali".
-kiln's mascot, built from a richer brief over **five rounds** before the user's validation and one
-after, with a written critique each time: "pas mal en vrai". The rounds were the difference — what
+kiln's mascot, built from a richer brief over **six rounds** on the model and three more on its
+motion, with a written critique each time: "pas mal en vrai". The rounds were the difference — what
 each one found is in `characters.md` § A stylised humanoid.
 
 | The asset | Rounds, at least | Stop |
 |---|---:|---|
 | A prop, an object, a scene piece | **3** | a round finds nothing from the lists below |
-| A character, a mascot, a creature — or any brief that says showcase, hero, vitrine, high quality | **5** | the same, and every line of the design sheet shows |
+| A character, a mascot, a creature — or any brief that says showcase, hero, vitrine, high quality | **6**, no cap | the same, every line of the design sheet shows — then rounds on the motion (below) |
 | From a photo | the proportions: **2** correction rounds at most (`reference-fidelity.md` § 5); then **3** rounds on the surface, the finish **and the assembly** | the same |
 | Print | `print.md`'s own rounds | `print_check` PASS and the gaps stop closing |
 
 **Auto mode does not shorten them**: nobody is there to say it looks wrong, so the rounds are the
-only eye. A round that finds a defect is followed by another. Eight at most: at the cap, ship and
-list in the hand-over what is still wrong.
+only eye. A round that finds a defect is followed by another. A prop stops at eight: at the cap,
+ship and list in the hand-over what is still wrong. **A character has no cap** — the mascot's
+quality is the bar, and it took six rounds on the model and three on the motion. A defect that
+comes back after two fixes is the method's, not the dose's: rebuild that part another way (the
+mascot's lids, re-weighted twice, were replaced by a squash blink).
 
 ## Before building: the intent
 
@@ -85,6 +88,13 @@ All of the above, plus `characters.md` § A stylised humanoid § Review rounds: 
 straw, bald nape, stair-stepped edge at the temples), face (eyes, brows, smile, nose), hands (a thumb),
 accessories big enough to read, the design sheet's every line. Then the matcap at rest and mid-walk
 (`characters.md` § Matcap before delivery).
+
+**Then rounds on the motion**, once rigged and animated, the same way — render the clips (a GIF or a
+strip of frames from the front and the side), look, write the defects, fix, again until a round finds
+nothing: lids or parts that fly off the head, hips that roll, a head that bobs, feet that slide, a hand
+through the body, a prop that leaves the hand. Measure what can be measured (`tools/motion_measure.py`,
+`animation.md`). The mascot: lids that "flew", hips that rolled, then a head that moved once the hips
+were calmed — three rounds, each seen on the clip, none in the numbers alone.
 
 ## From a photo: the proportions stay, the assembly is always fixed
 

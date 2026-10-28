@@ -213,7 +213,7 @@ log line (rule 7). Copy this checklist into your reply and tick it as you go:
 - [ ] [3] SOURCE               references/pipeline-source.md
 - [ ] [4] IMPORT + [5] CLEANUP references/pipeline-import-cleanup.md
 - [ ] [5b] TEXTURING           below, + references/texturing-strategy.md
-- [ ] REVIEW ROUNDS            references/review-rounds.md (3 at least; a character 5; auto mode too)
+- [ ] REVIEW ROUNDS            references/review-rounds.md (3 at least; a character 6, no cap, then its motion; auto mode too)
 - [ ] [5c] RIG + [5d] ANIMATE  references/pipeline-rig-animate.md (characters / motion only)
 - [ ] [6] OPTIMIZE + [7] EXPORT references/pipeline-optimize-export.md
 ```
@@ -299,9 +299,9 @@ Project left 1.7% of its surface on collapsed UVs, unseen.
   least on an object of several parts), three finishes; a character, its design sheet.
 - After building and texturing, before rigging or optimizing: **rounds** — `tools/review_sheet.py`
   (six views and a close-up, in colour and in clay), both sheets looked at, a
-  written critique of three defects or more with their fixes, then the fixes. **3 rounds at least, 5
-  for a character or a showcase brief**, until a round finds nothing; **auto mode does not shorten
-  them**. From a photo: reshaping to the photo keeps its two correction rounds; a part off-centre or
+  written critique of three defects or more with their fixes, then the fixes. **3 rounds at least
+  (8 at most) for a prop; 6 at least and no cap for a character or a showcase brief, then rounds on
+  its motion**, until a round finds nothing; **auto mode does not shorten them**. From a photo: reshaping to the photo keeps its two correction rounds; a part off-centre or
   out of line is a build error, fixed at any round.
 
 ### [5c] RIG and [5d] ANIMATE — `references/pipeline-rig-animate.md`
