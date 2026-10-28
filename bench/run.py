@@ -140,6 +140,52 @@ def skill_fingerprint():
                    for d in {REPO, PLUGIN})
 
 
+HUNG_S = 60   # a session done (its last result written, no background task left) and silent this long
+
+
+def finished(proc, transcript, t0):
+    """Wait for `claude -p` and return (exit code, when it finished). A session can write its last
+    result, with no background task left, and never exit: the mascot of 2026-10-28 sat 10 min so,
+    holding the port and the queue behind it. Done and silent HUNG_S seconds, it is closed and its
+    code read as 0 ("hung-closed" is logged); past TIMEOUT_S, "timeout"."""
+    seen, done_at, tasks = 0, None, []
+    while True:
+        try:
+            return proc.wait(5), done_at
+        except subprocess.TimeoutExpired:
+            pass
+        try:
+            with open(transcript) as f:
+                f.seek(seen)
+                for line in f:
+                    if not line.endswith("\n"):
+                        break                       # a line still being written: read it next time
+                    seen += len(line.encode())
+                    try:
+                        r = json.loads(line)
+                    except ValueError:
+                        continue
+                    if r.get("subtype") == "background_tasks_changed":
+                        tasks = r.get("tasks") or []
+                    if r.get("type") == "result":
+                        done_at = time.time()
+                    elif r.get("type") in ("assistant", "user"):
+                        done_at = None              # it went on working after that result
+        except OSError:
+            pass
+        if done_at and not tasks and time.time() - done_at > HUNG_S:
+            proc.terminate()
+            try:
+                proc.wait(20)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+            print(f"     hung-closed: done and silent {HUNG_S} s, closed", flush=True)
+            return 0, done_at
+        if time.time() - t0 > TIMEOUT_S:
+            proc.kill()
+            return "timeout", None
+
+
 def sandbox_for(brief, outdir):
     box = SANDBOX / outdir.parent.name / outdir.name
     shutil.rmtree(box, ignore_errors=True)
@@ -230,12 +276,12 @@ def run_brief(brief, outdir):
     before = skill_fingerprint()
     with open(outdir / "blender.log", "w") as blog:
         blender = start_blender(outdir / "profile", blog)
-        t0 = time.time()
+        t0, done_at = time.time(), None
         try:
             with open(outdir / "transcript.jsonl", "w") as tr, open(outdir / "claude.err", "w") as err:
                 prompt = (brief["prompt"].replace("<REFS>", str(refs))
                           + f"\n\nOutput folder (absolute): {work / 'generated-assets'}")
-                r = subprocess.run(
+                proc = subprocess.Popen(
                     ["claude", "-p", prompt,
                      "--plugin-dir", str(skill_copy),
                      "--mcp-config", str(outdir / "mcp.json"), "--strict-mcp-config",
@@ -244,12 +290,10 @@ def run_brief(brief, outdir):
                      "--model", MODEL,
                      "--no-session-persistence",
                      "--output-format", "stream-json", "--verbose"],
-                    cwd=work, stdout=tr, stderr=err, timeout=TIMEOUT_S)
-                code = r.returncode
-        except subprocess.TimeoutExpired:
-            code = "timeout"
+                    cwd=work, stdout=tr, stderr=err)
+                code, done_at = finished(proc, outdir / "transcript.jsonl", t0)
         finally:
-            wall = round(time.time() - t0, 1)
+            wall = round((done_at or time.time()) - t0, 1)
             blender.terminate()
             try:
                 blender.wait(20)
