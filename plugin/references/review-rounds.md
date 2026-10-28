@@ -50,8 +50,9 @@ shorts, one material, nothing in its hands):
 1. Render the sheets: `blender -b --factory-startup --python-exit-code 1 --python tools/review_sheet.py
    -- MODEL --out review/round{n}.png` — front, both three-quarters, side, back and a close-up of the
    top (a character's head), under a studio light, a rigged model in its rest pose, framed on its
-   vertices, exposed on the model. Two sheets: `round{n}.png` in colour, for how it looks, and
-   `round{n}_clay.png`, every material replaced by light clay, for how it is built.
+   vertices. Two sheets: `round{n}.png` in colour, for how it looks, and `round{n}_clay.png`, every
+   material replaced by light clay, for how it is built. From a photo, judge colour, glass and wear
+   on `side_by_side.png` against the photo (`reference-fidelity.md` § 5), not on the sheet's studio light.
 2. **Look at both** (Read the PNGs), every tile, as the person who will use the asset. The clay sheet
    first: paint hides a part out of place — a dark olive ammo box went through eight rounds with its
    latch plate off-centre, seen on the side tile only once the paint was gone (3.0 bench, 2026-10-28).

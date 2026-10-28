@@ -298,7 +298,7 @@ Project left 1.7% of its surface on collapsed UVs, unseen.
 - Before the first primitive, **the intent** in the log: a palette with roles, the materials (three at
   least on an object of several parts), three finishes; a character, its design sheet.
 - After building and texturing, before rigging or optimizing: **rounds** — `tools/review_sheet.py`
-  (six views and a close-up, exposed on the model, in colour and in clay), both sheets looked at, a
+  (six views and a close-up, in colour and in clay), both sheets looked at, a
   written critique of three defects or more with their fixes, then the fixes. **3 rounds at least, 5
   for a character or a showcase brief**, until a round finds nothing; **auto mode does not shorten
   them**. From a photo: reshaping to the photo keeps its two correction rounds; a part off-centre or

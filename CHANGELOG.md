@@ -17,8 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   latch plate off-centre after eight rounds of paint). The 3.0 bench's chibi, two looks and shipped, was
   "pas très quali"; kiln's mascot, five rounds and a design sheet, was validated.
 - **`tools/review_sheet.py`**: six views under a studio light, a close-up of the top, a rigged model in
-  its rest pose, framed on its vertices, exposed on the model (a near-black box is brought to a median
-  of ~0.45), and a second sheet in clay for the assembly (`test_review_sheet.py`, 5/5).
+  its rest pose, framed on its vertices, the exposure moved one stop at most (pushed to a fixed
+  brightness, a dark lantern's colours shifted and a session made its glass opaque), and a second
+  sheet in clay for the assembly (`test_review_sheet.py`, 5/5).
 - **`characters.md` § Design sheet first**: role and signature shape, palette, costume in layers with
   four materials, a prop, three finishes — shown to the user, or logged in auto mode.
 - **`tools/presets.py --blink`**: blinks in every clip on the eye bones (a squash and the highlights

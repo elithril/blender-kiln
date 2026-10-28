@@ -5,8 +5,8 @@
 
 - a 0.3 m crate 5 m off the origin, as a GLB: exit 0, six tiles at the --res asked and the
   3 x 2 sheet, every tile's subject over 10 % of it — framed on the vertices, not on the origin;
-- painted near-black: both sheets (colour, clay) exposed to a subject median of 0.3-0.6 — a dark
-  ammo box read as a black block under the fixed light;
+- painted near-black: the colour sheet's exposure moved one stop at most (pushed further, a dark
+  lantern's colours shifted and the session "fixed" them), the clay sheet's subject at 0.3-0.6;
 - a missing model: exit 1, no traceback.
 """
 import os, subprocess, sys, tempfile
@@ -56,9 +56,11 @@ def main():
         check("each tile at the --res asked, each sheet 3 x 2 of them",
               all(png_size(v[2]) == (200, 200) for v in views) and png_size(out) == png_size(clay) == (600, 400),
               [png_size(v[2]) for v in views] + [png_size(out), png_size(clay)])
-        med = [float(l.split()[-1]) for l in r.stdout.splitlines() if l.startswith("EXPOSURE ")]
-        check(f"a near-black crate exposed to be seen (subject median {med})",
-              len(med) == 2 and all(0.3 <= m <= 0.6 for m in med), r.stdout[-400:])
+        ex = {l.split()[1]: (float(l.split()[2]), float(l.split()[-1])) for l in r.stdout.splitlines()
+              if l.startswith("EXPOSURE ")}
+        check(f"near-black: colour exposure one stop at most, clay subject 0.3-0.6 ({ex})",
+              set(ex) == {"colour", "clay"} and abs(ex["colour"][0]) <= 1.0 and 0.3 <= ex["clay"][1] <= 0.6,
+              r.stdout[-400:])
         cov = [float(v[4]) for v in views]
         check(f"the crate fills every tile (subject {min(cov):.0f}-{max(cov):.0f} %)", min(cov) > 10, cov)
     r = subprocess.run([BLENDER, "-b", "--factory-startup", "--python-exit-code", "1", "--python", TOOL, "--",

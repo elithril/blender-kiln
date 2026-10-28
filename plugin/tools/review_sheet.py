@@ -9,9 +9,10 @@ round of references/review-rounds.md looks at.
 - a studio light (key, fill, rim) on a dark floor, EEVEE, Khronos PBR Neutral, perspective: the
   colours, materials and finish a person judges, which the orthographic matcap/colour renders of
   tools/review_renders.py are not made for (those check the geometry);
-- the exposure set on the model, not on the light: a dark olive ammo box under the fixed light read
-  as a black block, its latch and brackets unseen through eight rounds (3.0 bench, 2026-10-28). The
-  subject's median brightness is brought to ~0.45 whatever its paint;
+- the colour sheet's exposure nudged toward the model, one stop at most: pushed to a fixed brightness
+  (+4 stops on a dark olive ammo box), the colours shifted and a session "fixed" them — a lantern's
+  glass made opaque, its wear removed (3.0 bench, 2026-10-28). A dark object stays dark here; its
+  build shows on the clay sheet;
 - a second sheet, SHEET_clay.png: the same six views with every material replaced by light clay —
   where a part is off-centre, out of line or sticking out shows there, not under the paint;
 - a rigged model is shown in its REST pose and framed on its vertices: framed on its active clip, a
@@ -142,9 +143,9 @@ def pixels(path):
     return a
 
 
-def expose(sc, pts, base, target=0.45):
-    """Set the exposure so the subject's median brightness (display values) reads ~target: the floor
-    hidden, the background transparent, the front view at low resolution; twice, the tone curve bends."""
+def expose(sc, pts, base, target=0.3, most=1.0):
+    """Nudge the exposure toward a subject median brightness (display values) of ~target, `most` stops
+    at most: the floor hidden, the background transparent, the front view at low resolution."""
     floor = bpy.data.objects["review_floor"]; floor.hide_render = True
     sc.render.film_transparent = True; sc.view_settings.exposure = 0.0
     camera(sc, pts, math.radians(VIEWS[0][1]), math.radians(VIEWS[0][2]))
@@ -157,7 +158,7 @@ def expose(sc, pts, base, target=0.45):
         med = float(np.median(a[..., :3][m] @ np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)))
         if abs(med - target) < 0.03:
             break                                      # display ~ linear^(1/2.2): one stop moves it by 2^(1/2.2)
-        sc.view_settings.exposure = float(np.clip(sc.view_settings.exposure + 2.2 * math.log2(target / max(med, 1e-3)), -2, 5))
+        sc.view_settings.exposure = float(np.clip(sc.view_settings.exposure + 2.2 * math.log2(target / max(med, 1e-3)), -most, most))
     os.remove(probe)
     floor.hide_render = False; sc.render.film_transparent = False
     return sc.view_settings.exposure, med
@@ -203,7 +204,7 @@ def main():
         if kind == "clay":
             clay(sc)
         stem = base if kind == "colour" else base + "_clay"
-        ev, med = expose(sc, pts, stem)
+        ev, med = expose(sc, pts, stem, *((0.3, 1.0) if kind == "colour" else (0.45, 3.0)))
         print(f"EXPOSURE {kind} {ev:+.2f} stops, subject median {med if med is not None else 0:.2f}")
         paths = []
         for name, az, el in VIEWS + (("close", -72, 8),):
