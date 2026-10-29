@@ -153,8 +153,8 @@ For the maintainer, an accepted entry is:
    (empty when it is not out yet: the plate links to the author's GitHub), `github`, `media`, `alt`,
    `how` and `credit` from the issue, and `mark`, the maker's mark on the plate: a figure from `how` and
    its unit, such as `["101", "GLB"]`. `fit: "contain"` and `ground` for a picture that must not be cropped.
-3. A cell in the README's [Built with kiln](README.md#built-with-kiln) table: the picture at 800 × 500
-   in `docs/images/built-<project>.webp`, the title linked, the handle, `how` and `credit`.
+3. A line in the README's [Built with kiln](README.md#built-with-kiln) list (title linked, handle, `how`,
+   `credit`), and the track picture made again from the site (`docs/images/built-with-kiln.webp`).
 4. A reply on the issue with the link, then close it.
 
 ## Use of AI

@@ -60,10 +60,10 @@ Every model comes out clean, named, at real size, on the ground, compressed for 
 ### Kiln Studio — look at your models, pin a note, let Claude fix it
 
 <p align="center">
-  <img src="docs/images/studio.webp" width="100%" alt="Kiln Studio: six models in the list, an iron lantern open with a note pinned on its ring, the before and after views, and Claude's reply: the ring twice as big" />
+  <a href="https://elithril.github.io/blender-kiln/#studio"><img src="docs/images/studio-film.webp" width="100%" alt="Kiln Studio: a note pinned on the mascot's hammer and typed, then the note back addressed by Claude and the before and after of the hammer, side by side" /></a>
 </p>
-<p align="center"><sub>A real session from the 3.0 bench: the note was pinned in the page, Claude made the change and replied on it.<br />
-<b><a href="https://elithril.github.io/blender-kiln/#studio">How it works: watch a real session ▶</a></b></sub></p>
+<p align="center"><sub>From the film of a real session: a note pinned on the mascot's hammer, Claude makes it bigger in its own Blender and replies on the note.<br />
+<b><a href="https://elithril.github.io/blender-kiln/#studio">How it works: watch the whole film ▶</a></b></sub></p>
 
 A local page that shows every model in your project. Pin a note on a spot — *"the ring is too
 small to hang it"* — press **Work on it with Claude**, and the change lands in the model, with
@@ -249,8 +249,8 @@ hurricane lantern at **0.885** to **0.946** depending on the method ([the number
 ### Animate, and characters that bend
 
 <p align="center">
-  <img src="docs/images/animate-character-walk.webp" width="32%" alt="A low-poly villager walking in place, looped" />
-  <img src="docs/images/animate-character-jump.webp" width="32%" alt="The villager jumping in place, looped" />
+  <img src="docs/images/animate-mascot-walk.webp" width="32%" alt="kiln's mascot walking in place with its hammer, feet flat on the floor, looped" />
+  <img src="docs/images/animate-mascot-idle.webp" width="32%" alt="kiln's mascot idling with its hammer, breathing and blinking, looped" />
   <img src="docs/images/animate-dragon-flap.webp"    width="32%" alt="A low-poly dragon flapping its wings, looped" />
 </p>
 <p align="center">
@@ -474,24 +474,14 @@ Single steps, measured where stated:
 
 Projects people made with kiln, shown with their own pictures.
 
-<table>
-<tr>
-<td width="50%" valign="top"><a href="https://token-kingdom.com"><img src="docs/images/built-token-kingdom.webp" alt="Eighteen low-poly medieval buildings from Token Kingdom: keep, temple, clock tower, market, windmill, gold mine and more" width="100%" /></a><br />
-<b><a href="https://token-kingdom.com">Token Kingdom</a></b> · <a href="https://github.com/MartySalade">@MartySalade</a><br />
-<sub>22 buildings, one GLB per level, 101 in all, assembled by script through Blender MCP with kiln. Pieces: KayKit Medieval Hexagon Pack, Kay Lousberg, CC0.</sub></td>
-<td width="50%" valign="top"><a href="https://mylittleworkout.com/"><img src="docs/images/built-my-little-workout.webp" alt="Four of My Little Workout's exercise animations: burpee, dips, muscle-up and nordic curl" width="100%" /></a><br />
-<b><a href="https://mylittleworkout.com/">My Little Workout</a></b> · <a href="https://github.com/QuegoFreki">@QuegoFreki</a><br />
-<sub>112 exercises, illustrated and animated by headless Blender scripts with kiln.</sub></td>
-</tr>
-<tr>
-<td width="50%" valign="top"><img src="docs/images/built-olympus.webp" alt="Low-poly white and gold Olympus models: statues of the gods, a throne, braziers, a vase" width="100%" /><br />
-<b>Zeus Incremental FPS: Olympus</b> · <a href="https://github.com/MushkyQT">@MushkyQT</a><br />
-<sub>25 game-ready models for the game's Olympus, temple, statues of the gods and throne, with the Blender source.</sub></td>
-<td width="50%" valign="top"><img src="docs/images/built-imprint.webp" alt="A pixel-art office in the game Imprint, with the wind-up ink-sweeper made with kiln on the carpet" width="100%" /><br />
-<b>Imprint</b> · <a href="https://github.com/MushkyQT">@MushkyQT</a><br />
-<sub>The ink-sweeper, the dart and the paper plane: modelled in 3D with kiln, rendered at 8x, then turned into the game's pixel-art sprites.</sub></td>
-</tr>
-</table>
+<p align="center">
+  <a href="https://elithril.github.io/blender-kiln/#built"><img src="docs/images/built-with-kiln.webp" width="100%" alt="Four projects made with kiln, hung on a rolling track: My Little Workout, Zeus Incremental FPS: Olympus, Imprint and Token Kingdom" /></a>
+</p>
+
+- **[Token Kingdom](https://token-kingdom.com)** · [@MartySalade](https://github.com/MartySalade) — 22 buildings, one GLB per level, 101 in all, assembled by script through Blender MCP with kiln. Pieces: KayKit Medieval Hexagon Pack, Kay Lousberg, CC0.
+- **[My Little Workout](https://mylittleworkout.com/)** · [@QuegoFreki](https://github.com/QuegoFreki) — 112 exercises, illustrated and animated by headless Blender scripts with kiln.
+- **Zeus Incremental FPS: Olympus** · [@MushkyQT](https://github.com/MushkyQT) — 25 game-ready models for the game's Olympus, temple, statues of the gods and throne, with the Blender source.
+- **Imprint** · [@MushkyQT](https://github.com/MushkyQT) — the ink-sweeper, the dart and the paper plane: modelled in 3D with kiln, rendered at 8x, then turned into the game's pixel-art sprites.
 
 Built something with kiln? [Share it](https://github.com/elithril/blender-kiln/issues/new?template=share-what-you-built.yml) —
 it goes on the site and here once it has been looked at, credited to you.

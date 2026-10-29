@@ -599,7 +599,7 @@
     "since": "3.0",
     "video": "/assets/video/kiln-studio-session.mp4",
     "poster": "/assets/img/studio-poster.webp",
-    "alt": "A Kiln Studio session: a note pinned on the mascot's hammer, Claude scales the hammer in its own Blender, the note comes back addressed and the mascot walks with the bigger hammer.",
+    "alt": "Kiln Studio, new in blender-kiln 3.0: an ammo box in clay, normals and wireframe, its checks and its AR QR code; then a note pinned on the mascot's hammer, Claude scaling the hammer in its own Blender, the note coming back addressed, the mascot walking with the bigger hammer, and Claude Code in the terminal.",
     "points": [
       {
         "title": "Look and check",
@@ -619,24 +619,32 @@
       }
     ],
     "command": "/kiln studio",
-    "disclosure": "The film is a real session, re-cut: every screen is Studio's own, captured; Claude's views are the ones it looked at; the hammer's change is the real before and after meshes. Only the moves are re-played. 4 minutes of work, 42 turns, shown in 42 seconds.",
+    "disclosure": "The film is a real session, re-cut: every screen is Studio's own, captured, the opening on four kiln 3.0 models and the note on the mascot; Claude's views are the ones it looked at; the hammer's change is the real before and after meshes. Only the moves are re-played. 4 minutes of work, 42 turns, shown 17 times faster.",
     "sinceLabel": "New in 3.0: Kiln Studio and its MCP",
     "chapters": [
       {
-        "label": "Pin a note",
+        "label": "Studio",
         "t": 0
       },
       {
-        "label": "Claude works",
-        "t": 12.4
+        "label": "Pin a note",
+        "t": 15
       },
       {
-        "label": "Before / after",
-        "t": 27.2
+        "label": "Claude works",
+        "t": 27.4
+      },
+      {
+        "label": "Before/after",
+        "t": 42.2
       },
       {
         "label": "It walks",
-        "t": 33
+        "t": 48
+      },
+      {
+        "label": "Terminal",
+        "t": 52.4
       }
     ]
   },
