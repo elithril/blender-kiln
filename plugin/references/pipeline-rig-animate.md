@@ -82,6 +82,9 @@ Only when the user asks for motion. Route by **subject** — table and measureme
   `tools/presets.py animate --asset X_rigged.glb --motion walk,run --loop`: NVIDIA Kimodo clips,
   commercial use allowed, feet planted, arms kept out of the body, cycles closed; one GLB, a
   clip per motion. Report its measures line per clip, and say where a target is missed.
+  **A chibi or a big-headed character: add `--calm`** to its walk or run — the clip's pelvis
+  swings twice a human's and reads as a waddle (`references/animation.md` § Humanoid presets, 5).
+  **A character with eye bones: add `--blink`** (item 6) — every clip blinks.
 - **Biped or winged, from a sentence** — a move not in the presets, a non-human biped, wings →
   UniMate:
   `python3 tools/unimate.py status` first (exit 2 = not installed, 10 = newer upstream).

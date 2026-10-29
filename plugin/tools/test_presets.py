@@ -18,6 +18,10 @@ kiln child's joints, a skin of tubes and box feet, 100% to one bone each):
   move it at recorded; the jump, a one-shot, kept whole and not looped;
 - arms: the jump's hands and forearms, which hang into the wide hips, cross the body < 500 mm²,
   where upstream's clearance (--no-fix arms: torso, neck and head only) leaves > 500;
+- the skinned meshes are written at the scene's root (no NODE_SKINNED_MESH_NON_ROOT); --blink on a
+  rig without eye bones is refused, naming them;
+- --calm: the walk_loop's hips roll at most 0.3x and yaw 0.5x the take's, the head rolls no more,
+  and the feet still hold (slide < 50 mm/s, < 5 mm under the floor, seam <= 1.2x);
 - a rig missing a leg bone is refused, naming it.
 """
 import json
@@ -198,6 +202,10 @@ def main():
     head = (HERE / "retarget.py").read_text()[:1200]
     check("retarget.py says what it adapts, from where, under which licence",
           "image-to-3dlab" in head and "Apache License, Version 2.0" in head and "Changed here" in head)
+    k = presets.blink_frames("walk", 66, 30, True), presets.blink_frames("idle", 120, 30, False)
+    shut = [sum(1 for t in range(1, len(x)) if x[t] >= 1 > x[t - 1]) for x in k]
+    check(f"blinks: {shut[0]} in a 66-frame walk loop, {shut[1]} in a 4 s idle (a double among them), none on a loop's seam",
+          shut == [1, 3] and k[0][-1] == 0 and k[0][-2] == 0)
     r = subprocess.run([sys.executable, str(HERE / "presets.py"), "animate", "--asset", "x.glb", "--motion", "moonwalk"],
                        capture_output=True, text=True, env={**os.environ, "BLENDER": "/nonexistent"})
     check("an unknown motion is refused, before Blender, pointing at the routes",
@@ -252,6 +260,26 @@ def main():
         j, rj = meas["jump"]["skin"]["mean_arm_body_mm2"], raws.get("jump", {}).get("skin", {}).get("mean_arm_body_mm2")
         check(f"arms out of the hips: jump {j} mm² of arm through body (upstream's clearance: {rj} mm²)",
               rj is not None and j < 500 < rj)
+        calm = subprocess.run([sys.executable, str(HERE / "presets.py"), "animate", "--asset", str(rig), "--motion", "walk",
+                               "--loop", "--calm", "--out", str(tmp / "calm")], capture_output=True, text=True, env=env)
+        line = next((l for l in calm.stdout.splitlines() if l.startswith("presets: walk_loop {")), "")
+        c = json.loads(line.split(" ", 2)[2]).get("calm") if line else None
+        cm = json.loads((tmp / "calm" / "SK_Test_rigged_animated.measures.json").read_text()).get("walk_loop", {}) \
+            if calm.returncode == 0 else {}
+        check(f"--calm: walk_loop hips roll {c and c['hips_roll_deg']} deg, yaw {c and c['hips_yaw_deg']}, head roll "
+              f"{c and c.get('head_roll_deg')}; slide {cm.get('foot_slide', {}).get('mm_s')} mm/s, seam {cm.get('seam_x_step')}x",
+              c is not None and c["hips_roll_deg"][1] <= 0.3 * c["hips_roll_deg"][0]
+              and c["hips_yaw_deg"][1] <= 0.5 * c["hips_yaw_deg"][0] and c["head_roll_deg"][1] <= c["head_roll_deg"][0]
+              and cm["foot_slide"]["mm_s"] < 50 and cm["floor"]["below_mm"] < 5 and cm["seam_x_step"] <= 1.2)
+        hdr = out.read_bytes(); n = int.from_bytes(hdr[12:16], "little"); j = json.loads(hdr[20:20 + n])
+        kids = {c for nd in j["nodes"] for c in nd.get("children", [])}
+        skinned = [i for i, nd in enumerate(j["nodes"]) if "skin" in nd]
+        check(f"the skinned meshes at the scene's root ({len(skinned)}), no NODE_SKINNED_MESH_NON_ROOT",
+              skinned and not (set(skinned) & kids), [j["nodes"][i]["name"] for i in set(skinned) & kids])
+        noeyes = subprocess.run([sys.executable, str(HERE / "presets.py"), "animate", "--asset", str(rig), "--motion", "walk",
+                                 "--blink", "--out", str(tmp / "noeyes")], capture_output=True, text=True, env=env)
+        check("--blink on a rig without LeftEye/RightEye is refused, naming them",
+              noeyes.returncode != 0 and "LeftEye" in noeyes.stdout + noeyes.stderr, noeyes.stdout[-300:])
     bad_run = subprocess.run([sys.executable, str(HERE / "presets.py"), "animate", "--asset", str(bad),
                               "--motion", "walk", "--out", str(tmp)], capture_output=True, text=True, env=env)
     check("a rig without LeftFoot is refused, naming it", bad_run.returncode != 0 and "LeftFoot" in bad_run.stdout + bad_run.stderr,
