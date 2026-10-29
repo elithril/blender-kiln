@@ -1,0 +1,85 @@
+---
+import site from '../content/site.json';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const S = site.studio;
+---
+<section id="studio" class="studio" aria-labelledby="studio-h" data-studio>
+  <header class="head">
+    <h2 id="studio-h">{S.headline}</h2>
+    <div class="side">
+      <p>{S.lede}</p>
+      <p class="since measure">New in {S.since}: Kiln Studio</p>
+    </div>
+  </header>
+
+  <div class="stage">
+    <div class="screen">
+      <video data-video muted playsinline loop preload="none" poster={`${base}${S.poster}`} aria-label={S.alt}>
+        <source src={`${base}${S.video}`} type="video/mp4" />
+      </video>
+      <button type="button" class="toggle measure" data-toggle aria-pressed="false">Play</button>
+    </div>
+
+    <div class="points">
+      {S.points.map((p) => (
+        <div class="point">
+          <h3>{p.title}</h3>
+          <p>{p.detail}</p>
+        </div>
+      ))}
+      <p class="cmd measure" aria-label="The command that opens Kiln Studio"><code>{S.command}</code></p>
+    </div>
+  </div>
+  <p class="disclosure">{S.disclosure}</p>
+</section>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-studio]')!;
+  const video = root.querySelector<HTMLVideoElement>('[data-video]')!;
+  const toggle = root.querySelector<HTMLButtonElement>('[data-toggle]')!;
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let userPaused = still;
+  const sync = () => { const on = !video.paused; toggle.textContent = on ? 'Pause' : 'Play'; toggle.setAttribute('aria-pressed', String(on)); };
+  video.addEventListener('play', sync); video.addEventListener('pause', sync);
+  toggle.addEventListener('click', () => { if (video.paused) { userPaused = false; video.play().catch(() => {}); } else { userPaused = true; video.pause(); } });
+  // plays only while on screen, and never on its own when the reader asked for less motion
+  new IntersectionObserver(([e]) => {
+    if (e.isIntersecting && !userPaused) video.play().catch(() => {});
+    else if (!e.isIntersecting) video.pause();
+  }, { threshold: 0.25 }).observe(video);
+  sync();
+</script>
+
+<style>
+  .studio { position: relative; padding: 160px var(--gutter) 120px; background: rgb(11 9 8 / 0.86); }
+  .head { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 32px 64px; align-items: end; margin-bottom: 48px; }
+  .head h2 { margin: 0; font-size: var(--h2); line-height: 0.95; letter-spacing: -0.025em; word-spacing: 0.05em; }
+  .side p { margin: 0 0 14px; color: var(--ash); max-width: 46ch; }
+  .since { font-size: 0.8125rem; color: var(--molten); }
+
+  .stage { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr); gap: 40px; align-items: start; }
+  .screen { position: relative; border-radius: 2rem; padding: 6px; background: rgb(255 238 220 / 0.04); box-shadow: inset 0 0 0 1px var(--line); }
+  .screen video { display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: 26px; background: #0b0d11; object-fit: cover; }
+  .toggle { position: absolute; left: 28px; bottom: 22px; padding: 6px 14px; border: 0; border-radius: 999px; font-size: 0.8125rem; color: var(--bone);
+    background: rgb(11 9 8 / 0.6); box-shadow: inset 0 0 0 1px var(--line); cursor: pointer; }
+  .toggle:hover { background: rgb(11 9 8 / 0.8); }
+
+  .points { display: grid; gap: 24px; }
+  .point { padding-top: 18px; border-top: 1px solid var(--line); }
+  .point h3 { margin: 0 0 6px; font-size: 1.375rem; line-height: 1.15; }
+  .point p { margin: 0; color: var(--ash); font-size: 0.9375rem; max-width: 42ch; }
+  .cmd { margin: 4px 0 0; font-size: 0.9375rem; color: var(--ash); }
+  .cmd code { font: inherit; color: var(--bone); }
+  .cmd code::before { content: '>'; color: var(--molten); margin-right: 1ch; }
+  .disclosure { margin: 48px 0 0; font-size: 0.8125rem; color: var(--ash-dim); max-width: 100ch; }
+
+  @media (max-width: 960px) {
+    .head, .stage { grid-template-columns: minmax(0, 1fr); }
+    .screen { border-radius: 1.25rem; padding: 4px; }
+    .screen video { border-radius: 16px; }
+    .toggle { left: 16px; bottom: 14px; }
+  }
+  @media (max-width: 560px) {
+    .studio { padding-top: 120px; }
+  }
+</style>

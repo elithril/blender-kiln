@@ -62,7 +62,8 @@ Every model comes out clean, named, at real size, on the ground, compressed for 
 <p align="center">
   <img src="docs/images/studio.webp" width="100%" alt="Kiln Studio: six models in the list, an iron lantern open with a note pinned on its ring, the before and after views, and Claude's reply: the ring twice as big" />
 </p>
-<p align="center"><sub>A real session from the 3.0 bench: the note was pinned in the page, Claude made the change and replied on it.</sub></p>
+<p align="center"><sub>A real session from the 3.0 bench: the note was pinned in the page, Claude made the change and replied on it.<br />
+<b><a href="https://elithril.github.io/blender-kiln/#studio">How it works: watch a real session ▶</a></b></sub></p>
 
 A local page that shows every model in your project. Pin a note on a spot — *"the ring is too
 small to hang it"* — press **Work on it with Claude**, and the change lands in the model, with

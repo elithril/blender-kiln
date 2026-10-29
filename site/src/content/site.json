@@ -555,5 +555,33 @@
       "url": "https://arxiv.org/abs/2606.01057"
     },
     "credits": "Reference photos and real objects: Poly Haven (CC0). The forge, the three rebuilt objects and every animated model on this page were made with kiln."
+  },
+  "studio": {
+    "headline": "Point at what's wrong. Claude fixes it.",
+    "lede": "Kiln Studio is a local page with every model in your project. Pin a note on the spot, press Work on it with Claude, and the change lands in the model, with Claude's reply and a before and after on the note.",
+    "since": "3.0",
+    "video": "/assets/video/kiln-studio-session.mp4",
+    "poster": "/assets/img/studio-poster.webp",
+    "alt": "A Kiln Studio session: a note pinned on the mascot's hammer, Claude scales the hammer in its own Blender, the note comes back addressed and the mascot walks with the bigger hammer.",
+    "points": [
+      {
+        "title": "Pin a note",
+        "detail": "The note keeps the point, the part and the material it hit, the camera and a close-up, so Claude knows exactly where."
+      },
+      {
+        "title": "Claude works in its own Blender",
+        "detail": "Never yours. Safe steps pass; anything else waits for your OK in the page, and paid generation always asks."
+      },
+      {
+        "title": "Look, compare, ship",
+        "detail": "The previous version side by side, game and AR exports made in seconds, and the model in AR on your iPhone through a QR code."
+      },
+      {
+        "title": "From your terminal too",
+        "detail": "Claude Code sees the model you have open in Studio: say \"fix this\" and it knows what you are looking at."
+      }
+    ],
+    "command": "/kiln studio",
+    "disclosure": "The film is a real session, re-cut: every screen is Studio's own, captured; Claude's views are the ones it looked at; the hammer's change is the real before and after meshes. Only the moves are re-played. 4 minutes of work, 42 turns, shown in 42 seconds."
   }
 }
