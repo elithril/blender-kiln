@@ -8,16 +8,36 @@ const S = site.studio;
     <h2 id="studio-h">{S.headline}</h2>
     <div class="side">
       <p>{S.lede}</p>
-      <p class="since measure">New in {S.since}: Kiln Studio</p>
+      <p class="since measure">{S.sinceLabel}</p>
     </div>
   </header>
 
   <div class="stage">
-    <div class="screen">
-      <video data-video muted playsinline loop preload="none" poster={`${base}${S.poster}`} aria-label={S.alt}>
-        <source src={`${base}${S.video}`} type="video/mp4" />
-      </video>
-      <button type="button" class="toggle measure" data-toggle aria-pressed="false">Play</button>
+    <div class="player">
+      <div class="screen">
+        <video data-video muted playsinline loop preload="metadata" poster={`${base}${S.poster}`} aria-label={S.alt}>
+          <source src={`${base}${S.video}`} type="video/mp4" />
+        </video>
+      </div>
+      <!-- the reader's own controls: play or pause, scrub, and jump to a chapter -->
+      <div class="controls">
+        <button type="button" class="toggle" data-toggle aria-pressed="false" aria-label="Play">
+          <svg class="i-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" /></svg>
+          <svg class="i-pause" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5h3v11H4zM9 2.5h3v11H9z" /></svg>
+        </button>
+        <div class="scrub">
+          <input type="range" min="0" max="1000" step="1" value="0" data-seek aria-label="Position in the film" />
+          <div class="ticks" aria-hidden="true">
+            {S.chapters.map((c) => <span data-tick={c.t} />)}
+          </div>
+        </div>
+        <span class="time measure" data-time aria-hidden="true">0:00</span>
+      </div>
+      <ol class="chapters measure" aria-label="Chapters">
+        {S.chapters.map((c, i) => (
+          <li><button type="button" data-chapter={c.t}><span class="n">{String(i + 1).padStart(2, '0')}</span> {c.label}</button></li>
+        ))}
+      </ol>
     </div>
 
     <div class="points">
@@ -37,11 +57,41 @@ const S = site.studio;
   const root = document.querySelector<HTMLElement>('[data-studio]')!;
   const video = root.querySelector<HTMLVideoElement>('[data-video]')!;
   const toggle = root.querySelector<HTMLButtonElement>('[data-toggle]')!;
+  const seek = root.querySelector<HTMLInputElement>('[data-seek]')!;
+  const time = root.querySelector<HTMLElement>('[data-time]')!;
+  const chapters = [...root.querySelectorAll<HTMLButtonElement>('[data-chapter]')];
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let userPaused = still;
-  const sync = () => { const on = !video.paused; toggle.textContent = on ? 'Pause' : 'Play'; toggle.setAttribute('aria-pressed', String(on)); };
+  let dragging = false;
+  const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  const sync = () => {
+    const on = !video.paused;
+    toggle.classList.toggle('on', on); toggle.setAttribute('aria-pressed', String(on)); toggle.setAttribute('aria-label', on ? 'Pause' : 'Play');
+  };
+  // the bar, the clock and the chapter under way follow the film
+  const progress = () => {
+    const d = video.duration || 0, t = video.currentTime;
+    if (!dragging && d) seek.value = String(Math.round((t / d) * 1000));
+    seek.style.setProperty('--at', `${d ? (t / d) * 100 : 0}%`);
+    seek.setAttribute('aria-valuetext', `${clock(t)} of ${clock(d)}`);
+    time.textContent = `${clock(t)} / ${clock(d)}`;
+    let cur = 0; chapters.forEach((c, i) => { if (t >= Number(c.dataset.chapter) - 0.05) cur = i; });
+    chapters.forEach((c, i) => c.toggleAttribute('aria-current', i === cur));
+  };
+  const placeTicks = () => {
+    if (!video.duration) return;
+    root.querySelectorAll<HTMLElement>('[data-tick]').forEach((s) => { s.style.left = `${(Number(s.dataset.tick) / video.duration) * 100}%`; });
+    progress();
+  };
+  const go = (t: number) => { video.currentTime = t; userPaused = false; video.play().catch(() => {}); progress(); };
   video.addEventListener('play', sync); video.addEventListener('pause', sync);
+  video.addEventListener('timeupdate', progress); video.addEventListener('loadedmetadata', placeTicks);
+  if (video.readyState >= 1) placeTicks();
   toggle.addEventListener('click', () => { if (video.paused) { userPaused = false; video.play().catch(() => {}); } else { userPaused = true; video.pause(); } });
+  seek.addEventListener('input', () => { dragging = true; if (video.duration) { video.currentTime = (Number(seek.value) / 1000) * video.duration; progress(); } });
+  seek.addEventListener('change', () => { dragging = false; });
+  chapters.forEach((c) => c.addEventListener('click', () => go(Number(c.dataset.chapter))));
+  video.addEventListener('click', () => toggle.click());
   // plays only while on screen, and never on its own when the reader asked for less motion
   new IntersectionObserver(([e]) => {
     if (e.isIntersecting && !userPaused) video.play().catch(() => {});
@@ -59,10 +109,35 @@ const S = site.studio;
 
   .stage { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr); gap: 40px; align-items: start; }
   .screen { position: relative; border-radius: 2rem; padding: 6px; background: rgb(255 238 220 / 0.04); box-shadow: inset 0 0 0 1px var(--line); }
-  .screen video { display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: 26px; background: #0b0d11; object-fit: cover; }
-  .toggle { position: absolute; left: 28px; bottom: 22px; padding: 6px 14px; border: 0; border-radius: 999px; font-size: 0.8125rem; color: var(--bone);
-    background: rgb(11 9 8 / 0.6); box-shadow: inset 0 0 0 1px var(--line); cursor: pointer; }
-  .toggle:hover { background: rgb(11 9 8 / 0.8); }
+  .screen video { display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: 26px; background: #0b0d11; object-fit: cover; cursor: pointer; }
+
+  .controls { display: flex; align-items: center; gap: 14px; margin: 14px 6px 0; }
+  .toggle { flex: 0 0 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 999px; color: #140d07; background: var(--molten); cursor: pointer;
+    transition: transform 0.2s var(--ease-spring), background 0.2s; }
+  .toggle:hover { background: var(--bone); transform: scale(1.06); }
+  .toggle:focus-visible { outline: 2px solid var(--bone); outline-offset: 3px; }
+  .toggle svg { width: 16px; height: 16px; fill: currentColor; }
+  .toggle .i-pause, .toggle.on .i-play { display: none; }
+  .toggle.on .i-pause { display: block; }
+  .scrub { position: relative; flex: 1; height: 40px; display: flex; align-items: center; }
+  /* a thin track filled in molten up to where the film is, a thumb that grows under the pointer */
+  .scrub input { --at: 0%; appearance: none; -webkit-appearance: none; width: 100%; height: 4px; margin: 0; border-radius: 999px; cursor: pointer; background:
+      linear-gradient(90deg, var(--molten) var(--at), rgb(255 238 220 / 0.14) var(--at)); }
+  .scrub input::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 999px; background: var(--bone); box-shadow: 0 0 0 4px rgb(255 181 71 / 0.25); transition: transform 0.15s; }
+  .scrub input::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 999px; background: var(--bone); box-shadow: 0 0 0 4px rgb(255 181 71 / 0.25); }
+  .scrub input:hover::-webkit-slider-thumb { transform: scale(1.25); }
+  .scrub input:focus-visible { outline: 2px solid var(--bone); outline-offset: 6px; }
+  .ticks { position: absolute; inset: 0; pointer-events: none; }
+  .ticks span { position: absolute; top: 50%; width: 2px; height: 10px; margin: -5px 0 0 -1px; border-radius: 1px; background: rgb(255 238 220 / 0.35); }
+  .ticks span:first-child { display: none; }
+  .time { flex: 0 0 auto; min-width: 9ch; text-align: right; font-size: 0.8125rem; color: var(--ash-dim); }
+
+  .chapters { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+  .chapters button { border: 0; border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 0.8125rem; color: var(--ash); cursor: pointer;
+    background: rgb(255 238 220 / 0.04); box-shadow: inset 0 0 0 1px var(--line); transition: color 0.2s, background 0.2s, box-shadow 0.2s; }
+  .chapters button:hover { color: var(--bone); background: rgb(255 238 220 / 0.08); }
+  .chapters button[aria-current] { color: var(--bone); box-shadow: inset 0 0 0 1px var(--molten); }
+  .chapters .n { color: var(--molten); margin-right: 0.5ch; }
 
   .points { display: grid; gap: 24px; }
   .point { padding-top: 18px; border-top: 1px solid var(--line); }
@@ -77,7 +152,6 @@ const S = site.studio;
     .head, .stage { grid-template-columns: minmax(0, 1fr); }
     .screen { border-radius: 1.25rem; padding: 4px; }
     .screen video { border-radius: 16px; }
-    .toggle { left: 16px; bottom: 14px; }
   }
   @media (max-width: 560px) {
     .studio { padding-top: 120px; }

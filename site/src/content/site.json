@@ -594,32 +594,51 @@
     "credits": "Reference photos and real objects: Poly Haven (CC0). The forge, the three rebuilt objects and every animated model on this page were made with kiln."
   },
   "studio": {
-    "headline": "Point at what's wrong. Claude fixes it.",
-    "lede": "Kiln Studio is a local page with every model in your project. Pin a note on the spot, press Work on it with Claude, and the change lands in the model, with Claude's reply and a before and after on the note.",
+    "headline": "Every model, one page. Claude at hand.",
+    "lede": "Kiln Studio is a local page with every model in your project: turn it, check it, compare it with the last version, export it for games and AR, see it on your iPhone. Pin a note where something is wrong and Claude fixes it in its own Blender. And Claude Code, in your terminal, sees the model you have open.",
     "since": "3.0",
     "video": "/assets/video/kiln-studio-session.mp4",
     "poster": "/assets/img/studio-poster.webp",
     "alt": "A Kiln Studio session: a note pinned on the mascot's hammer, Claude scales the hammer in its own Blender, the note comes back addressed and the mascot walks with the bigger hammer.",
     "points": [
       {
-        "title": "Pin a note",
-        "detail": "The note keeps the point, the part and the material it hit, the camera and a close-up, so Claude knows exactly where."
+        "title": "Look and check",
+        "detail": "Clay, normals, UVs, wireframe, real sizes, animation clips, the previous version beside this one, and a Checks tab that reads the file in plain words."
       },
       {
-        "title": "Claude works in its own Blender",
-        "detail": "Never yours. Safe steps pass; anything else waits for your OK in the page, and paid generation always asks."
+        "title": "Pin a note, Claude fixes it",
+        "detail": "The note keeps the spot, the part and the camera. Claude works in its own Blender, never yours, and replies on the note with a before and after."
       },
       {
-        "title": "Look, compare, ship",
-        "detail": "The previous version side by side, game and AR exports made in seconds, and the model in AR on your iPhone through a QR code."
+        "title": "Export and see it on your phone",
+        "detail": "Game and AR files made in seconds, without Claude, and the model in AR on your iPhone through a QR code."
       },
       {
         "title": "From your terminal too",
-        "detail": "Claude Code sees the model you have open in Studio: say \"fix this\" and it knows what you are looking at."
+        "detail": "Its MCP lets Claude Code see the model open in Studio: say \"fix this\" and it knows what you are looking at, and it can drive the page."
       }
     ],
     "command": "/kiln studio",
-    "disclosure": "The film is a real session, re-cut: every screen is Studio's own, captured; Claude's views are the ones it looked at; the hammer's change is the real before and after meshes. Only the moves are re-played. 4 minutes of work, 42 turns, shown in 42 seconds."
+    "disclosure": "The film is a real session, re-cut: every screen is Studio's own, captured; Claude's views are the ones it looked at; the hammer's change is the real before and after meshes. Only the moves are re-played. 4 minutes of work, 42 turns, shown in 42 seconds.",
+    "sinceLabel": "New in 3.0: Kiln Studio and its MCP",
+    "chapters": [
+      {
+        "label": "Pin a note",
+        "t": 0
+      },
+      {
+        "label": "Claude works",
+        "t": 12.4
+      },
+      {
+        "label": "Before / after",
+        "t": 27.2
+      },
+      {
+        "label": "It walks",
+        "t": 33
+      }
+    ]
   },
   "built": {
     "headline": "Built with kiln.",
