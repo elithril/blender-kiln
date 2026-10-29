@@ -61,6 +61,10 @@ on:
       - "plugin/tools/motions/**"
       - "plugin/tools/fixtures/**"
 
+# read-only token: these jobs check the repository, they never write to it
+permissions:
+  contents: read
+
 jobs:
   blender:
     runs-on: ubuntu-latest
