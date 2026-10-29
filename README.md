@@ -60,10 +60,10 @@ Every model comes out clean, named, at real size, on the ground, compressed for 
 ### Kiln Studio — look at your models, pin a note, let Claude fix it
 
 <p align="center">
-  <a href="https://elithril.github.io/blender-kiln/#studio"><img src="docs/images/studio-film.webp" width="100%" alt="Kiln Studio: a note pinned on the mascot's hammer and typed, then the note back addressed by Claude and the before and after of the hammer, side by side" /></a>
+  <img src="docs/images/studio.webp" width="100%" alt="Kiln Studio: six models in the list, an iron lantern open with a note pinned on its ring, the before and after views, and Claude's reply: the ring twice as big" />
 </p>
-<p align="center"><sub>From the film of a real session: a note pinned on the mascot's hammer, Claude makes it bigger in its own Blender and replies on the note.<br />
-<b><a href="https://elithril.github.io/blender-kiln/#studio">How it works: watch the whole film ▶</a></b></sub></p>
+<p align="center"><sub>A real session from the 3.0 bench: the note was pinned in the page, Claude made the change and replied on it.<br />
+<b><a href="https://elithril.github.io/blender-kiln/#studio">How it works: watch a real session ▶</a></b></sub></p>
 
 A local page that shows every model in your project. Pin a note on a spot — *"the ring is too
 small to hang it"* — press **Work on it with Claude**, and the change lands in the model, with
@@ -144,10 +144,6 @@ modelled were printed as exported, on a Bambu Lab P1S.
 <details>
 <summary><b>How print mode works, and its limits</b></summary>
 
-<p align="center">
-  <img src="docs/images/print-windmill.webp" width="100%" alt="A Dutch windmill kiln modelled for an FDM printer: the coloured preview, and the two STL parts as they print — the body upright, the lattice sails flat beside it" />
-</p>
-
 Say it will be printed — FDM or resin, a height, your printer's colours — and kiln models
 **for the printer from the first primitive**: at size, in closed solids joined into one
 volume, walls thick enough (0.8 mm FDM, 0.5 mm resin), a flat base, overhangs designed out
@@ -195,7 +191,7 @@ the input is never overwritten.
 ### Limits
 
 - **Printed, four of them.** The forge, the lighthouse, the Art Deco box and the windmill were
-  printed as kiln exported them, on a Bambu Lab P1S in PLA ([photos](#3d-printing--models-that-actually-print)).
+  printed as kiln exported them, on a Bambu Lab P1S in PLA.
   The box's bayonet lid turns, locks and holds with the box upside down. The fit test print was not printed; the
   rest was checked by PrusaSlicer 2.9.6 and by renders, not on a bed.
 - **FDM, checked with PrusaSlicer's default profile.** No resin slicing, no orientation search,
@@ -225,7 +221,8 @@ The teapot photo is the Auckland War Memorial Museum's, CC BY 4.0, via Wikimedia
 Give it a photo and kiln rebuilds the object by script, textures it from CC0 scans, and measures
 its silhouette and materials against the photo before shipping. Against the real 3D object the
 photo was taken of: an ammo box at **0.948** with review rounds (0.936 on the bench, before them), a
-hurricane lantern at **0.885** to **0.946** depending on the method ([the numbers](#measured-not-claimed)).
+hurricane lantern at **0.888** (0.885 before them), **0.946** when kiln finishes a TRELLIS.2 mesh of the
+photo ([the numbers](#measured-not-claimed)).
 
 <details>
 <summary><b>The five steps</b></summary>
@@ -273,7 +270,8 @@ all of them ([`references/animation.md`](plugin/references/animation.md) has eve
 
 | Subject | Route | Shown above |
 |---|---|---|
-| Biped or winged, from a sentence | [UniMate](https://github.com/Friedrich-M/UniMate) text-to-motion, looped by `tools/motion_loop.py` — **non-commercial weights** | the villager, the dragon |
+| Humanoid, a ready-made move | `tools/presets.py` — 22 motions made with NVIDIA Kimodo, retargeted, feet planted and flat | the mascot |
+| Biped or winged, from a sentence | [UniMate](https://github.com/Friedrich-M/UniMate) text-to-motion, looped by `tools/motion_loop.py` — **non-commercial weights** | the dragon |
 | Four-legged, idle and walk | `tools/quadruped.py` — a scripted, measured cycle | the cat |
 | Articulated object | rigid parts keyed by script, every rotation's sign measured first | the lamp, the chest |
 
@@ -286,8 +284,6 @@ model author's own robot dog — so a quadruped never goes to it.
 > scripts (`examples/animation/showcase.sh`), not from an interactive session.
 
 ### Organic characters
-
-<!-- [VISUAL — à choisir: one rigged character walking, from a user or a curated bench run] -->
 
 A character is built as **one skin** — families of metaballs or overlapping volumes, joined by
 a single voxel remesh — so it bends without seams at the shoulders, hips and neck. Then:
@@ -356,10 +352,11 @@ most, then rounds on its motion.
 
 Measured after the bench, one run each: on a mascot, the first reviewer found 16 defects the
 session had passed (a hair flame read as horns, palms without fingers, a bald nape), and the walk
-no longer snaps the knees; against the real object, the chair from a photo 0.720 → 0.729 and the
-ammo box 0.936 → 0.948 — within one session's spread for the scores, so the clearer gain is what
+no longer snaps the knees; against the real object, the chair from a photo 0.720 → 0.729, the
+ammo box 0.936 → 0.948 and the lantern 0.885 → 0.888 (eight rounds, the cap: its reviewers
+disagreed on the tone) — within one session's spread for the scores, so the clearer gain is what
 the reviewers catch. The price: about twice the time and usage (the ammo box $4.45 → $9.17, the
-chair $6.64 → $14.39). [`references/review-rounds.md`](plugin/references/review-rounds.md)
+chair $6.64 → $14.39, the lantern $6.04 → $13.19). [`references/review-rounds.md`](plugin/references/review-rounds.md)
 
 ### No Blender open — built in the background, several at once
 
@@ -383,7 +380,8 @@ asset the session never sees. Blender 5.2.2, Opus 5.5, one run each, October 202
 | Gothic chair, from a photo | 0.637 | **0.720** | 449 KB | $6.64 |
 
 The bench ran before [review rounds](#review-rounds--a-fresh-eye-on-every-model). With them, one run
-each: the ammo box 0.948 (493 KB, $9.17) and the chair 0.729 (505 KB, $14.39) — the two shown at the top.
+each: the lantern 0.888 (612 KB, $13.19), the ammo box 0.948 (493 KB, $9.17) and the chair 0.729
+(505 KB, $14.39) — the three shown at the top.
 
 Across the whole bench, 3.0 against 2.2.0: both prints pass the printability check (2.2.0: one of
 two), the humanoids kiln builds no longer pass skin through skin when they bend, and a note in Kiln Studio is addressed
@@ -424,7 +422,7 @@ likeness was comparable — 0.866 against kiln v7's 0.861 (2.0 era) — at about
 a run stopped after three of its eight passes
 ([benchmarks § 4](docs/benchmarks.md#4-kiln-against-an-image-to-code-tool)).
 
-What did not improve is published too: the [benchmarks](docs/benchmarks.md) — fifteen
+What did not improve is published too: the [benchmarks](docs/benchmarks.md) — eighteen
 versions of one lantern, what each fix broke, how the bench was kept honest — and every
 number, render and GLB under 1 MB on the [`bench-results`](https://github.com/elithril/blender-kiln/tree/bench-results) branch, except the
 humanoid derived from Hunyuan3D, whose licence keeps it out.
@@ -532,6 +530,7 @@ and kiln writes each source and its licence into the asset's production log
 | **TRELLIS** Space (`trellis-community`), **TripoSR** Space | MIT; TRELLIS's background removal is `rembg` (MIT) + U²-Net (Apache-2.0) | — | `references/ai-generation.md` |
 | **Hunyuan3D 2.0 / 2.1** (Space, local, MCP) — on request only | **Tencent Hunyuan 3D Community License** | **not licensed in the European Union, the United Kingdom or South Korea.** Line 3 of the licence: *"THIS LICENSE AGREEMENT DOES NOT APPLY IN THE EUROPEAN UNION, UNITED KINGDOM AND SOUTH KOREA"*; §5(c) forbids using the works **or their Output** outside that Territory; services above 1 million monthly active users need a licence from Tencent (§4) — section numbers from the 2.0 text; 2.1 opens with the same line. kiln never proposes it first, quotes that line and waits for a yes | [Hunyuan3D-2 LICENSE](https://github.com/Tencent-Hunyuan/Hunyuan3D-2/blob/main/LICENSE), [Hunyuan3D-2.1 LICENSE](https://github.com/Tencent-Hunyuan/Hunyuan3D-2.1/blob/main/LICENSE) |
 | **UniMate** (text-to-motion) | code MIT; **checkpoints CC BY-NC 4.0** | **non-commercial use only**; kiln treats the motions it generates as covered too, and says so before running it | [UniMate README § License](https://github.com/Friedrich-M/UniMate#%EF%B8%8F-license); [model LICENSE](https://huggingface.co/Linzhan/UniMate/blob/main/LICENSE) |
+| **Kimodo** motions (`tools/presets.py`, shipped in `tools/motions/`) | **NVIDIA Open Model License** | commercial use allowed; NVIDIA claims no ownership of its outputs | [`plugin/NOTICE`](plugin/NOTICE) |
 | `tools/quadruped.py`, keyed props | MIT (kiln) | scripted cycles, no model weights | — |
 | **FLUX.1-schnell** concept art | Apache-2.0 | concept images only, never shipped in the GLB | `references/ai-generation.md` |
 | Mixamo (optional, humanoids) | Adobe account, Adobe's terms | [not checked here] | `references/characters.md` |
