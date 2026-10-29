@@ -142,7 +142,8 @@ Two things worth including that are easy to overlook:
 
 Made something with kiln? Open a [Share what you built](https://github.com/elithril/blender-kiln/issues/new?template=share-what-you-built.yml)
 issue: your pictures, a link, how kiln was used, the third-party assets and their licences. It goes on
-the site's "Built with kiln" track once it has been looked at, shown as you made it and credited to you.
+the site's "Built with kiln" track and in the README once it has been looked at, shown as you made
+it and credited to you.
 
 For the maintainer, an accepted entry is:
 
@@ -152,7 +153,9 @@ For the maintainer, an accepted entry is:
    (empty when it is not out yet: the plate links to the author's GitHub), `github`, `media`, `alt`,
    `how` and `credit` from the issue, and `mark`, the maker's mark on the plate: a figure from `how` and
    its unit, such as `["101", "GLB"]`. `fit: "contain"` and `ground` for a picture that must not be cropped.
-3. A reply on the issue with the link, then close it.
+3. A cell in the README's [Built with kiln](README.md#built-with-kiln) table: the picture at 800 × 500
+   in `docs/images/built-<project>.webp`, the title linked, the handle, `how` and `credit`.
+4. A reply on the issue with the link, then close it.
 
 ## Use of AI
 

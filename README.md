@@ -28,8 +28,8 @@ the server behind Claude's Blender connector.
   <img src="docs/images/photo-to-asset.webp" alt="Three reference photos — a hurricane lantern, an ammo box, a gothic chair — and below each, the GLB kiln 3.0 shipped from it, turning" width="100%" />
 </p>
 <p align="center"><sub>From one photo each, no marketplace, no AI generation: scripted in Blender, textured from CC0 scans,
-measured against the real object. Shape scores against the real assets: <b>0.885</b>, <b>0.948</b>, <b>0.729</b> —
-the ammo box and the chair with <a href="#review-rounds--a-fresh-eye-on-every-model">review rounds</a>;
+measured against the real object. Shape scores against the real assets: <b>0.888</b>, <b>0.948</b>, <b>0.729</b> —
+all three with <a href="#review-rounds--a-fresh-eye-on-every-model">review rounds</a>;
 <a href="docs/benchmarks.md">how they are measured</a>.</sub></p>
 
 ## Quickstart
@@ -469,6 +469,32 @@ Single steps, measured where stated:
 | Kiln Studio, a note addressed (read → change → re-export → reply) | 1.4 min of Claude, 2.4 min with Studio's Blender starting | bench, October 2026 |
 
 </details>
+
+## Built with kiln
+
+Projects people made with kiln, shown with their own pictures.
+
+<table>
+<tr>
+<td width="50%" valign="top"><a href="https://token-kingdom.com"><img src="docs/images/built-token-kingdom.webp" alt="Eighteen low-poly medieval buildings from Token Kingdom: keep, temple, clock tower, market, windmill, gold mine and more" width="100%" /></a><br />
+<b><a href="https://token-kingdom.com">Token Kingdom</a></b> · <a href="https://github.com/MartySalade">@MartySalade</a><br />
+<sub>22 buildings, one GLB per level, 101 in all, assembled by script through Blender MCP with kiln. Pieces: KayKit Medieval Hexagon Pack, Kay Lousberg, CC0.</sub></td>
+<td width="50%" valign="top"><a href="https://mylittleworkout.com/"><img src="docs/images/built-my-little-workout.webp" alt="Four of My Little Workout's exercise animations: burpee, dips, muscle-up and nordic curl" width="100%" /></a><br />
+<b><a href="https://mylittleworkout.com/">My Little Workout</a></b> · <a href="https://github.com/QuegoFreki">@QuegoFreki</a><br />
+<sub>112 exercises, illustrated and animated by headless Blender scripts with kiln.</sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="docs/images/built-olympus.webp" alt="Low-poly white and gold Olympus models: statues of the gods, a throne, braziers, a vase" width="100%" /><br />
+<b>Zeus Incremental FPS: Olympus</b> · <a href="https://github.com/MushkyQT">@MushkyQT</a><br />
+<sub>25 game-ready models for the game's Olympus, temple, statues of the gods and throne, with the Blender source.</sub></td>
+<td width="50%" valign="top"><img src="docs/images/built-imprint.webp" alt="A pixel-art office in the game Imprint, with the wind-up ink-sweeper made with kiln on the carpet" width="100%" /><br />
+<b>Imprint</b> · <a href="https://github.com/MushkyQT">@MushkyQT</a><br />
+<sub>The ink-sweeper, the dart and the paper plane: modelled in 3D with kiln, rendered at 8x, then turned into the game's pixel-art sprites.</sub></td>
+</tr>
+</table>
+
+Built something with kiln? [Share it](https://github.com/elithril/blender-kiln/issues/new?template=share-what-you-built.yml) —
+it goes on the site and here once it has been looked at, credited to you.
 
 ## Requirements
 
