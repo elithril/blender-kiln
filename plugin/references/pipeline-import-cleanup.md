@@ -32,6 +32,19 @@ shoulder = max((c for c in right if abs(c.x - torso_w) < 0.03), key=lambda c: c.
 angle = math.degrees(math.atan2(hand.z - shoulder.z, hand.x - shoulder.x))
 ```
 
+**A big head (over a third of the height, a chibi): the slice at 0.75 × H is the head**, and the
+snippet reads −54° on a true T-pose (kiln's mascot, the 3.0 bench's chibi). Measure the arm itself —
+its axis between two sections, inner and outer, near the hand's height:
+
+```python
+hand = max(cos, key=lambda c: c.x)
+def section(a, b):
+    q = [c for c in cos if a * hand.x <= c.x <= b * hand.x and abs(c.z - hand.z) < 0.15 * H]
+    return sum(q, Vector()) / len(q)
+inner, outer = section(0.55, 0.65), section(0.85, 0.95)
+angle = math.degrees(math.atan2(outer.z - inner.z, outer.x - inner.x))   # the mascot: -3.3 deg
+```
+
 | Angle | Pose | Action |
 |---|---|---|
 | within ±15 deg | T-pose | proceed |

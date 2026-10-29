@@ -546,6 +546,7 @@ plugin/
     ├── photo-projection.md
     ├── pipeline-brief.md
     ├── pipeline-import-cleanup.md
+    ├── review-rounds.md
     ├── pipeline-optimize-export.md
     ├── pipeline-rig-animate.md
     ├── pipeline-source.md
@@ -646,7 +647,8 @@ interactive run of the skill: treat them as reference output and a conventions c
 | `plugin/SKILL.md` | The router: commands, iron rules, the pipeline's skeleton (each phase's gates and the file to read before it), where everything else is | ~440 |
 | `plugin/references/pipeline-brief.md` | Pipeline [1] CONFIG (parameters, first launch) and [2] BRIEF | ~48 |
 | `plugin/references/pipeline-source.md` | Pipeline [3] SOURCE: marketplace preflight, choosing a method, print, concept art, a reference image per method, scripted and Geometry Nodes flows | ~160 |
-| `plugin/references/pipeline-import-cleanup.md` | Pipeline [4] IMPORT (pose measure, rename, framing) and [5] CLEANUP | ~110 |
+| `plugin/references/pipeline-import-cleanup.md` | Pipeline [4] IMPORT (pose measure, rename, framing) and [5] CLEANUP | ~130 |
+| `plugin/references/review-rounds.md` | Review rounds for every asset: the intent before building, a fresh reviewer each round, the end on two clean readings (a character 6 rounds at least), what to look for, the log | ~155 |
 | `plugin/references/pipeline-rig-animate.md` | Pipeline [5c] RIG SELECTION (SkinTokens or Rigify, by measure) and [5d] ANIMATE (routes by subject) | ~96 |
 | `plugin/references/pipeline-optimize-export.md` | Pipeline [6] OPTIMIZE (auto preset, preview, outputs' folders) and [7] EXPORT | ~110 |
 | `plugin/references/commands.md` | Standalone commands: status, inspect, cleanup, texture, animate, optimize, convert, search, studio, help | ~220 |
@@ -656,7 +658,7 @@ interactive run of the skill: treat them as reference output and a conventions c
 | `plugin/references/characters.md` | Rigging patterns, animation-ready skeleton, an animated creature (one skin, charm, QuadriFlow first, lid weights, matcap), export gotchas, Blender 5.x | ~990 |
 | `plugin/references/animation.md` | Routes by subject, scripted-animation rules, quadruped cycles, humanoid presets (measured against UniMate), UniMate install / loops / prompts | ~290 |
 | `plugin/tools/quadruped.py` | Procedural quadruped idle + walk, IK-planted, measured before export (legs bent, paws in step, exact loop), secondary motion (ears, tail wave, blinks), one GLB with every clip | ~370 |
-| `plugin/tools/presets.py` | Ready-made humanoid moves (22 motions, 43 Kimodo clips in `tools/motions/`) on a kiln-named rig: one GLB a clip per motion, measures, provenance | ~270 |
+| `plugin/tools/presets.py` | Ready-made humanoid moves (22 motions, 43 Kimodo clips in `tools/motions/`) on a kiln-named rig: one GLB a clip per motion, measures, provenance; `--calm` for a chibi's gait, `--blink` | ~320 |
 | `plugin/tools/retarget.py` | The retarget behind it (adapted from image-to-3dlab, Apache-2.0): bones by name, feet planted, arms out of hips and belly, loops | ~850 |
 | `plugin/tools/motion_measure.py` | Measures an animated humanoid GLB: foot slide, floor, skin through skin, arm through body, loop seam | ~230 |
 | `plugin/tools/motion_loop.py` | Generated clip → seamless loop (pose + direction matched, drift removed in world axes, one clip with a closing key); keeps the sample that loops best | ~120 |
@@ -675,6 +677,7 @@ interactive run of the skill: treat them as reference output and a conventions c
 | `plugin/tools/cutout.swift` | Cuts the subject out of a photo with macOS Vision (14+), local and free — the alpha `fidelity_check` needs | ~30 |
 | `plugin/tools/flatten.py` | Makes a model's nearly flat faces exactly flat and lays it on the bed — curves, bevels and slopes untouched, the input never overwritten | ~290 |
 | `plugin/tools/fit_coupon.py` | Writes the test print for a peg in a hole, diamond on its side or round standing up: one hole per clearance, one with a lead-in chamfer, the peg printed the way the model's is | ~235 |
+| `plugin/tools/review_sheet.py` | The review sheet of a round: six views and a close-up, in colour and in clay; a rigged model at rest, framed on its vertices | ~225 |
 | `plugin/tools/review_renders.py` | The review renders without a connected Blender: matcap and colour (textures or vertex colours), opposite three-quarters, top and under, framed on the vertices; close-ups along the surface's normal, at the check's thin spots or where asked | ~285 |
 | `plugin/tools/uv_check.py` | UV check: used tile, overlap, stretch, collapsed and flipped faces; FAIL on a texture without UVs or collapsed UVs | ~180 |
 | `plugin/references/validation-checklist.md` | Geometry cleanup (welding that keeps the shading) + material export audit | ~320 |

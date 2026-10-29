@@ -117,7 +117,7 @@ woman's walk, 2.1 MB in `tools/motions/`. The rig needs kiln's names (`reference
 `{asset}_animated.glb`, **one clip per motion, named as asked**, a `.measures.json`
 (`tools/motion_measure.py` on every clip of the file written) and a `.provenance.json` (preset,
 take, prompt, file hash, licences). `--speed 1.25` plays faster; `--no-fix feet,arms` gives the
-upstream behaviour back, for comparison.
+upstream behaviour back, for comparison. `--calm` calms a walk or a run (item 5 below).
 
 **Licences.** The clips: *Licensed by NVIDIA Corporation under the NVIDIA Open Model License*;
 NVIDIA claims no ownership of the outputs; commercial use allowed. The data and the retarget
@@ -148,12 +148,32 @@ humanoid whose right hand is fused to its hip:
    keyed equal to frame 0 (rule 5 of § Rules for scripted animation), the hips' travel taken
    out; the root speed to move the character at is recorded. One-shots are kept whole, not
    looped.
+5. **`--calm`** (walk, walk_woman, run, sneak) — a calmer gait. Kimodo's walk swings the pelvis
+   18.8° of roll and 13.5° of yaw peak to peak, about twice a human walk; on a chibi with short legs
+   and wide hips it reads as a waddle (the user, on kiln's mascot; the 3.0 bench's chibi: the same
+   numbers). Calming the hips alone made the head roll 12.2° instead of 4.3° — the spine had been
+   compensating — so `retarget.calm` scales the hips' roll ×0.25 and yaw ×0.4, their side sway ×0.5,
+   the spine's and neck's own turns ×0.4 and the head's roll and yaw in the world ×0.25 (pitch ×0.7),
+   **before** the feet are locked. On the mascot's walk_loop: hips 4.7° roll, 5.4° yaw, 11.6 mm sway;
+   head 1.1° roll, 1.1° yaw; slide 1.1 mm/s, seam 0.9×. **Use it on a chibi or any big-headed
+   character**; its report line carries each value before and after.
+6. **`--blink`** — blinks in every clip, keyed on the eye bones `LeftEye` / `RightEye` (`characters.md`
+   § Blink on flat eyes): the eye squashed along the face's up axis (read off the bone), the
+   `…EyeShine` highlights shrunk to nothing; 3 frames closing, 1 held, 4 opening at 24 fps, resampled
+   to the clip's rate; one in a walk or a run, three in an idle with a double, one in any other clip
+   of 2 s or more, none on a loop's seam. Refused on a rig without the eye bones. **A character with
+   eyes blinks: add it** — the 3.0 bench's chibi built the bones and keyed no blink, "not asked".
+7. **The meshes are written at the scene's root**, their Armature modifier kept: under the armature's
+   node the glTF validator reported `NODE_SKINNED_MESH_NON_ROOT` on every one.
 
 **Measured** with `tools/motion_measure.py`, the same measure on every route (method in its
 docstring): standing-foot slide (mm/s), deepest skin under the floor (mm), arm through body
 (mm² per frame, rest crossings subtracted), loop seam (× the mean frame step; walk and run:
-the `_loop` clips, jump and dance are one-shots, their seam is the take's own end). Targets: < 50 mm/s,
-< 5 mm, < 500 mm², ≤ 1.2×. UniMate: the comparison study's samples (`--loop` for walk and run).
+the `_loop` clips, jump and dance are one-shots, their seam is the take's own end), knee pops (a knee
+snapping straight, or bent, for one frame by 8° or more). Targets: < 50 mm/s,
+< 5 mm, < 500 mm², ≤ 1.2×, no knee pop. The pops came from the foot lock pulling a leg to full reach on
+one frame — the knees of both mascots "tremblaient", 1.4-2 a second; `retarget.py` now eases a leg's
+reach from 93 % of its length (`SOFT_REACH`): none left on either. UniMate: the comparison study's samples (`--loop` for walk and run).
 
 | Character | Move | UniMate | Upstream presets | **`presets.py`** |
 |---|---|---|---|---|

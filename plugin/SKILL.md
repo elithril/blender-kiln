@@ -213,6 +213,7 @@ log line (rule 7). Copy this checklist into your reply and tick it as you go:
 - [ ] [3] SOURCE               references/pipeline-source.md
 - [ ] [4] IMPORT + [5] CLEANUP references/pipeline-import-cleanup.md
 - [ ] [5b] TEXTURING           below, + references/texturing-strategy.md
+- [ ] REVIEW ROUNDS            references/review-rounds.md (3 at least; a character 6, then its motion; a fresh reviewer each round)
 - [ ] [5c] RIG + [5d] ANIMATE  references/pipeline-rig-animate.md (characters / motion only)
 - [ ] [6] OPTIMIZE + [7] EXPORT references/pipeline-optimize-export.md
 ```
@@ -291,6 +292,19 @@ Project left 1.7% of its surface on collapsed UVs, unseen.
 2. **Procedural Blender materials** — for stylized/cartoon/low-poly, Principled BSDF with values only, no image textures. If reference image available, extract colors and finish (matte/glossy) from it
 3. **Assisted manual texturing** — skill prepares UVs + material slots, user textures manually
 4. **Try another Space** — if current Space doesn't support texture, offer to change URL
+
+### Review rounds — `references/review-rounds.md`
+
+- Before the first primitive, **the intent** in the log: a palette with roles, the materials (three at
+  least on an object of several parts), three finishes; a character, its design sheet.
+- After building and texturing, before rigging or optimizing: **rounds** — `tools/review_sheet.py`
+  (six views and a close-up, in colour and in clay), both sheets looked at, a
+  written critique of three defects or more with their fixes, then the fixes. **Each round is read by
+  a new subagent that knows nothing of the build** — the brief, the sheets, the lists, nothing else:
+  the builder reads its own work as its author. **A prop: rounds until two new reviewers in a row
+  find nothing blocking, 8 at most; a character or a showcase brief: 6 at least (12 at most), then
+  rounds on its motion**, ending the same way; **auto mode does not shorten them**. From a photo: reshaping to the photo keeps its two correction rounds; a part off-centre or
+  out of line is a build error, fixed at any round.
 
 ### [5c] RIG and [5d] ANIMATE — `references/pipeline-rig-animate.md`
 
@@ -425,6 +439,7 @@ Axis conversion at export is automatic.
 | Pipeline [1] CONFIG, [2] BRIEF | `references/pipeline-brief.md` |
 | Pipeline [3] SOURCE | `references/pipeline-source.md` |
 | Pipeline [4] IMPORT, [5] CLEANUP | `references/pipeline-import-cleanup.md` |
+| Review rounds — the intent, the rounds, what to look for | `references/review-rounds.md` |
 | Pipeline [5c] RIG, [5d] ANIMATE | `references/pipeline-rig-animate.md` |
 | Pipeline [6] OPTIMIZE, [7] EXPORT | `references/pipeline-optimize-export.md` |
 | Standalone commands (status, inspect, cleanup, texture, animate, optimize, convert, search, studio, help) | `references/commands.md` |

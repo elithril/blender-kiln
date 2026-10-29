@@ -29,6 +29,51 @@ found these in 3.0; each brief it touched was run again after the fix.
 - **Kiln Studio: `gltf-transform`'s steps pass without an approval** — a session had skipped
   the compression to avoid one (18.3 kB instead of 15.7 kB).
 
+### Added — what kiln's mascot taught (3.0)
+
+- **Review rounds for every asset** (`references/review-rounds.md`): the intent in the log before the
+  first primitive (a palette with roles, three materials at least, three finishes), then rounds —
+  **for a prop, until two new reviewers in a row find nothing blocking (8 at most); 6 at least (12 at
+  most) for a character or a showcase brief, then rounds on its motion**, auto mode included — each a
+  `tools/review_sheet.py` sheet looked at and a written critique of three defects or more with their
+  fixes; from a photo, reshaping to the photo keeps its two correction
+  rounds and the next ones work on the surface, the finish and the assembly — a part off-centre or out
+  of line is fixed at any round (a test ammo box read the cap as "no more geometry" and shipped its
+  latch plate off-centre after eight rounds of paint). The 3.0 bench's chibi, two looks and shipped, was
+  "pas très quali"; kiln's mascot, six rounds on the model, three on the motion and a design sheet, was
+  validated.
+- **A fresh reviewer each round** (`review-rounds.md` § The fresh reviewer): a new subagent given the
+  brief, the sheets and the lists — not the log or the scripts — reports every defect, blocking or
+  detail. The builder, reading its own sheets, had written "nothing found" over a chair's holed
+  rosette and a mascot's hair flame read as horns. Characters: twelve rounds at most. The rounds end
+  when a second new reviewer, on the same sheets, finds nothing blocking either.
+- **Knees that snapped** (`retarget.py` `SOFT_REACH`, `motion_measure.py` `knee_pops`): the foot lock
+  pulled a leg straight for one frame and bent it on the next, 1.4-2 times a second on both mascots;
+  a leg's reach now eases from 93 % of its length — none left, the slide still under 50 mm/s.
+- **`tools/review_sheet.py`**: six views under a studio light, a close-up of the top, a rigged model in
+  its rest pose, framed on its vertices, the exposure moved one stop at most (pushed to a fixed
+  brightness, a dark lantern's colours shifted and a session made its glass opaque), and a second
+  sheet in clay for the assembly (`test_review_sheet.py`, 5/5).
+- **`characters.md` § Design sheet first**: role and signature shape, palette, costume in layers with
+  four materials, a prop, three finishes — shown to the user, or logged in auto mode.
+- **`tools/presets.py --blink`**: blinks in every clip on the eye bones (a squash and the highlights
+  shrinking); and its export now writes the meshes at the scene's root — no validator warning.
+- **The T-pose measure on a big head**: the slice at 0.75 × H was the head (−54° on a T-pose); the arm's
+  own axis instead (`pipeline-import-cleanup.md`).
+- **`tools/presets.py --calm`** (walk, walk_woman, run, sneak): Kimodo's walk swings the pelvis 18.8°
+  of roll and 13.5° of yaw, about twice a human walk — a waddle on a chibi. `retarget.calm` scales the
+  hips' roll and yaw, their side sway, the spine's turns and the head's roll and yaw together, before
+  the feet are locked (calming the hips alone made the head roll 12.2° instead of 4.3°). On the
+  mascot: hips 4.7° roll, head 1.1°, slide 1.1 mm/s. `test_presets.py` checks it (14/14).
+- **`references/characters.md` § A stylised humanoid**: hair as chunky locks over a thin cap, never a
+  shell; an open smile, a small nose, a flat palm with a thumb; clothes projected on the body, cuffs
+  sized from the front, one object per limb; skin weights for the parts autorig makes rigid (an
+  apron on `Spine2`, a hammer on the thumb's tip); a squash blink on flat eyes instead of a floating
+  lid; six review rounds at least, with the questions each of the mascot's six rounds answered.
+- **Export**: read the glTF validator's whole output — `NODE_SKINNED_MESH_NON_ROOT` was on every
+  skinned mesh (the bench's chibi logged "0 warnings" with 7): unparent the meshes before export; keep
+  a re-exported clip at its own frame rate (at 24 fps a 30 fps walk's locked feet slid 6.5 mm/s).
+
 ### Changed — mcp-for-blender's current tools; the server pinned for real (3.0)
 
 - **ahujasid's server is `mcp-for-blender`** (renamed from `blender-mcp` in September 2026),
