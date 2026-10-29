@@ -1,4 +1,4 @@
 {
-  "prompt": "Sourced: blender-kiln bench-results:ref-kiln-v15gen/ref-chair/render-gothic-wooden-chair_final.webp (bench render of the shipped GLB), no-WebGL fallback.",
-  "createdAt": "2026-10-08T11:06:43.113Z"
+  "prompt": "Sourced: blender-kiln bench/runs/v300rounds5-ahujasid/ref-chair/render-wooden-chair_final.png (bench render of the shipped GLB, kiln 3.0 with review rounds), resized to 1000 px, no-WebGL fallback.",
+  "createdAt": "2026-10-29T10:02:56.305Z"
 }

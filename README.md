@@ -28,7 +28,8 @@ the server behind Claude's Blender connector.
   <img src="docs/images/photo-to-asset.webp" alt="Three reference photos — a hurricane lantern, an ammo box, a gothic chair — and below each, the GLB kiln 3.0 shipped from it, turning" width="100%" />
 </p>
 <p align="center"><sub>From one photo each, no marketplace, no AI generation: scripted in Blender, textured from CC0 scans,
-measured against the real object. Shape scores against the real assets: <b>0.885</b>, <b>0.936</b>, <b>0.720</b> —
+measured against the real object. Shape scores against the real assets: <b>0.885</b>, <b>0.948</b>, <b>0.729</b> —
+the ammo box and the chair with <a href="#review-rounds--a-fresh-eye-on-every-model">review rounds</a>;
 <a href="docs/benchmarks.md">how they are measured</a>.</sub></p>
 
 ## Quickstart
@@ -66,8 +67,9 @@ Every model comes out clean, named, at real size, on the ground, compressed for 
 A local page that shows every model in your project. Pin a note on a spot — *"the ring is too
 small to hang it"* — press **Work on it with Claude**, and the change lands in the model, with
 Claude's reply and a before/after on the note. Studio also exports for games and AR in seconds,
-and shows the model in AR on your iPhone through a QR code. Measured: a note addressed in one
-pass, nothing else moved, for $0.69 of API-equivalent usage.
+and shows the model in AR on your iPhone through a QR code. From the terminal, Claude sees the
+model you have open in Studio and can turn it, compare it and present it on a second screen.
+Measured: a note addressed in one pass, nothing else moved, for $0.69 of API-equivalent usage.
 
 <details>
 <summary><b>Everything Studio does</b></summary>
@@ -89,6 +91,15 @@ every `.glb .gltf .fbx .obj .usdz .3mf .stl` under it shows up, and kiln's `_ori
   addressed in one pass — ×1.9, nothing else moved, the note answered — for $0.69 of
   API-equivalent usage (official Lab MCP: $0.73). Or run `/kiln studio` in your terminal: Claude
   reads the open notes, changes the model, re-exports and replies on each.
+- **Claude in your terminal sees what Studio shows** — installed as a plugin, kiln brings a small
+  MCP server, `kiln-studio`, with nothing more to set up (a standalone-skill clone does not
+  register it). Say *"fix this"* or *"what am I looking at"* and Claude reads
+  the model open in the page, its stage, the camera and the note picked, and can grab the image
+  you see. It drives the page too: open a model, turn the view to a note's, switch to clay or
+  normals, a before/after against the previous version, play a clip, and a present mode for a
+  second screen. It replies on notes and leaves its own, and makes variations and finishes when
+  you ask; it never touches a model file itself. Tools and when they are called:
+  [`references/studio.md` § 11](plugin/references/studio.md#11-the-kiln-studio-mcp-server--what-the-user-is-looking-at-and-driving-studio).
 - **Outputs** — Web, Game, AR and 3D print for each model. Game (FBX) and AR (a GLB and a USDZ
   that passes `usdchecker --arkit`) are made by Studio itself, in seconds, without Claude.
   *Download* zips the outputs you pick with a sheet: each file's size and use, the licences.
@@ -212,8 +223,8 @@ The teapot photo is the Auckland War Memorial Museum's, CC BY 4.0, via Wikimedia
 
 Give it a photo and kiln rebuilds the object by script, textures it from CC0 scans, and measures
 its silhouette and materials against the photo before shipping. Against the real 3D object the
-photo was taken of: an ammo box at **0.936**, a hurricane lantern at **0.885** to **0.946**
-depending on the method ([the numbers](#measured-not-claimed)).
+photo was taken of: an ammo box at **0.948** with review rounds (0.936 on the bench, before them), a
+hurricane lantern at **0.885** to **0.946** depending on the method ([the numbers](#measured-not-claimed)).
 
 <details>
 <summary><b>The five steps</b></summary>
@@ -333,6 +344,22 @@ On the bench, a raw TRELLIS output went from 191,520 triangles and 11.4 MB, full
 
 </details>
 
+### Review rounds — a fresh eye on every model
+
+A session that looks at its own model sees what it meant to make. So each model goes through
+review rounds: six views and a close-up, in colour and in clay, read each round by a new Claude
+subagent that knows the brief and the photo, never the build. It lists every defect, blocking or
+detail; the rounds end when two new reviewers in a row find nothing blocking. A prop has no
+minimum and eight rounds at most; a character or a showcase brief, six at least and twelve at
+most, then rounds on its motion.
+
+Measured after the bench, one run each: on a mascot, the first reviewer found 16 defects the
+session had passed (a hair flame read as horns, palms without fingers, a bald nape), and the walk
+no longer snaps the knees; against the real object, the chair from a photo 0.720 → 0.729 and the
+ammo box 0.936 → 0.948 — within one session's spread for the scores, so the clearer gain is what
+the reviewers catch. The price: about twice the time and usage (the ammo box $4.45 → $9.17, the
+chair $6.64 → $14.39). [`references/review-rounds.md`](plugin/references/review-rounds.md)
+
 ### No Blender open — built in the background, several at once
 
 Blender closed, or busy with your own work: kiln builds in a background Blender instead, saves
@@ -353,6 +380,9 @@ asset the session never sees. Blender 5.2.2, Opus 5.5, one run each, October 202
 | The lantern, from a TRELLIS.2 mesh | 0.934 | **0.946** | 465 KB | $6.43 |
 | Ammo box, from a photo | 0.774 | **0.936** | 373 KB | $4.45 |
 | Gothic chair, from a photo | 0.637 | **0.720** | 449 KB | $6.64 |
+
+The bench ran before [review rounds](#review-rounds--a-fresh-eye-on-every-model). With them, one run
+each: the ammo box 0.948 (493 KB, $9.17) and the chair 0.729 (505 KB, $14.39) — the two shown at the top.
 
 Across the whole bench, 3.0 against 2.2.0: both prints pass the printability check (2.2.0: one of
 two), the humanoids kiln builds no longer pass skin through skin when they bend, and a note in Kiln Studio is addressed

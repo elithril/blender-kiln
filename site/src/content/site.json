@@ -61,23 +61,23 @@
       "photoAlt": "Reference photo: a rusted olive-green ammunition box with a yellow stencil reading 200 CARTRIGES 7.62 MM",
       "photoCredit": "Poly Haven, ammo_box (CC0)",
       "glb": "/assets/glb/ammo-box.glb",
-      "score": 0.936,
+      "score": 0.948,
       "scoreBefore": 0.854,
-      "shippedKB": 365,
-      "rawMB": 5.35,
-      "tris": 4632,
-      "minutes": 15,
-      "costUSD": 4.45,
-      "run": "v300final-ahujasid/ref-ammo-box",
+      "shippedKB": 493,
+      "rawMB": 7.57,
+      "tris": 6552,
+      "minutes": 46,
+      "costUSD": 9.17,
+      "run": "v300rounds6/ref-ammo-box",
       "truth": "/assets/glb/truth-ammo-box.glb",
       "truthYaw": 270,
       "fallback": "/assets/img/render-ammo-box.webp",
       "views": {
-        "front": 0.937,
-        "back": 0.937,
-        "left": 0.947,
-        "right": 0.945,
-        "top": 0.915
+        "front": 0.958,
+        "back": 0.958,
+        "left": 0.929,
+        "right": 0.927,
+        "top": 0.968
       },
       "scoredViews": [
         "front",
@@ -86,7 +86,7 @@
         "right",
         "top"
       ],
-      "heightVsTruth": 0.14
+      "heightVsTruth": 0.18
     },
     {
       "id": "chair",
@@ -95,32 +95,30 @@
       "photoAlt": "Reference photo: a tall gothic wooden chair with a pointed arch, a rose and tracery in its back",
       "photoCredit": "Poly Haven, WoodenChair_01 (CC0)",
       "glb": "/assets/glb/chair.glb",
-      "score": 0.72,
+      "score": 0.729,
       "scoreBefore": 0.445,
-      "shippedKB": 439,
-      "rawMB": 11.47,
-      "tris": 9852,
-      "minutes": 23,
-      "costUSD": 6.64,
-      "run": "v300final-ahujasid/ref-chair",
+      "shippedKB": 505,
+      "rawMB": 7.6,
+      "tris": 9984,
+      "minutes": 51,
+      "costUSD": 14.39,
+      "run": "v300rounds5-ahujasid/ref-chair",
       "truth": "/assets/glb/truth-chair.glb",
-      "truthYaw": 0,
+      "truthYaw": 180,
       "fallback": "/assets/img/render-chair.webp",
       "views": {
-        "front": 0.634,
-        "back": 0.634,
-        "left": 0.604,
-        "right": 0.617,
-        "top": 0.892
+        "front": 0.658,
+        "back": 0.658,
+        "left": 0.337,
+        "right": 0.337,
+        "top": 0.871
       },
       "scoredViews": [
         "front",
         "back",
-        "left",
-        "right",
         "top"
       ],
-      "heightVsTruth": -0.25
+      "heightVsTruth": -0.28
     }
   ],
   "scoreNote": "Silhouette overlap with the real object, 1 = identical. Each view is cropped and scaled to the same height, then compared.",
@@ -129,7 +127,7 @@
     "blender": "Blender 5.2.2",
     "runsPerBrief": 1
   },
-  "_gtSource": "views, yaw and heightVsTruth: bench/gt_compare.py on 2026-10-28 on the GLBs kiln 3.0 shipped on the 3.0 bench (label v300final-ahujasid, mcp-for-blender 2.2.2), against the Poly Haven truth; the means are the bench report's (0.885, 0.936, 0.720). scoreBefore: v1, before 2.0's photo method (docs/benchmarks.md § 3).",
+  "_gtSource": "views, yaw and heightVsTruth: bench/gt_compare.py against the Poly Haven truth — the lantern on the GLB kiln 3.0 shipped on the 3.0 bench (label v300final-ahujasid, mcp-for-blender 2.2.2, 2026-10-28; the bench report's 0.885); the ammo box and the chair on later runs of 3.0 with review rounds, one run each (v300rounds6 2026-10-29: 0.948; v300rounds5-ahujasid 2026-10-28: 0.729), where the bench had 0.936 and 0.720. scoreBefore: v1, before 2.0's photo method (docs/benchmarks.md § 3).",
   "scoreBeforeLabel": "before 2.0's photo method",
   "costNote": "API-equivalent",
   "requirements": "Needs Blender 4.4+ with a Blender MCP server running.",
