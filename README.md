@@ -472,16 +472,14 @@ Single steps, measured where stated:
 
 ## Built with kiln
 
-Projects people made with kiln, shown with their own pictures.
+Projects people made with kiln. Their pictures are in [the gallery on the site](https://elithril.github.io/blender-kiln/#built).
 
-<p align="center">
-  <a href="https://elithril.github.io/blender-kiln/#built"><img src="docs/images/built-with-kiln.webp" width="100%" alt="Four projects made with kiln, hung on a rolling track: My Little Workout, Zeus Incremental FPS: Olympus, Imprint and Token Kingdom" /></a>
-</p>
-
-- **[Token Kingdom](https://token-kingdom.com)** · [@MartySalade](https://github.com/MartySalade) — 22 buildings, one GLB per level, 101 in all, assembled by script through Blender MCP with kiln. Pieces: KayKit Medieval Hexagon Pack, Kay Lousberg, CC0.
-- **[My Little Workout](https://mylittleworkout.com/)** · [@QuegoFreki](https://github.com/QuegoFreki) — 112 exercises, illustrated and animated by headless Blender scripts with kiln.
-- **Zeus Incremental FPS: Olympus** · [@MushkyQT](https://github.com/MushkyQT) — 25 game-ready models for the game's Olympus, temple, statues of the gods and throne, with the Blender source.
-- **Imprint** · [@MushkyQT](https://github.com/MushkyQT) — the ink-sweeper, the dart and the paper plane: modelled in 3D with kiln, rendered at 8x, then turned into the game's pixel-art sprites.
+| | Project | What kiln made |
+|:-:|---|---|
+| <a href="https://github.com/MartySalade"><img src="https://github.com/MartySalade.png?size=96" width="48" height="48" alt="@MartySalade" /></a> | **[Token Kingdom](https://token-kingdom.com)**<br />[@MartySalade](https://github.com/MartySalade) | 22 buildings, one GLB per level, 101 in all, assembled by script through Blender MCP. Pieces: KayKit Medieval Hexagon Pack, Kay Lousberg, CC0. |
+| <a href="https://github.com/QuegoFreki"><img src="https://github.com/QuegoFreki.png?size=96" width="48" height="48" alt="@QuegoFreki" /></a> | **[My Little Workout](https://mylittleworkout.com/)**<br />[@QuegoFreki](https://github.com/QuegoFreki) | 112 exercises, illustrated and animated by headless Blender scripts. |
+| <a href="https://github.com/MushkyQT"><img src="https://github.com/MushkyQT.png?size=96" width="48" height="48" alt="@MushkyQT" /></a> | **Zeus Incremental FPS: Olympus**<br />[@MushkyQT](https://github.com/MushkyQT) | 25 game-ready models for the game's Olympus, temple, statues of the gods and throne, with the Blender source. |
+| <a href="https://github.com/MushkyQT"><img src="https://github.com/MushkyQT.png?size=96" width="48" height="48" alt="@MushkyQT" /></a> | **Imprint**<br />[@MushkyQT](https://github.com/MushkyQT) | The ink-sweeper, the dart and the paper plane, modelled in 3D, rendered at 8x, then turned into the game's pixel-art sprites. |
 
 Built something with kiln? [Share it](https://github.com/elithril/blender-kiln/issues/new?template=share-what-you-built.yml) —
 it goes on the site and here once it has been looked at, credited to you.
