@@ -1,0 +1,151 @@
+{
+  "ref-lantern": {
+    "brief": "ref-lantern",
+    "mcp": "mcp-for-blender==2.2.2",
+    "blender": "Blender 5.2.2 LTS",
+    "skill": "f692753 release/3.0-character-rules",
+    "claude_exit": 0,
+    "wall_s": 2862.8,
+    "is_error": false,
+    "num_turns": 16,
+    "duration_ms": 203033,
+    "cost_usd_equiv": 13.188764999999995,
+    "output_tokens": 10179,
+    "input_tokens_total": 4464463,
+    "tool_calls": {
+      "Bash": 64,
+      "Read": 76,
+      "ToolSearch": 1,
+      "mcp__blender__get_addon_status": 1,
+      "mcp__blender__get_scene_info": 4,
+      "Write": 3,
+      "mcp__blender__execute_blender_code": 5,
+      "mcp__blender__look": 5,
+      "Agent": 9,
+      "ScheduleWakeup": 9
+    },
+    "final_text": ".md` | Every measurement, review round and decision. |\n| `scripts/` | Rebuilds the whole asset from the photo. |\n\n**The asset**\n- **Size:** 9,972 triangles. That is about twice the balanced range for a prop (1.5\u20135K), still within the 2\u00d7 the tier allows. They go into round parts and thin wires, so I didn't decimate.\n- **Meshes:** four \u2014 body, wires, bail and glass. The bail's pivot is on its hinge, so it can swing in-game.\n- **Materials:** aged brass (baked colour, roughness and normal maps), drawn wire, and smoked glass that is see-through with a hammered texture.\n- **Checks:** the glTF validator reports 0 errors and 0 warnings, and the UV check passes.\n- **Match to the photo:** the outline overlaps the photo's by 0.883 (overlap score, 1.0 = identical). It scored the same before and after export.\n\n**Assumptions** (the photo alone can't give these):\n- The lantern is 0.36 m tall to the top of the bail.\n- The camera looks down at 18\u00b0, read from the base's ellipse.\n- The back and underside aren't in the photo, so they are kept plain and closed.\n\n**Still wrong:**\n- **Metal colour and wear.** Reviewers swung between \"too cold\" and \"too orange\", so I stopped changing it rather than chase the swing.\n- **Vents under the cap** are painted on, not real holes.\n- **The cap's dome** is single-tier; the photo's has two steps.\n- **The ribs around the fuel tank** are shallow.\n- **The filler cap's dark lid** can read as an open cup.\n- **No seam line** along the side tubes.\n\nThe side tubes (16.5 mm) and the bail wire (2.8 mm) were also called too thick or too thin by some reviewers, but those sizes are measured from the photo, so I kept them.\n\nI built in a background Blender. Your open Blender only ever had its untouched default scene: I removed its default cube, and it now shows the final model.\n\nI kept all the intermediate files (review renders, crops, textures) because nobody was there to approve deleting them. The `review/` folder alone is 191 MB; tell me if you want them removed.",
+    "sandbox": "/private/tmp/kiln-bench/v300v18/ref-lantern",
+    "contamination": [],
+    "orphan_blenders": {
+      "closed": [],
+      "port_still_held_by": null
+    },
+    "timeout_s": 5400,
+    "instruments": {
+      "measure.py": "d9b0004b1db7",
+      "skin_intersect.py": "af01b7048d88",
+      "signals.py": "1b00b2cb60de",
+      "print_check.py": "0d333f8fdbfe"
+    },
+    "signals": {
+      "calls": {
+        "autorig": 0,
+        "rigify": 0,
+        "quadruped": 0,
+        "auto_weights": 0,
+        "scripted_armature": 0,
+        "unimate": 0,
+        "motion_loop": 0,
+        "matcap": 2,
+        "photo_project": 0,
+        "fidelity_check": 11,
+        "print_check": 0,
+        "fit_coupon": 0,
+        "decimate": 1,
+        "voxel_remesh": 0
+      },
+      "rig_route": null,
+      "quadruped_tool": false,
+      "matcap_check": true,
+      "projection": {
+        "proposed": false,
+        "ran": false,
+        "said": []
+      },
+      "fused_hand": {
+        "mentions": 0,
+        "said": []
+      },
+      "print_check": {
+        "runs": 0,
+        "verdicts": [],
+        "last": null
+      },
+      "ended_on_question": false
+    },
+    "artifacts": {},
+    "input_measures": [],
+    "finals": 1,
+    "measures": [
+      {
+        "file": "generated-assets/hurricane-lantern/web/hurricane-lantern_final.glb",
+        "bytes": 627128,
+        "extensions_used": [
+          "EXT_texture_webp",
+          "KHR_draco_mesh_compression"
+        ],
+        "gltf_meshes": 4,
+        "gltf_materials": 3,
+        "gltf_images": 5,
+        "gltf_skins": 0,
+        "gltf_joints": 0,
+        "gltf_animations": 0,
+        "gltf_skinned_nodes": 0,
+        "clips": [],
+        "clip_names": [],
+        "blink": false,
+        "objects_mesh": 4,
+        "object_names": [
+          "SM_HurricaneLantern",
+          "SM_HurricaneLantern_Bail",
+          "SM_HurricaneLantern_Glass",
+          "SM_HurricaneLantern_Wire"
+        ],
+        "tris": 9972,
+        "verts": 8257,
+        "non_manifold_edges": 0,
+        "boundary_edges": 128,
+        "loose_edges": 0,
+        "degenerate_faces": 0,
+        "dims_m": [
+          0.1391,
+          0.114,
+          0.3591
+        ],
+        "z_min_m": 0.0,
+        "centre_xy_m": [
+          0.0,
+          -0.0
+        ],
+        "materials": {
+          "M_Metal_AgedBrass": {
+            "images": 3,
+            "max_px": 1024
+          },
+          "M_Metal_BrassWire": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Glass_Smoked": {
+            "images": 2,
+            "max_px": 1024
+          }
+        },
+        "empty_material_slots": 0,
+        "rigs": [],
+        "skinned_mesh_objects": 0,
+        "single_skin": false,
+        "render": "render-hurricane-lantern_final.png"
+      }
+    ],
+    "glbs": [
+      {
+        "file": "hurricane-lantern_final.glb",
+        "bytes": 627128,
+        "sha256": "e3a7329f98dcc05f31f42990426685b4a86df5ebc07b647625515a4aee0b3cf8",
+        "published": true
+      }
+    ]
+  }
+}

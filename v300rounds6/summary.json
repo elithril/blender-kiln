@@ -1,0 +1,156 @@
+{
+  "ref-ammo-box": {
+    "brief": "ref-ammo-box",
+    "mcp": "mcp-for-blender==2.2.2",
+    "blender": "Blender 5.2.2 LTS",
+    "skill": "f692753 release/3.0-character-rules",
+    "claude_exit": 0,
+    "wall_s": 2750.6,
+    "is_error": false,
+    "num_turns": 9,
+    "duration_ms": 47065,
+    "cost_usd_equiv": 9.172452799999997,
+    "output_tokens": 4429,
+    "input_tokens_total": 1935553,
+    "tool_calls": {
+      "Read": 88,
+      "Bash": 61,
+      "ToolSearch": 2,
+      "mcp__blender__get_addon_status": 1,
+      "mcp__blender__get_scene_info": 1,
+      "Write": 3,
+      "Agent": 6
+    },
+    "final_text": "e tabs;\n  - the lid wire, the lower tabs and the bail.\n- **Materials:** two scanned Poly Haven textures (green_metal_rust for the paint, rust_coarse_01 for the rust), tinted to colours sampled from the photo. The stencil reads \"200 CARTRIGES / 7.62 MM, M108 / CARTONS \u2022 M31\", keeping the photo's spelling; \"M108\" is my reading of a partly worn mark. All of it is baked into three 1024 px texture sets.\n- **Triangles:** 6,552, which is 31 % over the balanced tier's 5K. The extra goes on the wires, the rounded lid and the rivets, so I kept it rather than reduce.\n- **Checks:** the shipped file scores 0.874 silhouette overlap against the photo. The remaining gap is the photo's close perspective, which I did not copy into the shape. UV check passes, the glTF validator finds 0 errors, and the box sits on the ground.\n\n**Where it still differs from the photo**\n- **Handle:** three of the five reviewers said the photo's handle lies flat. I measured the photo instead: one end is raised about 19 mm on its standing wire loop, so I kept it raised, at 21 mm.\n- **Paint:** it is greener and cleaner than the photo's near-black olive. When I darkened it that far, the lid read as glossy plastic, so the paint stays a faded olive drab. I took the photo's darkness to be its lighting.\n- **Unseen sides:** the hinge end and the underside don't show in the photo, so they are plain and closed, with nothing invented.\n- **Tangents:** 7 of the 12 parts ship without tangents and get them from the viewer; the validator flags this as a warning.\n\n**Kept on disk:** under compact storage these working files would normally be deleted at the end, but nobody was here to confirm. They are the build scripts, the geometry-only .blend, the source textures, the photo crops and about 190 MB of review renders. Tell me if you want them removed.\n\n**Licences:** the Poly Haven textures are CC0; credit \"Poly Haven (polyhaven.com)\" if you publish. The stencil uses Blender's built-in font, only rasterised into the texture.",
+    "sandbox": "/private/tmp/kiln-bench/v300rounds6/ref-ammo-box",
+    "contamination": [],
+    "orphan_blenders": {
+      "closed": [],
+      "port_still_held_by": null
+    },
+    "timeout_s": 3600,
+    "instruments": {
+      "measure.py": "d9b0004b1db7",
+      "skin_intersect.py": "af01b7048d88",
+      "signals.py": "1b00b2cb60de",
+      "print_check.py": "0d333f8fdbfe"
+    },
+    "signals": {
+      "calls": {
+        "autorig": 0,
+        "rigify": 0,
+        "quadruped": 0,
+        "auto_weights": 0,
+        "scripted_armature": 0,
+        "unimate": 0,
+        "motion_loop": 0,
+        "matcap": 3,
+        "photo_project": 0,
+        "fidelity_check": 13,
+        "print_check": 0,
+        "fit_coupon": 0,
+        "decimate": 0,
+        "voxel_remesh": 0
+      },
+      "rig_route": null,
+      "quadruped_tool": false,
+      "matcap_check": true,
+      "projection": {
+        "proposed": false,
+        "ran": false,
+        "said": []
+      },
+      "fused_hand": {
+        "mentions": 0,
+        "said": []
+      },
+      "print_check": {
+        "runs": 0,
+        "verdicts": [],
+        "last": null
+      },
+      "ended_on_question": false
+    },
+    "artifacts": {},
+    "input_measures": [],
+    "finals": 1,
+    "measures": [
+      {
+        "file": "generated-assets/ammo-box/web/ammo-box_final.glb",
+        "bytes": 504708,
+        "extensions_used": [
+          "EXT_texture_webp",
+          "KHR_draco_mesh_compression"
+        ],
+        "gltf_meshes": 12,
+        "gltf_materials": 3,
+        "gltf_images": 9,
+        "gltf_skins": 0,
+        "gltf_joints": 0,
+        "gltf_animations": 0,
+        "gltf_skinned_nodes": 0,
+        "clips": [],
+        "clip_names": [],
+        "blink": false,
+        "objects_mesh": 12,
+        "object_names": [
+          "SM_AmmoBox_Bail",
+          "SM_AmmoBox_Body",
+          "SM_AmmoBox_Handle",
+          "SM_AmmoBox_HandleBracketL",
+          "SM_AmmoBox_HandleBracketR",
+          "SM_AmmoBox_HandleWireL",
+          "SM_AmmoBox_HandleWireR",
+          "SM_AmmoBox_LatchLever",
+          "SM_AmmoBox_Lid",
+          "SM_AmmoBox_LidWire",
+          "SM_AmmoBox_LowerBracket",
+          "SM_AmmoBox_RivetStrip"
+        ],
+        "tris": 6552,
+        "verts": 6654,
+        "non_manifold_edges": 0,
+        "boundary_edges": 0,
+        "loose_edges": 0,
+        "degenerate_faces": 0,
+        "dims_m": [
+          0.2928,
+          0.1006,
+          0.2099
+        ],
+        "z_min_m": 0.0,
+        "centre_xy_m": [
+          0.0066,
+          0.0
+        ],
+        "materials": {
+          "M_AmmoBox_Parts": {
+            "images": 3,
+            "max_px": 1024
+          },
+          "M_AmmoBox_Body": {
+            "images": 3,
+            "max_px": 1024
+          },
+          "M_AmmoBox_Lid": {
+            "images": 3,
+            "max_px": 1024
+          }
+        },
+        "empty_material_slots": 0,
+        "rigs": [],
+        "skinned_mesh_objects": 0,
+        "single_skin": false,
+        "render": "render-ammo-box_final.png"
+      }
+    ],
+    "glbs": [
+      {
+        "file": "ammo-box_final.glb",
+        "bytes": 504708,
+        "sha256": "80381cc37f9b655aa290a91e96187d13c19a7c5a11b9e5beb8d6e698addb457e",
+        "published": true
+      }
+    ]
+  }
+}

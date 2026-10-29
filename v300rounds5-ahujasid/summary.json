@@ -1,0 +1,1630 @@
+{
+  "mascot-kiln-smith": {
+    "brief": "mascot-kiln-smith",
+    "mcp": "mcp-for-blender==2.2.2",
+    "blender": "Blender 5.2.2 LTS",
+    "skill": "ddc7a49 release/3.0-character-rules",
+    "claude_exit": 143,
+    "wall_s": 3574.2,
+    "is_error": false,
+    "num_turns": 21,
+    "duration_ms": 145690,
+    "cost_usd_equiv": 22.184772,
+    "output_tokens": 12194,
+    "input_tokens_total": 7982669,
+    "tool_calls": {
+      "Bash": 138,
+      "ToolSearch": 1,
+      "mcp__blender__get_addon_status": 1,
+      "mcp__blender__get_scene_info": 4,
+      "Write": 7,
+      "mcp__blender__execute_blender_code": 23,
+      "mcp__blender__look": 13,
+      "Read": 130,
+      "Agent": 10,
+      "ScheduleWakeup": 9
+    },
+    "final_text": "ements et les mains reprennent les poids de la peau ; le marteau suit la main.\n- **`walk`** (1,03 s) : glissement des pieds 33,9 mm/s, bras dans le corps 260 mm\u00b2 en moyenne, jointure de boucle 1,14\u00d7.\n- **`idle`** (3,97 s) : respiration, balancement, regard qui tourne, trois clignements.\n- Les deux clips restent sur place. J'ai d\u00fb recentrer le walk : la boucle g\u00e9n\u00e9r\u00e9e \u00e9tait d\u00e9cal\u00e9e de 0,9 m, le personnage aurait saut\u00e9 en passant d'un clip \u00e0 l'autre.\n\n**Ce qui reste, signal\u00e9 par les derniers relecteurs (rien de bloquant)** :\n- Le bas du tablier fait un pli sur la cuisse lev\u00e9e pendant la marche.\n- La marche est calme plut\u00f4t que bondissante, et la main libre reste raide.\n- Le marteau monte encore assez haut vers l'avant (jusqu'au menton vu de profil).\n- La jointure de l'idle est \u00e0 1,23\u00d7, pour une cible de 1,2.\n- La lueur ambre est volontairement faible : plus forte, elle d\u00e9lavait les verres et le cristal en couleur saumon.\n- 73 160 triangles, dans la fourchette \u00ab detailed \u00bb (20-80K). Je n'ai pas d\u00e9cim\u00e9.\n\nDeux points pratiques :\n- Le Blender ouvert affiche encore la version statique, alors que `kiln-smith.blend` sur disque contient maintenant la version rigg\u00e9e et anim\u00e9e. Un enregistrement depuis ce Blender l'\u00e9craserait.\n- Les relecteurs ont deux fois \u00e9crit leurs recadrages dans `/tmp/crops`. Je les ai d\u00e9plac\u00e9s dans `review/` et j'ai supprim\u00e9 le dossier.\n\nJ'ai gard\u00e9 tous les interm\u00e9diaires (`review/`, `rig/`, `anim/`, `anim_try/`, `rig_test/`, environ 210 MB, dont 187 MB de rendus de revue) : je les supprime si tu veux. Licences : clips NVIDIA Kimodo, usage commercial autoris\u00e9 ; SkinTokens sous MIT. Tout est d\u00e9taill\u00e9 dans le journal.\n\nFichiers dans `generated-assets/kiln-smith/` :\n- `web/kiln-smith_final.glb` \u2014 pour le site, 479 KB, compress\u00e9 Draco (il faut le `DRACOLoader` c\u00f4t\u00e9 three.js)\n- `kiln-smith_preview.glb` \u2014 sans compression, s'ouvre dans l'aper\u00e7u du Mac, 2,2 MB\n- `kiln-smith_original.glb`\n- `kiln-smith.blend`\n- `kiln-smith_log.md`\n- `scripts/` \u2014 reconstruit tout",
+    "sandbox": "/private/tmp/kiln-bench/v300rounds5-ahujasid/mascot-kiln-smith",
+    "contamination": [],
+    "orphan_blenders": {
+      "closed": [],
+      "port_still_held_by": null
+    },
+    "timeout_s": 10800,
+    "instruments": {
+      "measure.py": "d9b0004b1db7",
+      "skin_intersect.py": "af01b7048d88",
+      "signals.py": "1b00b2cb60de",
+      "print_check.py": "0d333f8fdbfe"
+    },
+    "signals": {
+      "calls": {
+        "autorig": 4,
+        "rigify": 0,
+        "quadruped": 0,
+        "auto_weights": 0,
+        "scripted_armature": 0,
+        "unimate": 0,
+        "motion_loop": 0,
+        "matcap": 13,
+        "photo_project": 0,
+        "fidelity_check": 0,
+        "print_check": 0,
+        "fit_coupon": 0,
+        "decimate": 1,
+        "voxel_remesh": 2
+      },
+      "rig_route": "autorig (SkinTokens)",
+      "quadruped_tool": false,
+      "matcap_check": true,
+      "projection": {
+        "proposed": false,
+        "ran": false,
+        "said": []
+      },
+      "fused_hand": {
+        "mentions": 7,
+        "said": [
+          "a ring floating around it. The hammer reads as a brick, the hands as mittens and the boots as blobs. The colour palette and the face work best. I looked at both sheets and the clay front, clay back, colour three-quarter",
+          "all at the handle end pokes out below the fist (back). 6. **Hands are mittens (front, three-quarter left, back):** the free hand is a flat paddle with no readable thumb. The hammer hand is a lump. 7. **Boots are blobs (f",
+          "t, three-quarter right, side; clearest in clay)**: the free hand is a flat paddle or mitten with no readable thumb. From the side it looks like a sausage or duck bill. The fist on the hammer is also vague. 5. **Front cre"
+        ]
+      },
+      "print_check": {
+        "runs": 0,
+        "verdicts": [],
+        "last": null
+      },
+      "ended_on_question": false
+    },
+    "artifacts": {},
+    "input_measures": [],
+    "finals": 5,
+    "measures": [
+      {
+        "file": "generated-assets/kiln-smith/anim/kiln-smith_animated.glb",
+        "bytes": 2225980,
+        "extensions_used": [
+          "KHR_materials_emissive_strength"
+        ],
+        "gltf_meshes": 20,
+        "gltf_materials": 22,
+        "gltf_images": 0,
+        "gltf_skins": 1,
+        "gltf_joints": 32,
+        "gltf_animations": 2,
+        "gltf_skinned_nodes": 20,
+        "clips": [
+          {
+            "name": "walk",
+            "duration_s": 1.0333,
+            "keys": 32,
+            "channels": 96,
+            "unread_channels": 0,
+            "moving_nodes": 24,
+            "loop_closes": true,
+            "seam": {
+              "rotation_deg": 0.0,
+              "translation_m": 0.0,
+              "scale": 0.0,
+              "weights": 0.0
+            },
+            "seam_vs_step": 0.0,
+            "blink": []
+          },
+          {
+            "name": "idle",
+            "duration_s": 3.9667,
+            "keys": 120,
+            "channels": 96,
+            "unread_channels": 0,
+            "moving_nodes": 20,
+            "loop_closes": true,
+            "seam": {
+              "rotation_deg": 0.0,
+              "translation_m": 0.0,
+              "scale": 0.0,
+              "weights": 0.0
+            },
+            "seam_vs_step": 0.0,
+            "blink": []
+          }
+        ],
+        "clip_names": [
+          "walk",
+          "idle"
+        ],
+        "blink": false,
+        "objects_mesh": 20,
+        "object_names": [
+          "SK_KilnSmith",
+          "SK_KilnSmith_Apron",
+          "SK_KilnSmith_Belt",
+          "SK_KilnSmith_BootL",
+          "SK_KilnSmith_BootR",
+          "SK_KilnSmith_Collar",
+          "SK_KilnSmith_CuffL",
+          "SK_KilnSmith_CuffR",
+          "SK_KilnSmith_EyeL",
+          "SK_KilnSmith_EyeR",
+          "SK_KilnSmith_Face",
+          "SK_KilnSmith_Flame",
+          "SK_KilnSmith_Goggles",
+          "SK_KilnSmith_Hair",
+          "SK_KilnSmith_HairCap",
+          "SK_KilnSmith_Hammer",
+          "SK_KilnSmith_HandL",
+          "SK_KilnSmith_HandR",
+          "SK_KilnSmith_ShineL",
+          "SK_KilnSmith_ShineR"
+        ],
+        "tris": 73160,
+        "verts": 37691,
+        "non_manifold_edges": 6,
+        "boundary_edges": 32,
+        "loose_edges": 0,
+        "degenerate_faces": 0,
+        "dims_m": [
+          0.7637,
+          0.483,
+          1.0396
+        ],
+        "z_min_m": 0.0001,
+        "centre_xy_m": [
+          -0.0369,
+          -0.0306
+        ],
+        "materials": {
+          "M_Skin": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Shirt": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Trousers": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_LeatherDark": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Sole": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Leather": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Stitch": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Brass": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Crystal": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Steel": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Eye": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Iris": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Mouth": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Tongue": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Cheek": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Brow": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_HairGlow": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Hair": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Lens": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_HairDark": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Wood": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Shine": {
+            "images": 0,
+            "max_px": 0
+          }
+        },
+        "empty_material_slots": 0,
+        "rigs": [
+          {
+            "armature": "SK_KilnSmith_Armature",
+            "neutral_bone": false,
+            "bones": 32,
+            "deform_bones": 32,
+            "deform_bones_without_influence": 0,
+            "skinned_meshes": 20,
+            "unweighted_verts": 0,
+            "max_influences": 4,
+            "stretch_p50": 1.0,
+            "stretch_p99": 1.536,
+            "stretch_max": 10.742,
+            "hand_bones": 2,
+            "finger_bones": 6,
+            "bent": {
+              "status": "ok",
+              "posture": "biped",
+              "posed_bones": [
+                "LeftArm",
+                "LeftForeArm",
+                "LeftLeg",
+                "LeftUpLeg",
+                "Neck",
+                "RightArm",
+                "RightForeArm",
+                "RightLeg",
+                "RightUpLeg",
+                "Spine1"
+              ],
+              "resolved": {
+                "Hips": "Hips",
+                "LeftUpLeg": "LeftUpLeg",
+                "RightUpLeg": "RightUpLeg",
+                "LeftLeg": "LeftLeg",
+                "RightLeg": "RightLeg",
+                "Spine1": "Spine1",
+                "LeftFoot": "LeftFoot",
+                "RightFoot": "RightFoot",
+                "Neck": "Neck",
+                "LeftArm": "LeftArm",
+                "Head": "Head",
+                "RightArm": "RightArm",
+                "LeftForeArm": "LeftForeArm",
+                "RightForeArm": "RightForeArm",
+                "LeftHand": "LeftHand",
+                "RightHand": "RightHand"
+              },
+              "skins": 20,
+              "tris": 73160,
+              "area_mm2": 4249396.7,
+              "rest_self_mm2": 1994279.4,
+              "self_mm2": 83565.6,
+              "inter_mm2": 28513.4,
+              "fold_mm2": 55052.2,
+              "self_pct": 1.967,
+              "inter_pct": 0.671,
+              "fold_pct": 1.296,
+              "by_part_mm2": {
+                "Body": 48716.4,
+                "Head": 5773.2,
+                "LeftHind": 14450.2,
+                "RightFore": 330.9,
+                "RightHind": 14294.9
+              }
+            }
+          }
+        ],
+        "skinned_mesh_objects": 20,
+        "single_skin": false,
+        "render": "render-kiln-smith_animated.png"
+      },
+      {
+        "file": "generated-assets/kiln-smith/anim_try/A/kiln-smith_rigged_animated.glb",
+        "bytes": 2325524,
+        "extensions_used": [
+          "KHR_materials_emissive_strength"
+        ],
+        "gltf_meshes": 20,
+        "gltf_materials": 22,
+        "gltf_images": 0,
+        "gltf_skins": 1,
+        "gltf_joints": 32,
+        "gltf_animations": 4,
+        "gltf_skinned_nodes": 20,
+        "clips": [
+          {
+            "name": "walk",
+            "duration_s": 3.9667,
+            "keys": 120,
+            "channels": 96,
+            "unread_channels": 0,
+            "moving_nodes": 26,
+            "loop_closes": false,
+            "seam": {
+              "rotation_deg": 51.3903,
+              "translation_m": 1.7587,
+              "scale": 0.0,
+              "weights": 0.0
+            },
+            "seam_vs_step": 20.64,
+            "blink": []
+          },
+          {
+            "name": "walk_loop",
+            "duration_s": 1.0333,
+            "keys": 32,
+            "channels": 96,
+            "unread_channels": 0,
+            "moving_nodes": 26,
+            "loop_closes": true,
+            "seam": {
+              "rotation_deg": 0.0,
+              "translation_m": 0.0,
+              "scale": 0.0,
+              "weights": 0.0
+            },
+            "seam_vs_step": 0.0,
+            "blink": []
+          },
+          {
+            "name": "idle",
+            "duration_s": 3.9667,
+            "keys": 120,
+            "channels": 96,
+            "unread_channels": 0,
+            "moving_nodes": 20,
+            "loop_closes": false,
+            "seam": {
+              "rotation_deg": 2.3288,
+              "translation_m": 0.0031,
+              "scale": 0.0,
+              "weights": 0.0
+            },
+            "seam_vs_step": 45.16,
+            "blink": []
+          },
+          {
+            "name": "idle_loop",
+            "duration_s": 0.6,
+            "keys": 19,
+            "channels": 96,
+            "unread_channels": 0,
+            "moving_nodes": 5,
+            "loop_closes": true,
+            "seam": {
+              "rotation_deg": 0.0,
+              "translation_m": 0.0,
+              "scale": 0.0,
+              "weights": 0.0
+            },
+            "seam_vs_step": 0.0,
+            "blink": []
+          }
+        ],
+        "clip_names": [
+          "walk",
+          "walk_loop",
+          "idle",
+          "idle_loop"
+        ],
+        "blink": false,
+        "objects_mesh": 20,
+        "object_names": [
+          "SK_KilnSmith",
+          "SK_KilnSmith_Apron",
+          "SK_KilnSmith_Belt",
+          "SK_KilnSmith_BootL",
+          "SK_KilnSmith_BootR",
+          "SK_KilnSmith_Collar",
+          "SK_KilnSmith_CuffL",
+          "SK_KilnSmith_CuffR",
+          "SK_KilnSmith_EyeL",
+          "SK_KilnSmith_EyeR",
+          "SK_KilnSmith_Face",
+          "SK_KilnSmith_Flame",
+          "SK_KilnSmith_Goggles",
+          "SK_KilnSmith_Hair",
+          "SK_KilnSmith_HairCap",
+          "SK_KilnSmith_Hammer",
+          "SK_KilnSmith_HandL",
+          "SK_KilnSmith_HandR",
+          "SK_KilnSmith_ShineL",
+          "SK_KilnSmith_ShineR"
+        ],
+        "tris": 73160,
+        "verts": 37691,
+        "non_manifold_edges": 6,
+        "boundary_edges": 32,
+        "loose_edges": 0,
+        "degenerate_faces": 0,
+        "dims_m": [
+          0.6605,
+          0.564,
+          1.0441
+        ],
+        "z_min_m": 0.0002,
+        "centre_xy_m": [
+          -0.0283,
+          -0.046
+        ],
+        "materials": {
+          "M_Skin": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Shirt": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Trousers": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_LeatherDark": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Sole": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Leather": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Stitch": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Brass": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Crystal": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Steel": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Eye": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Iris": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Mouth": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Tongue": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Cheek": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Brow": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_HairGlow": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Hair": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Lens": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_HairDark": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Wood": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Shine": {
+            "images": 0,
+            "max_px": 0
+          }
+        },
+        "empty_material_slots": 0,
+        "rigs": [
+          {
+            "armature": "SK_KilnSmith_Armature",
+            "neutral_bone": false,
+            "bones": 32,
+            "deform_bones": 32,
+            "deform_bones_without_influence": 0,
+            "skinned_meshes": 20,
+            "unweighted_verts": 0,
+            "max_influences": 4,
+            "stretch_p50": 1.0,
+            "stretch_p99": 1.536,
+            "stretch_max": 10.742,
+            "hand_bones": 2,
+            "finger_bones": 6,
+            "bent": {
+              "status": "ok",
+              "posture": "biped",
+              "posed_bones": [
+                "LeftArm",
+                "LeftForeArm",
+                "LeftLeg",
+                "LeftUpLeg",
+                "Neck",
+                "RightArm",
+                "RightForeArm",
+                "RightLeg",
+                "RightUpLeg",
+                "Spine1"
+              ],
+              "resolved": {
+                "Hips": "Hips",
+                "LeftUpLeg": "LeftUpLeg",
+                "RightUpLeg": "RightUpLeg",
+                "LeftLeg": "LeftLeg",
+                "RightLeg": "RightLeg",
+                "Spine1": "Spine1",
+                "LeftFoot": "LeftFoot",
+                "RightFoot": "RightFoot",
+                "Neck": "Neck",
+                "LeftArm": "LeftArm",
+                "Head": "Head",
+                "RightArm": "RightArm",
+                "LeftForeArm": "LeftForeArm",
+                "RightForeArm": "RightForeArm",
+                "LeftHand": "LeftHand",
+                "RightHand": "RightHand"
+              },
+              "skins": 20,
+              "tris": 73160,
+              "area_mm2": 4249396.3,
+              "rest_self_mm2": 1989030.3,
+              "self_mm2": 83613.0,
+              "inter_mm2": 28513.4,
+              "fold_mm2": 55099.6,
+              "self_pct": 1.968,
+              "inter_pct": 0.671,
+              "fold_pct": 1.297,
+              "by_part_mm2": {
+                "Body": 48980.4,
+                "Head": 5773.2,
+                "LeftHind": 14450.2,
+                "RightFore": 114.3,
+                "RightHind": 14294.9
+              }
+            }
+          }
+        ],
+        "skinned_mesh_objects": 20,
+        "single_skin": false,
+        "render": "render-kiln-smith_rigged_animated.png"
+      },
+      {
+        "file": "generated-assets/kiln-smith/anim_try/B/kiln-smith_rigged_animated.glb",
+        "bytes": 2340104,
+        "extensions_used": [
+          "KHR_materials_emissive_strength"
+        ],
+        "gltf_meshes": 20,
+        "gltf_materials": 22,
+        "gltf_images": 0,
+        "gltf_skins": 1,
+        "gltf_joints": 32,
+        "gltf_animations": 4,
+        "gltf_skinned_nodes": 20,
+        "clips": [
+          {
+            "name": "walk",
+            "duration_s": 3.9667,
+            "keys": 120,
+            "channels": 96,
+            "unread_channels": 0,
+            "moving_nodes": 26,
+            "loop_closes": false,
+            "seam": {
+              "rotation_deg": 48.9495,
+              "translation_m": 1.8676,
+              "scale": 0.0,
+              "weights": 0.0
+            },
+            "seam_vs_step": 17.73,
+            "blink": []
+          },
+          {
+            "name": "walk_loop",
+            "duration_s": 2.1667,
+            "keys": 66,
+            "channels": 96,
+            "unread_channels": 0,
+            "moving_nodes": 26,
+            "loop_closes": true,
+            "seam": {
+              "rotation_deg": 0.0,
+              "translation_m": 0.0,
+              "scale": 0.0,
+              "weights": 0.0
+            },
+            "seam_vs_step": 0.0,
+            "blink": []
+          },
+          {
+            "name": "idle",
+            "duration_s": 3.9667,
+            "keys": 120,
+            "channels": 96,
+            "unread_channels": 0,
+            "moving_nodes": 24,
+            "loop_closes": false,
+            "seam": {
+              "rotation_deg": 8.4708,
+              "translation_m": 0.0192,
+              "scale": 0.0,
+              "weights": 0.0
+            },
+            "seam_vs_step": 92.62,
+            "blink": []
+          },
+          {
+            "name": "idle_loop",
+            "duration_s": 0.6,
+            "keys": 19,
+            "channels": 96,
+            "unread_channels": 0,
+            "moving_nodes": 7,
+            "loop_closes": true,
+            "seam": {
+              "rotation_deg": 0.0,
+              "translation_m": 0.0,
+              "scale": 0.0,
+              "weights": 0.0
+            },
+            "seam_vs_step": 0.0,
+            "blink": []
+          }
+        ],
+        "clip_names": [
+          "walk",
+          "walk_loop",
+          "idle",
+          "idle_loop"
+        ],
+        "blink": false,
+        "objects_mesh": 20,
+        "object_names": [
+          "SK_KilnSmith",
+          "SK_KilnSmith_Apron",
+          "SK_KilnSmith_Belt",
+          "SK_KilnSmith_BootL",
+          "SK_KilnSmith_BootR",
+          "SK_KilnSmith_Collar",
+          "SK_KilnSmith_CuffL",
+          "SK_KilnSmith_CuffR",
+          "SK_KilnSmith_EyeL",
+          "SK_KilnSmith_EyeR",
+          "SK_KilnSmith_Face",
+          "SK_KilnSmith_Flame",
+          "SK_KilnSmith_Goggles",
+          "SK_KilnSmith_Hair",
+          "SK_KilnSmith_HairCap",
+          "SK_KilnSmith_Hammer",
+          "SK_KilnSmith_HandL",
+          "SK_KilnSmith_HandR",
+          "SK_KilnSmith_ShineL",
+          "SK_KilnSmith_ShineR"
+        ],
+        "tris": 73160,
+        "verts": 37691,
+        "non_manifold_edges": 6,
+        "boundary_edges": 32,
+        "loose_edges": 0,
+        "degenerate_faces": 0,
+        "dims_m": [
+          0.65,
+          0.6653,
+          1.031
+        ],
+        "z_min_m": 0.0013,
+        "centre_xy_m": [
+          0.0539,
+          -0.1242
+        ],
+        "materials": {
+          "M_Skin": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Shirt": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Trousers": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_LeatherDark": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Sole": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Leather": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Stitch": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Brass": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Crystal": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Steel": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Eye": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Iris": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Mouth": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Tongue": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Cheek": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Brow": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_HairGlow": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Hair": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Lens": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_HairDark": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Wood": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Shine": {
+            "images": 0,
+            "max_px": 0
+          }
+        },
+        "empty_material_slots": 0,
+        "rigs": [
+          {
+            "armature": "SK_KilnSmith_Armature",
+            "neutral_bone": false,
+            "bones": 32,
+            "deform_bones": 32,
+            "deform_bones_without_influence": 0,
+            "skinned_meshes": 20,
+            "unweighted_verts": 0,
+            "max_influences": 4,
+            "stretch_p50": 1.0,
+            "stretch_p99": 1.6,
+            "stretch_max": 19.972,
+            "hand_bones": 2,
+            "finger_bones": 6,
+            "bent": {
+              "status": "ok",
+              "posture": "biped",
+              "posed_bones": [
+                "LeftArm",
+                "LeftForeArm",
+                "LeftLeg",
+                "LeftUpLeg",
+                "Neck",
+                "RightArm",
+                "RightForeArm",
+                "RightLeg",
+                "RightUpLeg",
+                "Spine1"
+              ],
+              "resolved": {
+                "Hips": "Hips",
+                "LeftUpLeg": "LeftUpLeg",
+                "RightUpLeg": "RightUpLeg",
+                "LeftLeg": "LeftLeg",
+                "RightLeg": "RightLeg",
+                "Spine1": "Spine1",
+                "LeftFoot": "LeftFoot",
+                "RightFoot": "RightFoot",
+                "Neck": "Neck",
+                "LeftArm": "LeftArm",
+                "Head": "Head",
+                "RightArm": "RightArm",
+                "LeftForeArm": "LeftForeArm",
+                "RightForeArm": "RightForeArm",
+                "LeftHand": "LeftHand",
+                "RightHand": "RightHand"
+              },
+              "skins": 20,
+              "tris": 73160,
+              "area_mm2": 4249396.3,
+              "rest_self_mm2": 1989030.3,
+              "self_mm2": 75215.4,
+              "inter_mm2": 36181.2,
+              "fold_mm2": 39034.2,
+              "self_pct": 1.77,
+              "inter_pct": 0.851,
+              "fold_pct": 0.919,
+              "by_part_mm2": {
+                "Body": 41012.2,
+                "Head": 5773.2,
+                "LeftHind": 12638.2,
+                "RightFore": 114.3,
+                "RightHind": 15677.5
+              }
+            }
+          }
+        ],
+        "skinned_mesh_objects": 20,
+        "single_skin": false,
+        "render": "render-kiln-smith_rigged_animated.png"
+      },
+      {
+        "file": "generated-assets/kiln-smith/rig_test/t_rigged_animated.glb",
+        "bytes": 2302976,
+        "extensions_used": [
+          "KHR_materials_emissive_strength"
+        ],
+        "gltf_meshes": 20,
+        "gltf_materials": 22,
+        "gltf_images": 0,
+        "gltf_skins": 1,
+        "gltf_joints": 32,
+        "gltf_animations": 4,
+        "gltf_skinned_nodes": 20,
+        "clips": [
+          {
+            "name": "walk",
+            "duration_s": 3.9667,
+            "keys": 120,
+            "channels": 96,
+            "unread_channels": 0,
+            "moving_nodes": 26,
+            "loop_closes": false,
+            "seam": {
+              "rotation_deg": 54.6399,
+              "translation_m": 1.7587,
+              "scale": 0.0,
+              "weights": 0.0
+            },
+            "seam_vs_step": 20.64,
+            "blink": []
+          },
+          {
+            "name": "walk_loop",
+            "duration_s": 1.0333,
+            "keys": 32,
+            "channels": 96,
+            "unread_channels": 0,
+            "moving_nodes": 26,
+            "loop_closes": true,
+            "seam": {
+              "rotation_deg": 0.0,
+              "translation_m": 0.0,
+              "scale": 0.0,
+              "weights": 0.0
+            },
+            "seam_vs_step": 0.0,
+            "blink": []
+          },
+          {
+            "name": "idle",
+            "duration_s": 3.9667,
+            "keys": 120,
+            "channels": 96,
+            "unread_channels": 0,
+            "moving_nodes": 20,
+            "loop_closes": false,
+            "seam": {
+              "rotation_deg": 2.3288,
+              "translation_m": 0.0031,
+              "scale": 0.0,
+              "weights": 0.0
+            },
+            "seam_vs_step": 45.16,
+            "blink": []
+          },
+          {
+            "name": "idle_loop",
+            "duration_s": 0.6,
+            "keys": 19,
+            "channels": 96,
+            "unread_channels": 0,
+            "moving_nodes": 5,
+            "loop_closes": true,
+            "seam": {
+              "rotation_deg": 0.0,
+              "translation_m": 0.0,
+              "scale": 0.0,
+              "weights": 0.0
+            },
+            "seam_vs_step": 0.0,
+            "blink": []
+          }
+        ],
+        "clip_names": [
+          "walk",
+          "walk_loop",
+          "idle",
+          "idle_loop"
+        ],
+        "blink": false,
+        "objects_mesh": 20,
+        "object_names": [
+          "SK_KilnSmith",
+          "SK_KilnSmith_Apron",
+          "SK_KilnSmith_Belt",
+          "SK_KilnSmith_BootL",
+          "SK_KilnSmith_BootR",
+          "SK_KilnSmith_Collar",
+          "SK_KilnSmith_CuffL",
+          "SK_KilnSmith_CuffR",
+          "SK_KilnSmith_EyeL",
+          "SK_KilnSmith_EyeR",
+          "SK_KilnSmith_Face",
+          "SK_KilnSmith_Flame",
+          "SK_KilnSmith_Goggles",
+          "SK_KilnSmith_Hair",
+          "SK_KilnSmith_HairCap",
+          "SK_KilnSmith_Hammer",
+          "SK_KilnSmith_HandL",
+          "SK_KilnSmith_HandR",
+          "SK_KilnSmith_ShineL",
+          "SK_KilnSmith_ShineR"
+        ],
+        "tris": 71856,
+        "verts": 37039,
+        "non_manifold_edges": 6,
+        "boundary_edges": 32,
+        "loose_edges": 0,
+        "degenerate_faces": 0,
+        "dims_m": [
+          0.676,
+          0.5241,
+          1.047
+        ],
+        "z_min_m": -0.0026,
+        "centre_xy_m": [
+          -0.0411,
+          -0.0329
+        ],
+        "materials": {
+          "M_Skin": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Shirt": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Trousers": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_LeatherDark": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Sole": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Leather": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Stitch": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Brass": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Crystal": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Steel": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Eye": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Iris": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Mouth": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Tongue": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Cheek": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Brow": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_HairGlow": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Hair": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Lens": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_HairDark": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Wood": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Shine": {
+            "images": 0,
+            "max_px": 0
+          }
+        },
+        "empty_material_slots": 0,
+        "rigs": [
+          {
+            "armature": "SK_KilnSmith_Armature",
+            "neutral_bone": false,
+            "bones": 32,
+            "deform_bones": 32,
+            "deform_bones_without_influence": 0,
+            "skinned_meshes": 20,
+            "unweighted_verts": 0,
+            "max_influences": 4,
+            "stretch_p50": 1.0,
+            "stretch_p99": 1.628,
+            "stretch_max": 19.294,
+            "hand_bones": 2,
+            "finger_bones": 6,
+            "bent": {
+              "status": "ok",
+              "posture": "biped",
+              "posed_bones": [
+                "LeftArm",
+                "LeftForeArm",
+                "LeftLeg",
+                "LeftUpLeg",
+                "Neck",
+                "RightArm",
+                "RightForeArm",
+                "RightLeg",
+                "RightUpLeg",
+                "Spine1"
+              ],
+              "resolved": {
+                "Hips": "Hips",
+                "LeftUpLeg": "LeftUpLeg",
+                "RightUpLeg": "RightUpLeg",
+                "LeftLeg": "LeftLeg",
+                "RightLeg": "RightLeg",
+                "Spine1": "Spine1",
+                "LeftFoot": "LeftFoot",
+                "RightFoot": "RightFoot",
+                "Neck": "Neck",
+                "LeftArm": "LeftArm",
+                "Head": "Head",
+                "RightArm": "RightArm",
+                "LeftForeArm": "LeftForeArm",
+                "RightForeArm": "RightForeArm",
+                "LeftHand": "LeftHand",
+                "RightHand": "RightHand"
+              },
+              "skins": 20,
+              "tris": 71856,
+              "area_mm2": 4317546.5,
+              "rest_self_mm2": 2050441.1,
+              "self_mm2": 75730.4,
+              "inter_mm2": 32612.4,
+              "fold_mm2": 43118.0,
+              "self_pct": 1.754,
+              "inter_pct": 0.755,
+              "fold_pct": 0.999,
+              "by_part_mm2": {
+                "Body": 39034.0,
+                "Head": 9126.3,
+                "LeftHind": 11851.9,
+                "RightFore": 311.6,
+                "RightHind": 15406.5
+              }
+            }
+          }
+        ],
+        "skinned_mesh_objects": 20,
+        "single_skin": false,
+        "render": "render-t_rigged_animated.png"
+      },
+      {
+        "file": "generated-assets/kiln-smith/web/kiln-smith_final.glb",
+        "bytes": 478720,
+        "extensions_used": [
+          "KHR_draco_mesh_compression",
+          "KHR_materials_emissive_strength"
+        ],
+        "gltf_meshes": 20,
+        "gltf_materials": 22,
+        "gltf_images": 0,
+        "gltf_skins": 1,
+        "gltf_joints": 32,
+        "gltf_animations": 2,
+        "gltf_skinned_nodes": 20,
+        "clips": [
+          {
+            "name": "walk",
+            "duration_s": 1.0333,
+            "keys": 32,
+            "channels": 96,
+            "unread_channels": 0,
+            "moving_nodes": 24,
+            "loop_closes": true,
+            "seam": {
+              "rotation_deg": 0.0,
+              "translation_m": 0.0,
+              "scale": 0.0,
+              "weights": 0.0
+            },
+            "seam_vs_step": 0.0,
+            "blink": []
+          },
+          {
+            "name": "idle",
+            "duration_s": 3.9667,
+            "keys": 120,
+            "channels": 96,
+            "unread_channels": 0,
+            "moving_nodes": 20,
+            "loop_closes": true,
+            "seam": {
+              "rotation_deg": 0.0,
+              "translation_m": 0.0,
+              "scale": 0.0,
+              "weights": 0.0
+            },
+            "seam_vs_step": 0.0,
+            "blink": []
+          }
+        ],
+        "clip_names": [
+          "walk",
+          "idle"
+        ],
+        "blink": false,
+        "objects_mesh": 20,
+        "object_names": [
+          "SK_KilnSmith",
+          "SK_KilnSmith_Apron",
+          "SK_KilnSmith_Belt",
+          "SK_KilnSmith_BootL",
+          "SK_KilnSmith_BootR",
+          "SK_KilnSmith_Collar",
+          "SK_KilnSmith_CuffL",
+          "SK_KilnSmith_CuffR",
+          "SK_KilnSmith_EyeL",
+          "SK_KilnSmith_EyeR",
+          "SK_KilnSmith_Face",
+          "SK_KilnSmith_Flame",
+          "SK_KilnSmith_Goggles",
+          "SK_KilnSmith_Hair",
+          "SK_KilnSmith_HairCap",
+          "SK_KilnSmith_Hammer",
+          "SK_KilnSmith_HandL",
+          "SK_KilnSmith_HandR",
+          "SK_KilnSmith_ShineL",
+          "SK_KilnSmith_ShineR"
+        ],
+        "tris": 73160,
+        "verts": 37698,
+        "non_manifold_edges": 6,
+        "boundary_edges": 808,
+        "loose_edges": 0,
+        "degenerate_faces": 0,
+        "dims_m": [
+          0.7637,
+          0.483,
+          1.0395
+        ],
+        "z_min_m": 0.0001,
+        "centre_xy_m": [
+          -0.0369,
+          -0.0306
+        ],
+        "materials": {
+          "M_Skin": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Shirt": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Trousers": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_LeatherDark": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Sole": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Leather": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Stitch": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Brass": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Crystal": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Steel": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Eye": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Iris": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Mouth": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Tongue": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Cheek": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Brow": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_HairGlow": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Hair": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Lens": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_HairDark": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Wood": {
+            "images": 0,
+            "max_px": 0
+          },
+          "M_Shine": {
+            "images": 0,
+            "max_px": 0
+          }
+        },
+        "empty_material_slots": 0,
+        "rigs": [
+          {
+            "armature": "SK_KilnSmith_Armature",
+            "neutral_bone": false,
+            "bones": 32,
+            "deform_bones": 32,
+            "deform_bones_without_influence": 0,
+            "skinned_meshes": 20,
+            "unweighted_verts": 0,
+            "max_influences": 4,
+            "stretch_p50": 1.0,
+            "stretch_p99": 1.537,
+            "stretch_max": 10.738,
+            "hand_bones": 2,
+            "finger_bones": 6,
+            "bent": {
+              "status": "ok",
+              "posture": "biped",
+              "posed_bones": [
+                "LeftArm",
+                "LeftForeArm",
+                "LeftLeg",
+                "LeftUpLeg",
+                "Neck",
+                "RightArm",
+                "RightForeArm",
+                "RightLeg",
+                "RightUpLeg",
+                "Spine1"
+              ],
+              "resolved": {
+                "Hips": "Hips",
+                "LeftUpLeg": "LeftUpLeg",
+                "RightUpLeg": "RightUpLeg",
+                "LeftLeg": "LeftLeg",
+                "RightLeg": "RightLeg",
+                "Spine1": "Spine1",
+                "LeftFoot": "LeftFoot",
+                "RightFoot": "RightFoot",
+                "Neck": "Neck",
+                "LeftArm": "LeftArm",
+                "Head": "Head",
+                "RightArm": "RightArm",
+                "LeftForeArm": "LeftForeArm",
+                "RightForeArm": "RightForeArm",
+                "LeftHand": "LeftHand",
+                "RightHand": "RightHand"
+              },
+              "skins": 20,
+              "tris": 73160,
+              "area_mm2": 4249397.6,
+              "rest_self_mm2": 1991226.3,
+              "self_mm2": 85549.7,
+              "inter_mm2": 28630.7,
+              "fold_mm2": 56919.0,
+              "self_pct": 2.013,
+              "inter_pct": 0.674,
+              "fold_pct": 1.339,
+              "by_part_mm2": {
+                "Body": 50492.8,
+                "Head": 5745.6,
+                "LeftHind": 14756.6,
+                "RightFore": 189.9,
+                "RightHind": 14364.8
+              }
+            }
+          }
+        ],
+        "skinned_mesh_objects": 20,
+        "single_skin": false,
+        "render": "render-kiln-smith_final.png"
+      }
+    ],
+    "glbs": [
+      {
+        "file": "kiln-smith_final.glb",
+        "bytes": 478720,
+        "sha256": "466808d9d49b39f2b1e8426b448a8c6769b130f053ce32ba3d1b1d2603a5e7ee",
+        "published": true
+      }
+    ]
+  },
+  "ref-chair": {
+    "brief": "ref-chair",
+    "mcp": "mcp-for-blender==2.2.2",
+    "blender": "Blender 5.2.2 LTS",
+    "skill": "ddc7a49 release/3.0-character-rules",
+    "claude_exit": 0,
+    "wall_s": 3037.4,
+    "is_error": false,
+    "num_turns": 19,
+    "duration_ms": 287456,
+    "cost_usd_equiv": 14.392090999999992,
+    "output_tokens": 13201,
+    "input_tokens_total": 6440506,
+    "tool_calls": {
+      "Read": 92,
+      "Bash": 83,
+      "ToolSearch": 1,
+      "mcp__blender__get_addon_status": 1,
+      "mcp__blender__get_scene_info": 3,
+      "mcp__blender__execute_blender_code": 17,
+      "Write": 4,
+      "mcp__blender__look": 9,
+      "Edit": 1,
+      "Agent": 7
+    },
+    "final_text": "and derived the rest from it.\n- **Parts:** everything in the photo is there. That covers the posts with bead rows, finials, the pointed arch with teardrop, quatrefoil and rosette, and the round-arched lower tracery with thorns. Below the back are the bowed arms on round pads, fluted turned legs with bun feet, cusped arcade aprons and the box stretchers.\n- **Material:** a Poly Haven wood scan (CC0), recoloured to the photo's colours, with grime in the carving and wear on the seat and arm tops. It's baked into colour, roughness and normal maps.\n- **Measured match:** the silhouette overlap with your photo is 0.478, from the photo's camera angle. Part of the remaining gap is the photo's perspective, which I deliberately didn't copy into the geometry.\n\n**Review rounds:** seven, each read by a new reviewer who saw only images. The last one found nothing blocking. Along the way I fixed a real geometry bug: the front apron's arches had been filled in wrongly and looked torn. The arms took four rounds before they matched the photo.\n\n**Details simpler than the photo:**\n- The bead rows on the posts are sparser.\n- The finials are a bud with outward leaves rather than a full fleur-de-lis.\n- The arm pads are round discs, not rolled scrolls.\n- The arcade drops still look slightly pointed from a low angle.\n\n**Budget:** 9,984 triangles is twice the balanced tier's 5,000 top, the most the tier allows. It goes into the tracery and the turned parts, so I didn't decimate.\n\n**Storage:** you asked for compact storage, but I haven't deleted anything. The working files are still there: `review/` (285 MB), `textures/` (24 MB, the bakes and downloaded scans) and `optimize_tmp/` (12 MB). The bakes are also packed in the .blend, so none of these are needed. Should I delete them?\n\nI built this in your open Blender, which only held the empty startup scene; I removed its default cube first. Kiln Studio is running at http://127.0.0.1:4841/ if you want to look at the model there and pin notes on it.",
+    "sandbox": "/private/tmp/kiln-bench/v300rounds5-ahujasid/ref-chair",
+    "contamination": [],
+    "orphan_blenders": {
+      "closed": [
+        "/opt/homebrew/Cellar/python@3.14/3.14.4/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python /private/tmp/kiln-bench/v300rounds5-ahujasid/ref-chair/skill/studio/studio.py serve /private/tmp/kiln-bench/v300rounds5-ahujasid/ref-chair/work --port 4841"
+      ],
+      "port_still_held_by": null
+    },
+    "timeout_s": 5400,
+    "instruments": {
+      "measure.py": "d9b0004b1db7",
+      "skin_intersect.py": "af01b7048d88",
+      "signals.py": "1b00b2cb60de",
+      "print_check.py": "0d333f8fdbfe"
+    },
+    "signals": {
+      "calls": {
+        "autorig": 0,
+        "rigify": 0,
+        "quadruped": 0,
+        "auto_weights": 0,
+        "scripted_armature": 0,
+        "unimate": 0,
+        "motion_loop": 0,
+        "matcap": 0,
+        "photo_project": 0,
+        "fidelity_check": 9,
+        "print_check": 0,
+        "fit_coupon": 0,
+        "decimate": 1,
+        "voxel_remesh": 0
+      },
+      "rig_route": null,
+      "quadruped_tool": false,
+      "matcap_check": false,
+      "projection": {
+        "proposed": false,
+        "ran": false,
+        "said": []
+      },
+      "fused_hand": {
+        "mentions": 0,
+        "said": []
+      },
+      "print_check": {
+        "runs": 0,
+        "verdicts": [],
+        "last": null
+      },
+      "ended_on_question": false
+    },
+    "artifacts": {},
+    "input_measures": [],
+    "finals": 1,
+    "measures": [
+      {
+        "file": "generated-assets/wooden-chair/web/wooden-chair_final.glb",
+        "bytes": 517104,
+        "extensions_used": [
+          "EXT_texture_webp",
+          "KHR_draco_mesh_compression"
+        ],
+        "gltf_meshes": 1,
+        "gltf_materials": 1,
+        "gltf_images": 3,
+        "gltf_skins": 0,
+        "gltf_joints": 0,
+        "gltf_animations": 0,
+        "gltf_skinned_nodes": 0,
+        "clips": [],
+        "clip_names": [],
+        "blink": false,
+        "objects_mesh": 1,
+        "object_names": [
+          "SM_WoodenChair"
+        ],
+        "tris": 9984,
+        "verts": 13338,
+        "non_manifold_edges": 0,
+        "boundary_edges": 398,
+        "loose_edges": 0,
+        "degenerate_faces": 0,
+        "dims_m": [
+          0.466,
+          0.5231,
+          1.6414
+        ],
+        "z_min_m": 0.0,
+        "centre_xy_m": [
+          -0.0,
+          -0.0049
+        ],
+        "materials": {
+          "M_Wood_DarkStain": {
+            "images": 3,
+            "max_px": 1024
+          }
+        },
+        "empty_material_slots": 0,
+        "rigs": [],
+        "skinned_mesh_objects": 0,
+        "single_skin": false,
+        "render": "render-wooden-chair_final.png"
+      }
+    ],
+    "glbs": [
+      {
+        "file": "parts_final.glb",
+        "bytes": 8770044,
+        "sha256": "98a4cb16fe5569407cfbac1528fc41a90ebfa22ef2b46121ac2f0bb5eb8b312b",
+        "published": false
+      },
+      {
+        "file": "wooden-chair_final.glb",
+        "bytes": 517104,
+        "sha256": "dd3510b46e236559c0afc303dd9dfc2efa077b5aae677a9cc5b9274c705ac539",
+        "published": true
+      }
+    ]
+  }
+}
