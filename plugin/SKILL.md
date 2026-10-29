@@ -301,9 +301,9 @@ Project left 1.7% of its surface on collapsed UVs, unseen.
   (six views and a close-up, in colour and in clay), both sheets looked at, a
   written critique of three defects or more with their fixes, then the fixes. **Each round is read by
   a new subagent that knows nothing of the build** — the brief, the sheets, the lists, nothing else:
-  the builder reads its own work as its author. **3 rounds at least (8 at most) for a prop; 6 at
-  least (12 at most) for a character or a showcase brief, then rounds on its motion**, until a round
-  finds nothing blocking; **auto mode does not shorten them**. From a photo: reshaping to the photo keeps its two correction rounds; a part off-centre or
+  the builder reads its own work as its author. **A prop: rounds until two new reviewers in a row
+  find nothing blocking, 8 at most; a character or a showcase brief: 6 at least (12 at most), then
+  rounds on its motion**, ending the same way; **auto mode does not shorten them**. From a photo: reshaping to the photo keeps its two correction rounds; a part off-centre or
   out of line is a build error, fixed at any round.
 
 ### [5c] RIG and [5d] ANIMATE — `references/pipeline-rig-animate.md`

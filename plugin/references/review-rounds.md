@@ -22,9 +22,9 @@ each one found is in `characters.md` § A stylised humanoid.
 
 | The asset | Rounds, at least | Stop |
 |---|---:|---|
-| A prop, an object, a scene piece | **3** | a round finds nothing from the lists below |
+| A prop, an object, a scene piece | **1**, eight at most | two fresh reviewers in a row find nothing blocking (§ The fresh reviewer) |
 | A character, a mascot, a creature — or any brief that says showcase, hero, vitrine, high quality | **6**, twelve at most | the same, every line of the design sheet shows — then rounds on the motion (below) |
-| From a photo | the proportions: **2** correction rounds at most (`reference-fidelity.md` § 5); then **3** rounds on the surface, the finish **and the assembly** | the same |
+| From a photo | the proportions: **2** correction rounds at most (`reference-fidelity.md` § 5); then rounds on the surface, the finish **and the assembly** | the same |
 | Print | `print.md`'s own rounds | `print_check` PASS and the gaps stop closing |
 
 **Auto mode does not shorten them**: nobody is there to say it looks wrong, so the rounds are the
@@ -84,8 +84,13 @@ nothing of the build** — the Task (Agent) tool, a general-purpose agent, a fre
   the asset would notice it in the views it will be seen in) or **detail**; and its verdict in one
   line — would this be shown to the user as is?
 - **Use it**: every blocking defect is fixed this round or argued in the log with what was checked
-  (the reviewer can be wrong — a shadow read as a hole); details are fixed when cheap. A round whose
-  reviewer finds nothing blocking, and your own reading neither, ends the rounds.
+  (the reviewer can be wrong — a shadow read as a hole); details are fixed when cheap.
+- **Stop on two clean readings**: when a reviewer finds nothing blocking, and your own reading
+  neither, give the same sheets to a second new subagent, briefed the same way. If it finds nothing
+  blocking either, the rounds end — a prop as early as round 1, a character once its six are done;
+  if it finds something, that round goes on with its fixes. One reviewer can miss what the next one
+  sees, and the second reading costs a review, not a rebuild. A prop has no minimum: the rounds were
+  a count because the builder judged itself; two outside readings are the judgement now.
 - **The motion too**: for a motion round, give it strips of frames (front and side, every 2nd frame
   of the loop, `characters.md` § Matcap before delivery) and the measures, and ask the same.
 
