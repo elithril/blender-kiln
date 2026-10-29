@@ -1,5 +1,5 @@
 {
-  "_sources": "Every figure here comes from docs/benchmarks.md, README.md, CHANGELOG.md or the bench-results branch (summary.json of each run). Update this file on a release; no section hard-codes a number.",
+  "_sources": "Every figure here comes from docs/benchmarks.md, README.md, CHANGELOG.md or the bench-results branch (summary.json of each run). Update this file on a release; no section hard-codes a number. The lantern GLB on the site is kiln 3.0's shipped file with its textures resized to 512 px (gltf-transform resize, then Draco), 376 KB; shippedKB stays what kiln shipped (1,155 KB, 1024 px).",
   "release": {
     "version": "2.2.0",
     "date": "2026-10-07",
@@ -27,23 +27,23 @@
       "photoAlt": "Reference photo: an old brass hurricane lantern with a glass globe and a wire bail, cut out on transparent background",
       "photoCredit": "Poly Haven, Lantern_01 (CC0)",
       "glb": "/assets/glb/lantern.glb",
-      "score": 0.897,
+      "score": 0.885,
       "scoreBefore": 0.83,
-      "shippedKB": 229,
-      "rawMB": 3.94,
-      "tris": 12314,
-      "minutes": 21,
-      "costUSD": 5.04,
-      "run": "ref-kiln-v15",
+      "shippedKB": 1155,
+      "rawMB": 9.2,
+      "tris": 9920,
+      "minutes": 18,
+      "costUSD": 6.04,
+      "run": "v300final-ahujasid/ref-lantern",
       "truth": "/assets/glb/truth-lantern.glb",
       "truthYaw": 0,
       "fallback": "/assets/img/render-lantern.webp",
       "views": {
-        "front": 0.827,
-        "back": 0.827,
-        "left": 0.929,
-        "right": 0.929,
-        "top": 0.971
+        "front": 0.818,
+        "back": 0.818,
+        "left": 0.906,
+        "right": 0.906,
+        "top": 0.979
       },
       "scoredViews": [
         "front",
@@ -52,7 +52,7 @@
         "right",
         "top"
       ],
-      "heightVsTruth": 0.19
+      "heightVsTruth": 0.21
     },
     {
       "id": "ammo-box",
@@ -61,23 +61,23 @@
       "photoAlt": "Reference photo: a rusted olive-green ammunition box with a yellow stencil reading 200 CARTRIGES 7.62 MM",
       "photoCredit": "Poly Haven, ammo_box (CC0)",
       "glb": "/assets/glb/ammo-box.glb",
-      "score": 0.95,
+      "score": 0.936,
       "scoreBefore": 0.854,
-      "shippedKB": 187,
-      "rawMB": 5.54,
-      "tris": 3856,
+      "shippedKB": 365,
+      "rawMB": 5.35,
+      "tris": 4632,
       "minutes": 15,
-      "costUSD": 3.8,
-      "run": "ref-kiln-v15gen",
+      "costUSD": 4.45,
+      "run": "v300final-ahujasid/ref-ammo-box",
       "truth": "/assets/glb/truth-ammo-box.glb",
       "truthYaw": 270,
       "fallback": "/assets/img/render-ammo-box.webp",
       "views": {
-        "front": 0.958,
-        "back": 0.956,
-        "left": 0.945,
+        "front": 0.937,
+        "back": 0.937,
+        "left": 0.947,
         "right": 0.945,
-        "top": 0.949
+        "top": 0.915
       },
       "scoredViews": [
         "front",
@@ -86,7 +86,7 @@
         "right",
         "top"
       ],
-      "heightVsTruth": 0.16
+      "heightVsTruth": 0.14
     },
     {
       "id": "chair",
@@ -95,30 +95,32 @@
       "photoAlt": "Reference photo: a tall gothic wooden chair with a pointed arch, a rose and tracery in its back",
       "photoCredit": "Poly Haven, WoodenChair_01 (CC0)",
       "glb": "/assets/glb/chair.glb",
-      "score": 0.75,
+      "score": 0.72,
       "scoreBefore": 0.445,
-      "shippedKB": 239,
-      "rawMB": null,
-      "tris": 9908,
-      "minutes": 21,
-      "costUSD": 6.13,
-      "run": "ref-kiln-v15gen",
+      "shippedKB": 439,
+      "rawMB": 11.47,
+      "tris": 9852,
+      "minutes": 23,
+      "costUSD": 6.64,
+      "run": "v300final-ahujasid/ref-chair",
       "truth": "/assets/glb/truth-chair.glb",
       "truthYaw": 0,
       "fallback": "/assets/img/render-chair.webp",
       "views": {
-        "front": 0.696,
-        "back": 0.696,
-        "left": 0.462,
-        "right": 0.462,
-        "top": 0.859
+        "front": 0.634,
+        "back": 0.634,
+        "left": 0.604,
+        "right": 0.617,
+        "top": 0.892
       },
       "scoredViews": [
         "front",
         "back",
+        "left",
+        "right",
         "top"
       ],
-      "heightVsTruth": -0.29
+      "heightVsTruth": -0.25
     }
   ],
   "scoreNote": "Silhouette overlap with the real object, 1 = identical. Each view is cropped and scaled to the same height, then compared.",
@@ -127,7 +129,7 @@
     "blender": "Blender 5.2.2",
     "runsPerBrief": 1
   },
-  "_gtSource": "views, yaw and heightVsTruth: bench/gt_compare.py re-run on 2026-10-07 on the shipped GLBs against the Poly Haven truth; it reproduces the published means exactly (0.897, 0.950, 0.750).",
+  "_gtSource": "views, yaw and heightVsTruth: bench/gt_compare.py on 2026-10-28 on the GLBs kiln 3.0 shipped on the 3.0 bench (label v300final-ahujasid, mcp-for-blender 2.2.2), against the Poly Haven truth; the means are the bench report's (0.885, 0.936, 0.720). scoreBefore: v1, before 2.0's photo method (docs/benchmarks.md § 3).",
   "scoreBeforeLabel": "before 2.0's photo method",
   "costNote": "API-equivalent",
   "requirements": "Needs Blender 4.4+ with a Blender MCP server running.",
@@ -205,10 +207,10 @@
     }
   },
   "lanterns": {
-    "headline": "Fifteen lanterns. Five turning points.",
-    "lede": "One photo and the same brief, fifteen times, each version the skill after the previous one's findings, scored against the real lantern it never saw. The curve is all fifteen; the stops are where something changed.",
-    "note": "v1 to v8 and v8 to v15 come from two bench sheets rendered under the same studio light and camera; the shape score is measured the same way for all. One run per version: a few hundredths are not significant.",
-    "source": "bench-results: lantern-iterations/README.md and sheets; docs/benchmarks.md",
+    "headline": "Seventeen lanterns. Six turning points.",
+    "lede": "One photo and the same brief, seventeen times, each version the skill after the previous one's findings, scored against the real lantern it never saw. The curve is all seventeen; the stops are where something changed.",
+    "note": "v1 to v8 and v8 to v15 come from two bench sheets rendered under the same studio light and camera; v16 and v17 are the released 2.2.0 and 3.0 on the 3.0 bench. The shape score is measured the same way for all. One run per version: a few hundredths are not significant. 3.0 with a TRELLIS.2 template scores 0.917, finishing the TRELLIS.2 mesh 0.946 (docs/benchmarks.md).",
+    "source": "bench-results: lantern-iterations/README.md and sheets; the 3.0 bench (labels v220-mcp222-ahujasid, v300final-ahujasid); docs/benchmarks.md",
     "photo": "/assets/img/lantern/photo.webp",
     "truth": "/assets/img/lantern/truth.webp",
     "versions": [
@@ -361,6 +363,26 @@
         "result": "The tank has matter. Brass has no scan, so the frame came out a second tone.",
         "contaminated": false,
         "img": "/assets/img/lantern/v15.webp"
+      },
+      {
+        "v": 16,
+        "score": 0.9,
+        "height": 0.3,
+        "cost": 6.61,
+        "change": "Release 2.2.0, run again on the 3.0 bench.",
+        "result": "Level with v15; the height drifts again.",
+        "contaminated": false,
+        "img": null
+      },
+      {
+        "v": 17,
+        "score": 0.885,
+        "height": 0.21,
+        "cost": 6.04,
+        "change": "Release 3.0: the photo's perspective is never corrected.",
+        "result": "Posts narrowed to fit the photo scored 0.849; read as perspective, 0.885.",
+        "contaminated": false,
+        "img": "/assets/img/lantern/v17.webp"
       }
     ],
     "more": {
@@ -372,7 +394,8 @@
       4,
       6,
       12,
-      15
+      15,
+      17
     ],
     "tradeoff": {
       "headline": "Close, not identical, on purpose.",

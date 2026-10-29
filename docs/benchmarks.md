@@ -6,9 +6,10 @@ GLBs under 1 MB, renders, production logs and per-run JSON. Nothing is estimated
 says so. Where a result is unflattering, it stays.
 
 - [How it is measured](#how-it-is-measured)
+- [The 3.0 bench: twenty briefs, 2.2.0 against 3.0](#the-30-bench-twenty-briefs-220-against-30)
 - [1. Before and after: six briefs, two Blender MCP servers](#1-before-and-after-six-briefs-two-blender-mcp-servers)
 - [2. The two Blender MCP servers, same skill](#2-the-two-blender-mcp-servers-same-skill)
-- [3. From a photo: fifteen iterations on one lantern](#3-from-a-photo-fifteen-iterations-on-one-lantern)
+- [3. From a photo: seventeen iterations on one lantern](#3-from-a-photo-seventeen-iterations-on-one-lantern)
 - [4. kiln against an image-to-code tool](#4-kiln-against-an-image-to-code-tool)
 - [5. Does it generalise: a crate and a chair](#5-does-it-generalise-a-crate-and-a-chair)
 - [6. Does the skill fire when it should](#6-does-the-skill-fire-when-it-should)
@@ -46,6 +47,94 @@ reaching the results, the truth or the repositories ([§ 8](#8-keeping-the-bench
 
 **Cost** is the CLI's API-equivalent figure (`total_cost_usd`). On a Claude subscription it is
 not billed; it is the comparable measure of how much a run consumes.
+
+## The 3.0 bench: twenty briefs, 2.2.0 against 3.0
+
+Twenty fixed briefs, October 2026, Blender 5.2.2 LTS, `claude-opus-5-5`, one session per brief:
+2.2.0 and 3.0 on the same pinned server (`mcp-for-blender==2.2.2`), and 3.0 again on the official
+Blender Lab MCP. Studio's brief did not exist in 2.2.0, so it ran nineteen. The skill under test is
+the frozen `release/3.0` branch, its commit recorded in every result.
+
+| | 2.2.0 | 3.0 | 3.0 on the Blender Lab MCP |
+|---|---|---|---|
+| Briefs measured | 19 | 20 | 20 |
+| Cost (API-equivalent) | $54.06 | $76.57 | $84.97 |
+| Turns / API time | 1,060 / 197 min | 1,467 / 257 min | 1,560 / 267 min |
+
+**What 3.0 brings, measured:**
+
+- **3D printing**: the four-colour fox goes from FAIL (non-manifold edges in every colour, floating
+  parts, an empty layer) to PASS, no overlap between colours; the bayonet box passes on both
+  versions.
+- **AI generation**: TRELLIS.2 (MIT) instead of Hunyuan3D-2, whose licence excludes the EU, the UK
+  and South Korea — recognisable mushrooms instead of orange lumps. With the free Hugging Face
+  quota spent, a clean fall-back to scripted modelling, no paid service.
+- **Rigging**: SkinTokens on humanoids; skin through skin on a bent pose 3.15 → 0 %
+  (`rigged-character`), 1.34 → 0 % (`humanoid-chibi-rig-walk`), 0.74 → 0.45 %
+  (`generated-humanoid-rig`); the cat, at 0 %, reads 0.1 %.
+- **Animation**: blinks, ears and tail lagging the head, closed loops (`walk_loop`, the owl's flap).
+- **Photo projection** (`ref-ammo-box-project`): proposed and run; 2.2.0 did not propose it.
+- **Kiln Studio** (3.0 only): a note pinned in the page is handled by Studio's worker in one pass,
+  on both servers — the ring ×2, nothing else moved, the note marked addressed, no permission asked.
+
+**Against the real object** (mean silhouette IoU against the 3D model the photo was taken of, never
+shown to the session; 1 = identical):
+
+| Brief | 2.2.0 | 3.0 | 3.0 Lab |
+|---|---:|---:|---:|
+| ref-lantern | 0.900 | 0.885 | 0.878 |
+| ref-lantern-template | 0.880 | **0.917** | 0.883 |
+| ref-lantern-trellis | 0.934 | **0.946** | 0.933 |
+| ref-ammo-box | 0.774 | **0.936** | 0.959 |
+| ref-ammo-box-project | 0.935 | 0.922 | 0.953 |
+| ref-chair | 0.637 | **0.720** | 0.769 |
+
+**The lantern, the showcase, is 0.015 below 2.2.0** (v16 and v17 of [§ 3](#3-from-a-photo-seventeen-iterations-on-one-lantern)). It had fallen to 0.849: a session narrowed the
+posts to match the photo, copying the photo's perspective. `fidelity_check` now reports that gap as
+perspective, never to be corrected (`bcc42f2`) — 0.885 after. One session per brief: expect ±0.02–0.03
+from one session to the next.
+
+**Cost: +40 %** on the nineteen briefs both versions ran ($54.06 → $75.87): 45 % more turns × 19 % more
+context per turn. The extra turns are 3.0's new work — review renders, UV, print and Studio checks,
+SkinTokens, loops, projection, more looks at the model — where the quality moved. The skill split into
+phase files is neutral (6,500 tokens fewer loaded at start, 7,300 more read by phase).
+
+**Fixed during the bench** (each re-run on the commit that carries it; CHANGELOG § Fixed — what the
+3.0 bench found): a decimation that adds open or fused edges is a failed one — on a closed shell,
+Blender's Collapse, decimating less or rebuilding thin parts, never `gltfpack -sa`
+(`repair-trellis-glb`: 840 non-manifold → 0); `read_factory_settings` never through the MCP;
+`open_blender.py` no longer opens a second Blender; the photo's perspective (above).
+
+**Still open:** auto mode leaves working folders beside the asset; a session started outside Studio
+leaves a Studio server running; physical-transmission glass renders dark in an engine without
+transmission; one free FLUX + TRELLIS.2 generation a day per Hugging Face account.
+
+| Brief | 2.2.0 | 3.0 | 3.0 Lab |
+|---|---|---|---|
+| scripted-lantern | $1.31 · 30 turns · 4,004 tris | $1.36 · 34 · 1,756 | $1.40 · 32 · 3,532 |
+| ai-mushrooms | $3.66 · 76 · 8,000 | $3.80 · 94 · 8,991 | $5.38 · 96 · 5,928 |
+| polyhaven-chair | $0.98 · 23 · 724 | $1.45 · 39 · 1,246 | $1.37 · 34 · 724 |
+| pbr-crate | $1.70 · 35 · 4,960 | $2.80 · 58 · 1,480 | $2.59 · 63 · 4,196 |
+| rigged-character | $2.07 · 43 · 1,396 | $2.60 · 63 · 1,488 | $2.35 · 50 · 1,196 |
+| batch-props | $1.98 · 40 · 2,092 | $2.88 · 62 · 1,512 | $3.31 · 73 · 1,344 |
+| ref-lantern | $6.61 · 103 · 10,012 | $6.04 · 94 · 9,920 | $6.00 · 92 · 9,920 |
+| ref-ammo-box | $3.73 · 74 · 3,456 | $4.45 · 88 · 4,632 | $5.39 · 89 · 3,036 |
+| ref-chair | $3.49 · 77 · 7,808 | $6.64 · 111 · 9,852 | $5.57 · 95 · 8,568 |
+| ref-lantern-trellis | $5.68 · 103 · 9,895 | $6.43 · 113 · 9,000 | $10.86 · 160 · 9,848 |
+| ref-lantern-template | $3.72 · 63 · 10,692 | $7.16 · 106 · 9,972 | $6.44 · 94 · 9,960 |
+| humanoid-chibi-rig-walk | $2.70 · 49 · 6,548 | $4.36 · 87 · 10,514 | $3.64 · 78 · 8,138 |
+| generated-humanoid-rig | $2.20 · 42 · 40,000 | $1.87 · 47 · 40,000 | $2.03 · 47 · 40,000 |
+| cat-mascot-walk-idle | $2.19 · 49 · 10,128 | $4.34 · 73 · 9,526 | $6.08 · 118 · 9,396 |
+| owl-web-flap | $1.32 · 31 · 4,502 | $4.21 · 88 · 8,312 | $5.27 · 120 · 10,446 |
+| repair-trellis-glb | $2.61 · 68 · 6,940 | $3.89 · 87 · 9,000 | $3.70 · 93 · 9,000 |
+| ref-ammo-box-project | $4.75 · 84 · 3,246 | $5.88 · 99 · 2,452 | $7.66 · 108 · 3,632 |
+| print-fox-figurine | $1.88 · 41 · print FAIL | $3.82 · 68 · print PASS | $3.09 · 58 · print PASS |
+| print-bayonet-box | $1.49 · 29 · print PASS | $1.90 · 34 · print PASS | $2.12 · 31 · print PASS |
+| studio-note-roundtrip | — | $0.69 · 22 · Studio PASS | $0.73 · 29 · Studio PASS |
+
+Each cell: cost · turns · triangles shipped. Sessions that hit the 5-hour usage limit or were killed
+for memory were run again; two Mac sleeps make two durations not comparable (cost and result valid).
+<!-- À FAIRE avant la sortie : planches 2.2.0 | 3.0 et ahujasid | Lab (WebP) et les trois labels sur bench-results, puis leurs liens ici — sur feu vert -->
 
 ## 1. Before and after: six briefs, two Blender MCP servers
 
@@ -89,7 +178,7 @@ with no change: sessions mapped the tool names themselves and reached PolyHaven 
 public API when the server had no PolyHaven tools. The skill now documents both paths.
 Details: [`bench/results/mcp-comparison-2026-09-29.md`](https://github.com/elithril/blender-kiln/blob/bench-results/mcp-comparison-2026-09-29.md).
 
-## 3. From a photo: fifteen iterations on one lantern
+## 3. From a photo: seventeen iterations on one lantern
 
 One reference — Poly Haven's `Lantern_01` preview, photographed from about 15° above — and the
 same brief each time. Each version is the skill after the previous one's findings.
@@ -134,9 +223,16 @@ together at one render setting (so their detail figures do not compare with the 
 | v13 | **0.924** | +1 % | widths from the template; glass tinted from the photo; sandboxed | $5.63 |
 | v14 | 0.880 | +11 % | every figure from this lantern removed from the skill | $5.29 |
 | **v15** | 0.897 | **−1 %** | **scanned CC0 texture sets before procedural noise** | $5.04 |
+| v16 | 0.900 | +3 % | release 2.2.0, run again on the 3.0 bench | $6.61 |
+| **v17** | **0.885** | +6 % | **release 3.0: the photo's perspective is never corrected** | $6.04 |
 
 <p align="center"><img src="https://raw.githubusercontent.com/elithril/blender-kiln/bench-results/lantern-iterations/v15-compare.webp" alt="The reference photo, the real lantern, img2threejs, kiln v10, v14 and v15" width="100%" /></p>
 <p align="center"><sub><b>Left to right:</b> the reference photo · the real asset · img2threejs · kiln v10 · kiln v14 · kiln v15 (scanned texture sets). Close-ups of the tank: <a href="https://github.com/elithril/blender-kiln/blob/bench-results/lantern-iterations/v15-closeups.webp">v15-closeups.webp</a>.</sub></p>
+
+**v16 and v17 are the released skills** on the 3.0 bench ([§ The 3.0 bench](#the-30-bench-twenty-briefs-220-against-30)),
+scored the same way. 3.0 had first scored 0.849: a session narrowed the
+posts to match the photo, taken from above; told that gap is perspective, 0.885. The same 3.0 skill
+from a TRELLIS.2 template of the photo scores **0.917**, and finishing the TRELLIS.2 mesh itself **0.946**.
 
 The shape settled early; the surface took the rest. Each texture fix had a side effect the next
 version paid — dark metal reported → confetti; patina as non-metal → grey pewter; patina as
@@ -160,7 +256,7 @@ Details: [`bench/results/lantern-iterations/`](https://github.com/elithril/blend
 image as procedural Three.js code, through eight vision-reviewed passes. Same reference image,
 same instruction; its code was exported to GLB by the bench with Three.js's `GLTFExporter`.
 
-Measured against v7 (later versions in [§ 3](#3-from-a-photo-fifteen-iterations-on-one-lantern)):
+Measured against v7 (later versions in [§ 3](#3-from-a-photo-seventeen-iterations-on-one-lantern)):
 
 | Lantern | kiln v7 | img2threejs |
 |---|---:|---:|
