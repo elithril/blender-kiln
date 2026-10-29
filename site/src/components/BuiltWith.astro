@@ -1,0 +1,159 @@
+---
+import site from '../content/site.json';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const B = site.built;
+// one pass of the band: about 9 s a plate, whatever the number of projects
+const seconds = Math.max(24, B.projects.length * 9);
+const tilts = ['-12deg', '8deg', '-6deg', '10deg'];
+---
+<section id="built" class="built" aria-labelledby="built-h" data-built>
+  <header class="head">
+    <h2 id="built-h">{B.headline}</h2>
+    <a class="share measure" href={B.share.url}>{B.share.label} →</a>
+  </header>
+
+  <!-- a barn-door track: each project hangs from a wheel that rolls along it, right to left; the
+       wheels turn at the speed the plates travel, and everything stops under a pointer or the keyboard -->
+  <div class="band" data-band style={`--pass:${seconds}s`}>
+    <div class="rail" aria-hidden="true"></div>
+    <div class="track">
+      {[0, 1].map((copy) => (
+        <ul class="row" aria-hidden={copy === 1 ? 'true' : undefined}>
+          {B.projects.map((p, i) => (
+            <li class="item">
+              <div class="piece">
+                <svg class="hanger" width="60" height="96" viewBox="0 0 60 96" aria-hidden="true">
+                  <circle cx="30" cy="37" r="18" fill="#1f1a17" stroke="#8a8077" stroke-width="2.5" />
+                  <circle cx="30" cy="37" r="14" fill="none" stroke="#0d0b0a" stroke-width="2" />
+                  <g class="spokes" stroke="#6e655c" stroke-width="2.4" stroke-linecap="round">
+                    <path d="M30 24 L30 50 M18.7 30.5 L41.3 43.5 M18.7 43.5 L41.3 30.5" />
+                  </g>
+                  <path d="M23 37 A7 7 0 0 1 37 37 L37 96 L23 96 Z" fill="url(#built-strap)" stroke="#0d0b0a" stroke-width="1" />
+                  <circle cx="30" cy="37" r="4.5" fill="#3a342f" stroke="#9a9187" stroke-width="1.2" />
+                  <circle cx="30" cy="80" r="2.6" fill="#8a7f74" stroke="#0d0b0a" stroke-width="1" />
+                  <circle cx="30" cy="90" r="2.6" fill="#8a7f74" stroke="#0d0b0a" stroke-width="1" />
+                </svg>
+                <div class="plate">
+                  <div class:list={['media', { pixel: p.pixel, contain: p.fit === 'contain' }]} style={p.ground ? `background:${p.ground}` : undefined}>
+                    {p.video
+                      ? <video data-video muted playsinline loop preload="none" poster={`${base}${p.media}`} aria-label={p.alt}><source src={`${base}${p.video}`} type="video/mp4" /></video>
+                      : <img src={`${base}${p.media}`} alt={copy === 1 ? '' : p.alt} loading="lazy" decoding="async" />}
+                    <span class="visit measure" aria-hidden="true">{p.linkLabel || `github.com/${p.github}`} ↗</span>
+                  </div>
+                  <div class="txt">
+                    <div class="names">
+                      <h3><a class="whole" href={p.link || `https://github.com/${p.github}`} tabindex={copy === 1 ? -1 : undefined}>{p.title}</a></h3>
+                      <p class="by measure">
+                        {p.link && <><a href={p.link} tabindex={copy === 1 ? -1 : undefined}>{p.linkLabel}</a><span aria-hidden="true"> · </span></>}
+                        <a href={`https://github.com/${p.github}`} tabindex={copy === 1 ? -1 : undefined}>@{p.github}</a>
+                      </p>
+                    </div>
+                    <span class="mark measure" style={`transform:rotate(${tilts[i % 4]})`} aria-hidden="true">KILN<b>{p.mark[0]}</b>{p.mark[1]}</span>
+                  </div>
+                  <p class="how">{p.how}{p.credit && <span class="credit"> {p.credit}</span>}</p>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ))}
+    </div>
+  </div>
+  <p class="note">{B.note}</p>
+  <svg width="0" height="0" aria-hidden="true" style="position:absolute">
+    <defs><linearGradient id="built-strap" x1="0" x2="1"><stop offset="0" stop-color="#1f1a17" /><stop offset=".45" stop-color="#5a524a" /><stop offset="1" stop-color="#231e1a" /></linearGradient></defs>
+  </svg>
+</section>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-built]')!;
+  const band = root.querySelector<HTMLElement>('[data-band]')!;
+  const row = band.querySelector<HTMLElement>('.row')!;
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // reduced motion: a still row the reader scrolls by hand, and no video plays on its own
+  if (still) band.classList.add('still');
+  // a wheel rolls without slipping: one turn per 2π × 15 px (its groove) of travel
+  const roll = () => {
+    const pass = parseFloat(getComputedStyle(band).getPropertyValue('--pass'));
+    band.style.setProperty('--roll', `${(pass * 2 * Math.PI * 15) / row.offsetWidth}s`);
+  };
+  if (!still) { roll(); new ResizeObserver(roll).observe(row); }
+  if (!still) root.querySelectorAll<HTMLVideoElement>('[data-video]').forEach((v) => {
+    new IntersectionObserver(([e]) => { if (e.isIntersecting) v.play().catch(() => {}); else v.pause(); }, { threshold: 0.2 }).observe(v);
+  });
+</script>
+
+<style>
+  .built { position: relative; padding: 24px 0 72px;
+    /* no edge with the sections around it: picks up where the briefs end (0.6) and fades out into the close */
+    background: linear-gradient(rgb(11 9 8 / 0.6), rgb(11 9 8 / 0.86) 18%, rgb(11 9 8 / 0.86) 62%, rgb(11 9 8 / 0)); }
+  .head { margin: 0 var(--gutter) 8px; display: flex; justify-content: space-between; align-items: flex-end; gap: 12px 32px; flex-wrap: wrap; }
+  .head h2 { margin: 0; font-size: var(--h2); line-height: 0.95; letter-spacing: -0.025em; }
+  .share { font-size: 0.875rem; color: var(--molten); text-decoration: none; padding-bottom: 6px; }
+  .share:hover { color: var(--bone); }
+
+  /* two copies of the row side by side, the track sliding one copy's width, so the loop has no seam */
+  .band { position: relative; overflow: hidden; padding-bottom: 28px; mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent); }
+  .track { display: flex; width: max-content; animation: drift var(--pass) linear infinite; }
+  .spokes { transform-box: fill-box; transform-origin: center; animation: roll var(--roll, 2.5s) linear infinite; }
+  .band:hover .track, .band:focus-within .track, .band:hover .spokes, .band:focus-within .spokes { animation-play-state: paused; }
+  @keyframes drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  @keyframes roll { to { transform: rotate(-360deg); } }
+  /* half a gap each side, so a copy is exactly n × (plate + gap) wide */
+  .row { list-style: none; margin: 0; padding: 0 20px; display: flex; gap: 40px; }
+
+  /* the flat steel track, fixed to the wall: the wheels' grooves sit on its top edge */
+  .rail { position: absolute; left: 0; right: 0; top: 52px; height: 14px;
+    background: radial-gradient(circle at 110px 7px, #9a9187 0 2.5px, #1a1512 3px 4px, transparent 4.5px) 0 0 / 440px 14px,
+      linear-gradient(180deg, #a39a90 0%, #5e5750 30%, #3a342f 70%, #1a1512 100%);
+    box-shadow: 0 10px 18px rgb(0 0 0 / 0.65), inset 0 1px 0 rgb(255 255 255 / 0.22); }
+
+  .item { position: relative; flex: 0 0 300px; }
+  .piece { display: flex; flex-direction: column; align-items: center; transform-origin: 50% 37px; }
+  .item:hover .piece, .item:focus-within .piece { animation: swing 1.8s cubic-bezier(.36, .07, .19, .97) both; }
+  @keyframes swing { 0% { transform: rotate(0); } 18% { transform: rotate(3.5deg); } 38% { transform: rotate(-2.6deg); } 58% { transform: rotate(1.4deg); } 78% { transform: rotate(-.5deg); } 100% { transform: rotate(0); } }
+  .hanger { display: block; position: relative; z-index: 2; pointer-events: none; }
+
+  .plate { width: 100%; box-sizing: border-box; margin-top: -26px; border-radius: 12px; padding: 32px 12px 14px;
+    background: linear-gradient(#2d2723, #161210);
+    box-shadow: inset 0 1px 0 rgb(255 238 220 / 0.14), inset 0 -2px 0 rgb(0 0 0 / 0.5), 0 22px 40px rgb(0 0 0 / 0.6);
+    transition: box-shadow 0.35s ease; }
+  .item:hover .plate { box-shadow: inset 0 1px 0 rgb(255 238 220 / 0.16), 0 0 0 2px var(--ember), 0 0 34px rgb(255 90 20 / 0.45), 0 28px 50px rgb(0 0 0 / 0.6); }
+  .item:has(.whole:focus-visible) .plate { box-shadow: inset 0 0 0 2px var(--molten), 0 22px 40px rgb(0 0 0 / 0.6); }
+  /* the whole plate opens the project (its site, else its author's GitHub); the byline links stay their own targets */
+  .whole::after { content: ''; position: absolute; inset: 0; z-index: 1; }
+  .whole:focus-visible { outline: none; }
+  .by a { position: relative; z-index: 3; }
+
+  .media { position: relative; border-radius: 6px; overflow: hidden; aspect-ratio: 16 / 10; background: #000; }
+  .media img, .media video { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s var(--ease-spring); }
+  .item:hover .media img, .item:hover .media video { transform: scale(1.06); }
+  .media.pixel img { image-rendering: pixelated; }
+  .media.contain img { object-fit: contain; }
+  .visit { position: absolute; top: 8px; right: 8px; padding: 5px 10px; border-radius: 999px; background: var(--molten); color: #140d07;
+    font-size: 0.6875rem; font-weight: 500; opacity: 0; transform: translateY(-4px); transition: opacity 0.3s ease, transform 0.3s ease; }
+  .item:hover .visit { opacity: 1; transform: none; }
+
+  .txt { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 4px 0; }
+  .names { min-width: 0; }
+  .txt h3 { margin: 0 0 3px; font-size: 1.3125rem; line-height: 1.1; }
+  .txt h3 a { color: inherit; text-decoration: none; }
+  .by { margin: 0; font-size: 0.6875rem; color: var(--ash-dim); }
+  .by a { color: var(--molten); text-decoration: none; }
+  .by a:hover { text-decoration: underline; }
+  /* the maker's mark, struck into the iron */
+  .mark { flex: 0 0 56px; height: 56px; border-radius: 999px; border: 2px solid #8a7f74; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 600; line-height: 1.15; color: #8a7f74;
+    text-shadow: 0 1px 0 rgb(255 238 220 / 0.18), 0 -1px 0 rgb(0 0 0 / 0.7); }
+  .mark b { font-size: 14px; }
+  .how { margin: 10px 4px 0; color: var(--ash); font-size: 0.75rem; line-height: 1.45; }
+  .credit { color: var(--ash-dim); }
+  .note { margin: 0 var(--gutter); font-size: 0.8125rem; color: var(--ash-dim); }
+
+  .band.still { overflow-x: auto; mask-image: none; scrollbar-width: thin; }
+  .band.still .track { animation: none; }
+  .band.still .row[aria-hidden] { display: none; }
+  @media (prefers-reduced-motion: reduce) { .spokes, .item:hover .piece, .item:focus-within .piece { animation: none; } }
+
+  @media (max-width: 560px) { .built { padding: 16px 0 32px; } .item { flex-basis: 260px; } }
+</style>

@@ -1,5 +1,5 @@
 {
-  "_sources": "Every figure here comes from docs/benchmarks.md, README.md, CHANGELOG.md or the bench-results branch (summary.json of each run). Update this file on a release; no section hard-codes a number. The lantern GLB on the site is kiln 3.0's shipped file with its textures resized to 512 px (gltf-transform resize, then Draco), 376 KB; shippedKB stays what kiln shipped (1,155 KB, 1024 px).",
+  "_sources": "Every figure here comes from docs/benchmarks.md, README.md, CHANGELOG.md or the bench-results branch (summary.json of each run). Update this file on a release; no section hard-codes a number. The lantern GLB on the site is kiln 3.0's shipped file (v18, with review rounds) with its textures resized to 512 px (gltf-transform resize, then Draco), 152 KB; shippedKB stays what kiln shipped (612 KB, 1024 px).",
   "release": {
     "version": "2.2.0",
     "date": "2026-10-07",
@@ -27,23 +27,23 @@
       "photoAlt": "Reference photo: an old brass hurricane lantern with a glass globe and a wire bail, cut out on transparent background",
       "photoCredit": "Poly Haven, Lantern_01 (CC0)",
       "glb": "/assets/glb/lantern.glb",
-      "score": 0.885,
+      "score": 0.888,
       "scoreBefore": 0.83,
-      "shippedKB": 1155,
-      "rawMB": 9.2,
-      "tris": 9920,
-      "minutes": 18,
-      "costUSD": 6.04,
-      "run": "v300final-ahujasid/ref-lantern",
+      "shippedKB": 612,
+      "rawMB": 5.08,
+      "tris": 9972,
+      "minutes": 48,
+      "costUSD": 13.19,
+      "run": "v300v18/ref-lantern",
       "truth": "/assets/glb/truth-lantern.glb",
       "truthYaw": 0,
       "fallback": "/assets/img/render-lantern.webp",
       "views": {
-        "front": 0.818,
-        "back": 0.818,
-        "left": 0.906,
-        "right": 0.906,
-        "top": 0.979
+        "front": 0.813,
+        "back": 0.813,
+        "left": 0.916,
+        "right": 0.916,
+        "top": 0.983
       },
       "scoredViews": [
         "front",
@@ -52,7 +52,7 @@
         "right",
         "top"
       ],
-      "heightVsTruth": 0.21
+      "heightVsTruth": 0.22
     },
     {
       "id": "ammo-box",
@@ -127,7 +127,7 @@
     "blender": "Blender 5.2.2",
     "runsPerBrief": 1
   },
-  "_gtSource": "views, yaw and heightVsTruth: bench/gt_compare.py against the Poly Haven truth — the lantern on the GLB kiln 3.0 shipped on the 3.0 bench (label v300final-ahujasid, mcp-for-blender 2.2.2, 2026-10-28; the bench report's 0.885); the ammo box and the chair on later runs of 3.0 with review rounds, one run each (v300rounds6 2026-10-29: 0.948; v300rounds5-ahujasid 2026-10-28: 0.729), where the bench had 0.936 and 0.720. scoreBefore: v1, before 2.0's photo method (docs/benchmarks.md § 3).",
+  "_gtSource": "views, yaw and heightVsTruth: bench/gt_compare.py against the Poly Haven truth — the lantern on v18, kiln 3.0 with review rounds (label v300v18, 2026-10-29: 0.888; the 3.0 bench had 0.885); the ammo box and the chair on later runs of 3.0 with review rounds, one run each (v300rounds6 2026-10-29: 0.948; v300rounds5-ahujasid 2026-10-28: 0.729), where the bench had 0.936 and 0.720. scoreBefore: v1, before 2.0's photo method (docs/benchmarks.md § 3).",
   "scoreBeforeLabel": "before 2.0's photo method",
   "costNote": "API-equivalent",
   "requirements": "Needs Blender 4.4+ with a Blender MCP server running.",
@@ -205,10 +205,10 @@
     }
   },
   "lanterns": {
-    "headline": "Seventeen lanterns. Six turning points.",
-    "lede": "One photo and the same brief, seventeen times, each version the skill after the previous one's findings, scored against the real lantern it never saw. The curve is all seventeen; the stops are where something changed.",
-    "note": "v1 to v8 and v8 to v15 come from two bench sheets rendered under the same studio light and camera; v16 and v17 are the released 2.2.0 and 3.0 on the 3.0 bench. The shape score is measured the same way for all. One run per version: a few hundredths are not significant. 3.0 with a TRELLIS.2 template scores 0.917, finishing the TRELLIS.2 mesh 0.946 (docs/benchmarks.md).",
-    "source": "bench-results: lantern-iterations/README.md and sheets; the 3.0 bench (labels v220-mcp222-ahujasid, v300final-ahujasid); docs/benchmarks.md",
+    "headline": "Eighteen lanterns. Seven turning points.",
+    "lede": "One photo and the same brief, eighteen times, each version the skill after the previous one's findings, scored against the real lantern it never saw. The curve is all eighteen; the stops are where something changed.",
+    "note": "v1 to v8 and v8 to v15 come from two bench sheets rendered under the same studio light and camera; v16 and v17 are the released 2.2.0 and 3.0 on the 3.0 bench; v18 is 3.0 with its review rounds, run after. The shape score is measured the same way for all. One run per version: a few hundredths are not significant. 3.0 with a TRELLIS.2 template scores 0.917, finishing the TRELLIS.2 mesh 0.946 (docs/benchmarks.md).",
+    "source": "bench-results: lantern-iterations/README.md and sheets; the 3.0 bench (labels v220-mcp222-ahujasid, v300final-ahujasid, v300v18); docs/benchmarks.md",
     "photo": "/assets/img/lantern/photo.webp",
     "truth": "/assets/img/lantern/truth.webp",
     "versions": [
@@ -381,6 +381,16 @@
         "result": "Posts narrowed to fit the photo scored 0.849; read as perspective, 0.885.",
         "contaminated": false,
         "img": "/assets/img/lantern/v17.webp"
+      },
+      {
+        "v": 18,
+        "score": 0.888,
+        "height": 0.22,
+        "cost": 13.19,
+        "change": "Release 3.0 with review rounds: a fresh reviewer each round, ending on two clean readings.",
+        "result": "Shape level with v17; the patina and the parts read closer to the photo. Eight rounds, the cap: the reviewers swung on the tone.",
+        "contaminated": false,
+        "img": "/assets/img/lantern/v18.webp"
       }
     ],
     "more": {
@@ -393,7 +403,8 @@
       6,
       12,
       15,
-      17
+      17,
+      18
     ],
     "tradeoff": {
       "headline": "Close, not identical, on purpose.",
@@ -415,6 +426,32 @@
     "lede": "No single animation method held up across a cat, a villager and a desk lamp, so kiln picks the route from the subject, and shows every clip before exporting.",
     "since": "2.1, one command since 2.2",
     "routes": [
+      {
+        "subject": "A character of your own, rigged",
+        "route": "autorig, then presets.py: Kimodo moves retargeted to its bones",
+        "detail": "kiln's mascot: a walk with its feet locked and flat on the floor, and an idle with blinks. Its hammer was made bigger in Kiln Studio.",
+        "clips": [
+          {
+            "src": "/assets/img/animate/kiln-smith-walk.webp",
+            "still": "/assets/img/animate/kiln-smith-walk-still.webp",
+            "alt": "kiln's mascot, a young smith with goggles and a hammer, walking, looped",
+            "label": "kiln's mascot, walk",
+            "bench": false,
+            "glb": "/assets/glb/anim/kiln-smith.glb",
+            "clip": "walk_loop"
+          },
+          {
+            "src": "/assets/img/animate/kiln-smith-idle.webp",
+            "still": "/assets/img/animate/kiln-smith-idle-still.webp",
+            "alt": "kiln's mascot idling: breathing, blinking, the hammer in hand",
+            "label": "kiln's mascot, idle",
+            "bench": false,
+            "glb": "/assets/glb/anim/kiln-smith.glb",
+            "clip": "idle"
+          }
+        ],
+        "command": "/kiln animate kiln-smith.glb walk, idle"
+      },
       {
         "subject": "Biped or winged, from a sentence",
         "route": "UniMate text-to-motion, looped by motion_loop.py",
@@ -583,5 +620,75 @@
     ],
     "command": "/kiln studio",
     "disclosure": "The film is a real session, re-cut: every screen is Studio's own, captured; Claude's views are the ones it looked at; the hammer's change is the real before and after meshes. Only the moves are re-played. 4 minutes of work, 42 turns, shown in 42 seconds."
+  },
+  "built": {
+    "headline": "Built with kiln.",
+    "projects": [
+      {
+        "title": "Token Kingdom",
+        "link": "https://token-kingdom.com",
+        "linkLabel": "token-kingdom.com",
+        "github": "MartySalade",
+        "media": "/assets/img/built/token-kingdom.webp",
+        "alt": "Eighteen low-poly medieval buildings from Token Kingdom: keep, temple, clock tower, market, windmill, gold mine and more, on green",
+        "how": "22 buildings, one GLB per level, 101 in all, assembled by script through Blender MCP with kiln.",
+        "credit": "Pieces: KayKit Medieval Hexagon Pack, Kay Lousberg, CC0.",
+        "fit": "contain",
+        "ground": "#1b1c22",
+        "mark": [
+          "101",
+          "GLB"
+        ]
+      },
+      {
+        "title": "My Little Workout",
+        "link": "https://mylittleworkout.com/",
+        "linkLabel": "mylittleworkout.com",
+        "github": "QuegoFreki",
+        "media": "/assets/img/built/my-little-workout.webp",
+        "video": "/assets/video/my-little-workout.mp4",
+        "alt": "Four of My Little Workout's exercise animations: burpee, dips, muscle-up and nordic curl",
+        "how": "112 exercises, illustrated and animated by headless Blender scripts with kiln.",
+        "credit": "",
+        "mark": [
+          "112",
+          "MOVES"
+        ]
+      },
+      {
+        "title": "Zeus Incremental FPS: Olympus",
+        "link": "",
+        "linkLabel": "",
+        "github": "MushkyQT",
+        "media": "/assets/img/built/olympus.webp",
+        "alt": "Low-poly white and gold Olympus models: statues of the gods, a throne, braziers, a vase",
+        "how": "25 game-ready models for the game's Olympus, temple, statues of the gods and throne, with the Blender source.",
+        "credit": "",
+        "mark": [
+          "25",
+          "MODELS"
+        ]
+      },
+      {
+        "title": "Imprint",
+        "link": "",
+        "linkLabel": "",
+        "github": "MushkyQT",
+        "pixel": true,
+        "media": "/assets/img/built/imprint.webp",
+        "alt": "A pixel-art office in the game Imprint, with the wind-up ink-sweeper made with kiln on the carpet",
+        "how": "The ink-sweeper, the dart and the paper plane: modelled in 3D with kiln, rendered at 8x, then turned into the game's pixel-art sprites.",
+        "credit": "",
+        "mark": [
+          "8×",
+          "PIXEL"
+        ]
+      }
+    ],
+    "note": "Projects not yet released link to their author.",
+    "share": {
+      "label": "Built something with kiln? Share it",
+      "url": "https://github.com/elithril/blender-kiln/issues/new?template=share-what-you-built.yml"
+    }
   }
 }

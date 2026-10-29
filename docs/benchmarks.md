@@ -9,7 +9,7 @@ says so. Where a result is unflattering, it stays.
 - [The 3.0 bench: twenty briefs, 2.2.0 against 3.0](#the-30-bench-twenty-briefs-220-against-30)
 - [1. Before and after: six briefs, two Blender MCP servers](#1-before-and-after-six-briefs-two-blender-mcp-servers)
 - [2. The two Blender MCP servers, same skill](#2-the-two-blender-mcp-servers-same-skill)
-- [3. From a photo: seventeen iterations on one lantern](#3-from-a-photo-seventeen-iterations-on-one-lantern)
+- [3. From a photo: eighteen iterations on one lantern](#3-from-a-photo-eighteen-iterations-on-one-lantern)
 - [4. kiln against an image-to-code tool](#4-kiln-against-an-image-to-code-tool)
 - [5. Does it generalise: a crate and a chair](#5-does-it-generalise-a-crate-and-a-chair)
 - [6. Does the skill fire when it should](#6-does-the-skill-fire-when-it-should)
@@ -89,7 +89,7 @@ shown to the session; 1 = identical):
 | ref-ammo-box-project | 0.935 | 0.922 | 0.953 |
 | ref-chair | 0.637 | **0.720** | 0.769 |
 
-**The lantern, the showcase, is 0.015 below 2.2.0** (v16 and v17 of [§ 3](#3-from-a-photo-seventeen-iterations-on-one-lantern)). It had fallen to 0.849: a session narrowed the
+**The lantern, the showcase, is 0.015 below 2.2.0** (v16 and v17 of [§ 3](#3-from-a-photo-eighteen-iterations-on-one-lantern)). It had fallen to 0.849: a session narrowed the
 posts to match the photo, copying the photo's perspective. `fidelity_check` now reports that gap as
 perspective, never to be corrected (`bcc42f2`) — 0.885 after. One session per brief: expect ±0.02–0.03
 from one session to the next.
@@ -178,7 +178,7 @@ with no change: sessions mapped the tool names themselves and reached PolyHaven 
 public API when the server had no PolyHaven tools. The skill now documents both paths.
 Details: [`bench/results/mcp-comparison-2026-09-29.md`](https://github.com/elithril/blender-kiln/blob/bench-results/mcp-comparison-2026-09-29.md).
 
-## 3. From a photo: seventeen iterations on one lantern
+## 3. From a photo: eighteen iterations on one lantern
 
 One reference — Poly Haven's `Lantern_01` preview, photographed from about 15° above — and the
 same brief each time. Each version is the skill after the previous one's findings.
@@ -225,11 +225,12 @@ together at one render setting (so their detail figures do not compare with the 
 | **v15** | 0.897 | **−1 %** | **scanned CC0 texture sets before procedural noise** | $5.04 |
 | v16 | 0.900 | +3 % | release 2.2.0, run again on the 3.0 bench | $6.61 |
 | **v17** | **0.885** | +6 % | **release 3.0: the photo's perspective is never corrected** | $6.04 |
+| **v18** | **0.888** | +7 % | **3.0 with review rounds: a fresh reviewer each round** — eight rounds, the cap; the reviewers swung on the tone | $13.19 |
 
 <p align="center"><img src="https://raw.githubusercontent.com/elithril/blender-kiln/bench-results/lantern-iterations/v15-compare.webp" alt="The reference photo, the real lantern, img2threejs, kiln v10, v14 and v15" width="100%" /></p>
 <p align="center"><sub><b>Left to right:</b> the reference photo · the real asset · img2threejs · kiln v10 · kiln v14 · kiln v15 (scanned texture sets). Close-ups of the tank: <a href="https://github.com/elithril/blender-kiln/blob/bench-results/lantern-iterations/v15-closeups.webp">v15-closeups.webp</a>.</sub></p>
 
-**v16 and v17 are the released skills** on the 3.0 bench ([§ The 3.0 bench](#the-30-bench-twenty-briefs-220-against-30)),
+**v16 and v17 are the released skills** on the 3.0 bench, **v18** the 3.0 skill with its review rounds, run after it ([§ The 3.0 bench](#the-30-bench-twenty-briefs-220-against-30)),
 scored the same way. 3.0 had first scored 0.849: a session narrowed the
 posts to match the photo, taken from above; told that gap is perspective, 0.885. The same 3.0 skill
 from a TRELLIS.2 template of the photo scores **0.917**, and finishing the TRELLIS.2 mesh itself **0.946**.
@@ -256,7 +257,7 @@ Details: [`bench/results/lantern-iterations/`](https://github.com/elithril/blend
 image as procedural Three.js code, through eight vision-reviewed passes. Same reference image,
 same instruction; its code was exported to GLB by the bench with Three.js's `GLTFExporter`.
 
-Measured against v7 (later versions in [§ 3](#3-from-a-photo-seventeen-iterations-on-one-lantern)):
+Measured against v7 (later versions in [§ 3](#3-from-a-photo-eighteen-iterations-on-one-lantern)):
 
 | Lantern | kiln v7 | img2threejs |
 |---|---:|---:|

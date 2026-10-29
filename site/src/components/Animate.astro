@@ -6,7 +6,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const A = site.animate;
 const clips = A.routes.flatMap((r, ri) => r.clips.map((c) => ({ ...c, route: ri })));
 ---
-<section id="animate" class="animate" aria-labelledby="animate-h" data-animate data-base={base} data-clips={JSON.stringify(clips.map((c) => [c.glb, c.label.split(',')[0].trim()]))}>
+<section id="animate" class="animate" aria-labelledby="animate-h" data-animate data-base={base} data-clips={JSON.stringify(clips.map((c) => [c.glb, c.label.split(',')[0].trim(), c.clip ?? '']))}>
   <header class="head">
     <h2 id="animate-h">{A.headline}</h2>
     <div class="side">
@@ -49,7 +49,8 @@ const clips = A.routes.flatMap((r, ri) => r.clips.map((c) => ({ ...c, route: ri 
 <script>
   const root = document.querySelector<HTMLElement>('[data-animate]')!;
   const base = root.dataset.base ?? '';
-  const glbs = JSON.parse(root.dataset.clips!) as [string, string][]; // [file, model]
+  // [file, model, clip name in the file]
+  const glbs = JSON.parse(root.dataset.clips!) as [string, string, string][];
   const canvas = root.querySelector<HTMLCanvasElement>('[data-canvas]')!;
   const fallback = root.querySelector<HTMLImageElement>('[data-fallback]')!;
   const now = root.querySelector<HTMLElement>('[data-now]')!;
@@ -64,7 +65,7 @@ const clips = A.routes.flatMap((r, ri) => r.clips.map((c) => ({ ...c, route: ri 
     const b = buttons.find((x) => Number(x.dataset.clip) === i)!;
     now.textContent = b.textContent;
     fallback.src = b.dataset.src!; fallback.alt = b.dataset.alt!;
-    live?.show(base + glbs[i][0], glbs[i][1]);
+    live?.show(base + glbs[i][0], glbs[i][1], glbs[i][2] || undefined);
     clearInterval(timer);
     if (!user) timer = window.setInterval(() => { if (onScreen) pick((cur + 1) % glbs.length); }, 7000); // no change nobody sees
   }
