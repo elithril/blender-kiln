@@ -815,6 +815,62 @@ def lock_feet(rig: Rig, frames, fps, contacts, cyclic=False, tread=None, iterati
     return report
 
 
+# ── a foot in the air (kiln) ────────────────────────────────────────────────────────────
+# Kimodo's actor points its toes down as each foot leaves the floor; retargeted onto kiln's mascot,
+# the foot dropped 67 deg below its rest pitch at mid-swing (rest -20, swing -87), tiptoeing in big
+# boots — "les pieds sont pas vraiment à plat" (Nicolas, 2026-10-29). Standing, it did no better: the
+# actor's planted foot came across 20-25 deg toes-down, heel off the floor, where the rig's own rest has
+# the sole flat. So the foot's pitch while standing (its median) is brought back to its rest pitch,
+# the sole flat; a foot in the air keeps its turn off that under FOOT_SWING_PITCH[0] degrees and is
+# eased toward at most [1] past it; lock_feet, which runs after, plants the feet on the floor.
+FOOT_SWING_PITCH = (10.0, 22.0)
+# The correction is worked out for the feet in the air, then smoothed over a few frames: the steepest
+# turn comes on the frames right after the toe leaves the floor (57-72 deg on the mascot), so a
+# correction that only started there either snapped or let most of it through (51 deg).
+FOOT_SMOOTH = np.array([1.0, 2.0, 3.0, 2.0, 1.0]) / 9.0
+
+
+def _soft_pitch(p, knee, top):
+    a = abs(p)
+    return p if a <= knee else float(np.sign(p)) * (knee + (top - knee) * np.tanh((a - knee) / (top - knee)))
+
+
+def ease_swing_feet(rig: Rig, frames, contacts, cyclic=False, limits=FOOT_SWING_PITCH) -> tuple[list, dict]:
+    """The frames with each foot standing at its rest pitch (the sole flat) and, in the air, turned at most
+    `limits[1]` deg off it (about the character's left axis), its toes following; and per side the
+    standing pitch off rest, then the largest turn in the air, before -> after (deg)."""
+    axes = character_frame(rig.heads, rig.up)
+    out = [(dict(wr), pos) for wr, pos in frames]
+    n = len(out)
+    info = {}
+    for s in SIDES:
+        foot = s + "Foot"
+        if foot not in rig.rest or foot not in out[0][0]:
+            continue
+        rest = rig.rest[foot][:3, :3]
+        below = [b for b in subtree(foot, rig.parents) if b in out[0][0]]
+        c = _clean(np.asarray(contacts[s], bool), cyclic)
+        ypr = [_ypr(axes.T @ out[t][0][foot] @ rest.T @ axes) for t in range(n)]
+        p = np.array([v[1] for v in ypr])
+        planted = float(np.median(p[c])) if c.any() else 0.0
+        off = p - planted
+        want = np.array([o if c[t] else np.radians(_soft_pitch(np.degrees(o), *limits)) for t, o in enumerate(off)])
+        k = len(FOOT_SMOOTH) // 2
+        fix = np.convolve(np.pad(want - off, k, mode="wrap" if cyclic else "edge"), FOOT_SMOOTH, "valid") - planted
+        for t in range(n):
+            if abs(fix[t]) < 1e-6:
+                continue
+            y, _, r = ypr[t]
+            turn = axes @ _from_ypr(y, p[t] + fix[t], r) @ axes.T @ rest @ out[t][0][foot].T
+            for b in below:
+                out[t][0][b] = turn @ out[t][0][b]
+        air = ~c
+        info[s] = dict(standing_off_rest_deg=round(float(np.degrees(planted)), 1),
+                       air_deg=[round(float(np.degrees(np.abs(off[air]).max())), 1) if air.any() else 0.0,
+                                round(float(np.degrees(np.abs(off + fix + planted)[air].max())), 1) if air.any() else 0.0])
+    return out, info
+
+
 # ── loops (kiln) ──────────────────────────────────────────────────────────────────────────
 # A preset is a take, not a cycle: the walk starts from standing and ends mid-stride, and
 # played on repeat it jumped 6.2 frame steps at the seam (child; 6.4 Hunyuan). For a cyclic

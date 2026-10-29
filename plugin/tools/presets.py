@@ -240,6 +240,9 @@ def blender_animate(args) -> int:  # pragma: no cover - needs bpy
             frames, calmed = R.calm(rig, frames)
         swings = R.clear_arms(rig, frames, proxy, cyclic=looped,
                               upper_points=R.UPPER_ARM_POINTS if arms_kiln else ()) if proxy else {}
+        swing = None
+        if "feet" not in skip:                     # toes no longer pointing down in the air; lock_feet then plants them
+            frames, swing = R.ease_swing_feet(rig, frames, contacts, cyclic=looped)
         feet = R.lock_feet(rig, frames, fps, contacts, cyclic=looped, tread=tread) if "feet" not in skip else {}
         if looped:
             frames = frames + [frames[0]]          # key P = key 0 (animation.md rule 5)
@@ -269,7 +272,7 @@ def blender_animate(args) -> int:  # pragma: no cover - needs bpy
             strip.action_slot = act.slots[0]
         ad.action = None
         report[clip] = dict(frames=len(frames), seconds=round((len(frames) - 1) / fps, 2),
-                            hip_scale=round(info["hip_scale"], 3), arm_swing=swings, feet=feet,
+                            hip_scale=round(info["hip_scale"], 3), arm_swing=swings, feet=feet, swing_foot_pitch=swing,
                             loop=loop, calm=calmed, blinks=args.blink and sum(
                                 1 for t in range(1, len(frames)) if blinks[t] >= 1.0 > blinks[t - 1]))
         prov.append(dict(clip=clip, preset=preset["id"], take=take, prompt=preset["prompt"],

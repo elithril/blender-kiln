@@ -26,6 +26,12 @@ otherwise `Loop` (tools/motion_loop.py), else the active one.
   rest areas); arm_body = the part where an arm/hand triangle crosses a torso/head one.
 - seam: pose step across the loop point (last frame -> first, horizontal root travel removed)
   over the mean frame step. A clip whose last key equals its first is measured last-1 -> first.
+- standing_foot_pitch: per side, the foot bone's pitch off its rest pitch while standing (median), the rest
+  being the sole flat: kiln's mascot stood 20-25 deg toes-down, heel up, under every other measure (2026-10-29).
+- swing_foot_pitch: per side, the largest turn of the foot bone off its planted pitch (its median while
+  standing) while the foot is in the air (its ankle more than H above its usual height: the lowest skin point
+  is no test, a foot pointing down keeps its toe on the floor). Kiln's mascot pointed its toes 68 deg down at
+  mid-swing, tiptoeing in big boots; retarget.ease_swing_feet brings it near 30 (2026-10-29).
 - knee_pops: frames where a knee's bend spikes by KNEE_POP_DEG or more against both neighbours,
   either way — the leg pulled to full reach for one frame, or bent back between two straight ones. Read by eye as knees that
   "tremblent" on a mascot no other measure flagged (2026-10-28: 36 -> 4 -> 20 deg of bend).
@@ -158,6 +164,11 @@ def measure(clip, out_json=None, rigf=None, name=None, every=1):
     bypair = {}
     footd = {k: [] for k in feet}; low = []; hips = []; Vs = []; skin = []
     knees = {sd: [] for sd in ("Left", "Right") if sd + "UpLeg" in PB and sd + "Leg" in PB}
+    fpitch = {sd: [] for sd in ("Left", "Right") if sd + "Foot" in PB}; ankle = {sd: [] for sd in fpitch}
+    def pitch(h, t):                       # in the world, Z up (an armature can be turned in it)
+        h, t = rig.matrix_world @ h, rig.matrix_world @ t
+        return math.degrees(math.atan2(t.z - h.z, math.hypot(t.x - h.x, t.y - h.y)))
+    rest_pitch = {sd: pitch(rig.data.bones[sd + "Foot"].head_local, rig.data.bones[sd + "Foot"].tail_local) for sd in fpitch}
     for k, f in enumerate(frames):
         sc.frame_set(f); V = evaluated()
         V = V / S
@@ -166,6 +177,9 @@ def measure(clip, out_json=None, rigf=None, name=None, every=1):
             u = (PB[sd + "UpLeg"].tail - PB[sd + "UpLeg"].head).normalized()
             l = (PB[sd + "Leg"].tail - PB[sd + "Leg"].head).normalized()
             knees[sd].append(math.degrees(math.acos(max(-1.0, min(1.0, u.dot(l))))))
+        for sd in fpitch:
+            fpitch[sd].append(pitch(PB[sd + "Foot"].head, PB[sd + "Foot"].tail) - rest_pitch[sd])
+            ankle[sd].append((rig.matrix_world @ PB[sd + "Foot"].head).z / S)
         low.append(float(V[:, 2].min()))
         for sd, idx in feet.items():
             footd[sd].append(V[idx].copy())
@@ -180,7 +194,7 @@ def measure(clip, out_json=None, rigf=None, name=None, every=1):
 
     # feet
     H = 0.025 * height / 1.7          # foot-skate height scale (2.5 cm on a 1.7 m human)
-    stance, onsets, gvs, disp, wts = {}, {}, [], {}, {}
+    stance, onsets, gvs, disp, wts, swing_pitch, stand_pitch = {}, {}, [], {}, {}, {}, {}
     for sd, seq in footd.items():
         Z = np.array([P[:, 2].min() for P in seq])
         h = np.clip(Z - np.percentile(Z, 20), 0, None)
@@ -192,6 +206,12 @@ def measure(clip, out_json=None, rigf=None, name=None, every=1):
         starts, ends = np.where(runs == 1)[0], np.where(runs == -1)[0]
         onsets[sd] = int(np.sum(ends - starts >= 3))
         stance[sd] = st
+        if sd in fpitch:
+            a = np.array(ankle[sd]); fp = np.array(fpitch[sd])
+            air = a - np.percentile(a, 20) > H
+            planted = np.median(fp[~air]) if (~air).any() else 0.0
+            swing_pitch[sd] = round(float(np.abs(fp[air] - planted).max()), 1) if air.any() else 0.0
+            stand_pitch[sd] = round(float(planted), 1)
         d = []
         for t in range(n - 1):
             P = seq[t]; c = P[:, 2] < P[:, 2].min() + 0.003
@@ -241,6 +261,8 @@ def measure(clip, out_json=None, rigf=None, name=None, every=1):
                          by_pair_mean_mm2={k: round(v / len(skin), 0) for k, v in sorted(bypair.items(), key=lambda x: -x[1])[:5]},
                          arm_body_frames_pct=round(100 * float(np.mean([b > 1 for _, b in skin])), 1)),
                seam_x_step=round(seam, 2),
+               standing_foot_pitch=dict(max_abs_deg=max((abs(v) for v in stand_pitch.values()), default=0.0), by_side=stand_pitch),
+               swing_foot_pitch=dict(max_deg=max(swing_pitch.values(), default=0.0), by_side=swing_pitch),
                knee_pops=dict(count=sum(len(v) for v in pops.values()), frames=pops),
                measure_s=round(time.time() - t0, 1))
     if out_json:

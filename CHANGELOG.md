@@ -50,6 +50,12 @@ found these in 3.0; each brief it touched was run again after the fix.
 - **Knees that snapped** (`retarget.py` `SOFT_REACH`, `motion_measure.py` `knee_pops`): the foot lock
   pulled a leg straight for one frame and bent it on the next, 1.4-2 times a second on both mascots;
   a leg's reach now eases from 93 % of its length — none left, the slide still under 50 mm/s.
+- **Feet flat** (`retarget.py` `ease_swing_feet`, `motion_measure.py` `standing_foot_pitch`, `swing_foot_pitch`):
+  the ankle came across wrong from Kimodo's actor — kiln's mascot stood 30° toes-down, heel off the floor, and
+  pointed 68° down in the air, tiptoeing in big boots. The standing foot goes back to its rest pitch (the sole
+  flat) and a foot in the air is eased toward 22° past 10°, before the feet are locked: on the mascot 0.6°
+  standing, 32° in the air, no knee pop (3 before); `test_presets.py` 19/19. A prop held in the hand is taken
+  for part of the arm by the arms' clearance: the mascot is animated without its hammer, added back after.
 - **`tools/review_sheet.py`**: six views under a studio light, a close-up of the top, a rigged model in
   its rest pose, framed on its vertices, the exposure moved one stop at most (pushed to a fixed
   brightness, a dark lantern's colours shifted and a session made its glass opaque), and a second
