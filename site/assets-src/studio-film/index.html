@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Sora"; font-weight: 400 700; src: url("assets/fonts/sora-latin.woff2") format("woff2"); }
+      @font-face { font-family: "JetBrains Mono"; font-weight: 400 600; src: url("assets/fonts/jetbrains-mono-latin.woff2") format("woff2"); }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #0b0d11; }
+      #root { position: relative; width: 100%; height: 100%; font-family: "Sora", sans-serif; }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-dqd3" id="root" data-composition-id="main" data-start="0" data-duration="60.3" data-width="1920" data-height="1080">
+      <div id="opener" data-composition-id="opener" data-composition-src="compositions/opener.html"
+        data-start="0" data-duration="3.3" data-track-index="7" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 10"></div>
+      <div id="intro" data-composition-id="intro" data-composition-src="compositions/intro.html"
+        data-start="3.0" data-duration="12.2" data-track-index="0" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 0"></div>
+      <div data-hf-id="hf-dvz8" id="studio" data-composition-id="studio" data-composition-src="compositions/studio.html"
+        data-start="15.0" data-duration="12.6" data-track-index="1" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 1"></div>
+      <div data-hf-id="hf-km23" id="work" data-composition-id="work" data-composition-src="compositions/work.html"
+        data-start="27.4" data-duration="15" data-track-index="2" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 2"></div>
+      <div data-hf-id="hf-jnom" id="back" data-composition-id="back" data-composition-src="compositions/back.html"
+        data-start="42.2" data-duration="6.4" data-track-index="3" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 3"></div>
+      <div data-hf-id="hf-mtj7" id="walk" data-composition-id="walk" data-composition-src="compositions/walk.html"
+        data-start="48.0" data-duration="4.6" data-track-index="4" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 4"></div>
+      <div id="mcp" data-composition-id="mcp" data-composition-src="compositions/mcp.html"
+        data-start="52.4" data-duration="3.5" data-track-index="6" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 5"></div>
+      <div data-hf-id="hf-tz4z" id="endcard" data-composition-id="endcard" data-composition-src="compositions/endcard.html"
+        data-start="55.7" data-duration="4.6" data-track-index="5" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 6"></div>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = gsap.timeline({ paused: true });
+    </script>
+  </body>
+</html>

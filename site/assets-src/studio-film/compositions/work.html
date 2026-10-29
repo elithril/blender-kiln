@@ -1,0 +1,113 @@
+<template>
+  <style>
+    @font-face { font-family: "Sora"; font-weight: 400 700; src: url("assets/fonts/sora-latin.woff2") format("woff2"); }
+    @font-face { font-family: "JetBrains Mono"; font-weight: 400 600; src: url("assets/fonts/jetbrains-mono-latin.woff2") format("woff2"); }
+    #root { position: absolute; inset: 0; overflow: hidden; background: #3d3d3d; font-family: "Sora", sans-serif; }
+    #wk-flood { position: absolute; inset: 0; background: #5ce1e6; }
+    #wk-all { position: absolute; inset: 0; }
+    #wk-head { position: absolute; left: 110px; top: 84px; font: 500 28px/1 "JetBrains Mono", monospace; color: #b9bec6; }
+    #wk-head b { color: #ffffff; font-weight: 600; }
+    #wk-note { position: absolute; left: 110px; top: 150px; width: 340px; height: 420px; border-radius: 10px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45); }
+    #wk-note img { width: 340px; height: 420px; display: block; border-radius: 10px; }
+    .wk-line { position: absolute; left: 560px; top: 160px; width: 1250px; font: 600 50px/1.2 "Sora", sans-serif; letter-spacing: -0.01em;
+      color: #f2f4f7; opacity: 0; }
+    .wk-line i { font-style: normal; color: #9aa0a8; }
+    .wk-ev { position: absolute; opacity: 0; }
+    .wk-look { border: 4px solid #1f1f1f; border-radius: 10px; overflow: hidden; background: #2b2b2b;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35); }
+    .wk-look img { display: block; }
+    #wk-look1 { left: 560px; top: 300px; }
+    #wk-look1 img { width: 826px; height: 410px; }
+    #wk-morph { left: 560px; top: 280px; }
+    #wk-morph video { display: block; width: 780px; height: 520px; }
+    #wk-num { left: 1420px; top: 330px; width: 420px; color: #ffffff; }
+    #wk-num .k { font: 400 30px/1.3 "Sora", sans-serif; color: #c9ced6; }
+    #wk-num .was { margin-top: 16px; font: 400 56px/1 "Sora", sans-serif; color: #9aa0a8; text-decoration: line-through; text-decoration-thickness: 3px; }
+    #wk-num .big { margin-top: 14px; font: 700 120px/1 "Sora", sans-serif; letter-spacing: -0.02em; }
+    #wk-num .sub { margin-top: 26px; font: 400 30px/1.3 "Sora", sans-serif; color: #c9ced6; }
+    #wk-look2, #wk-look3 { left: 560px; top: 300px; }
+    #wk-look2 img, #wk-look3 img { width: 770px; height: 579px; }
+    #wk-stat { left: 1420px; top: 330px; width: 400px; color: #ffffff; }
+    #wk-stat .k { font: 400 30px/1.3 "Sora", sans-serif; color: #c9ced6; }
+    #wk-stat .v { margin-top: 18px; font: 700 132px/1 "Sora", sans-serif; letter-spacing: -0.02em; }
+    #wk-stat .v small { font: 400 40px/1 "Sora", sans-serif; color: #c9ced6; letter-spacing: 0; }
+    #wk-ok { left: 560px; top: 340px; color: #ffffff; }
+    #wk-ok .big { font: 700 120px/1.05 "Sora", sans-serif; letter-spacing: -0.02em; }
+    #wk-ok .sub { margin-top: 30px; font: 400 44px/1.2 "Sora", sans-serif; color: #c9ced6; }
+    #wk-bar { position: absolute; left: 110px; top: 1000px; width: 1700px; height: 6px; border-radius: 3px; background: #2b2b2b; overflow: hidden; }
+    #wk-fill { width: 100%; height: 100%; background: #5ce1e6; transform-origin: 0 50%; transform: scaleX(0); }
+    #wk-time { position: absolute; left: 110px; top: 948px; font: 500 28px/1 "JetBrains Mono", monospace; color: #d6dadf; }
+  </style>
+  <div data-hf-id="hf-h3sq" id="root" data-composition-id="work" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-9mxh" id="wk-all">
+      <div data-hf-id="hf-vevc" id="wk-head"><b data-hf-id="hf-w5xz">Claude</b> · Studio's worker, in its own Blender</div>
+      <div data-hf-id="hf-tz48" id="wk-note"><img data-hf-id="hf-9m15" src="assets/ui/note-open.png" alt="" /></div>
+
+      <div data-hf-id="hf-wz2b" class="wk-line" id="wk-l1">Looks at it from the note's angle</div>
+      <div data-hf-id="hf-oon9" class="wk-ev wk-look" id="wk-look1"><img data-hf-id="hf-1j9b" src="assets/session/look-1.png" alt="" /></div>
+
+      <div data-hf-id="hf-quk7" class="wk-line" id="wk-l2">Scales the hammer ×1.5</div>
+      <div class="wk-ev wk-look" id="wk-morph">
+        <video id="wk-morph-v" class="clip" data-start="3.7" data-duration="2.6" data-track-index="0"
+          src="assets/render/hammer-morph-hold.mp4" muted playsinline></video>
+      </div>
+      <div class="wk-ev" id="wk-num">
+        <div class="k">hammer length</div>
+        <div class="was">0.35 m</div>
+        <div class="big"><span id="wk-count">0.35</span> m</div>
+        <div class="sub">head 16 × 8 → 24 × 12 cm</div>
+      </div>
+
+      <div data-hf-id="hf-agi9" class="wk-line" id="wk-l3">Checks the walk: the hammer goes through the right leg</div>
+      <div data-hf-id="hf-smra" class="wk-ev wk-look" id="wk-look2"><img data-hf-id="hf-e1xw" src="assets/session/look-2.png" alt="" /></div>
+      <div data-hf-id="hf-swr9" class="wk-line" id="wk-l4">A 20° wrist twist clears it, idle untouched</div>
+      <div data-hf-id="hf-wkvb" class="wk-ev wk-look" id="wk-look3"><img data-hf-id="hf-354t" src="assets/session/look-3.png" alt="" /></div>
+      <div data-hf-id="hf-65yp" class="wk-ev" id="wk-stat">
+        <div data-hf-id="hf-9tiz" class="k">frames through the leg</div>
+        <div data-hf-id="hf-mxpy" class="v"><span data-hf-id="hf-ntc3" id="wk-frames">17</span> <small data-hf-id="hf-v6ev">of 66</small></div>
+      </div>
+
+      <div data-hf-id="hf-uvuw" class="wk-line" id="wk-l5">Re-exports, then checks both files</div>
+      <div data-hf-id="hf-tg4p" class="wk-ev" id="wk-ok">
+        <div data-hf-id="hf-gggs" class="big">0 errors<br data-hf-id="hf-x5px" />0 warnings</div>
+        <div data-hf-id="hf-fzge" class="sub">re-exported · web file 368 KB · note replied</div>
+      </div>
+
+      <div data-hf-id="hf-s0h2" id="wk-time">4 min of work · 42 turns — shown 17× faster</div>
+      <div data-hf-id="hf-7bk3" id="wk-bar"><div data-hf-id="hf-1qcf" id="wk-fill"></div></div>
+    </div>
+    <div data-hf-id="hf-w8jc" id="wk-flood"></div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      const swapIn = (sel, at) => tl.fromTo(sel, { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, at);
+      const swapOut = (sel, at) => tl.to(sel, { opacity: 0, filter: "blur(8px)", duration: 0.16, ease: "power2.in" }, at);
+      // the teal of the button floods into Blender's grey
+      tl.fromTo("#wk-flood", { opacity: 1 }, { opacity: 0, duration: 0.45, ease: "power2.inOut" }, 0);
+      tl.fromTo("#wk-note", { x: -40, y: 60, scale: 0.9, filter: "blur(6px)" }, { x: 0, y: 0, scale: 1, filter: "blur(0px)", duration: 0.6, ease: "expo.out" }, 0.15);
+      tl.fromTo("#wk-fill", { scaleX: 0 }, { scaleX: 1, duration: 14.3, ease: "none" }, 0.3);
+      // (a) the look
+      swapIn("#wk-l1", 0.5); tl.fromTo("#wk-look1", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.6, ease: "expo.out" }, 0.7);
+      swapOut("#wk-l1", 3.3); swapOut("#wk-look1", 3.3);
+      // (b) the size
+      swapIn("#wk-l2", 3.5); tl.fromTo("#wk-morph", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.5, ease: "expo.out" }, 3.55); swapIn("#wk-num", 3.75);
+      const n = { v: 0.35 }, cnt = document.querySelector("#wk-count");
+      tl.fromTo(n, { v: 0.35 }, { v: 0.52, duration: 0.87, ease: "power1.inOut", onUpdate: () => (cnt.textContent = n.v.toFixed(2)) }, 4.03);
+      swapOut("#wk-l2", 6.1); swapOut("#wk-num", 6.1); swapOut("#wk-morph", 6.1);
+      // (c) the leg
+      swapIn("#wk-l3", 6.3); tl.fromTo("#wk-look2", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.6, ease: "expo.out" }, 6.45); swapIn("#wk-stat", 6.7);
+      swapOut("#wk-l3", 9.6); swapIn("#wk-l4", 9.8);
+      tl.to("#wk-look2", { opacity: 0, duration: 0.25, ease: "none" }, 9.8); tl.set("#wk-look3", { opacity: 1 }, 9.8);
+      const f = { v: 17 }, fr = document.querySelector("#wk-frames");
+      tl.fromTo(f, { v: 17 }, { v: 0, duration: 0.6, ease: "power2.out", onUpdate: () => (fr.textContent = Math.round(f.v)) }, 9.95);
+      swapOut("#wk-l4", 12.2); swapOut("#wk-look3", 12.2); swapOut("#wk-stat", 12.2);
+      // (d) the export
+      swapIn("#wk-l5", 12.4); swapIn("#wk-ok", 12.55);
+      // out, the stage blurs away
+      tl.to("#wk-all", { opacity: 0, filter: "blur(10px)", duration: 0.2, ease: "power2.in" }, 14.65);
+      window.__timelines["work"] = tl;
+    })();
+  </script>
+</template>

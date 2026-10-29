@@ -426,7 +426,6 @@ What did not improve is published too: the [benchmarks](docs/benchmarks.md) — 
 versions of one lantern, what each fix broke, how the bench was kept honest — and every
 number, render and GLB under 1 MB on the [`bench-results`](https://github.com/elithril/blender-kiln/tree/bench-results) branch, except the
 humanoid derived from Hunyuan3D, whose licence keeps it out.
-<!-- [À FAIRE avant la sortie: publier v220-mcp222-ahujasid, v300final-ahujasid et v300final-lab sur bench-results (bench/publish.py) — sur feu vert] -->
 
 ### How long it takes
 

@@ -1,0 +1,11 @@
+{
+  "name": "studio-video",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx --yes hyperframes@0.8.216 preview",
+    "check": "npx --yes hyperframes@0.8.216 check",
+    "render": "npx --yes hyperframes@0.8.216 render",
+    "publish": "npx --yes hyperframes@0.8.216 publish"
+  }
+}

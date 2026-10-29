@@ -1,0 +1,43 @@
+<template>
+  <style>
+    @font-face { font-family: "Sora"; font-weight: 400 700; src: url("assets/fonts/sora-latin.woff2") format("woff2"); }
+    @font-face { font-family: "JetBrains Mono"; font-weight: 400 600; src: url("assets/fonts/jetbrains-mono-latin.woff2") format("woff2"); }
+    #root { position: absolute; inset: 0; overflow: hidden; background: #0b0d11; }
+    #bk-cam { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
+    #bk-cam img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+    #bk-sweep-w { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; opacity: 0; }
+    #bk-sweep { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+    #bk-cursor { position: absolute; left: 0; top: 0; width: 44px; height: 64px; opacity: 0; }
+    #bk-cover { position: absolute; left: 1584px; top: 392px; width: 314px; height: 248px; background: rgb(20, 25, 36); transform-origin: 50% 100%; }
+    #bk-mark { position: absolute; left: 1712px; top: 478px; width: 92px; height: 3px; background: #5ce1e6; transform-origin: 0 50%; transform: scaleX(0); }
+  </style>
+  <div data-hf-id="hf-zve4" id="root" data-composition-id="back" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-35f2" id="bk-cam">
+      <img data-hf-id="hf-j7an" src="assets/studio/s5-after.png" alt="" />
+      <div id="bk-sweep-w"><video id="bk-sweep" class="clip" data-start="2.9" data-duration="3.5" data-track-index="0" src="assets/render/compare-sweep.mp4" muted playsinline></video></div>
+      <div data-hf-id="hf-lage" id="bk-cover"></div>
+      <div data-hf-id="hf-bxky" id="bk-mark"></div>
+    </div>
+    <svg id="bk-cursor" viewBox="0 0 22 32" xmlns="http://www.w3.org/2000/svg"><path d="M2 2 L2 26 L8 20 L12 30 L16 28 L12 18.5 L20 18.5 Z" fill="#ffffff" stroke="#000000" stroke-width="1.6" stroke-linejoin="round" /></svg>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo("#bk-cam", { opacity: 0, filter: "blur(10px)", x: -1576, y: -53, scale: 1.45 },
+        { opacity: 1, filter: "blur(0px)", duration: 0.25, ease: "power2.out" }, 0);
+      // the reply arrives on the note
+      tl.fromTo("#bk-cover", { scaleY: 1 }, { scaleY: 0, duration: 1.2, ease: "power2.inOut" }, 0.7);
+      tl.fromTo("#bk-mark", { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: "expo.out" }, 2.1);
+      // to the model; Compare against the previous version, its handle dragged across the hammer
+      tl.to("#bk-cam", { x: 6, y: -630, scale: 1.8, duration: 0.8, ease: "power2.inOut" }, 3.0);
+      tl.to("#bk-cover, #bk-mark", { opacity: 0, duration: 0.2 }, 3.2);
+      tl.to("#bk-sweep-w", { opacity: 1, duration: 0.15, ease: "none" }, 2.92);
+      tl.fromTo("#bk-cursor", { x: 1500, y: 620, opacity: 0 }, { x: 1363, y: 338, opacity: 1, duration: 0.45, ease: "power3.out" }, 3.05);
+      tl.to("#bk-cursor", { x: 704, y: 338, duration: 1.33, ease: "power1.inOut" }, 3.5);
+      tl.to("#bk-cursor", { x: 600, y: 700, opacity: 0, duration: 0.35, ease: "power2.in" }, 5.05);
+      // through the bigger hammer, into the walk
+      tl.to("#bk-cam", { x: -1690, y: -2710, scale: 5, filter: "blur(12px)", duration: 0.6, ease: "power3.in" }, 5.6);
+      window.__timelines["back"] = tl;
+    })();
+  </script>
+</template>

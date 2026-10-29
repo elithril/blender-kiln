@@ -1,0 +1,75 @@
+<template>
+  <style>
+    @font-face { font-family: "Sora"; font-weight: 400 700; src: url("assets/fonts/sora-latin.woff2") format("woff2"); }
+    @font-face { font-family: "JetBrains Mono"; font-weight: 400 600; src: url("assets/fonts/jetbrains-mono-latin.woff2") format("woff2"); }
+    #root { position: absolute; inset: 0; overflow: hidden; background: #0b0d11; }
+    #in-cam { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
+    #in-cam img.screen { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; opacity: 0; }
+    #in-lit { opacity: 1 !important; }
+    /* one Studio panel carries the words of each beat; the beats share one grid cell, so the panel
+       is as tall as the longest of them and no line ever reaches its edge */
+    #in-card { position: absolute; left: 340px; top: 96px; width: 680px; display: grid; padding: 32px 40px 36px; box-sizing: border-box;
+      border-radius: 18px; background: #141924; border: 1px solid #2a3345; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45); }
+    .in-beat { grid-area: 1 / 1; opacity: 0; }
+    .in-kick { font: 600 22px/1 "JetBrains Mono", monospace; letter-spacing: 0.06em; color: #5ce1e6; }
+    .in-title { margin-top: 16px; font: 700 64px/1.05 "Sora", sans-serif; letter-spacing: -0.015em; color: #e6ebf2; }
+    .in-line { margin-top: 16px; font: 400 30px/1.3 "Sora", sans-serif; color: #a3adbe; }
+  </style>
+  <div id="root" data-composition-id="intro" data-width="1920" data-height="1080">
+    <div id="in-cam">
+      <img class="screen" id="in-lit" src="assets/intro/i1-lit.png" alt="" />
+      <img class="screen" id="in-clay" src="assets/intro/i2-clay.png" alt="" />
+      <img class="screen" id="in-normals" src="assets/intro/i2-normals.png" alt="" />
+      <img class="screen" id="in-wire" src="assets/intro/i2-wire.png" alt="" />
+      <img class="screen" id="in-checks" src="assets/intro/i3-checks.png" alt="" />
+      <img class="screen" id="in-ar" src="assets/intro/i4-ar-made.png" alt="" />
+      <img class="screen" id="in-qr" src="assets/intro/i5-qr.png" alt="" />
+      <img class="screen" id="in-s1" src="assets/studio/s1-model.png" alt="" />
+    </div>
+    <div id="in-card">
+      <div class="in-beat" id="in-b1"><div class="in-kick">KILN STUDIO</div><div class="in-title">Your models</div><div class="in-line">Every model in your project, in one page on your own machine.</div></div>
+      <div class="in-beat" id="in-b2"><div class="in-kick">LOOK</div><div class="in-title">Any way you like</div><div class="in-line">Clay, normals, wireframe, real sizes.</div></div>
+      <div class="in-beat" id="in-b3"><div class="in-kick">CHECKS</div><div class="in-title">In plain words</div><div class="in-line">Triangles, size, textures, compression, licences.</div></div>
+      <div class="in-beat" id="in-b4"><div class="in-kick">OUTPUTS</div><div class="in-title">On your iPhone</div><div class="in-line">Game and AR files in seconds. Scan the QR code and it is in your room.</div></div>
+      <div class="in-beat" id="in-b5"><div class="in-kick">NOTES</div><div class="in-title">Something to fix?</div><div class="in-line">Pin a note on it. Claude fixes it, in its own Blender.</div></div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      const cam = "#in-cam";
+      const beat = (on, off, at) => {
+        if (off) tl.to(off, { opacity: 0, filter: "blur(6px)", duration: 0.18, ease: "power2.in" }, at - 0.18);
+        tl.fromTo(on, { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.3, ease: "power2.out" }, at);
+      };
+      // A — the project: the ammo box open, the other models in the list
+      tl.fromTo("#in-card", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: "expo.out" }, 0.25);
+      beat("#in-b1", null, 0.35);
+      tl.fromTo(cam, { x: 0, y: 0, scale: 1 }, { x: -58, y: -32, scale: 1.06, duration: 2.5, ease: "none" }, 0);
+      // B — the same box in clay, normals, wireframe
+      beat("#in-b2", "#in-b1", 2.6);
+      tl.to(cam, { x: -460, y: -270, scale: 1.45, duration: 0.8, ease: "power2.inOut" }, 2.5);
+      tl.to("#in-clay", { opacity: 1, duration: 0.25, ease: "none" }, 2.95);
+      tl.to("#in-normals", { opacity: 1, duration: 0.25, ease: "none" }, 3.7);
+      tl.to("#in-wire", { opacity: 1, duration: 0.25, ease: "none" }, 4.45);
+      // C — the Checks tab, read up close
+      beat("#in-b3", "#in-b2", 5.3);
+      tl.to("#in-checks", { opacity: 1, duration: 0.3, ease: "none" }, 5.2);
+      tl.to(cam, { x: -1440, y: -40, scale: 1.75, duration: 0.8, ease: "power2.inOut" }, 5.2);
+      // D — AR made by Studio, then the QR
+      beat("#in-b4", "#in-b3", 7.5);
+      tl.to(cam, { x: 0, y: 0, scale: 1, duration: 0.7, ease: "power2.inOut" }, 7.4);
+      tl.to("#in-ar", { opacity: 1, duration: 0.25, ease: "none" }, 7.4);
+      tl.to("#in-qr", { opacity: 1, duration: 0.3, ease: "none" }, 8.4);
+      tl.to(cam, { x: 45, y: -149, scale: 1.3, duration: 0.8, ease: "power2.inOut" }, 8.5);
+      // E — the bridge: back to the page, the mascot picked in the list; the next scene opens on this same frame
+      beat("#in-b5", "#in-b4", 9.9);
+      tl.to(cam, { x: 0, y: 0, scale: 1, duration: 0.6, ease: "power2.inOut" }, 9.8);
+      // the card moves off the mascot, into the empty side of the view
+      tl.to("#in-card", { x: 520, duration: 0.6, ease: "power2.inOut" }, 9.8);
+      tl.to("#in-s1", { opacity: 1, duration: 0.4, ease: "none" }, 10.0);
+      tl.to("#in-card", { opacity: 0, y: -12, duration: 0.22, ease: "power3.in" }, 11.75);
+      window.__timelines["intro"] = tl;
+    })();
+  </script>
+</template>
