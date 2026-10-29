@@ -12,6 +12,7 @@ of it: **claims must be measured, not reasoned.**
 - [Pull requests](#pull-requests)
 - [Adding or changing an iron rule](#adding-or-changing-an-iron-rule)
 - [Reporting a bug](#reporting-a-bug)
+- [Sharing what you built](#sharing-what-you-built)
 - [Use of AI](#use-of-ai)
 - [Questions](#questions)
 - [Licence](#licence)
@@ -136,6 +137,22 @@ Two things worth including that are easy to overlook:
 - **`get_addon_status()`**, which reports whether the MCP addon is behind the
   server. An outdated addon is missing commands, and the resulting errors name
   nothing relevant to the real cause.
+
+## Sharing what you built
+
+Made something with kiln? Open a [Share what you built](https://github.com/elithril/blender-kiln/issues/new?template=share-what-you-built.yml)
+issue: your pictures, a link, how kiln was used, the third-party assets and their licences. It goes on
+the site's "Built with kiln" track once it has been looked at, shown as you made it and credited to you.
+
+For the maintainer, an accepted entry is:
+
+1. Its picture in `site/public/assets/img/built/<project>.webp` (a clip, if any, in
+   `site/public/assets/video/`), with a `.json` beside it that says where it came from (the issue).
+2. An entry in `site.built.projects` of `site/src/content/site.json`: `title`, `link` and `linkLabel`
+   (empty when it is not out yet: the plate links to the author's GitHub), `github`, `media`, `alt`,
+   `how` and `credit` from the issue, and `mark`, the maker's mark on the plate: a figure from `how` and
+   its unit, such as `["101", "GLB"]`. `fit: "contain"` and `ground` for a picture that must not be cropped.
+3. A reply on the issue with the link, then close it.
 
 ## Use of AI
 
