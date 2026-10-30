@@ -1,10 +1,10 @@
 {
   "_sources": "Every figure here comes from docs/benchmarks.md, README.md, CHANGELOG.md or the bench-results branch (summary.json of each run). Update this file on a release; no section hard-codes a number. The lantern GLB on the site is kiln 3.0's shipped file (v18, with review rounds) with its textures resized to 512 px (gltf-transform resize, then Draco), 152 KB; shippedKB stays what kiln shipped (612 KB, 1024 px).",
   "release": {
-    "version": "2.2.0",
-    "date": "2026-10-07",
-    "title": "/kiln animate",
-    "url": "https://github.com/elithril/blender-kiln/releases/tag/v2.2.0"
+    "version": "3.0.0",
+    "date": "2026-10-30",
+    "title": "Kiln Studio, 3D printing, characters",
+    "url": "https://github.com/elithril/blender-kiln/releases/tag/v3.0.0"
   },
   "repo": "https://github.com/elithril/blender-kiln",
   "install": [
@@ -425,6 +425,7 @@
     "headline": "It moves, routed by subject.",
     "lede": "No single animation method held up across a cat, a villager and a desk lamp, so kiln picks the route from the subject, and shows every clip before exporting.",
     "since": "2.1, one command since 2.2",
+    "sinceLabel": "New in 3.0: a learned auto-rig and 22 ready-made moves",
     "routes": [
       {
         "subject": "A character of your own, rigged",

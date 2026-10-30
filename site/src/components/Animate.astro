@@ -11,7 +11,7 @@ const clips = A.routes.flatMap((r, ri) => r.clips.map((c) => ({ ...c, route: ri 
     <h2 id="animate-h">{A.headline}</h2>
     <div class="side">
       <p>{A.lede}</p>
-      <a class="release measure" href={release.url}>New in {release.version}: {release.title}</a>
+      <a class="release measure" href={release.url}>{A.sinceLabel}</a>
     </div>
   </header>
 

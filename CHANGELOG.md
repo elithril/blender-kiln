@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0] — 2026-10-30
+
+kiln 3.0 gathers everything since 2.2.0: the sections below, and [2.3.0](#230--2026-10-12), which
+was never published. kiln now models **for a 3D printer** (closed solids at size, parts that fit,
+`print_check` and PrusaSlicer on every STL), opens every model of a project in **Kiln Studio**, a
+page on your own machine where a note pinned on a model goes to Claude, with **`kiln-studio`**, its
+MCP server, for the terminal; builds and animates **organic characters** (a learned auto-rig, 22
+ready-made humanoid moves, looped clips); and gives every asset **review rounds** read by a fresh
+reviewer. Measured by the full bench, 3.0 against 2.2.0: both prints pass the printability check
+(2.2.0: one of two), and the three rebuilds from a photo score 0.888, 0.948 and 0.729 against the
+real objects with review rounds. `SKILL.md` is now a router, and the server is
+`mcp-for-blender` 2.2.2, pinned.
+
 ### Fixed — what the 3.0 bench found (3.0)
 
 The full bench (2.2.0 and 3.0 on `mcp-for-blender` 2.2.2, 3.0 on the Lab MCP too, October 2026)
@@ -209,6 +222,8 @@ found these in 3.0; each brief it touched was run again after the fix.
   on every push (no Blender) and in the Blender workflow.
 
 ## [2.3.0] — 2026-10-12
+
+*Never published: tagged on the 3.0 branch only, it ships in 3.0.0.*
 
 kiln now models for a **3D printer** — simple objects only. Measured on sessions given the
 skill and a brief or a photo, nothing else: a dog house and a lighthouse from a brief, a
