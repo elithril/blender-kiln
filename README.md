@@ -130,10 +130,10 @@ with the models. [`references/studio.md`](plugin/references/studio.md) is the re
 <p align="center">
   <img src="docs/images/print-windmill.webp" width="100%" alt="A Dutch windmill kiln modelled for an FDM printer: the coloured preview, and the two STL parts as they print — the body upright, the lattice sails flat beside it" /></p>
 
-<!-- [PHOTOS — shooting 2026-10-28: the four objects kiln modelled for print on 2026-10-13, printed by a
-colleague on a Bambu Lab P1S in PLA, no touch-up — the forge of the logo (3 parts, 70 mm), the lighthouse
-(50 mm), the Art Deco box with a bayonet lid (Ø 62 mm), the windmill (2 parts, 90 mm). Caption: "Printed on a
-Bambu Lab P1S, PLA, 0.2 mm layers, as kiln exported them".] -->
+<p align="center">
+  <img src="docs/images/print-photos.webp" width="100%" alt="Photos of five white PLA prints on a desk: the windmill with its lattice sails, the forge of the logo in three stacked parts, the lighthouse, and the Art Deco box, closed, then open with its bayonet lid beside it" /></p>
+<p align="center"><sub>Printed on a Bambu Lab P1S, PLA, 0.2 mm layers, as kiln exported them: the windmill (2 parts, 90 mm),
+the forge of the logo (3 parts, 70 mm), the lighthouse (50 mm), the Art Deco box with its bayonet lid (Ø 62 mm).</sub></p>
 
 Say it will be printed — FDM or resin, a height, your printer's colours — and kiln models for the
 printer from the first primitive: closed solids at size, walls thick enough, a flat base, parts
@@ -191,7 +191,7 @@ the input is never overwritten.
 ### Limits
 
 - **Printed, four of them.** The forge, the lighthouse, the Art Deco box and the windmill were
-  printed as kiln exported them, on a Bambu Lab P1S in PLA.
+  printed as kiln exported them, on a Bambu Lab P1S in PLA ([photos](#3d-printing--models-that-actually-print)).
   The box's bayonet lid turns, locks and holds with the box upside down. The fit test print was not printed; the
   rest was checked by PrusaSlicer 2.9.6 and by renders, not on a bed.
 - **FDM, checked with PrusaSlicer's default profile.** No resin slicing, no orientation search,
