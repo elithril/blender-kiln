@@ -119,10 +119,11 @@ class Project:
         # an SMB connection, which would hand the user's NTLM hash to that host.
         if "\\" in rel or re.match(r"^[A-Za-z]:", rel) or rel.startswith("/") or "\0" in rel:
             raise ValueError(f"not a project path: {rel!r}")
-        p = (self.root / rel).resolve()
-        if p != self.root and self.root not in p.parents:
+        # realpath, then a prefix test: the same refusal as before, in the form CodeQL reads as a guard
+        p, root = os.path.realpath(os.path.join(self.root, rel)), str(self.root)
+        if p != root and not p.startswith(root + os.sep):
             raise ValueError(f"outside the project: {rel!r}")
-        return p
+        return Path(p)
 
     def ensure(self) -> None:
         if (self.data / ".gitignore").exists():
@@ -763,12 +764,15 @@ def image_ext(data: bytes) -> str:
 
 def save_shot(project: Project, asset_id: str, stem: str, data: bytes) -> str:
     d = project.asset_dir(asset_id) / "shots"
+    # stem is a note or reply id the server already matched; checked here again, on the path itself
+    p = os.path.normpath(d / (stem + image_ext(data)))
+    if not p.startswith(str(d) + os.sep) or os.path.dirname(p) != str(d):
+        raise ValueError(f"not a screenshot name: {stem!r}")
     d.mkdir(parents=True, exist_ok=True)
-    p = d / (stem + image_ext(data))
-    for old in d.glob(stem + ".*"):
+    for old in d.glob(Path(p).stem + ".*"):
         old.unlink()
-    p.write_bytes(data)
-    return project.rel(p)
+    Path(p).write_bytes(data)
+    return project.rel(Path(p))
 
 
 def _nums(v, n: int, lo: float = -1e9, hi: float = 1e9) -> list[float] | None:
@@ -1499,7 +1503,11 @@ def derive(project: Project, a: Asset, name: str, text: str, *, target: str = "s
     if start not in ("current", "kept"):
         raise ValueError("start from current or kept")
     src_dir = project.root / a.folder
-    dst = src_dir.parent / name
+    parent = str(src_dir.parent)
+    dst = os.path.normpath(os.path.join(parent, name))
+    if not dst.startswith(parent + os.sep) or os.path.dirname(dst) != parent:
+        raise ValueError(f"not a model name: {name!r}")
+    name, dst = os.path.basename(dst), Path(dst)
     if dst.exists() or any(x.name == name for x in scan(project)):
         raise ValueError(f"a model named {name} is already there")
     old = a.name

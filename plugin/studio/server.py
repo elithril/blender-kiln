@@ -381,10 +381,10 @@ def make_handler(studio: Studio, port_ref: list[int]):
                     return self._file(STATIC / "index.html")
                 if parts[0] == "static" and 2 <= len(parts) <= 3:
                     # static/app.js, static/i18n/fr.json: nothing outside static/.
-                    p = (STATIC / "/".join(parts[1:])).resolve()
-                    if STATIC not in p.parents:
+                    p = os.path.realpath(os.path.join(STATIC, *parts[1:]))
+                    if not p.startswith(str(STATIC) + os.sep):
                         return self._err(403, "forbidden")
-                    return self._file(p)
+                    return self._file(Path(p))
                 if parts[:2] == ["api", "messages"]:
                     # The checks' words, in English: the page renders a finding's codes with
                     # them, or with static/i18n/<lang>.json.

@@ -1362,7 +1362,7 @@ async function openDownload() {
       go.href = `${fileUrl(files[0].file)}?download=1`;
       $('#dl-sum').textContent = `${files[0].path.split('/').pop()} · ${fmtSize(size)}`;
     } else {
-      go.href = `/api/asset/${enc(d.id)}/package?lang=${getLang()}&outs=${picked.map((o) => o.out).join(',')}&sheet=${sheet ? 1 : 0}${vpicked.length ? `&variants=${vpicked.map((v) => enc(v.id)).join(',')}` : ''}${finQ}`;
+      go.href = `/api/asset/${enc(d.id)}/package?lang=${enc(getLang())}&outs=${picked.map((o) => o.out).join(',')}&sheet=${sheet ? 1 : 0}${vpicked.length ? `&variants=${vpicked.map((v) => enc(v.id)).join(',')}` : ''}${finQ}`;
       $('#dl-sum').textContent = t('{n} files · {size} → {zip}', { n: files.length + (sheet ? 1 : 0), size: fmtSize(size), zip: `${d.name}.zip` });
     }
     go.classList.toggle('disabled', !files.length);

@@ -208,7 +208,8 @@ class PhoneShare:
                     return self._send(404, b"Not found (the link may have expired).", "text/plain; charset=utf-8")
                 if len(parts) == 2:
                     return self._send(200, share.page(parts[1], l, self.headers.get("Host", "")).encode(), "text/html; charset=utf-8")
-                kind = parts[2].rsplit(".", 1)[-1] if len(parts) == 3 else ""
+                ext = parts[2].rsplit(".", 1)[-1] if len(parts) == 3 else ""
+                kind = next((k for k in TYPES if k == ext), "")   # one of TYPES' own keys, not the request's
                 data = share.file(l, parts[2]) if kind in TYPES else None
                 if data is None:
                     return self._send(404, b"Not found.", "text/plain; charset=utf-8")
