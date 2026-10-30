@@ -30,7 +30,9 @@ TEXT = {".md", ".yaml", ".json"}
 
 
 def scrub(text):
-    return text.replace(str(REPO), "<repo>").replace(HOME, "<home>")
+    # paths first, then the bare user name: an `ls -l` a session pasted carries it as the owner
+    text = text.replace(str(REPO), "<repo>").replace(HOME, "<home>")
+    return re.sub(rf"\b{re.escape(Path.home().name)}\b", "<user>", text)
 
 
 def assert_clean(root):
@@ -40,7 +42,7 @@ def assert_clean(root):
         if p.is_file() and p.suffix in TEXT:
             t = p.read_text(errors="ignore")
             leaks = [user] if user in t else []
-            leaks += re.findall(r"[\w.+-]+@[\w-]+\.[\w.]+", t)       # any e-mail address
+            leaks += re.findall(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)*\.[A-Za-z]{2,}\b", t)   # an e-mail address, not python@3.14
             if leaks:
                 bad.append(f"{p.relative_to(root)}: {sorted(set(leaks))[:3]}")
     if bad:

@@ -1,0 +1,65 @@
+name: Share what you built
+description: Something you made with kiln, for the "Built with kiln" gallery on the site and in the README
+title: "Built with kiln: "
+labels: ["built-with-kiln"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing. The gallery shows people's work as they made it: your own pictures, credited
+        to you, linked to your project. Each entry is looked at before it goes up, so it may take a little while.
+  - type: input
+    id: project
+    attributes:
+      label: Project name
+      placeholder: Token Kingdom
+    validations:
+      required: true
+  - type: input
+    id: link
+    attributes:
+      label: Link to the project
+      description: Its site, store page or repository. Leave empty if it is not out yet; the card will link to your GitHub.
+      placeholder: https://
+  - type: input
+    id: credit
+    attributes:
+      label: How to credit you
+      description: Your GitHub handle by default; say so if you would rather another name.
+      placeholder: "@your-handle"
+    validations:
+      required: true
+  - type: textarea
+    id: pictures
+    attributes:
+      label: Pictures or a short clip
+      description: |
+        Drag them in here. One picture that shows the work well matters more than many. A clip of a few
+        seconds is welcome for animation. Blur anything that should not be public (names, personal data).
+    validations:
+      required: true
+  - type: textarea
+    id: how
+    attributes:
+      label: How kiln was used
+      description: One or two sentences, with numbers if you have them (how many models, what kiln did, what you did by hand).
+      placeholder: 22 buildings, one GLB per level, assembled by script through Blender MCP with kiln.
+    validations:
+      required: true
+  - type: textarea
+    id: third-party
+    attributes:
+      label: Third-party assets and their licences
+      description: Kits, textures or scans you built from, with their licence, so they are credited too. "None" is a fine answer.
+      placeholder: KayKit Medieval Hexagon Pack, Kay Lousberg, CC0
+    validations:
+      required: true
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: Permission
+      options:
+        - label: I made this, or I have the right to share these pictures and this work.
+          required: true
+        - label: blender-kiln may show these pictures, credited and linked as above, on its site and in its README.
+          required: true

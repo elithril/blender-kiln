@@ -18,6 +18,10 @@ on:
       - "plugin/tools/unimate.patch"
   workflow_dispatch:
 
+# read-only token: these jobs check the repository, they never write to it
+permissions:
+  contents: read
+
 jobs:
   drift:
     runs-on: ubuntu-latest

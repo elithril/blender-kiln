@@ -78,7 +78,8 @@ engines = [i.identifier for i in
            bpy.types.RenderSettings.bl_rna.properties["engine"].enum_items]
 docs = "\n".join(p.read_text() for p in
                  [ROOT / "SKILL.md"] + sorted((ROOT / "references").glob("*.md")))
-for ident in sorted(set(re.findall(r"\bBLENDER_[A-Z_]+\b", docs))):
+# Not followed by "=": `BLENDER_MCP_SAFE_MODE=1` is an environment variable, not an engine.
+for ident in sorted(set(re.findall(r"\bBLENDER_[A-Z_]+\b(?!=)", docs))):
     if ident not in engines:
         fail("engines", f"docs name render engine {ident}, which does not exist: {engines}")
 else:
@@ -115,7 +116,7 @@ for op_name, expected in TIERS.items():
     deform = sum(1 for b in rig.data.bones if b.use_deform)
     if deform != expected:
         fail("rigtiers", f"{op_name} now yields {deform} deform bones, "
-                         f"PHASE 5c in SKILL.md says {expected}")
+                         f"PHASE 5c (references/pipeline-rig-animate.md) says {expected}")
     else:
         ok(f"rigtiers: {op_name} = {deform} deform bones")
     # A fresh rig must still default to IK, or the documented trap is stale.
@@ -279,11 +280,49 @@ try:
 except Exception as e:
     fail("weld", f"the weld or pose-test code in the docs does not run: {e}")
 
+# ── 5b2. Automatic weights leave the eyelid bones out of the skin.
+# On the cat they handed 2,890 skin vertices to the two lid bones and a blink dragged the
+# skin 125 mm; on the dog the skull bent when the eye blinked. Run the documented function
+# on a synthetic head, and plain automatic weights for the other direction.
+def _lid_head():
+    reset()
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=0.1)
+    skin = bpy.context.object
+    ad = bpy.data.armatures.new("head"); arm = bpy.data.objects.new("head", ad)
+    bpy.context.scene.collection.objects.link(arm)
+    bpy.context.view_layer.objects.active = arm; bpy.ops.object.mode_set(mode='EDIT')
+    h = ad.edit_bones.new("Head"); h.head, h.tail = (0, 0, -0.1), (0, 0, 0.1)
+    for n, x in (("LeftEyelid", 0.035), ("RightEyelid", -0.035)):
+        b = ad.edit_bones.new(n); b.head, b.tail = (x, -0.07, 0.03), (x, -0.11, 0.03); b.parent = h
+    bpy.ops.object.mode_set(mode='OBJECT')
+    return skin, arm
+
+
+try:
+    skin, arm = _lid_head()
+    bpy.ops.object.select_all(action='DESELECT'); skin.select_set(True); arm.select_set(True)
+    bpy.context.view_layer.objects.active = arm; bpy.ops.object.parent_set(type='ARMATURE_AUTO')
+    idx = {g.index for g in skin.vertex_groups if "Eyelid" in g.name}
+    plain = sum(1 for v in skin.data.vertices if any(g.group in idx and g.weight > 0.01 for g in v.groups))
+    _doc_code("characters.md", "**Eyelid bones out of the solve.**", "Then each lid shell")
+    skin, arm = _lid_head()
+    left = weight_skin_without_lids(skin, arm)
+    if plain == 0:
+        fail("lids", "plain automatic weights gave the lid bones no skin: the case no longer shows the fault")
+    elif left:
+        fail("lids", f"the documented weighting leaves {left} skin vertices on a lid bone")
+    else:
+        ok(f"lids: automatic weights put {plain} of {len(skin.data.vertices)} head vertices on the lid bones; "
+           "the documented weighting, 0")
+except Exception as e:
+    fail("lids", f"the eyelid weighting in characters.md does not run: {e}")
+
 # ── 5c. The quadruped walk stays measured: legs bent, paws in step, loop exact.
 # tools/quadruped.py replaced text-to-motion for four-legged locomotion; its first
 # cycle locked the legs at 101% of their length and moved the hips forward instead of
 # up. Run it on a synthetic quadruped built here, so no asset is downloaded.
-def _synthetic_quadruped(path):
+def _synthetic_quadruped(path, extras=False):
+    """extras: ears, a three-bone tail and eyelids, for the secondary motion."""
     reset()
     def seg(a, b, r):
         d = b - a
@@ -304,6 +343,13 @@ def _synthetic_quadruped(path):
         add(f"{s}Arm", V(x, -0.18, 0.36), V(x, -0.20, 0.20), "Spine1")
         add(f"{s}ForeArm", V(x, -0.20, 0.20), V(x, -0.19, 0.07), f"{s}Arm")
         add(f"{s}Hand", V(x, -0.19, 0.07), V(x, -0.21, 0.01), f"{s}ForeArm", 0.025)
+    if extras:
+        for s, x in (("Left", 0.03), ("Right", -0.03)):
+            add(f"{s}Ear", V(x, -0.32, 0.58), V(x * 1.3, -0.31, 0.66), "Head", 0.012)
+            add(f"{s}Eyelid", V(x, -0.36, 0.56), V(x, -0.40, 0.56), "Head", 0.01)
+        add("Tail1", V(0, 0.25, 0.40), V(0, 0.33, 0.43), "Hips", 0.02)
+        add("Tail2", V(0, 0.33, 0.43), V(0, 0.41, 0.47), "Tail1", 0.018)
+        add("Tail3", V(0, 0.41, 0.47), V(0, 0.49, 0.52), "Tail2", 0.015)
     ad = bpy.data.armatures.new("quad"); arm = bpy.data.objects.new("quad", ad); bpy.context.scene.collection.objects.link(arm)
     bpy.context.view_layer.objects.active = arm; bpy.ops.object.mode_set(mode='EDIT')
     for n, a, b, p in bones:
@@ -321,23 +367,89 @@ def _synthetic_quadruped(path):
     bpy.ops.object.select_all(action='SELECT'); bpy.ops.export_scene.gltf(filepath=path, use_selection=True)
 
 
+def _glb_clip_end(path):
+    """The first clip's last key time, and how far its last key is from its first (q ~ -q)."""
+    import struct
+    b = open(path, "rb").read(); n = struct.unpack("<I", b[12:16])[0]; j = json.loads(b[20:20 + n]); data = b[28 + n:]
+    def acc(i):
+        a = j["accessors"][i]; k = {"SCALAR": 1, "VEC3": 3, "VEC4": 4}[a["type"]]
+        s = j["bufferViews"][a["bufferView"]].get("byteOffset", 0) + a.get("byteOffset", 0)
+        f = struct.unpack_from(f"<{a['count'] * k}f", data, s)
+        return [f[i * k:(i + 1) * k] for i in range(a["count"])]
+    last = seam = 0.0
+    for s in j["animations"][0]["samplers"]:
+        t_, o = acc(s["input"]), acc(s["output"])
+        if len(t_) > 2:
+            d = max(abs(x - y) for x, y in zip(o[-1], o[0]))
+            if len(o[0]) == 4:
+                d = min(d, max(abs(x + y) for x, y in zip(o[-1], o[0])))
+            last, seam = max(last, t_[-1][0]), max(seam, d)
+    return last, seam
+
+
 try:
     from mathutils import Vector
     sys.path.insert(0, str(ROOT / "tools"))
     import quadruped as Q
     _synthetic_quadruped("/tmp/_quad.glb")
-    sc, arm, m = Q.make("/tmp/_quad.glb", "/tmp", "walk", 32, Q.walk, 0.11, 0.15)
-    if m["frames"] != 32:
+    sc, arm, m, stride, crouch = Q.cycle("/tmp/_quad.glb", "/tmp", "walk", 32, Q.walk)   # the shipped defaults
+    bpy.ops.export_scene.gltf(filepath="/tmp/_quad_walk.glb", export_animations=True, export_force_sampling=True)
+    last, seam = _glb_clip_end("/tmp/_quad_walk.glb")
+    if abs(last - 32 / 24) > 1e-3 or seam > 1e-4:
+        fail("quadruped", f"the walk's GLB ends at {last:.4f} s, not 32/24, its last key {seam:.2g} off the first "
+                          "— three.js skips the step back to frame 0")
+    elif crouch > 0.10:
+        fail("quadruped", f"the walk lowers the hips {crouch:.0%} of a leg — 15% read as stalking; lower only as the legs need")
+    elif m["frames"] != 32:
         fail("quadruped", f"walk has {m['frames']} frames, not 32 — the seam repeats a frame")
     elif m["extension"] > Q.MAX_EXTENSION:
         fail("quadruped", f"legs straighten to {m['extension']:.0%} of their length (limit {Q.MAX_EXTENSION:.0%})")
     elif m["root_speed_m_s"] <= 0 or m["stance_speed_spread"] > 0.10:
         fail("quadruped", f"planted paws are out of step: speed {m['root_speed_m_s']} m/s, spread {m['stance_speed_spread']}")
     else:
-        ok(f"quadruped: walk on a synthetic rig — legs <= {m['extension']:.0%}, paws in step "
+        ok(f"quadruped: walk on a synthetic rig — legs <= {m['extension']:.0%}, hips -{crouch:.0%} of a leg, paws in step "
            f"({m['root_speed_m_s']} m/s, spread {m['stance_speed_spread']}), {m['frames']} frames")
 except Exception as e:
     fail("quadruped", f"tools/quadruped.py does not run on a template-named rig: {e}")
+
+# One GLB with every clip: it wrote one file per motion, and a site needs Walk and Idle in one.
+try:
+    keeps = [Q.keep_action(arm, "/tmp", "walk")]
+    sc, arm, _, _, _ = Q.cycle("/tmp/_quad.glb", "/tmp", "idle", 48, Q.idle)
+    keeps.append(Q.keep_action(arm, "/tmp", "idle"))
+    Q.export_all("/tmp/_quad.glb", keeps, Path("/tmp/_quad_animated.glb"))
+    import struct
+    b = open("/tmp/_quad_animated.glb", "rb").read(); n = struct.unpack("<I", b[12:16])[0]
+    j = json.loads(b[20:20 + n]); data = b[28 + n:]
+    moving = {}
+    for an in j.get("animations", []):
+        spread = 0.0
+        for s in an["samplers"]:
+            a_ = j["accessors"][s["output"]]; k = {"SCALAR": 1, "VEC3": 3, "VEC4": 4}[a_["type"]]
+            at = j["bufferViews"][a_["bufferView"]].get("byteOffset", 0) + a_.get("byteOffset", 0)
+            f = struct.unpack_from(f"<{a_['count'] * k}f", data, at)
+            if a_["count"] > 2:
+                spread = max(spread, max(max(f[i::k]) - min(f[i::k]) for i in range(k)))
+        moving[an["name"]] = round(spread, 3)
+    if sorted(moving) != ["idle", "walk"] or min(moving.values()) < 0.01:
+        fail("quadruped", f"the animated GLB's clips are {moving} — want idle and walk, each moving")
+    else:
+        ok(f"quadruped: one GLB, clips {moving} (largest key range)")
+except Exception as e:
+    fail("quadruped", f"one GLB with every clip: {e}")
+
+# Secondary motion: the ears trail the head, the tail's tip trails its root, the lids blink.
+# No session got them from quadruped.py; the cat's wrote them itself.
+try:
+    _synthetic_quadruped("/tmp/_quad_x.glb", extras=True)
+    sc, arm, mx, _, _ = Q.cycle("/tmp/_quad_x.glb", "/tmp", "idle", 48, Q.idle, blink=("X", 90))
+    if mx.get("ear_lag_frames", 0) < 2 or mx.get("tail_tip_lag_frames", 0) < 2 or mx.get("blinks") != 3:
+        fail("quadruped", f"secondary motion missing: {mx}")
+    else:
+        ok(f"quadruped: idle ears trail the head by {mx['ear_lag_frames']} frames, tail tip its root by "
+           f"{mx['tail_tip_lag_frames']}, {mx['blinks']} blinks")
+except Exception as e:
+    fail("quadruped", f"secondary motion: {e}")
 
 # ── 5d. Bone-parented parts survive skin-only pipelines; generated clips loop.
 # A Quaternius dragon's eyes hung off a bone by parenting: UniMate kept the skin and left
@@ -374,30 +486,53 @@ try:
         fail("posture", "the synthetic quadruped is not recognised as one — the UniMate routing guard would not fire")
     else:
         ok(f"rigidparts: a bone-parented part follows its bone once folded in ({g0:.3f} m either way); posture: quadruped recognised")
-    # loop: a joint swinging with a 13-frame period, starting at its peak, cut at 48 frames — mid-swing
+    # loop: a joint swinging with a 13-frame period, starting at its peak, cut at 48 frames — mid-swing.
+    # The root bone is tilted 12.5 degrees, like the Hunyuan3D humanoid's Hips, and walks forward
+    # while it bobs: drift removed on its own location channels, the looped hips rose 115.6 mm there.
     reset()
     ad = bpy.data.armatures.new("osc"); arm = bpy.data.objects.new("osc", ad); bpy.context.scene.collection.objects.link(arm)
     bpy.context.view_layer.objects.active = arm; bpy.ops.object.mode_set(mode='EDIT')
-    a = ad.edit_bones.new("Root"); a.head, a.tail = (0, 0, 0), (0, 0, 1)
+    tilt = math.radians(12.5)
+    a = ad.edit_bones.new("Root"); a.head, a.tail = (0, 0, 0.8), (0, -0.2 * math.sin(tilt), 0.8 + 0.2 * math.cos(tilt))
     b = ad.edit_bones.new("Arm"); b.head, b.tail = (0, 0, 1), (0, 0, 2); b.parent = a
     bpy.ops.object.mode_set(mode='OBJECT')
     bpy.ops.mesh.primitive_cube_add(size=0.2, location=(0, 0, 1.5)); m = bpy.context.object
     m.vertex_groups.new(name="Arm").add(list(range(8)), 1.0, 'REPLACE'); m.parent = arm; m.modifiers.new("A", 'ARMATURE').object = arm
     arm.animation_data_create(); pb = arm.pose.bones["Arm"]; pb.rotation_mode = 'QUATERNION'
+    rp = arm.pose.bones["Root"]; rp.rotation_mode = 'QUATERNION'
     from mathutils import Euler
+    to_bone = rp.bone.matrix_local.to_3x3().inverted()
     for f in range(48):
         pb.rotation_quaternion = Euler((0.6 * math.cos(2 * math.pi * f / 13), 0, 0)).to_quaternion(); pb.keyframe_insert("rotation_quaternion", frame=f)
-        arm.pose.bones["Root"].rotation_mode = 'QUATERNION'; arm.pose.bones["Root"].keyframe_insert("rotation_quaternion", frame=f)
+        rp.keyframe_insert("rotation_quaternion", frame=f)
+        rp.location = to_bone @ Vector((0, -0.02 * f, 0.02 * math.cos(4 * math.pi * f / 13))); rp.keyframe_insert("location", frame=f)
     bpy.ops.object.select_all(action='SELECT'); bpy.ops.export_scene.gltf(filepath="/tmp/_osc.glb", use_selection=True, export_animations=True)
     code, out = _blender_tool("motion_loop.py", "--out", "/tmp/_osc_loop.glb", "/tmp/_osc.glb")
     rec = [json.loads(l.split("motion_loop: ", 1)[1]) for l in out.splitlines() if l.startswith("motion_loop: {")]
+    def _root_heights(path):
+        reset(); bpy.ops.import_scene.gltf(filepath=path)
+        arm = next(o for o in bpy.data.objects if o.type == 'ARMATURE'); act = arm.animation_data.action
+        f0, f1 = (int(round(x)) for x in act.frame_range); z = []
+        for f in range(f0, f1 + 1):
+            bpy.context.scene.frame_set(f); z.append((arm.matrix_world @ arm.pose.bones["Root"].head).z)
+        return z, len(bpy.data.actions)
     if code or not rec:
         fail("loop", f"motion_loop.py found no loop in a clean 13-frame oscillation (exit {code})")
-    elif rec[0]["seam"] > 1.2 or rec[0]["seam_raw"] < 2:
-        fail("loop", f"seam {rec[0]['seam_raw']}x raw -> {rec[0]['seam']}x looped; expected a raw seam > 2x closing to <= 1.2x")
     else:
-        ok(f"loop: a 13-frame swing cut at 48 frames seams {rec[0]['seam_raw']}x raw, {rec[0]['seam']}x looped "
-           f"({rec[0]['frames']} frames kept)")
+        z_src, _ = _root_heights("/tmp/_osc.glb"); z_loop, n_act = _root_heights("/tmp/_osc_loop.glb")
+        last, closing = _glb_clip_end("/tmp/_osc_loop.glb")
+        rise = 1000 * max((max(z_loop) - max(z_src), min(z_loop) - min(z_src)), key=abs)   # peak or trough
+        if rec[0]["seam"] > 1.2 or rec[0]["seam_raw"] < 2:
+            fail("loop", f"seam {rec[0]['seam_raw']}x raw -> {rec[0]['seam']}x looped; expected a raw seam > 2x closing to <= 1.2x")
+        elif n_act != 1:
+            fail("loop", f"the looped GLB carries {n_act} actions — the source's came along, and an importer may make it active")
+        elif abs(rise) > 3:
+            fail("loop", f"the looped root's height is {rise:+.1f} mm off the source's — its drift was removed on tilted bone axes")
+        elif closing > 1e-4 or abs(last - rec[0]["frames"] / 24) > 1e-3:
+            fail("loop", f"the loop's last key ({last:.4f} s) is not frame {rec[0]['frames']} equal to frame 0 (off {closing:.2g})")
+        else:
+            ok(f"loop: a 13-frame swing cut at 48 frames seams {rec[0]['seam_raw']}x raw, {rec[0]['seam']}x looped "
+               f"({rec[0]['frames']} frames + a closing key, one action); a tilted travelling root keeps its height ({rise:+.1f} mm)")
 except Exception as e:
     fail("rigidparts/loop", f"bind_rigid_parts.py or motion_loop.py does not run: {e}")
 

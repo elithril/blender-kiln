@@ -2,6 +2,28 @@
 
 > Cross-reference: `references/uv-materials.md` for UV unwrapping, PBR channel packing, and the `create_pbr_material()` helper.
 
+## Contents
+- When This Applies
+- Strategy 1 — Geometric Analysis + PolyHaven (recommended for props)
+  - Step 1: Geometric Analysis
+  - Step 2: Create Material Slots
+  - Step 3: Visual Labeling
+  - Step 4: User Validation
+  - Step 5: PolyHaven Texture Search
+  - Step 6: Apply Textures
+  - Step 7: Iterate
+- Strategy 2 — Procedural Blender Materials
+  - Shader Recipes (Principled BSDF)
+  - GLTF Export Compatibility of Principled BSDF Properties
+  - GLTF Export Compatibility of TEXTURE MAPS
+- Strategy 2b — Bake Procedural to Image Textures
+  - When to use
+  - Bake Workflow
+  - After the bake
+- Strategy 3 — Assisted Manual Texturing
+- Strategy 4 — Try Another Space
+- Choosing a Strategy
+
 ## When This Applies
 - Mesh is white/untextured (AI generation without texture)
 - Materials are insufficient or missing
@@ -62,7 +84,7 @@ bm.to_mesh(obj.data)
 ```
 
 ### Step 3: Visual Labeling
-- `get_viewport_screenshot()` with colored zones visible
+- `look(mode="angles", target=[name])` with colored zones visible
 - Claude identifies zones: "red = seat (wood), blue = legs (wood), green = cushion (fabric)"
 - Propose material mapping to user
 
@@ -70,8 +92,10 @@ bm.to_mesh(obj.data)
 Present identified zones and proposed materials. User can adjust.
 
 ### Step 5: PolyHaven Texture Search
-Rule 23 first: `get_polyhaven_status()`. Then, for each zone:
-- `search_polyhaven_assets` with `asset_type='textures'` and material keywords
+Rule 23 first: `get_addon_status()` — `libraries.polyhaven` on (older servers:
+`get_polyhaven_status()`). Then, for each zone:
+- `search_assets(source="polyhaven", asset_type="textures", query=…, previews=5)` (older
+  servers: `search_polyhaven_assets` with `asset_type='textures'`)
 - Present ~5 options with links
 - User picks per zone
 
@@ -80,6 +104,14 @@ Rule 23 first: `get_polyhaven_status()`. Then, for each zone:
 **Use the addon's own tools — do not hand-build the node graph.**
 
 ```
+import_asset(source="polyhaven", id=..., asset_type="textures",
+             apply_to=[object_name], resolution="1k")
+    → mcp-for-blender ≥ 2.1.9: downloads the maps and builds the PBR material on
+      those objects in one call (without apply_to the material is made but unused,
+      and lost when the file is saved). Its node graph and the material's name were
+      not measured on this version: look at both before relying on them.
+
+Older servers, two calls:
 download_polyhaven_asset(asset_id=..., asset_type='textures',
                          resolution='1k', file_format='jpg')
     → imports every available map as a material
@@ -92,11 +124,11 @@ set_texture(object_name=..., texture_id=...)
 ```
 
 Hand-writing `ShaderNodeTexImage` chains reproduces a fraction of that and gets
-the colorspaces wrong more often than not. Only fall back to it if `set_texture`
-fails.
+the colorspaces wrong more often than not. Only fall back to it if the server's own
+call fails.
 
-**Then rename (rule 25).** `set_texture` names the material
-`<texture_id>_material_<object>`, which is not the `M_Type_Variant` convention:
+**Then rename (rule 25).** The server names the material after the texture (`set_texture`:
+`<texture_id>_material_<object>`), which is not the `M_Type_Variant` convention:
 
 ```python
 obj.data.materials[0].name = "M_Wood_Walnut"
@@ -230,7 +262,7 @@ survived**:
 | Normal (`nor_gl`) | ✅ | `normalTexture` |
 | **Ambient occlusion** | ❌ | glTF *has* an `occlusionTexture` slot, but Blender only fills it from an ARM-packed arrangement. A standalone AO map is dropped silently |
 | **Displacement / height** | ❌ | glTF has no displacement slot at all. Bake into the normal map or drop it deliberately |
-| **ARM (packed ORM)** | ❌ | Left unused by `set_texture`'s graph |
+| **ARM (packed ORM)** | ❌ | Left unused by `set_texture`'s graph (older servers; `import_asset`'s not measured) |
 | Metallic | ✅ | packed into `metallicRoughnessTexture` |
 
 Watch the exporter's own console output. This warning means information was lost:
@@ -293,7 +325,7 @@ def bake_channel(obj, channel_type, output_path, resolution=1024):
     # Ensure UVs exist
     if not obj.data.uv_layers:
         bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.uv.smart_project(angle_limit=66, island_margin=0.02)
+        bpy.ops.uv.smart_project(angle_limit=1.152, island_margin=0.02)   # radians: 66°
         bpy.ops.object.mode_set(mode='OBJECT')
     
     # Bake
@@ -326,7 +358,7 @@ def bake_channel(obj, channel_type, output_path, resolution=1024):
 1. Reconnect the baked images to the Principled BSDF inputs
 2. Remove the procedural nodes
 3. Re-run the material audit to confirm compatibility
-4. `get_viewport_screenshot()` to visually compare before/after
+4. `look()` to visually compare before/after (rule 2)
 
 ---
 

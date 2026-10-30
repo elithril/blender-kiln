@@ -1,0 +1,33 @@
+<template>
+  <style>
+    @font-face { font-family: "Sora"; font-weight: 400 700; src: url("assets/fonts/sora-latin.woff2") format("woff2"); }
+    /* the end card's world, so the film opens and closes on the forge */
+    #root { position: absolute; inset: 0; overflow: hidden; background: linear-gradient(180deg, #ecdfcd 0%, #e2d3bf 62%, #d6c4ab 100%); }
+    #op-lock { position: absolute; left: 0; right: 0; top: 300px; display: flex; align-items: center; justify-content: center; gap: 44px; }
+    #op-logo { width: 240px; height: 240px; }
+    #op-name { font: 700 120px/1 "Sora", sans-serif; letter-spacing: -0.02em; color: #2a1d14; clip-path: inset(0 100% 0 0); }
+    #op-out { margin-top: 14px; font: 700 56px/1 "Sora", sans-serif; letter-spacing: -0.015em; color: #6b5a4c; }
+    #op-out span { display: inline-block; opacity: 0; }
+    #op-out .hot { color: #e8742c; }
+    #op-meet { position: absolute; left: 0; right: 0; top: 700px; text-align: center; font: 400 44px/1 "Sora", sans-serif; color: #2a1d14; opacity: 0; }
+  </style>
+  <div id="root" data-composition-id="opener" data-width="1920" data-height="1080">
+    <div id="op-lock">
+      <img id="op-logo" src="assets/brand/blender-kiln-logo.png" alt="blender-kiln" />
+      <div><div id="op-name">blender-kiln</div><div id="op-out"><span class="hot">3.0</span> <span>is</span> <span>out.</span></div></div>
+    </div>
+    <div id="op-meet">Meet Kiln Studio.</div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo("#op-logo", { y: 220, scale: 0.7, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.75, ease: "expo.out" }, 0.1);
+      tl.fromTo("#op-name", { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.5, ease: "power3.out" }, 0.6);
+      tl.fromTo("#op-out span", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.16, stagger: 0.09 }, 1.05);
+      tl.fromTo("#op-meet", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.3 }, 1.75);
+      // into Studio: the card blurs away over the first Studio frame
+      tl.to("#root", { opacity: 0, filter: "blur(8px)", duration: 0.3, ease: "power2.in" }, 3.0);
+      window.__timelines["opener"] = tl;
+    })();
+  </script>
+</template>

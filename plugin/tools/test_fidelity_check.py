@@ -9,7 +9,11 @@ test writes its own tiny HDRI. Cases:
 
 - a model measured against its own render: IoU near 1, no shape gap;
 - the same model 20 % wider: the width gap is reported, and close to +20 %;
+- its lower body 14 % wider, a camera 15° above: told as the photo's perspective, last; with no
+  elevation, a shape gap (3.0's lantern narrowed its tubes for such a gap and lost 0.05 IoU);
 - a texture that is not loaded: refused, exit 1 — it would render black;
+- a reference with no transparency (a phone photo on its white table): refused, exit 1 —
+  measured as it was, a pumpkin scored 0.62 instead of 0.93, with exit 0;
 - a .blend: measured, with the warning that the shipped file is what counts;
 - --max-tris: a guide, not a cap — under twice the limit listed last and kept, past it a
   reduction proposed; silent below;
@@ -20,9 +24,13 @@ test writes its own tiny HDRI. Cases:
 - joints: a rod's flat end resting on a sphere is rendered up close (two views); a rod sunk
   into it, and a free one, are not;
 - --view and --azimuth on a 2 x 1 x 1 box: 2:1 from the front, 1:1 from the side or at 90°,
-  and 2.12:1 at 45° (2 cos 45° + sin 45°) — the 3/4 view most product photos are.
+  and 2.12:1 at 45° (2 cos 45° + sin 45°) — the 3/4 view most product photos are;
+- face details, on a vase with two dark eyes and a mouth: its own render matches them in
+  place; the same vase without them keeps its silhouette IoU but scores 0 and every detail
+  is reported missing; the face 3 cm lower is reported lower, by about that much, and still
+  matches once slid; a reference one stop brighter changes nothing.
 """
-import json, os, subprocess, sys, tempfile
+import hashlib, json, os, subprocess, sys, tempfile
 
 BLENDER = os.environ.get("BLENDER", "/Applications/Blender.app/Contents/MacOS/Blender")
 TOOL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fidelity_check.py")
@@ -50,6 +58,10 @@ img.pixels = [0.8, 0.8, 0.8, 1.0] * (16 * 8)
 img.filepath_raw = f"{d}/env.hdr"; img.file_format = "HDR"; img.save()
 vase(1.0); export(f"{d}/vase.glb"); bpy.ops.wm.save_as_mainfile(filepath=f"{d}/vase.blend")
 vase(1.2); export(f"{d}/vase_wide.glb")
+vase(1.0)
+for o in bpy.context.scene.objects:
+    if o.location.z < 0.2: o.scale.x = 1.14   # the lower body 14 % wider: a photo's perspective
+export(f"{d}/vase_foot.glb")
 # the reference: the vase's own silhouette, front, orthographic, alpha — as a photo would be
 vase(1.0)
 cam = bpy.data.objects.new("c", bpy.data.cameras.new("c")); bpy.context.scene.collection.objects.link(cam)
@@ -58,6 +70,10 @@ cam.location = (0, -2, 0.225); cam.rotation_euler = (math.pi / 2, 0, 0); bpy.con
 sc = bpy.context.scene; sc.render.engine = "BLENDER_WORKBENCH"; sc.render.film_transparent = True
 sc.render.resolution_x = sc.render.resolution_y = 512; sc.render.image_settings.color_mode = "RGBA"
 sc.render.filepath = f"{d}/ref.png"; bpy.ops.render.render(write_still=True)
+# the same vase photographed from 15 deg above (still orthographic: only the elevation differs)
+e = math.radians(15); cam.location = (0, -2 * math.cos(e), 0.225 + 2 * math.sin(e)); cam.rotation_euler = (math.pi / 2 - e, 0, 0)
+sc.render.filepath = f"{d}/ref_high.png"; bpy.ops.render.render(write_still=True)
+cam.location = (0, -2, 0.225); cam.rotation_euler = (math.pi / 2, 0, 0)
 # a model whose texture points nowhere
 fresh(); bpy.ops.mesh.primitive_cube_add(); o = bpy.context.object
 m = bpy.data.materials.new("lost"); m.use_nodes = True
@@ -125,9 +141,38 @@ def rods(name, z_bottom):
 rods("rod_resting", 0.1993)   # the UV sphere is faceted: 0.8 mm under its pole at 8 mm out
 rods("rod_sunk", 0.17)
 rods("rod_free", 0.25)
+# face details: a vase with two dark eyes and a mouth on its front (the pumpkin whose carved
+# face the silhouette could not see); the reference is its own Cycles render, then one stop
+# brighter; the models: the same, the vase alone, the face 3 cm lower
+def face_vase(name, dz=0.0, features=True):
+    vase(1.0)
+    if features:
+        dark = bpy.data.materials.new("dark"); dark.use_nodes = True
+        dark.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.02, 0.02, 0.02, 1)
+        for x, z, sx, sz in ((-0.045, 0.22, 0.03, 0.04), (0.045, 0.22, 0.03, 0.04), (0.0, 0.12, 0.1, 0.02)):
+            bpy.ops.mesh.primitive_cube_add(size=1, location=(x, -0.1, z + dz)); b = bpy.context.object
+            b.scale = (sx, 0.01, sz); b.data.materials.append(dark)
+    export(f"{d}/{name}.glb")
+face_vase("face"); face_vase("face_blank", features=False); face_vase("face_low", dz=-0.03)
+face_vase("face")
+w = bpy.data.worlds.new("w"); bpy.context.scene.world = w
+env = w.node_tree.nodes.new("ShaderNodeTexEnvironment"); env.image = bpy.data.images.load(f"{d}/env.hdr")
+w.node_tree.links.new(env.outputs["Color"], w.node_tree.nodes["Background"].inputs["Color"])
+cam = bpy.data.objects.new("c", bpy.data.cameras.new("c")); bpy.context.scene.collection.objects.link(cam)
+cam.data.type = "ORTHO"; cam.data.ortho_scale = 0.46; cam.location = (0, -2, 0.225); cam.rotation_euler = (math.pi / 2, 0, 0)
+sc = bpy.context.scene; sc.camera = cam; sc.render.engine = "CYCLES"; sc.cycles.samples = 16; sc.render.film_transparent = True
+sc.render.resolution_x = sc.render.resolution_y = 512; sc.render.image_settings.color_mode = "RGBA"
+sc.view_settings.view_transform = "Standard"; sc.render.filepath = f"{d}/ref_face.png"; bpy.ops.render.render(write_still=True)
+sc.view_settings.exposure = 1.0; sc.render.filepath = f"{d}/ref_face_bright.png"; bpy.ops.render.render(write_still=True)
 # a 2 x 1 x 1 box: 2 m along X, so front is 2:1 and left is 1:1
 fresh(); bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, 0.5)); bpy.context.object.scale = (2, 1, 1)
 bpy.ops.object.transform_apply(scale=True); export(f"{d}/box.glb")
+# the reference flattened on white, every pixel opaque — what a phone photo is
+im = bpy.data.images.load(f"{d}/ref.png"); w, h = im.size; px = list(im.pixels[:])
+for i in range(0, len(px), 4):
+    a = px[i + 3]; px[i:i + 4] = [c * a + (1 - a) for c in px[i:i + 3]] + [1.0]
+op = bpy.data.images.new("opaque", w, h, alpha=True); op.pixels = px
+op.filepath_raw = f"{d}/ref_opaque.png"; op.file_format = "PNG"; op.save()
 '''
 
 
@@ -155,10 +200,18 @@ with tempfile.TemporaryDirectory() as d:
     def check(name, ok, got):
         checks.append(ok); print(f"{'PASS' if ok else 'FAIL'}  {name}  ({got})")
 
-    _, same, _ = measure(d, f"{d}/vase.glb")
+    _, same, out = measure(d, f"{d}/vase.glb")
     shape_gaps = [g for g in same["gaps"] if g.startswith("band") and "width" in g]
     check("model vs its own render: IoU near 1", same["iou"] > 0.95, round(same["iou"], 3))
     check("model vs its own render: no shape gap", not shape_gaps, shape_gaps)
+    saved = json.load(open(f"{out}/fidelity.json"))
+    vase_hash = hashlib.sha1(open(f"{d}/vase.glb", "rb").read()).hexdigest()[:12]
+    check("fidelity.json: the printed measure, with the model's hash and the view",
+          saved["iou"] == same["iou"] and saved["model_hash"] == vase_hash and saved["view"] == "front",
+          (saved.get("model_hash"), vase_hash))
+    measure(d, f"{d}/vase.glb")
+    rounds = open(f"{out}/fidelity_log.jsonl").read().splitlines()
+    check("fidelity_log.jsonl: one line per run, kept across runs", len(rounds) == 2, len(rounds))
 
     _, wide, _ = measure(d, f"{d}/vase_wide.glb")
     body = [b for b in wide["shape"] if b["band"] >= 3]
@@ -166,8 +219,21 @@ with tempfile.TemporaryDirectory() as d:
     check("20 % wider: width gap reported", any("width +" in g for g in wide["gaps"]), wide["gaps"][:2])
     check("20 % wider: measured close to +20 %", 0.15 < mean_w < 0.25, round(mean_w, 3))
 
+    _, foot_high, _ = measure(d, f"{d}/vase_foot.glb", "--elevation", "15", ref="ref_high.png")
+    _, foot_flat, _ = measure(d, f"{d}/vase_foot.glb")
+    persp = [g for g in foot_high["gaps"] if "perspective" in g]
+    check("base 14 % wider, camera 15 deg above: told as perspective, listed last",
+          bool(persp) and foot_high["gaps"][-1] in persp and not any(g.startswith("band") and "check the overlay" in g
+                                                                     for g in foot_high["gaps"]), foot_high["gaps"][-2:])
+    check("the same base, no elevation given: a shape gap", any("check the overlay" in g for g in foot_flat["gaps"])
+          and not any("perspective" in g for g in foot_flat["gaps"]), foot_flat["gaps"][:2])
+
     r, _, _ = measure(d, f"{d}/lost.blend", check=False)
     check("unloaded texture: refused with exit 1", r.returncode == 1 and "textures not loaded" in (r.stdout + r.stderr),
+          r.returncode)
+
+    r, _, _ = measure(d, f"{d}/vase.glb", check=False, ref="ref_opaque.png")
+    check("opaque reference: refused with exit 1", r.returncode == 1 and "no transparent pixel" in (r.stdout + r.stderr),
           r.returncode)
 
     r, blend, _ = measure(d, f"{d}/vase.blend")
@@ -230,6 +296,26 @@ with tempfile.TemporaryDirectory() as d:
             "ys, xs = np.where(m); print('ASPECT', (np.ptp(xs) + 1) / (np.ptp(ys) + 1))\n")
         a = float(next(l for l in blender("--python", probe).stdout.splitlines() if l.startswith("ASPECT")).split()[1])
         check(f"{label}: 2x1x1 box silhouette {want:.2f}:1", abs(a - want) < 0.08, round(a, 2))
+
+    faces = {}
+    for name, ref in (("face", "ref_face.png"), ("face_blank", "ref_face.png"), ("face_low", "ref_face.png"),
+                      ("face", "ref_face_bright.png")):
+        _, r, _ = measure(d, f"{d}/{name}.glb", "--samples", "16", ref=ref)
+        faces[(name, ref)] = r
+    same, blank, low, bright = (faces[k] for k in faces)
+    fg = lambda r: [g for g in r["gaps"] if g.startswith("face")]
+    check("face: its own render matches the details in place", same["face"]["iou"] > 0.8 and max(map(abs, same["face"]["offset"])) < 0.02
+          and not fg(same), (round(same["face"]["iou"], 3), [round(v, 3) for v in same["face"]["offset"]], fg(same)))
+    check("face: without them the silhouette still matches", blank["iou"] > 0.95, round(blank["iou"], 3))
+    check("face: without them it scores 0, every detail missing",
+          blank["face"]["iou"] < 0.05 and sum("is missing" in g for g in fg(blank)) == len(blank["face"]["features"]) >= 3,
+          (round(blank["face"]["iou"], 3), len(fg(blank)), len(blank["face"]["features"])))
+    want = -0.03 / 0.45                                           # 3 cm on a 45 cm vase, as a share of its height
+    check("face: 3 cm lower is reported lower, by about that much", any("lower" in g for g in fg(low))
+          and abs(low["face"]["offset"][0] - want) < 0.015, (round(low["face"]["offset"][0], 3), round(want, 3)))
+    check("face: 3 cm lower still matches once slid", low["face"]["iou"] > 0.8, round(low["face"]["iou"], 3))
+    check("face: a reference one stop brighter changes nothing", abs(bright["face"]["iou"] - same["face"]["iou"]) < 0.05
+          and not fg(bright), (round(bright["face"]["iou"], 3), round(same["face"]["iou"], 3)))
 
 print(f"\n{sum(checks)}/{len(checks)}")
 sys.exit(0 if all(checks) else 1)

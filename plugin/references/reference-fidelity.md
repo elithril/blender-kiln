@@ -13,6 +13,15 @@ source of what this asset looks like.
 | lightweight, background prop | § 1 inventory, § 3 attachment, one § 5 measure of the shipped file |
 | balanced (default) | all of § 1–5, two correction rounds |
 | detailed, hero asset, character | all of it, plus the extra views of § 1, each measured |
+| **print** (any tier) | § 1–3 and § 5, rounds until the gaps stop closing — `print.md` § Like the photo, for print; § 4 shrinks to one flat colour per region (no texture reaches a print) |
+
+## Contents
+- 1. Inventory the details before modeling
+- 2. Measure the silhouette
+- 3. Check that every part is attached
+- 4. Materials from the reference, not from memory
+- 5. Review against the reference — measured, twice at most
+- 6. General rules
 
 ## 1. Inventory the details before modeling
 
@@ -38,10 +47,16 @@ small part reads as something it is not; a 3x crop shows what it is.
   measured in step 5 with its own `--view`. Parts no view shows are inventions: say which.
 - **The real size.** A photo has no scale. Ask; otherwise take the object's usual size
   and log it as an assumption. Never leave it implicit: an unstated size drifts by tens of
-  percent and nothing flags it.
+  percent and nothing flags it. **A ruler in the photo gives it** — but only for what stands
+  at the ruler's distance: a ruler laid in front of an object is nearer the lens, reads
+  larger, and makes the object read small (about 7 % on an object photographed close). Correct
+  for the depth between them, and log it.
 - **The camera's elevation.** A photo taken from above shows the top of every circle as an
   ellipse, whose minor/major ratio is sin θ. Read θ on the widest rim you can see; step 5
   renders at that elevation. Ignoring it inflates every stacked disc.
+  **No rim** (a fruit, a figure): any circle the object carries or rests on — its contact
+  with the table, a stem's foot, a base, a hat's brim. None at all: estimate it from how much
+  of the top shows, and log it as an estimate, not a measure.
 
 ## 2. Measure the silhouette
 
@@ -68,7 +83,9 @@ Materials and small details still come from the photo (§ 4).
 Without a template, the reference's own pixels give proportions in millimetres. For a turned object
 (bottle, vase, barrel, lamp) the profile is usable directly as a lathe profile.
 Take the **core width** — the opaque run through the vertical axis — not the full
-width, which measures whatever stands around the body (a handle, a bail).
+width, which measures whatever stands around the body (a handle, a bail). **Except where
+the axis row is see-through** (an opening on the front, the background through it): the
+core reads 0 there — take the full width on those rows, or interpolate from the rows around.
 
 ```python
 import bpy, numpy as np
@@ -91,8 +108,51 @@ def core_profile(path, height_m):
     return out[::-1]                                                      # bottom-up, as documented
 ```
 
-`height_m` is the one number you choose (brief, or a real-world size). An opaque
-reference needs a mask first — key out the corner colour.
+`height_m` is the one number you choose (brief, or a real-world size).
+
+**Cut the photo out.** A phone photo has no alpha, and `fidelity_check` refuses it: measured
+as it was, the table counted as object and a pumpkin scored 0.62 instead of 0.93. In order:
+
+1. **On macOS 14+: `swift tools/cutout.swift photo.jpg ref.png`** — the system's own subject
+   lifting, local and free. A white ghost on a white wall defeated the border fill below (the
+   lit object had the wall's colour, 197,206,219 against 197,209,218) and cost a session 40
+   points traced by hand; Vision cut it at 0.965 IoU against that outline, table removed.
+2. **Elsewhere, fill the background from the border** — what touches the edge and looks like
+   the corner is background; what is enclosed by the object (the background seen through a cut
+   eye) stays, to be read on a crop. It fails when the object shares the background's colour.
+3. **Last, trace the outline by hand** on gridded crops, and log it.
+
+Either way, look at the cut-out over a flat magenta before measuring with it. The border fill:
+
+```python
+import bpy, numpy as np
+from collections import deque
+im = bpy.data.images.load(PHOTO); w, h = im.size
+px = np.array(im.pixels[:], dtype=np.float32).reshape(h, w, 4)[::-1].copy()   # top row first
+corner = np.median(np.concatenate([px[:4, :4, :3].reshape(-1, 3), px[:4, -4:, :3].reshape(-1, 3)]), 0)
+near = np.abs(px[..., :3] - corner).max(-1) < 0.08         # loosen for a shadowed table, log it
+bg = np.zeros((h, w), bool)
+q = deque((y, x) for y in range(h) for x in (0, w - 1) if near[y, x])
+q.extend((y, x) for x in range(w) for y in (0, h - 1) if near[y, x])
+for y, x in q: bg[y, x] = True
+while q:
+    y, x = q.popleft()
+    for Y, X in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+        if 0 <= Y < h and 0 <= X < w and near[Y, X] and not bg[Y, X]:
+            bg[Y, X] = True; q.append((Y, X))
+px[..., 3] = ~bg
+out = bpy.data.images.new("ref", w, h, alpha=True); out.pixels = px[::-1].ravel().tolist()
+out.filepath_raw = REF_PNG; out.file_format = "PNG"; out.save()
+```
+
+Look at the cut-out before measuring with it: a shadow on the table that survives is a
+foot that does not exist.
+
+**Background seen THROUGH the object is not a view of its back.** The pumpkin's eyes showed
+the white behind it; a session read it as an opening at the back and cut one — a hole
+the user found and asked about. What the photo does not show is not added: no opening, no
+part, no ornament on a side nobody photographed. Keep the unseen side plain and closed, and
+list it in the log as unseen; the confirmation of [2] asks for the view.
 
 **Wires, handles and bails: trace their centre line and use it as the curve.** Guessed
 control points drift, and a guessed curve misses the shape of its peak:
@@ -144,13 +204,16 @@ def floating_parts(objs, tol=0.0005):
 
 Contact is not insertion: a part that touches another at one point passes this check
 and still reads wrong. **A part that joins another ENTERS it** — its end runs past the
-surface by at least its own radius, its section unchanged, with at most a small fillet
+surface by at least its own radius (into a hollow part, by the wall's thickness — deeper
+pierces the cavity), its section unchanged, with at most a small fillet
 where it meets. A foot, a flange or a saddle only when the photo shows one clearly, and
 then judged against the same crop of the photo. Never a flat cut resting on a curve, and
 never a tube widened or flattened to make a foot — it reads as a tongue. No distance can
 judge a joint, so `fidelity_check.py` renders every end of a long part that touches
 another — the two parts alone, flat grey, two views, in `review/joints/` — and **each one
-is looked at before the inventory line is ticked**.
+is looked at before the inventory line is ticked**. It needs the parts still separate: on a
+print, joined into one volume, it finds none (`joints: []`) — run it on the .blend saved
+before the union, or capture each joint by hand.
 
 ## 4. Materials from the reference, not from memory
 
@@ -326,9 +389,10 @@ UA="blender-kiln"                                   # Poly Haven ToS: a unique U
 curl -s -A "$UA" https://api.polyhaven.com/files/studio_small_09 \
   | python3 -c "import json,sys; print(json.load(sys.stdin)['hdri']['1k']['hdr']['url'])" \
   | xargs curl -s -A "$UA" -o studio_small_09_1k.hdr
-# --max-tris: the tier's top (rule 4: reported last, a reduction proposed only past 2x). --view/--elevation: where the photo's camera stood (§1)
+# --max-tris: the tier's top (rule 4: reported last, a reduction proposed only past 2x); omit it
+# for print — there is no tier, and two sessions were told each round to propose a reduction (rule 6) that print forbids. --view/--elevation: where the photo's camera stood (§1)
 blender -b --factory-startup --python-exit-code 1 --python <skill>/tools/fidelity_check.py -- \
-  --reference ref.png --model asset_final.glb --hdri studio_small_09_1k.hdr --out review/ \
+  --reference ref.png --model asset_final.glb --hdri studio_small_09_1k.hdr --out <name>/review/front/ \
   --max-tris 5000 --view front --elevation 12 --azimuth 0
 ```
 
@@ -352,20 +416,49 @@ modeling, never chosen by the score.** Picking the angle at which the model bein
 scores best is circular. With a close camera the ellipses open toward the bottom: take the
 rim nearest mid-height. Never rescale the whole model to raise the score.
 
-It writes `overlay.png` (red: reference only, cyan: model only) and `side_by_side.png`,
-and one `FIDELITY {...}` JSON line: silhouette IoU overall and per height band, width and
-core-width differences per band, and per band the material numbers — luminance,
-saturation, warmth (R−B), highlight share, texture detail, grain, value spread. Look at
+**`--out` goes in the asset's folder, one per view: `<name>/review/<view>/`.** Kiln Studio
+reads it there (`studio.md` § 3) and shows the user the measure, its rounds and the images
+beside the model.
+
+It writes `overlay.png` (red: reference only, cyan: model only), `face_overlay.png` (the
+same for the details inside the outline) and `side_by_side.png`, `fidelity.json` and a line
+per run in `fidelity_log.jsonl`, and prints one `FIDELITY {...}` JSON line: silhouette IoU
+overall and per height band, width and core-width differences per band, per band the
+material numbers — luminance, saturation, warmth (R−B), highlight share, texture detail,
+grain, value spread — and the `face` details. Look at
 both images, then fix the listed gaps.
 
 Read it with its limits:
 
 - **The reference's camera and light are unknown.** A frontal orthographic render cannot
-  match a slightly high perspective shot at the base; a few percent is noise.
+  match a high, close perspective shot at the base: the lower bands read wider than the photo
+  — on the bench lantern +7 to +12 % (ellipses 9° to 24°). The tool lists those as "expected
+  from the photo's perspective", last. **Never narrow the base or the side tubes to match
+  them:** widths measured with the elevation (§ 2) are the real ones. 2.2.0 left a +9 % base
+  and scored 0.900 against the real object; 3.0 pulled the tubes in for +12 % and scored 0.849.
 - **Know which numbers depend on the light.** Saturation, grain and shape hold across
   lights; **luminance and highlights depend on the photo's unknown light: alarms, never
   targets.** When luminance is off, fix the MATERIAL (dark metal, the palette), never the
   number — matching a photo's luminance under a different light proves nothing.
+- **The silhouette cannot see a face.** A carved eye is plugged by the back wall, ribs leave
+  the outline alone: three pumpkins whose openings went from wrong to right all scored
+  silhouette IoU 0.902. The `face` block measures the details inside the outline —
+  openings, cuts, dark marks: pixels much darker than a light field fitted to the body
+  (exposure and falloff cancel: ±1 EV or a hue turn moved it by 0.003), or background
+  seen through. The model's details are slid onto the photo's first: the slide is
+  `offset` (+ = higher, + = right; share of the height, and mm), a gap past 2 % — a camera
+  above lowers what is on the front, so check `--elevation` before moving features. Then
+  `iou`, `f` (within 2 % of the height), `chamfer_mm`, and each detail of the photo alone
+  in `features` (IoU, model area vs the photo's): missing, too small, too large or wrong
+  shape, and `extra` details the photo has not. Look at `face_overlay.png` (red: photo
+  only, cyan: model only, white: both). Its limits: it sees what is DARK or SEE-THROUGH,
+  not the cut's outline — a cut wall lit in the photo reads as body, so an opening traced
+  on its outer edge can read "too large"; thin lines (grooves, a 1-px slit) are dropped;
+  dark paint counts as a detail. Read the features and the overlay, not the total: a
+  broken mouth and a missing nose can score alike. **An alarm, not a judge**: on the
+  pumpkin it caught a face with no openings (0) and the whole face 4.9 mm too low, but it
+  did not rank the version a person found closest first on `iou` (only on `f`). Likeness
+  is decided by looking at `side_by_side.png` against the inventory, and by the user.
 - **Openwork is judged on proportions and by eye, not by silhouette.** A chair seen from
   the side is posts and rails: its silhouette overlaps little whatever its accuracy. For
   chairs, frames, lattices, cages: compare width, depth and height ratios and the heights
@@ -373,13 +466,26 @@ Read it with its limits:
 - **Thin parts wreck band IoU.** A 2-px wire off by one pixel scores very low. Use the
   overlay for wires, loops and handles; trust IoU for bodies.
 - **Two correction rounds at most — three measures in all**, each logged: what the numbers
-  said, what changed. **One material problem per round** — the largest the review shows —
+  said, what changed. **Except for print**: the cap stopped a pumpkin at round three with its
+  mouth still wrong, and a print is held in the hand — rounds go on until the gaps stop
+  closing (`print.md` § Like the photo, for print, rule 6). **One material problem per round** — the largest the review shows —
   then measure again; fixing several at once regresses the surface while every fix reads
   "applied". At 16–32 samples and 512 px bakes during review; 1024 only for the final bake.
+  The cap is on **reshaping to the photo** — a part's size or proportion changed to raise the score.
+  A part off-centre, out of line or sticking out is a build error, fixed at any round.
+  **After them, the review rounds go on** (`references/review-rounds.md`): three more on the surface,
+  the finish and the assembly, the shape measured again at the end — a drop of more than 0.01 is undone.
 - **Tick the inventory at the final review**, line by line, on an enlarged crop of the
   reference next to the same crop of the render: present and right, or not. Numbers see
   silhouettes and colours, not whether a detail is still there.
 - **Correct half-way.** A gap is a direction, not a dose. Move halfway, measure, finish.
+
+**After the last round, optionally: the photo's own markings.** When the photo carries text,
+a logo or precise wear the script copied as a lookalike, and the shape is final, propose
+`tools/photo_project.py` to the user — never run it silently (rule 6). It fits the photo's
+camera from this one and refuses under 0.95 IoU; it repaints only what the photo faces.
+Show its two other angles (`other_angles.png`) with the before/after: from the photo's view
+its numbers are partly circular. Method, options and measures: `photo-projection.md`.
 
 ## 6. General rules
 
@@ -389,6 +495,25 @@ Read it with its limits:
   not a closed ring on a clip.
 - **Round parts need enough sides to stay round up close**: 16 or more around a tube, 32
   or more round a turned body, shade smooth; the triangle range is a guide, not a cap.
+- **Shade smooth, and mark the sharp edges yourself — after the last boolean.** Smooth
+  shading across a cut blends the light over its edge, and the edge reads as a staircase:
+  a carved figure's eyes came out jagged in the preview while the geometry was straight.
+  `bpy.ops.object.shade_smooth_by_angle`, called headless through a `temp_override`,
+  marked **0** of 6,332 edges over 35° and raised nothing. Set them on the mesh, and count:
+
+  ```python
+  import bmesh, math
+  bm = bmesh.new(); bm.from_mesh(obj.data); n = 0
+  for e in bm.edges:
+      sharp = len(e.link_faces) == 2 and e.calc_face_angle(0) > math.radians(35)
+      e.smooth = not sharp; n += sharp
+  for f in bm.faces: f.smooth = True
+  bm.to_mesh(obj.data); bm.free()
+  print("sharp edges", n)        # 0 on an object with cuts is the bug, not a result
+  ```
+
+  Then look at **every cut edge up close** (a few cm of view, the shading on): the review
+  renders and the face measure are too coarse to show it.
 - **Curved glass needs ≥ 64 segments and one smooth shell**, or a semi-transparent shell
   shows its facets as bands, its back faces blending through.
 - **Fine detail is what reads as real.** Add it as **fine features** — scratches (thin

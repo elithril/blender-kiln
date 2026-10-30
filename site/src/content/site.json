@@ -1,10 +1,10 @@
 {
-  "_sources": "Every figure here comes from docs/benchmarks.md, README.md, CHANGELOG.md or the bench-results branch (summary.json of each run). Update this file on a release; no section hard-codes a number.",
+  "_sources": "Every figure here comes from docs/benchmarks.md, README.md, CHANGELOG.md or the bench-results branch (summary.json of each run). Update this file on a release; no section hard-codes a number. The lantern GLB on the site is kiln 3.0's shipped file (v18, with review rounds) with its textures resized to 512 px (gltf-transform resize, then Draco), 152 KB; shippedKB stays what kiln shipped (612 KB, 1024 px).",
   "release": {
-    "version": "2.2.0",
-    "date": "2026-10-07",
-    "title": "/kiln animate",
-    "url": "https://github.com/elithril/blender-kiln/releases/tag/v2.2.0"
+    "version": "3.0.0",
+    "date": "2026-10-30",
+    "title": "Kiln Studio, 3D printing, characters",
+    "url": "https://github.com/elithril/blender-kiln/releases/tag/v3.0.0"
   },
   "repo": "https://github.com/elithril/blender-kiln",
   "install": [
@@ -27,23 +27,23 @@
       "photoAlt": "Reference photo: an old brass hurricane lantern with a glass globe and a wire bail, cut out on transparent background",
       "photoCredit": "Poly Haven, Lantern_01 (CC0)",
       "glb": "/assets/glb/lantern.glb",
-      "score": 0.897,
+      "score": 0.888,
       "scoreBefore": 0.83,
-      "shippedKB": 229,
-      "rawMB": 3.94,
-      "tris": 12314,
-      "minutes": 21,
-      "costUSD": 5.04,
-      "run": "ref-kiln-v15",
+      "shippedKB": 612,
+      "rawMB": 5.08,
+      "tris": 9972,
+      "minutes": 48,
+      "costUSD": 13.19,
+      "run": "v300v18/ref-lantern",
       "truth": "/assets/glb/truth-lantern.glb",
       "truthYaw": 0,
       "fallback": "/assets/img/render-lantern.webp",
       "views": {
-        "front": 0.827,
-        "back": 0.827,
-        "left": 0.929,
-        "right": 0.929,
-        "top": 0.971
+        "front": 0.813,
+        "back": 0.813,
+        "left": 0.916,
+        "right": 0.916,
+        "top": 0.983
       },
       "scoredViews": [
         "front",
@@ -52,7 +52,7 @@
         "right",
         "top"
       ],
-      "heightVsTruth": 0.19
+      "heightVsTruth": 0.22
     },
     {
       "id": "ammo-box",
@@ -61,23 +61,23 @@
       "photoAlt": "Reference photo: a rusted olive-green ammunition box with a yellow stencil reading 200 CARTRIGES 7.62 MM",
       "photoCredit": "Poly Haven, ammo_box (CC0)",
       "glb": "/assets/glb/ammo-box.glb",
-      "score": 0.95,
+      "score": 0.948,
       "scoreBefore": 0.854,
-      "shippedKB": 187,
-      "rawMB": 5.54,
-      "tris": 3856,
-      "minutes": 15,
-      "costUSD": 3.8,
-      "run": "ref-kiln-v15gen",
+      "shippedKB": 493,
+      "rawMB": 7.57,
+      "tris": 6552,
+      "minutes": 46,
+      "costUSD": 9.17,
+      "run": "v300rounds6/ref-ammo-box",
       "truth": "/assets/glb/truth-ammo-box.glb",
       "truthYaw": 270,
       "fallback": "/assets/img/render-ammo-box.webp",
       "views": {
         "front": 0.958,
-        "back": 0.956,
-        "left": 0.945,
-        "right": 0.945,
-        "top": 0.949
+        "back": 0.958,
+        "left": 0.929,
+        "right": 0.927,
+        "top": 0.968
       },
       "scoredViews": [
         "front",
@@ -86,7 +86,7 @@
         "right",
         "top"
       ],
-      "heightVsTruth": 0.16
+      "heightVsTruth": 0.18
     },
     {
       "id": "chair",
@@ -95,30 +95,30 @@
       "photoAlt": "Reference photo: a tall gothic wooden chair with a pointed arch, a rose and tracery in its back",
       "photoCredit": "Poly Haven, WoodenChair_01 (CC0)",
       "glb": "/assets/glb/chair.glb",
-      "score": 0.75,
+      "score": 0.729,
       "scoreBefore": 0.445,
-      "shippedKB": 239,
-      "rawMB": null,
-      "tris": 9908,
-      "minutes": 21,
-      "costUSD": 6.13,
-      "run": "ref-kiln-v15gen",
+      "shippedKB": 505,
+      "rawMB": 7.6,
+      "tris": 9984,
+      "minutes": 51,
+      "costUSD": 14.39,
+      "run": "v300rounds5-ahujasid/ref-chair",
       "truth": "/assets/glb/truth-chair.glb",
-      "truthYaw": 0,
+      "truthYaw": 180,
       "fallback": "/assets/img/render-chair.webp",
       "views": {
-        "front": 0.696,
-        "back": 0.696,
-        "left": 0.462,
-        "right": 0.462,
-        "top": 0.859
+        "front": 0.658,
+        "back": 0.658,
+        "left": 0.337,
+        "right": 0.337,
+        "top": 0.871
       },
       "scoredViews": [
         "front",
         "back",
         "top"
       ],
-      "heightVsTruth": -0.29
+      "heightVsTruth": -0.28
     }
   ],
   "scoreNote": "Silhouette overlap with the real object, 1 = identical. Each view is cropped and scaled to the same height, then compared.",
@@ -127,7 +127,7 @@
     "blender": "Blender 5.2.2",
     "runsPerBrief": 1
   },
-  "_gtSource": "views, yaw and heightVsTruth: bench/gt_compare.py re-run on 2026-10-07 on the shipped GLBs against the Poly Haven truth; it reproduces the published means exactly (0.897, 0.950, 0.750).",
+  "_gtSource": "views, yaw and heightVsTruth: bench/gt_compare.py against the Poly Haven truth — the lantern on v18, kiln 3.0 with review rounds (label v300v18, 2026-10-29: 0.888; the 3.0 bench had 0.885); the ammo box and the chair on later runs of 3.0 with review rounds, one run each (v300rounds6 2026-10-29: 0.948; v300rounds5-ahujasid 2026-10-28: 0.729), where the bench had 0.936 and 0.720. scoreBefore: v1, before 2.0's photo method (docs/benchmarks.md § 3).",
   "scoreBeforeLabel": "before 2.0's photo method",
   "costNote": "API-equivalent",
   "requirements": "Needs Blender 4.4+ with a Blender MCP server running.",
@@ -205,10 +205,10 @@
     }
   },
   "lanterns": {
-    "headline": "Fifteen lanterns. Five turning points.",
-    "lede": "One photo and the same brief, fifteen times, each version the skill after the previous one's findings, scored against the real lantern it never saw. The curve is all fifteen; the stops are where something changed.",
-    "note": "v1 to v8 and v8 to v15 come from two bench sheets rendered under the same studio light and camera; the shape score is measured the same way for all. One run per version: a few hundredths are not significant.",
-    "source": "bench-results: lantern-iterations/README.md and sheets; docs/benchmarks.md",
+    "headline": "Eighteen lanterns. Seven turning points.",
+    "lede": "One photo and the same brief, eighteen times, each version the skill after the previous one's findings, scored against the real lantern it never saw. The curve is all eighteen; the stops are where something changed.",
+    "note": "v1 to v8 and v8 to v15 come from two bench sheets rendered under the same studio light and camera; v16 and v17 are the released 2.2.0 and 3.0 on the 3.0 bench; v18 is 3.0 with its review rounds, run after. The shape score is measured the same way for all. One run per version: a few hundredths are not significant. 3.0 with a TRELLIS.2 template scores 0.917, finishing the TRELLIS.2 mesh 0.946 (docs/benchmarks.md).",
+    "source": "bench-results: lantern-iterations/README.md and sheets; the 3.0 bench (labels v220-mcp222-ahujasid, v300final-ahujasid, v300v18); docs/benchmarks.md",
     "photo": "/assets/img/lantern/photo.webp",
     "truth": "/assets/img/lantern/truth.webp",
     "versions": [
@@ -361,6 +361,36 @@
         "result": "The tank has matter. Brass has no scan, so the frame came out a second tone.",
         "contaminated": false,
         "img": "/assets/img/lantern/v15.webp"
+      },
+      {
+        "v": 16,
+        "score": 0.9,
+        "height": 0.3,
+        "cost": 6.61,
+        "change": "Release 2.2.0, run again on the 3.0 bench.",
+        "result": "Level with v15; the height drifts again.",
+        "contaminated": false,
+        "img": null
+      },
+      {
+        "v": 17,
+        "score": 0.885,
+        "height": 0.21,
+        "cost": 6.04,
+        "change": "Release 3.0: the photo's perspective is never corrected.",
+        "result": "Posts narrowed to fit the photo scored 0.849; read as perspective, 0.885.",
+        "contaminated": false,
+        "img": "/assets/img/lantern/v17.webp"
+      },
+      {
+        "v": 18,
+        "score": 0.888,
+        "height": 0.22,
+        "cost": 13.19,
+        "change": "Release 3.0 with review rounds: a fresh reviewer each round, ending on two clean readings.",
+        "result": "Shape level with v17; the patina and the parts read closer to the photo. Eight rounds, the cap: the reviewers swung on the tone.",
+        "contaminated": false,
+        "img": "/assets/img/lantern/v18.webp"
       }
     ],
     "more": {
@@ -372,7 +402,9 @@
       4,
       6,
       12,
-      15
+      15,
+      17,
+      18
     ],
     "tradeoff": {
       "headline": "Close, not identical, on purpose.",
@@ -393,7 +425,34 @@
     "headline": "It moves, routed by subject.",
     "lede": "No single animation method held up across a cat, a villager and a desk lamp, so kiln picks the route from the subject, and shows every clip before exporting.",
     "since": "2.1, one command since 2.2",
+    "sinceLabel": "New in 3.0: a learned auto-rig and 22 ready-made moves",
     "routes": [
+      {
+        "subject": "A character of your own, rigged",
+        "route": "autorig, then presets.py: Kimodo moves retargeted to its bones",
+        "detail": "kiln's mascot: a walk with its feet locked and flat on the floor, and an idle with blinks. Its hammer was made bigger in Kiln Studio.",
+        "clips": [
+          {
+            "src": "/assets/img/animate/kiln-smith-walk.webp",
+            "still": "/assets/img/animate/kiln-smith-walk-still.webp",
+            "alt": "kiln's mascot, a young smith with goggles and a hammer, walking, looped",
+            "label": "kiln's mascot, walk",
+            "bench": false,
+            "glb": "/assets/glb/anim/kiln-smith.glb",
+            "clip": "walk_loop"
+          },
+          {
+            "src": "/assets/img/animate/kiln-smith-idle.webp",
+            "still": "/assets/img/animate/kiln-smith-idle-still.webp",
+            "alt": "kiln's mascot idling: breathing, blinking, the hammer in hand",
+            "label": "kiln's mascot, idle",
+            "bench": false,
+            "glb": "/assets/glb/anim/kiln-smith.glb",
+            "clip": "idle"
+          }
+        ],
+        "command": "/kiln animate kiln-smith.glb walk, idle"
+      },
       {
         "subject": "Biped or winged, from a sentence",
         "route": "UniMate text-to-motion, looped by motion_loop.py",
@@ -534,5 +593,226 @@
       "url": "https://arxiv.org/abs/2606.01057"
     },
     "credits": "Reference photos and real objects: Poly Haven (CC0). The forge, the three rebuilt objects and every animated model on this page were made with kiln."
+  },
+  "studio": {
+    "headline": "Every model, one page. Claude at hand.",
+    "lede": "Kiln Studio is a local page with every model in your project: turn it, check it, compare it with the last version, export it for games and AR, see it on your iPhone. Pin a note where something is wrong and Claude fixes it in its own Blender. And Claude Code, in your terminal, sees the model you have open.",
+    "since": "3.0",
+    "video": "/assets/video/kiln-studio-session.mp4",
+    "poster": "/assets/img/studio-poster.webp",
+    "alt": "Kiln Studio, new in blender-kiln 3.0: an ammo box in clay, normals and wireframe, its checks and its AR QR code; then a note pinned on the mascot's hammer, Claude scaling the hammer in its own Blender, the note coming back addressed, the mascot walking with the bigger hammer, and Claude Code in the terminal.",
+    "points": [
+      {
+        "title": "Look and check",
+        "detail": "Clay, normals, UVs, wireframe, real sizes, animation clips, the previous version beside this one, and a Checks tab that reads the file in plain words."
+      },
+      {
+        "title": "Pin a note, Claude fixes it",
+        "detail": "The note keeps the spot, the part and the camera. Claude works in its own Blender, never yours, and replies on the note with a before and after."
+      },
+      {
+        "title": "Export and see it on your phone",
+        "detail": "Game and AR files made in seconds, without Claude, and the model in AR on your iPhone through a QR code."
+      },
+      {
+        "title": "From your terminal too",
+        "detail": "Its MCP lets Claude Code see the model open in Studio: say \"fix this\" and it knows what you are looking at, and it can drive the page."
+      }
+    ],
+    "command": "/kiln studio",
+    "disclosure": "The film is a real session, re-cut: every screen is Studio's own, captured, the opening on four kiln 3.0 models and the note on the mascot; Claude's views are the ones it looked at; the hammer's change is the real before and after meshes. Only the moves are re-played. 4 minutes of work, 42 turns, shown 17 times faster.",
+    "sinceLabel": "New in 3.0: Kiln Studio and its MCP",
+    "chapters": [
+      {
+        "label": "Studio",
+        "t": 0
+      },
+      {
+        "label": "Pin a note",
+        "t": 15
+      },
+      {
+        "label": "Claude works",
+        "t": 27.4
+      },
+      {
+        "label": "Before/after",
+        "t": 42.2
+      },
+      {
+        "label": "It walks",
+        "t": 48
+      },
+      {
+        "label": "Terminal",
+        "t": 52.4
+      }
+    ]
+  },
+  "built": {
+    "headline": "Built with kiln.",
+    "projects": [
+      {
+        "title": "Token Kingdom",
+        "link": "https://token-kingdom.com",
+        "linkLabel": "token-kingdom.com",
+        "github": "MartySalade",
+        "media": "/assets/img/built/token-kingdom.webp",
+        "alt": "Eighteen low-poly medieval buildings from Token Kingdom: keep, temple, clock tower, market, windmill, gold mine and more, on green",
+        "how": "22 buildings, one GLB per level, 101 in all, assembled by script through Blender MCP with kiln.",
+        "credit": "Pieces: KayKit Medieval Hexagon Pack, Kay Lousberg, CC0.",
+        "fit": "contain",
+        "ground": "#1b1c22",
+        "mark": [
+          "101",
+          "GLB"
+        ]
+      },
+      {
+        "title": "My Little Workout",
+        "link": "https://mylittleworkout.com/",
+        "linkLabel": "mylittleworkout.com",
+        "github": "QuegoFreki",
+        "media": "/assets/img/built/my-little-workout.webp",
+        "video": "/assets/video/my-little-workout.mp4",
+        "alt": "Four of My Little Workout's exercise animations: burpee, dips, muscle-up and nordic curl",
+        "how": "112 exercises, illustrated and animated by headless Blender scripts with kiln.",
+        "credit": "",
+        "mark": [
+          "112",
+          "MOVES"
+        ]
+      },
+      {
+        "title": "Zeus Incremental FPS: Olympus",
+        "link": "",
+        "linkLabel": "",
+        "github": "MushkyQT",
+        "media": "/assets/img/built/olympus.webp",
+        "alt": "Low-poly white and gold Olympus models: statues of the gods, a throne, braziers, a vase",
+        "how": "25 game-ready models for the game's Olympus, temple, statues of the gods and throne, with the Blender source.",
+        "credit": "",
+        "mark": [
+          "25",
+          "MODELS"
+        ]
+      },
+      {
+        "title": "Imprint",
+        "link": "",
+        "linkLabel": "",
+        "github": "MushkyQT",
+        "pixel": true,
+        "media": "/assets/img/built/imprint.webp",
+        "alt": "A pixel-art office in the game Imprint, with the wind-up ink-sweeper made with kiln on the carpet",
+        "how": "The ink-sweeper, the dart and the paper plane: modelled in 3D with kiln, rendered at 8x, then turned into the game's pixel-art sprites.",
+        "credit": "",
+        "mark": [
+          "8×",
+          "PIXEL"
+        ]
+      }
+    ],
+    "note": "Projects not yet released link to their author.",
+    "share": {
+      "label": "Built something with kiln? Share it",
+      "url": "https://github.com/elithril/blender-kiln/issues/new?template=share-what-you-built.yml"
+    }
+  },
+  "print": {
+    "headline": "Made to print. Printed.",
+    "lede": "Say it will be printed, with a height and your printer's colours, and kiln models for the printer from the first primitive: closed solids at size, walls thick enough, a flat base, parts that fit together, one file per colour.",
+    "sinceLabel": "New in 3.0: print mode",
+    "objects": [
+      {
+        "name": "Dutch windmill",
+        "meta": "2 parts, 90 mm",
+        "note": "The body upright, the lattice sails printed flat beside it.",
+        "views": [
+          {
+            "label": "Printed",
+            "src": "/assets/img/print/windmill-photo.webp",
+            "alt": "The windmill printed in white PLA, its lattice sails on the cap, on a desk"
+          },
+          {
+            "label": "Modelled",
+            "src": "/assets/img/print/windmill-model.webp",
+            "alt": "kiln's preview of the windmill: red brick body, green cap, wooden gallery, grey sails"
+          }
+        ]
+      },
+      {
+        "name": "The forge of the logo",
+        "meta": "3 parts, 70 mm",
+        "note": "Ring, body and flame, printed apart and stacked.",
+        "views": [
+          {
+            "label": "Printed",
+            "src": "/assets/img/print/forge-photo.webp",
+            "alt": "The forge printed in white PLA: the faceted stone body, the ring and the flame stacked"
+          },
+          {
+            "label": "Modelled",
+            "src": "/assets/img/print/forge-model.webp",
+            "alt": "kiln's preview of the forge: slate stones, an orange flame and its glow"
+          }
+        ]
+      },
+      {
+        "name": "Lighthouse",
+        "meta": "1 part, 50 mm",
+        "note": "From a one-line brief, the smallest of the four.",
+        "views": [
+          {
+            "label": "Printed",
+            "src": "/assets/img/print/lighthouse-photo.webp",
+            "alt": "The lighthouse printed in white PLA, 50 mm tall"
+          },
+          {
+            "label": "Modelled",
+            "src": "/assets/img/print/lighthouse-model.webp",
+            "alt": "kiln's preview of the lighthouse: white tower, red bands and lantern roof, black gallery"
+          }
+        ]
+      },
+      {
+        "name": "Art Deco box",
+        "meta": "2 parts, 62 mm across",
+        "note": "The bayonet lid turns, locks and holds with the box upside down.",
+        "views": [
+          {
+            "label": "Printed",
+            "src": "/assets/img/print/box-photo.webp",
+            "alt": "The Art Deco box printed in white PLA, closed, its sunburst relief all round"
+          },
+          {
+            "label": "Open",
+            "src": "/assets/img/print/box-open-photo.webp",
+            "alt": "The same box open, the bayonet lid lying against it, its lugs visible"
+          },
+          {
+            "label": "Modelled",
+            "src": "/assets/img/print/box-model.webp",
+            "alt": "kiln's preview of the box: navy body with the relief, a gold stepped lid"
+          }
+        ]
+      }
+    ],
+    "points": [
+      {
+        "title": "Checked before you slice",
+        "body": "print_check on every STL: open edges, walls, overhangs, floating parts, the smallest scale it survives in the slicer. PrusaSlicer reads it as a second opinion."
+      },
+      {
+        "title": "Both bench prints pass",
+        "body": "kiln 3.0 passed both print briefs of the bench; 2.2.0 had passed one of the two."
+      },
+      {
+        "title": "Printed as exported",
+        "body": "These four, on a Bambu Lab P1S in PLA, 0.2 mm layers, from the files kiln wrote, unchanged."
+      }
+    ],
+    "command": "/kiln A 90 mm windmill for my FDM printer",
+    "disclosure": "Photos of the real prints, cropped; beside them, the preview kiln rendered with the files. Nothing was sanded, filled or painted."
   }
 }

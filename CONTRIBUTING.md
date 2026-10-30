@@ -12,6 +12,7 @@ of it: **claims must be measured, not reasoned.**
 - [Pull requests](#pull-requests)
 - [Adding or changing an iron rule](#adding-or-changing-an-iron-rule)
 - [Reporting a bug](#reporting-a-bug)
+- [Sharing what you built](#sharing-what-you-built)
 - [Use of AI](#use-of-ai)
 - [Questions](#questions)
 - [Licence](#licence)
@@ -45,9 +46,10 @@ Concrete gaps, roughly in order of value:
   Sketchfab sourcing. The first two consume credits and the third needs an API
   key, which is why they are untested — if you have access, running them once and
   reporting what actually happens is the most useful thing you can do here.
-- **Token cost.** `plugin/SKILL.md` is around 15.7k tokens on invoke, up 50% over the
-  audit. The measured tables it now carries could move into `plugin/references/`, where
-  loading is lazy, without losing the decisions.
+- **Token cost.** `plugin/SKILL.md` is a router of ~440 lines (~6k tokens on invoke, down
+  from ~19k): the commands, the iron rules and each phase's gates, the detail in
+  `plugin/references/`, read when the phase starts. Keep it that way — a new rule or a
+  measured table goes in the phase's reference, the router only says when to read it.
 - **The FK/IK, twist-bone and facial-rigging sections** of
   `plugin/references/characters.md` need an actual animated character and a human eye on
   the deformation. A synthetic rig cannot judge them.
@@ -60,8 +62,8 @@ Concrete gaps, roughly in order of value:
 Required to work on the skill itself:
 
 - **Blender 4.x+** (developed against 5.0, CI runs 5.2 LTS) with the
-  [Blender MCP](https://github.com/ahujasid/blender-mcp) addon. Install the addon
-  with `uvx blender-mcp install-addon` — `addon_utils.enable()` is not enough, it
+  [Blender MCP](https://github.com/ahujasid/mcp-for-blender) addon. Install the addon
+  with `uvx mcp-for-blender install-addon` — `addon_utils.enable()` is not enough, it
   leaves property groups incomplete and failures name nothing relevant.
 - **Python 3.10+** for `plugin/tools/`. No dependencies.
 
@@ -135,6 +137,25 @@ Two things worth including that are easy to overlook:
 - **`get_addon_status()`**, which reports whether the MCP addon is behind the
   server. An outdated addon is missing commands, and the resulting errors name
   nothing relevant to the real cause.
+
+## Sharing what you built
+
+Made something with kiln? Open a [Share what you built](https://github.com/elithril/blender-kiln/issues/new?template=share-what-you-built.yml)
+issue: your pictures, a link, how kiln was used, the third-party assets and their licences. It goes on
+the site's "Built with kiln" track and in the README once it has been looked at, shown as you made
+it and credited to you.
+
+For the maintainer, an accepted entry is:
+
+1. Its picture in `site/public/assets/img/built/<project>.webp` (a clip, if any, in
+   `site/public/assets/video/`), with a `.json` beside it that says where it came from (the issue).
+2. An entry in `site.built.projects` of `site/src/content/site.json`: `title`, `link` and `linkLabel`
+   (empty when it is not out yet: the plate links to the author's GitHub), `github`, `media`, `alt`,
+   `how` and `credit` from the issue, and `mark`, the maker's mark on the plate: a figure from `how` and
+   its unit, such as `["101", "GLB"]`. `fit: "contain"` and `ground` for a picture that must not be cropped.
+3. A row in the README's [Built with kiln](README.md#built-with-kiln) table: the author's GitHub avatar,
+   the title linked, the handle, `how` and `credit`.
+4. A reply on the issue with the link, then close it.
 
 ## Use of AI
 

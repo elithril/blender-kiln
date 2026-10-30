@@ -138,8 +138,14 @@ for i, line in enumerate(README.read_text().split("\n"), 1):
                               f"but rule {n} reads {body[:60]!r}")
 
 _rd = README.read_text()
-_sec = _rd[_rd.find("## Iron rules"):]
-_sec = _sec[:_sec.find("\n## ", 4)] if "\n## " in _sec[4:] else _sec
+# A heading, or a folded <details> block whose summary names it (README 3.0 folds its reference).
+_m = re.search(r"^## Iron rules\n|<summary><b>Iron rules</b></summary>", _rd, re.M)
+if not _m:
+    fail("semantics", "README.md has no Iron rules section (a `## Iron rules` heading or a <details> "
+                      "block summarised `Iron rules`): the key-rules checks would check nothing")
+_sec = _rd[_m.start():] if _m else ""
+_ends = [i for i in (_sec.find("\n## ", 4), _sec.find("</details>")) if i > 0]
+_sec = _sec[:min(_ends)] if _ends else _sec
 if re.search(r"^\d+\. ", _sec, re.M):
     fail("semantics", "README.md § Iron rules uses an ordered list — Markdown renumbers it "
                       "1, 2, 3 whatever the rule numbers; write '- **Rule N** — …'")
@@ -166,6 +172,17 @@ for m in re.finditer(r"\| `(?:plugin/)?references/([\w.-]+)` \|[^|]+\| ~(\d+) \|
     actual = len(ref.read_text().split("\n"))
     if abs(actual - claimed) / max(claimed, 1) > 0.15:
         fail("counts", f"references/{name}: README says ~{claimed}, actual {actual}")
+
+# The tools' rows drifted the same way, unchecked: fidelity_check.py said ~245 at 685 lines.
+for m in re.finditer(r"\| `plugin/tools/([\w.-]+)` \|[^|]+\| ~(\d+) \|", README.read_text()):
+    name, claimed = m.group(1), int(m.group(2))
+    tool = PLUGIN / "tools" / name
+    if not tool.exists():
+        fail("counts", f"README lists tools/{name}, which does not exist")
+        continue
+    actual = len(tool.read_text().split("\n"))
+    if abs(actual - claimed) / max(claimed, 1) > 0.15:
+        fail("counts", f"tools/{name}: README says ~{claimed}, actual {actual}")
 
 m = re.search(r"\*\*Total: ~([\d,]+) lines\*\*", README.read_text())
 if m:
@@ -216,7 +233,7 @@ else:
 # existed nowhere, and outside the plugin directory besides.
 for doc in DOCS:
     base = REPO if doc == README else PLUGIN
-    for m in re.finditer(r"`((?:\.\./|plugin/|references/|examples/|tools/|docs/)[\w./-]+\.\w+)`", doc.read_text()):
+    for m in re.finditer(r"`((?:\.\./|plugin/|references/|examples/|tools/|studio/|docs/)[\w./-]+\.\w+)`", doc.read_text()):
         rel = m.group(1)
         if rel.startswith("../"):
             fail("paths", f"{doc.name} references {rel} — outside the plugin directory")

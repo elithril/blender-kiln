@@ -1,0 +1,199 @@
+# kiln's patch for SkinTokens (github.com/VAST-AI-Research/SkinTokens, MIT) at commit
+# 273b691d35989d71cd17ff2895fdc735097b92d1: runs on Apple Silicon (MPS) and on NVIDIA
+# without flash-attn. Upstream hard-codes "cuda" as the device and autocast target, imports
+# flash-attn with no fallback and asks transformers for flash_attention_2; each edit keeps
+# upstream's behaviour where that holds and falls back to PyTorch's SDPA where it does not.
+#
+# These edits are the ones made by scripts/patch_skintokens_portable.py of image-to-3dlab
+# (AssetFurnace), Copyright 2026 Bingeljell and image-to-3dlab contributors,
+# https://github.com/Bingeljell/image-to-3dlab, licensed under the Apache License 2.0
+# (http://www.apache.org/licenses/LICENSE-2.0). Changed here: written out as one git diff
+# against the pinned commit, applied by tools/autorig.py setup. See plugin/NOTICE.
+#
+# git apply ignores everything above the first "diff --git" line.
+
+diff --git a/demo.py b/demo.py
+index a2cb3a2..e6f92ad 100755
+--- a/demo.py
++++ b/demo.py
+@@ -11,6 +11,7 @@ from typing import List, Iterable, Optional, Tuple
+ 
+ import gradio as gr
+ import requests
++import torch
+ from torch import Tensor
+ from tqdm import tqdm
+ 
+@@ -169,7 +170,7 @@ def run_rig(
+     dataset_config = DatasetConfig.parse(
+         shuffle=False,
+         batch_size=1,
+-        num_workers=1,
++        num_workers=1 if torch.cuda.is_available() else 0,
+         pin_memory=True,
+         persistent_workers=False,
+         datapath=datapath,
+@@ -188,7 +189,7 @@ def run_rig(
+ 
+     for i, batch in tqdm(enumerate(dataloader), total=len(dataloader)):
+         batch = {
+-            k: v.to("cuda") if isinstance(v, Tensor) else v
++            k: v.to(("cuda" if torch.cuda.is_available() else "mps")) if isinstance(v, Tensor) else v
+             for k, v in batch.items()
+         }
+ 
+diff --git a/src/model/michelangelo/utils/misc.py b/src/model/michelangelo/utils/misc.py
+index 2174de3..d2f675d 100755
+--- a/src/model/michelangelo/utils/misc.py
++++ b/src/model/michelangelo/utils/misc.py
+@@ -242,7 +242,7 @@ time_recorder = TimeRecorder()
+ 
+ class FLASH3:
+     def __init__(self) -> None:
+-        self.available = "H100" in get_device_type()
++        self.available = torch.cuda.is_available() and "H100" in get_device_type()
+         self.use = os.environ.get("USE_FLASH3", False)
+     
+     @property
+diff --git a/src/model/skin_vae/autoencoders/FSQ.py b/src/model/skin_vae/autoencoders/FSQ.py
+index 9f7bcf0..8f17975 100755
+--- a/src/model/skin_vae/autoencoders/FSQ.py
++++ b/src/model/skin_vae/autoencoders/FSQ.py
+@@ -168,7 +168,7 @@ class FSQ(Module):
+ 
+         # whether to force quantization step to be full precision or not
+         force_f32 = self.force_quantization_f32
+-        quantization_context = partial(autocast, 'cuda', enabled = False) if force_f32 else nullcontext
++        quantization_context = partial(autocast, ("cuda" if torch.cuda.is_available() else "mps"), enabled = False) if force_f32 else nullcontext
+ 
+         with quantization_context():
+             orig_dtype = z.dtype
+diff --git a/src/model/skin_vae_model.py b/src/model/skin_vae_model.py
+index a2b4e88..7492a5a 100755
+--- a/src/model/skin_vae_model.py
++++ b/src/model/skin_vae_model.py
+@@ -18,10 +18,22 @@ from .skin_vae.autoencoders import SkinFSQCVAEModel
+ try:
+     from flash_attn_interface import flash_attn_func # type: ignore
+ except Exception as e:
+-    from flash_attn.flash_attn_interface import flash_attn_func as _flash_attn_func
+-    def flash_attn_func(*args, **kwargs):
+-        res = _flash_attn_func(*args, **kwargs)
+-        return res, None
++    try:
++        from flash_attn.flash_attn_interface import flash_attn_func as _flash_attn_func
++        def flash_attn_func(*args, **kwargs):
++            res = _flash_attn_func(*args, **kwargs)
++            return res, None
++    except Exception:
++        # i2l-portable: no flash-attn (e.g. Apple Silicon). Same [B, L, H, D] layout via SDPA.
++        import torch.nn.functional as _F
++        def flash_attn_func(q, k, v, causal=False, softmax_scale=None, **kwargs):
++            q, k, v = (t.transpose(1, 2) for t in (q, k, v))
++            if k.shape[1] != q.shape[1]:  # grouped-query attention
++                rep = q.shape[1] // k.shape[1]
++                k, v = k.repeat_interleave(rep, dim=1), v.repeat_interleave(rep, dim=1)
++            v = v.to(q.dtype); k = k.to(q.dtype)
++            out = _F.scaled_dot_product_attention(q, k, v, is_causal=causal, scale=softmax_scale)
++            return out.transpose(1, 2).contiguous(), None
+ 
+ class Perceiver(nn.Module):
+     def __init__(self, channels, out_tokens, num_heads=8):
+@@ -136,7 +148,7 @@ class SkinVAEModel(ModelSpec):
+             uniform_skin=uniform_skin,
+         )
+     
+-    @torch.autocast(device_type='cuda', dtype=torch.bfloat16)
++    @torch.autocast(device_type=("cuda" if torch.cuda.is_available() else "mps"), dtype=torch.bfloat16)
+     def training_step(self, batch: Dict) -> Dict:
+         raise NotImplementedError()
+     
+@@ -171,7 +183,7 @@ class SkinVAEModel(ModelSpec):
+     def forward(self, batch: Dict) -> Dict:
+         return self.training_step(batch=batch)
+ 
+-    @torch.autocast('cuda', dtype=torch.bfloat16)
++    @torch.autocast(("cuda" if torch.cuda.is_available() else "mps"), dtype=torch.bfloat16)
+     def predict_step(self, batch: Dict) -> Dict:
+         vertices: Tensor = batch['vertices'].float() # (B, N, 3)
+         num_bones: List[int] = batch['num_bones']
+diff --git a/src/model/tokenrig.py b/src/model/tokenrig.py
+index ab35e3f..15197dc 100755
+--- a/src/model/tokenrig.py
++++ b/src/model/tokenrig.py
+@@ -25,10 +25,22 @@ from ..tokenizer.parse import get_tokenizer
+ try:
+     from flash_attn_interface import flash_attn_func # type: ignore
+ except Exception as e:
+-    from flash_attn.flash_attn_interface import flash_attn_func as _flash_attn_func
+-    def flash_attn_func(*args, **kwargs):
+-        res = _flash_attn_func(*args, **kwargs)
+-        return res, None
++    try:
++        from flash_attn.flash_attn_interface import flash_attn_func as _flash_attn_func
++        def flash_attn_func(*args, **kwargs):
++            res = _flash_attn_func(*args, **kwargs)
++            return res, None
++    except Exception:
++        # i2l-portable: no flash-attn (e.g. Apple Silicon). Same [B, L, H, D] layout via SDPA.
++        import torch.nn.functional as _F
++        def flash_attn_func(q, k, v, causal=False, softmax_scale=None, **kwargs):
++            q, k, v = (t.transpose(1, 2) for t in (q, k, v))
++            if k.shape[1] != q.shape[1]:  # grouped-query attention
++                rep = q.shape[1] // k.shape[1]
++                k, v = k.repeat_interleave(rep, dim=1), v.repeat_interleave(rep, dim=1)
++            v = v.to(q.dtype); k = k.to(q.dtype)
++            out = _F.scaled_dot_product_attention(q, k, v, is_causal=causal, scale=softmax_scale)
++            return out.transpose(1, 2).contiguous(), None
+ 
+ class VocabSwitchingLogitsProcessor(LogitsProcessor):
+     def __init__(self, tokenizer: Tokenizer, switch_token_id, eos_token_id, tokens_per_skin, init):
+@@ -106,7 +118,7 @@ class TokenRig(ModelSpec):
+         llm_config.torch_dtype = torch.bfloat16
+         llm_config.pre_norm = True
+         self.llm_config = llm_config
+-        self.transformer = AutoModelForCausalLM.from_config(config=llm_config, attn_implementation="flash_attention_2").to(torch.bfloat16)
++        self.transformer = AutoModelForCausalLM.from_config(config=llm_config, attn_implementation=("flash_attention_2" if __import__("importlib.util").util.find_spec("flash_attn") else "sdpa")).to(torch.bfloat16)
+         
+         self.output_proj = nn.Sequential(
+             nn.Linear(self.mesh_encoder.width, self.hidden_size),
+@@ -147,7 +159,7 @@ class TokenRig(ModelSpec):
+         rate = (self.global_step-start_steps) / (end_steps-start_steps)
+         return min(max((1.0-math.cos(math.pi * rate))/2, 0), 1)
+ 
+-    @torch.autocast(device_type='cuda', dtype=torch.bfloat16)
++    @torch.autocast(device_type=("cuda" if torch.cuda.is_available() else "mps"), dtype=torch.bfloat16)
+     def training_step(self, batch: Dict) -> Dict:
+         raise NotImplementedError()
+     
+@@ -191,7 +203,7 @@ class TokenRig(ModelSpec):
+             start_tokens_list.append(start_tokens)
+         return start_tokens_list
+     
+-    @torch.autocast(device_type='cuda', dtype=torch.bfloat16)
++    @torch.autocast(device_type=("cuda" if torch.cuda.is_available() else "mps"), dtype=torch.bfloat16)
+     def generate(
+         self,
+         vertices: Tensor,
+diff --git a/src/server/spec.py b/src/server/spec.py
+index f2ca6d7..9b7fb19 100755
+--- a/src/server/spec.py
++++ b/src/server/spec.py
+@@ -68,7 +68,7 @@ def bytes_to_object(b, map_location=None):
+ def get_model(
+     ckpt_path: str,
+     hf_path: Optional[str]=None,
+-    device='cuda',
++    device=("cuda" if torch.cuda.is_available() else "mps"),
+ ) -> TokenRig:
+     model = TokenRig.load_from_system_checkpoint(checkpoint_path=ckpt_path)
+     if hf_path is not None:
+@@ -76,7 +76,7 @@ def get_model(
+         a = AutoModel.from_pretrained(
+             hf_path,
+             local_files_only=True,
+-            _attn_implementation="flash_attention_2",
++            _attn_implementation=("flash_attention_2" if __import__("importlib.util").util.find_spec("flash_attn") else "sdpa"),
+             torch_dtype=torch.bfloat16,
+         )
+         model.transformer.model.load_state_dict(a.state_dict())

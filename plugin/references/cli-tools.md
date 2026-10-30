@@ -4,6 +4,29 @@
 
 ---
 
+## Contents
+- gltf-transform
+  - Inspect a GLB
+  - Texture Compression (KTX2/Basis)
+  - meshopt Compression
+  - Draco Compression
+  - Full Optimization Pipeline
+  - Reference Metrics
+  - Resize Textures
+  - Dedup (remove duplicate resources)
+- gltfpack
+  - Simplify Mesh
+  - Simplify to Target
+  - Generate LODs
+  - Full Optimization
+  - Compression Only (no simplification)
+- Reality Converter (USDZ — macOS only)
+  - Usage
+  - Alternative: usdzconvert (CLI)
+  - USDZ Constraints
+- Comparison: When to Use What
+- Before/After Reporting
+
 ## gltf-transform
 
 **Install:** `npm install -g @gltf-transform/cli`
@@ -86,7 +109,10 @@ gltf-transform dedup input.glb output.glb
 ```bash
 gltfpack -i input.glb -o output.glb -si 0.5
 ```
-`-si 0.5` = simplify to 50% of original faces. Preserves visual quality.
+`-si 0.5` = simplify to 50% of original faces. Keeps the look, not the topology: it stops
+short of the target on a closed mesh, and `-sa` reaches it by opening it (open and
+non-manifold edges): never `-sa` on a mesh that ships. For a mesh that must stay closed,
+decimate in Blender (Collapse) — `pipeline-import-cleanup.md` § Poly check.
 
 ### Simplify to Target
 ```bash

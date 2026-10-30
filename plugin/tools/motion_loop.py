@@ -14,6 +14,13 @@ are refused), and a clip that is still for two thirds of its length cannot loop 
 (its best seam stays several times its step — it loses to the other samples).
 
 UniMate's raw clips seamed at 2.1-9.7x the local step (12 clips: walks, wing flaps); looped, 0.5-1.2x.
+
+The root's drift and height are handled in world space, never on the bone's own location
+channels (references/animation.md rule 1): read as bone-local X/Y/Z, the drift of a Hips
+bone tilted 12.5 degrees (the Hunyuan3D humanoid's) was removed along the wrong axes and its
+forward travel climbed — the looped hips rose up to 115.6 mm. The file carries ONE clip,
+the loop, keyed 0..P with key P equal to key 0 (rule 5): the source action is not exported,
+so no importer can make it the active one.
 """
 import json
 import sys
@@ -34,12 +41,14 @@ def loop_one(path):
     for p in bones:
         p.rotation_mode = 'QUATERNION'
     N = f1 - f0 + 1
+    # the root's location channels are in its rest frame: work on them in world axes (Z up)
+    to_world = np.array(arm.matrix_world.to_3x3() @ root.bone.matrix_local.to_3x3())
     Q = np.zeros((N, len(bones), 4)); L = np.zeros((N, 3))
     for i, f in enumerate(range(f0, f1 + 1)):
         bpy.context.scene.frame_set(f)
         for b, p in enumerate(bones):
             Q[i, b] = p.rotation_quaternion[:]
-        L[i] = root.location[:]
+        L[i] = to_world @ np.array(root.location[:])
     dist = lambda a, b: float(np.degrees(2 * np.arccos(np.abs((Q[a] * Q[b]).sum(1)).clip(0, 1))).mean())
     steps = np.array([dist(n, n + 1) for n in range(N - 1)]); step = float(np.median(steps)) or 1e-6
     best = None
@@ -71,11 +80,16 @@ def loop_one(path):
     local = (qd(QQ[-2], QQ[-1]) + qd(QQ[0], QQ[1])) / 2 or 1e-6
     seam = qd(QQ[-1], QQ[0]) / local
     local_raw = (dist(N - 2, N - 1) + dist(0, 1)) / 2 or 1e-6
+    for old in list(bpy.data.actions):          # one clip in the file: the loop
+        bpy.data.actions.remove(old)
+    for t in list(arm.animation_data.nla_tracks):
+        arm.animation_data.nla_tracks.remove(t)
     act = bpy.data.actions.new("Loop"); arm.animation_data.action = act
-    for n in range(len(idx)):
+    to_bone = np.linalg.inv(to_world)
+    for n in range(len(idx) + 1):               # key P = key 0, so the step back to 0 is played
         for b, p in enumerate(bones):
-            p.rotation_quaternion = Quaternion(QQ[n, b]); p.keyframe_insert("rotation_quaternion", frame=n)
-        root.location = LL[n]; root.keyframe_insert("location", frame=n)
+            p.rotation_quaternion = Quaternion(QQ[n % len(idx), b]); p.keyframe_insert("rotation_quaternion", frame=n)
+        root.location = to_bone @ LL[n % len(idx)]; root.keyframe_insert("location", frame=n)
     bpy.context.scene.frame_start, bpy.context.scene.frame_end = 0, len(idx) - 1
     return dict(clip=path, frames=len(idx), seam=round(seam, 2), motion=round(moving / step, 2),
                 seam_raw=round(dist(N - 1, 0) / local_raw, 2))

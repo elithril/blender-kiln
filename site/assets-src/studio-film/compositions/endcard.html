@@ -1,0 +1,39 @@
+<template>
+  <style>
+    @font-face { font-family: "Sora"; font-weight: 400 700; src: url("assets/fonts/sora-latin.woff2") format("woff2"); }
+    @font-face { font-family: "JetBrains Mono"; font-weight: 400 600; src: url("assets/fonts/jetbrains-mono-latin.woff2") format("woff2"); }
+    #root { position: absolute; inset: 0; overflow: hidden; background: linear-gradient(180deg, #ecdfcd 0%, #e2d3bf 62%, #d6c4ab 100%); }
+    #ec-lock { position: absolute; left: 0; right: 0; top: 330px; display: flex; align-items: center; justify-content: center; gap: 44px; }
+    #ec-logo { width: 240px; height: 240px; }
+    #ec-name { font: 700 120px/1 "Sora", sans-serif; letter-spacing: -0.02em; color: #2a1d14; clip-path: inset(0 100% 0 0); }
+    #ec-sub { margin-top: 18px; font: 400 40px/1 "Sora", sans-serif; color: #6b5a4c; opacity: 0; }
+    #ec-cmd { position: absolute; left: 50%; top: 680px; width: 520px; margin-left: -260px; height: 84px; border-radius: 14px;
+      background: #2a1d14; display: flex; align-items: center; padding: 0 30px; font: 500 38px/1 "JetBrains Mono", monospace; color: #f2e6d6; opacity: 0; }
+    #ec-cmd .p { color: #e8742c; margin-right: 18px; }
+    #ec-cmd span.c { opacity: 0; }
+    #ec-foot { position: absolute; left: 0; right: 0; top: 950px; text-align: center; font: 400 28px/1 "Sora", sans-serif; color: #6b5a4c; opacity: 0; }
+  </style>
+  <div data-hf-id="hf-32ii" id="root" data-composition-id="endcard" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-punv" id="ec-lock">
+      <img data-hf-id="hf-mvoz" id="ec-logo" src="assets/brand/blender-kiln-logo.png" alt="blender-kiln" />
+      <div data-hf-id="hf-yeow"><div data-hf-id="hf-p43x" id="ec-name">Kiln Studio</div><div data-hf-id="hf-tpgn" id="ec-sub">in blender-kiln 3.0</div></div>
+    </div>
+    <div data-hf-id="hf-3h5m" id="ec-cmd"><span data-hf-id="hf-sgxz" class="p">›</span><span data-hf-id="hf-16ap" id="ec-typed"></span></div>
+    <div data-hf-id="hf-mrlh" id="ec-foot">A real session, re-cut · 4 min of work</div>
+  </div>
+  <script>
+    (function () {
+      const typed = document.querySelector("#ec-typed");
+      typed.innerHTML = [..."/kiln studio"].map((c) => `<span class="c">${c === " " ? " " : c}</span>`).join("");
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo("#root", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.22, ease: "power2.out" }, 0);
+      tl.fromTo("#ec-logo", { y: 220, scale: 0.7, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.75, ease: "expo.out" }, 0.15);
+      tl.fromTo("#ec-name", { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.5, ease: "power3.out" }, 0.7);
+      tl.fromTo("#ec-sub", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2 }, 1.05);
+      tl.fromTo("#ec-cmd", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: "expo.out" }, 1.35);
+      tl.to("#ec-typed .c", { opacity: 1, duration: 0.01, stagger: 0.045 }, 1.55);
+      tl.fromTo("#ec-foot", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 1.15);
+      window.__timelines["endcard"] = tl;
+    })();
+  </script>
+</template>

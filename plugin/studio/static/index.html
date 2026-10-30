@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kiln Studio</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/static/icon-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="/static/icon-64.png">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<link rel="stylesheet" href="/static/style.css">
+<script>try { const p = JSON.parse(localStorage.getItem('kiln-studio:prefs') || '{}'); if (p.theme) document.documentElement.dataset.theme = p.theme; } catch (e) { /* storage blocked: Dark */ }</script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+
+<aside id="left" class="panel left" aria-label="Models" data-i18n-attr="aria-label">
+  <div class="full">
+    <header class="lhead">
+      <div class="row1">
+        <span class="logo" id="logo" aria-hidden="true"><img src="/static/icon-64.png" alt=""></span>
+        <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+          <input id="search" type="search" placeholder="Find a model" autocomplete="off" spellcheck="false" aria-label="Find a model (/)" data-i18n-attr="placeholder,aria-label"><kbd>/</kbd></label>
+        <button id="view-btn" class="btn sm" aria-haspopup="true" aria-expanded="false" aria-controls="viewpop" title="Group, density, filter, sort" data-i18n data-i18n-attr="title">View</button>
+        <button class="btn icon sm" data-toggle="left" aria-label="Collapse the model list ([)" title="Collapse ( [ )" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+      </div>
+      <div id="tagbar" class="tagbar" role="group" aria-label="Filter by tag" data-i18n-attr="aria-label"></div>
+      <div id="strip" class="strip" role="group" aria-label="What needs you" data-i18n-attr="aria-label">
+        <button class="pill check" data-pill="addressed" aria-pressed="false" title="Notes Claude addressed: look and mark each one" data-i18n-attr="title"><b>0</b><span data-i18n>To check</span></button>
+        <button class="pill open" data-pill="open" aria-pressed="false" title="Open notes waiting for Claude" data-i18n-attr="title"><b>0</b><span data-i18n>Open</span></button>
+        <button class="pill works" data-pill="working" aria-pressed="false" title="Models in kiln's current run" data-i18n-attr="title"><b>0</b><span data-i18n>Claude works</span></button>
+        <button class="pill building" data-pill="building" aria-pressed="false" title="Models kiln is building now" data-i18n-attr="title"><b>0</b><span data-i18n>Building</span></button>
+      </div>
+      <div id="workline" class="workline" hidden aria-live="polite"></div>
+    </header>
+    <div id="resort" hidden><button id="resort-btn"></button></div>
+    <nav id="list" aria-label="Model list" data-i18n-attr="aria-label"></nav>
+    <footer class="lfoot">
+      <span id="project" class="dim mono" title=""></span>
+      <button class="btn icon sm ghost" id="t-import" aria-label="Import a model" title="Import a model: or drop a file anywhere" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg></button>
+      <button class="btn icon sm ghost" id="t-create" aria-label="Ask Claude for a new model" title="Create: ask Claude for a new model" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="btn icon sm ghost" id="t-settings" aria-label="Settings" title="Settings" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    </footer>
+    <div id="viewpop" class="popover" hidden role="group" aria-label="List view" data-i18n-attr="aria-label">
+      <span class="lab" data-i18n>Group by</span>
+      <div class="seg small" id="pg-group"><button data-v="folders" class="on" data-i18n>Folders</button><button data-v="state" data-i18n>State</button></div>
+      <span class="lab" data-i18n>Density</span>
+      <div class="seg small" id="pg-density"><button data-v="normal" class="on" data-i18n>Normal</button><button data-v="compact" data-i18n>Compact</button></div>
+      <label for="filter" data-i18n>Show</label>
+      <select id="filter">
+        <option value="all" data-i18n>All models</option>
+        <option value="open" data-i18n>Open notes</option>
+        <option value="addressed" data-i18n>Awaiting my check</option>
+        <option value="notes" data-i18n>Any notes</option>
+        <option value="clean" data-i18n>No notes</option>
+        <option value="working" hidden data-i18n>In Claude's run</option>
+        <option value="building" hidden data-i18n>Building</option>
+      </select>
+      <label for="sort" data-i18n>Sort</label>
+      <select id="sort">
+        <option value="name" data-i18n>By name</option>
+        <option value="updated" data-i18n>Recently changed</option>
+        <option value="tris" data-i18n>Heaviest</option>
+      </select>
+    </div>
+  </div>
+  <div class="rail" aria-label="Models (collapsed)" data-i18n-attr="aria-label">
+    <button class="rbtn" data-toggle="left" aria-label="Expand the model list ([)" title="Expand ( [ )" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+    <div class="rsep"></div>
+    <div id="lrail"></div>
+  </div>
+</aside>
+
+<main id="stage" data-bg="dark" aria-label="3D view" data-i18n-attr="aria-label">
+  <canvas id="view" aria-label="The model. Drag to orbit, scroll to zoom, right-drag to pan." data-i18n-attr="aria-label"></canvas>
+  <div id="labels"></div>
+  <div id="pins"></div>
+  <div id="split" hidden role="slider" aria-label="Compare divider" data-i18n-attr="aria-label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" tabindex="0"><div class="knob">⟷</div></div>
+  <div id="sidediv" hidden></div>
+  <span id="lab-prev" class="cmplab" hidden></span>
+  <span id="lab-cur" class="cmplab" hidden></span>
+  <!-- Compare and choose: a button over each side's label -->
+  <button id="cho-prev" class="btn sm cmpchoose" data-choose="prev" hidden data-i18n>Keep the previous one</button>
+  <button id="cho-cur" class="btn sm accent cmpchoose" data-choose="cur" hidden data-i18n>Keep the current one</button>
+
+  <button id="present-exit" class="btn sm" hidden title="Leave present mode (Esc)" data-i18n data-i18n-attr="title">Leave present mode</button>
+  <div id="cl-pill" class="cl-pill" hidden>
+    <button id="cl-pill-btn" class="cl-pill-btn" aria-haspopup="true" aria-expanded="false" aria-controls="cl-act"></button>
+    <div id="cl-act" class="cl-act" role="dialog" aria-label="Claude's activity" data-i18n-attr="aria-label" hidden></div>
+  </div>
+  <div class="topbar" id="topbar" hidden>
+    <div class="titlecol">
+      <div class="title">
+        <h2 id="asset-name">…</h2>
+        <div id="stages" class="seg small stages" role="radiogroup" aria-label="Stage" data-i18n-attr="aria-label"></div>
+        <div id="outputs" class="outputs" role="group" aria-label="Outputs" data-i18n-attr="aria-label"></div>
+      </div>
+      <div id="derived-from" class="derived-from" hidden></div>
+      <div class="statline">
+        <div id="stats" class="stats" aria-live="polite"></div>
+          <div class="pinsctl" id="pinsctl" hidden>
+            <button id="t-pins" class="eye on" aria-pressed="true" aria-label="Hide pins (P)" title="Pins (P)">
+              <svg class="on-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 5.1A9.8 9.8 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-2.4 3.3M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18"/></svg>
+            </button>
+            <div class="pinsmenu"><div class="box" role="group" aria-label="Which pins" data-i18n-attr="aria-label">
+              <button id="pm-all" aria-pressed="false"><i class="sw"></i><span data-i18n>Hide all pins</span> <kbd style="margin-left:auto">P</kbd></button>
+              <button id="pm-fixed" aria-pressed="false" title="Hide the pins Claude already addressed, and closed ones" data-i18n-attr="title"><i class="sw"></i><span data-i18n>Hide fixed pins</span></button>
+              <button id="pm-behind" aria-pressed="false" title="Pins on the far side are faded; this hides them (raycast against the model)" data-i18n-attr="title"><i class="sw"></i><span data-i18n>Hide pins behind the model</span></button>
+            </div></div>
+          </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="buildbar" hidden aria-live="polite">
+    <span class="st"><i class="bmark"></i><span data-i18n>Building</span></span>
+    <ol id="phases" aria-label="Build phases" data-i18n-attr="aria-label"></ol>
+    <span class="step" id="bstep"></span>
+  </div>
+
+  <div id="cmpbar" hidden>
+    <div class="seg small" id="cmp-mode" role="radiogroup" aria-label="Compare layout" data-i18n-attr="aria-label"><button data-m="split" class="on" data-i18n>Split</button><button data-m="side" data-i18n>Side by side</button></div>
+    <select id="cmp-select" aria-label="Compare with" data-i18n-attr="aria-label"></select>
+    <span class="delta" id="cmp-delta"></span>
+    <button class="btn icon sm ghost" id="cmp-close" aria-label="Stop comparing (C)" title="Stop comparing (C)" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+
+  <nav id="views" aria-label="Views" data-i18n-attr="aria-label" hidden>
+    <button data-view="front" title="Front, from Blender −Y (1)" data-i18n data-i18n-attr="title">Front</button>
+    <button data-view="back" title="Back (2)" data-i18n data-i18n-attr="title">Back</button>
+    <button data-view="left" title="Left, from −X (3)" data-i18n data-i18n-attr="title">Left</button>
+    <button data-view="right" title="Right, from +X (4)" data-i18n data-i18n-attr="title">Right</button>
+    <button data-view="top" title="Top (5)" data-i18n data-i18n-attr="title">Top</button>
+    <button data-view="iso" title="Three-quarter (6)" data-i18n-attr="title">¾</button>
+    <div class="vsep"></div>
+    <button id="t-frame" title="Frame the model (F)" data-i18n data-i18n-attr="title">Frame</button>
+  </nav>
+
+  <div class="bottom" id="bottom" hidden>
+    <div id="finishpop" class="bar" role="dialog" aria-label="Surface finish" data-i18n-attr="aria-label" hidden></div>
+    <div id="finishbar" class="bar" hidden></div>
+    <div id="animbar" class="bar" hidden>
+      <button id="a-play" class="btn icon" aria-label="Pause (Space)" title="Play / pause (Space)" data-i18n-attr="title"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
+      <select id="a-clip" aria-label="Clip" data-i18n-attr="aria-label"></select>
+      <input id="a-time" type="range" min="0" max="1" step="0.001" value="0" aria-label="Time in the clip" data-i18n-attr="aria-label">
+      <span id="a-read">0.00 / 0.00 s</span>
+      <select id="a-speed" aria-label="Speed" data-i18n-attr="aria-label"><option value="0.25">¼×</option><option value="0.5">½×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
+    </div>
+    <div id="tb-more-pop" class="bar" hidden role="group" aria-label="View options" data-i18n-attr="aria-label"></div>
+    <div id="toolbar" class="bar" role="toolbar" aria-label="View options" data-i18n-attr="aria-label">
+      <div class="seg" id="tb-shade" role="radiogroup" aria-label="Shading" data-i18n-attr="aria-label">
+        <button data-shade="lit" class="on" title="Lit: materials under a studio light (S cycles)" data-i18n data-i18n-attr="title">Lit</button>
+        <button data-shade="unlit" title="Unlit: base colour and textures only" data-i18n data-i18n-attr="title">Unlit</button>
+        <button data-shade="clay" title="Clay: form only" data-i18n data-i18n-attr="title">Clay</button>
+        <button data-shade="normals" title="Normals" data-i18n data-i18n-attr="title">Normals</button>
+        <button data-shade="uv" title="UV checker: stretching, seams, flipped islands" data-i18n-attr="title">UV</button>
+        <button data-shade="faces" title="Back faces in red: flipped normals and holes" data-i18n data-i18n-attr="title">Faces</button>
+      </div>
+      <select id="tb-shade-select" class="tb-select" hidden aria-label="Shading" data-i18n-attr="aria-label">
+        <option value="lit" data-i18n>Lit</option><option value="unlit" data-i18n>Unlit</option><option value="clay" data-i18n>Clay</option><option value="normals" data-i18n>Normals</option><option value="uv" data-i18n>UV checker</option><option value="faces" data-i18n>Faces</option>
+      </select>
+      <span class="vsep"></span>
+      <div class="tb-group" id="tb-toggles">
+      <button class="btn" data-opt="wire" title="Wireframe (W)" aria-pressed="false" data-i18n data-i18n-attr="title">Wire</button>
+      <button class="btn on" data-opt="grid" title="Ground grid, front arrow (G)" aria-pressed="true" data-i18n data-i18n-attr="title">Grid</button>
+      <button class="btn" data-opt="bounds" title="Bounds with sizes (B)" aria-pressed="false" data-i18n data-i18n-attr="title">Size</button>
+      <button class="btn" data-opt="skeleton" id="t-skel" title="Skeleton (K)" aria-pressed="false" hidden data-i18n data-i18n-attr="title">Bones</button>
+      <button class="btn" id="t-bg" title="Background: dark, mid, light" data-i18n-attr="title">Bg</button>
+      </div>
+      <button class="btn" id="t-more" hidden aria-haspopup="true" aria-expanded="false" aria-controls="tb-more-pop" title="Wire, grid, size, bones, background" data-i18n-attr="title"><span data-i18n>Options</span> <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button>
+      <span class="vsep"></span>
+      <button class="btn" id="t-compare" title="Compare with the previous version (C)" aria-pressed="false" data-i18n data-i18n-attr="title">Compare</button>
+      <button class="btn icon" id="t-palette" aria-label="All commands (⌘K)" title="All commands (⌘K)" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M9 6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3z"/></svg></button>
+      <button class="btn icon" id="t-keys" aria-label="Keyboard shortcuts (?)" title="Keys (?)" data-i18n-attr="aria-label,title">?</button>
+    </div>
+  </div>
+
+  <div id="empty"></div>
+  <div id="loading" hidden><div class="box"><span class="spin"></span><span id="loading-t"></span></div></div>
+  <div id="hint" hidden></div>
+  <div id="hover" hidden></div>
+  <div id="drop" hidden><div><b data-i18n>Drop to import</b><span data-i18n>GLB, glTF, FBX or OBJ: saved into imports/ in this project</span></div></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+</main>
+<input type="file" id="import-input" multiple hidden accept=".glb,.gltf,.fbx,.obj,.bin,.mtl,.png,.jpg,.jpeg,.webp,.ktx2">
+
+<aside id="right" class="panel right" aria-label="Notes and details" data-i18n-attr="aria-label">
+  <div class="full">
+    <div class="tabs" role="tablist" aria-label="Panels" data-i18n-attr="aria-label">
+      <button role="tab" id="tb-notes" data-tab="notes" aria-selected="true" aria-controls="tab-notes"><span data-i18n>Notes</span> <span class="tc" id="tc-notes"></span></button>
+      <button role="tab" id="tb-checks" data-tab="checks" aria-selected="false" aria-controls="tab-checks"><span data-i18n>Checks</span> <span class="tc" id="tc-checks"></span></button>
+      <button role="tab" id="tb-details" data-tab="details" aria-selected="false" aria-controls="tab-details"><span data-i18n>Details</span></button>
+      <button role="tab" id="tb-history" data-tab="history" aria-selected="false" aria-controls="tab-history"><span data-i18n>History</span></button>
+      <button role="tab" id="tb-claude" class="icon-tab" data-tab="claude" aria-selected="false" aria-controls="tab-claude" aria-label="Claude" title="Claude" data-i18n-attr="aria-label,title"><svg class="spark" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0.8C8.5 5 11 7.5 15.2 8 11 8.5 8.5 11 8 15.2 7.5 11 5 8.5 0.8 8 5 7.5 7.5 5 8 0.8z"/></svg><span class="tc" id="tc-claude"></span></button>
+      <button class="btn icon sm ghost collapse" data-toggle="right" aria-label="Collapse the notes panel (])" title="Collapse ( ] )" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+    </div>
+    <section id="tab-notes" class="tab" role="tabpanel" aria-labelledby="tb-notes">
+      <div class="notes-head">
+        <button id="t-pin" class="btn accent sm" title="Then click the model (N)" data-i18n-attr="title"><span data-i18n>Pin a note</span> <kbd>N</kbd></button>
+        <button id="t-general" class="btn sm" title="A note about the whole model (M)" data-i18n-attr="title"><span data-i18n>Whole model</span> <kbd>M</kbd></button>
+        <div class="seg small" id="nf" role="radiogroup" aria-label="Which notes" data-i18n-attr="aria-label"><button data-nf="active" class="on" data-i18n>Active</button><button data-nf="all" data-i18n>All</button></div>
+      </div>
+      <div id="work" aria-live="polite"></div>
+      <div id="composer" hidden>
+        <div class="where" id="composer-where"></div>
+        <textarea id="composer-text" rows="3" placeholder="What should change?" aria-label="Note text" data-i18n-attr="placeholder,aria-label"></textarea>
+        <div class="row"><button id="composer-save" class="btn accent sm"><span data-i18n>Save note</span> <kbd>⌘↵</kbd></button><button id="composer-cancel" class="btn sm" data-i18n>Cancel</button><span class="dim" data-i18n>Esc cancels</span></div>
+      </div>
+      <div id="note-list"></div>
+      <footer id="handoff"></footer>
+    </section>
+    <section id="tab-checks" class="tab" role="tabpanel" aria-labelledby="tb-checks" hidden></section>
+    <section id="tab-details" class="tab" role="tabpanel" aria-labelledby="tb-details" hidden></section>
+    <section id="tab-history" class="tab" role="tabpanel" aria-labelledby="tb-history" hidden></section>
+    <section id="tab-claude" class="tab" role="tabpanel" aria-labelledby="tb-claude" hidden>
+      <div class="cl-head" id="cl-head"></div>
+      <div class="cl-thread" id="cl-thread" aria-live="polite"></div>
+      <div class="cl-pending" id="cl-pending" hidden></div>
+      <div class="cl-composer" id="cl-composer">
+        <div class="cl-box">
+          <textarea id="cl-text" rows="2" aria-label="Message to Claude" data-i18n-attr="aria-label"></textarea>
+          <div class="cl-bar"><span class="cl-ctx" id="cl-ctx"></span><span class="sp"></span><button class="btn sm accent" id="cl-send"><span data-i18n>Send</span> <kbd>⌘↵</kbd></button></div>
+        </div>
+        <div class="cl-hint" id="cl-hint"></div>
+      </div>
+    </section>
+  </div>
+  <div class="rail" aria-label="Notes (collapsed)" data-i18n-attr="aria-label">
+    <button class="rbtn" data-toggle="right" aria-label="Expand the notes panel (])" title="Expand ( ] )" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+    <div class="rsep"></div>
+    <button class="rbtn" data-rtab="notes" aria-label="Notes" title="Notes" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M5 4h14v12H9l-4 4z"/></svg><span class="cnt" id="rc-notes" hidden></span></button>
+    <button class="rbtn" data-rtab="checks" aria-label="Checks" title="Checks" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg><span class="cnt" id="rc-checks" hidden></span></button>
+    <button class="rbtn" data-rtab="details" aria-label="Details" title="Details" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 11v5M12 8v.5"/></svg></button>
+    <button class="rbtn" data-rtab="history" aria-label="History" title="History" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button>
+    <button class="rbtn" data-rtab="claude" aria-label="Claude" title="Claude" data-i18n-attr="aria-label,title"><svg class="spark" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0.8C8.5 5 11 7.5 15.2 8 11 8.5 8.5 11 8 15.2 7.5 11 5 8.5 0.8 8 5 7.5 7.5 5 8 0.8z"/></svg><span class="cnt" id="rc-claude" hidden></span></button>
+    <div class="rsep"></div>
+    <button class="rbtn" id="r-pin" aria-label="Pin a note (N)" title="Pin a note (N)" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M9.5 3.5h5l-.8 5.2 3.3 3.1v2H7v-2l3.3-3.1z"/><path d="M12 13.8V21"/></svg></button>
+    <button class="rbtn" id="r-general" aria-label="Note on the whole model (M)" title="Whole model (M)" data-i18n-attr="aria-label,title"><svg viewBox="0 0 24 24"><path d="M5 4h14v10.5L13.5 20H5z"/><path d="M13.5 20v-5.5H19M8.5 9h7M8.5 12h4"/></svg></button>
+  </div>
+</aside>
+
+<dialog id="viewer2" aria-label="Note pictures" data-i18n-attr="aria-label">
+  <div class="vh"><span class="status" id="v2-status"></span><span class="text" id="v2-text"></span>
+    <button class="btn sm" id="v2-look" title="Turn the 3D view to where the note was made from" data-i18n data-i18n-attr="title">Look from here</button>
+    <form method="dialog" style="margin:0"><button class="btn sm" data-i18n>Close</button></form></div>
+  <div class="ba" id="v2-ba"><img class="before" alt=""><img class="after" alt=""><div class="bar2" role="slider" tabindex="0" aria-label="Before / after divider" data-i18n-attr="aria-label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"></div><span class="lab l"></span><span class="lab r"></span></div>
+  <div class="closeups" id="v2-close"></div>
+</dialog>
+<dialog id="lightbox"><figure></figure><div class="lb-extra"></div><form method="dialog"><button class="btn sm" data-i18n>Close</button></form></dialog>
+<dialog id="textbox"><h3></h3><pre></pre><form method="dialog"><button class="btn sm" data-i18n>Close</button></form></dialog>
+<dialog id="keys" aria-label="Keyboard shortcuts" data-i18n-attr="aria-label">
+  <h3 data-i18n>Keys</h3>
+  <dl id="keys-list"></dl>
+  <form method="dialog"><button class="btn" data-i18n>Close</button></form>
+</dialog>
+<dialog id="create" aria-labelledby="cr-title">
+  <header class="set-head"><h3 id="cr-title" data-i18n>Ask Claude for a new model</h3><form method="dialog"><button class="btn sm" data-i18n>Close</button></form></header>
+  <form id="cr-form" class="cr-body">
+    <label class="cr-brief"><span class="lab" data-i18n>Brief</span>
+      <textarea id="cr-brief" rows="3" required placeholder="A low-poly wooden chair with a curved backrest" data-i18n-attr="placeholder"></textarea></label>
+    <div class="cr-grid">
+      <label><span class="lab" data-i18n>Made for</span><select id="cr-target"><option value="web" data-i18n>Web (glTF)</option><option value="desktop" data-i18n>Unity / Unreal (FBX)</option><option value="ar" data-i18n>AR (USDZ)</option><option value="print" data-i18n>3D print</option></select></label>
+    </div>
+    <div class="cr-photo"><span class="lab" data-i18n>Reference photo</span>
+      <label class="btn sm" for="cr-file"><span data-i18n>Choose a photo</span></label><input type="file" id="cr-file" accept="image/jpeg,image/png,image/webp" hidden>
+      <img id="cr-thumb" alt="" hidden><button type="button" class="btn sm ghost" id="cr-nophoto" hidden data-i18n>Remove</button><span class="dim small" data-i18n>optional · JPEG, PNG or WebP</span></div>
+    <p class="cr-queue" id="cr-queue" hidden></p>
+    <p class="cr-est dim small" id="cr-est" hidden></p>
+    <div class="row"><button class="btn accent" id="cr-launch" type="submit" hidden data-i18n>Make it with Claude</button><button class="btn accent" id="cr-save" type="submit" data-i18n>Save the request</button><span class="dim small" id="cr-status" aria-live="polite"></span></div>
+  </form>
+  <div id="cr-done" class="cr-body" hidden>
+    <p data-i18n>Saved in .kiln-studio/requests.json, open until Claude has built it. Paste this in Claude Code:</p>
+    <div class="cmd"><code id="cr-cmd"></code><button class="btn sm" id="cr-copy" data-i18n>Copy</button></div>
+    <div class="row"><button class="btn sm" id="cr-another" data-i18n>Ask for another</button></div>
+  </div>
+  <div class="cr-body cr-list" id="cr-list"></div>
+</dialog>
+<dialog id="settings" aria-labelledby="set-title">
+  <header class="set-head"><h3 id="set-title" data-i18n>Settings</h3><form method="dialog"><button class="btn sm" data-i18n>Close</button></form></header>
+  <div class="set-body">
+    <nav class="set-nav" role="tablist" aria-label="Settings" data-i18n-attr="aria-label">
+      <button role="tab" data-pane="display"><b data-i18n>Display</b><span data-i18n>this browser</span></button>
+      <button role="tab" data-pane="project"><b data-i18n>Project</b><span data-i18n>shared with Claude</span></button>
+      <button role="tab" data-pane="claude"><b><span class="spark" aria-hidden="true">✦</span> Claude</b><span data-i18n>in Studio</span></button>
+      <button role="tab" data-pane="account"><b data-i18n>Account</b><span data-i18n>this computer</span></button>
+      <button role="tab" data-pane="setup"><b data-i18n>Setup</b><span data-i18n>what kiln uses</span></button>
+    </nav>
+    <div class="set-panes">
+      <section class="set-pane" data-pane="display" role="tabpanel">
+        <p class="set-where" data-i18n>Only in this browser: how the page looks to you.</p>
+        <div class="srow"><div class="st"><b data-i18n>Language</b></div><div class="sc"><div class="seg small" id="set-lang"></div></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Tips</b><span data-i18n>A word on a feature, the first time you use it.</span></div><div class="sc"><button class="btn sm" id="set-tips" data-i18n>Show them again</button></div></div>
+        <div class="srow wide"><div class="st"><b data-i18n>Theme</b></div><div class="sc"><div class="themes" id="set-theme" role="radiogroup" aria-label="Theme" data-i18n-attr="aria-label"></div></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Accent</b></div><div class="sc"><div class="swatches" id="set-accent" role="radiogroup" aria-label="Accent colour" data-i18n-attr="aria-label"></div></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Rows in the list</b></div><div class="sc"><div class="seg small" id="set-density"><button data-v="normal" data-i18n>Normal</button><button data-v="compact" data-i18n>Compact</button></div></div></div>
+        <div class="srow"><div class="st"><label for="set-shade"><b data-i18n>A model opens in</b></label></div><div class="sc"><select id="set-shade"><option value="" data-i18n>The last shading used</option><option value="lit" data-i18n>Lit</option><option value="unlit" data-i18n>Unlit</option><option value="clay" data-i18n>Clay</option><option value="normals" data-i18n>Normals</option><option value="uv" data-i18n>UV checker</option><option value="faces" data-i18n>Faces</option></select></div></div>
+        <div class="srow"><div class="st"><label for="set-view"><b data-i18n>Seen from</b></label></div><div class="sc"><select id="set-view"><option value="iso" data-i18n>Three-quarter</option><option value="front" data-i18n>Front</option><option value="back" data-i18n>Back</option><option value="left" data-i18n>Left</option><option value="right" data-i18n>Right</option><option value="top" data-i18n>Top</option></select></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Lengths in</b></div><div class="sc"><div class="seg small" id="set-units"><button data-v="m" data-i18n>metres</button><button data-v="cm" data-i18n>centimetres</button></div></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Hide closed notes' pins</b><span data-i18n>Resolved and won't-fix notes keep their pin, hidden until you show them.</span></div><div class="sc"><button class="switch" id="set-hidefixed" role="switch" aria-checked="false" aria-label="Hide closed notes' pins" data-i18n-attr="aria-label"><i class="sw"></i></button></div></div>
+      </section>
+      <section class="set-pane" data-pane="project" role="tabpanel" hidden>
+        <p class="set-where"><span data-i18n>This project, shared with Claude in</span> <code>.kiln-studio/config.json</code></p>
+        <div class="srow"><div class="st"><b data-i18n>Made for</b><span data-i18n>Sets the budgets (triangles, textures), the file format and the checks.</span></div><div class="sc"><select id="set-target" aria-label="Made for" data-i18n-attr="aria-label"><option value="" id="set-target-inherit"></option><option value="web" data-i18n>Web</option><option value="desktop" data-i18n>Unity / Unreal</option><option value="print" data-i18n>3D print</option></select></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Live view</b><span data-i18n>Watch a model take shape while Claude builds it.</span></div><div class="sc"><button class="switch" id="set-live" role="switch" aria-checked="true" aria-label="Live view" data-i18n-attr="aria-label"><i class="sw"></i></button></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Open the browser</b><span data-i18n>When Studio starts, it opens this page by itself.</span></div><div class="sc"><button class="switch" id="set-autoopen" role="switch" aria-checked="true" aria-label="Open the browser" data-i18n-attr="aria-label"><i class="sw"></i></button></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Instructions for Claude</b><span id="set-md-help"></span></div><div class="sc"><button class="btn sm" id="set-md"></button></div></div>
+        <div class="srow wide"><div class="st"><label for="set-exclude"><b data-i18n>Left out of the list</b></label><span id="set-exclude-help" data-i18n>One folder or file pattern per line, from the project folder.</span></div><div class="sc"><textarea id="set-exclude" rows="3" spellcheck="false" placeholder="site/public/*" aria-describedby="set-exclude-help"></textarea></div></div>
+      </section>
+      <section class="set-pane" data-pane="claude" role="tabpanel" hidden>
+        <p class="set-where" data-i18n>This project: how Claude works from the page.</p>
+        <div class="srow"><div class="st"><b data-i18n>Ask Claude from Studio</b><span data-i18n>The ✦ tab, New model and the project conversation. Off, Studio is for looking and noting; Claude is used from the terminal.</span></div><div class="sc"><button class="switch" id="set-claude" role="switch" aria-checked="false" aria-label="Ask Claude from Studio" data-i18n-attr="aria-label"><i class="sw"></i></button></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Approvals</b><span id="set-approvals-help"></span></div><div class="sc"><div class="seg small" id="set-approvals"><button data-v="ask" data-i18n>Ask me</button><button data-v="auto" data-i18n>Auto</button><button data-v="all" data-i18n>Allow all</button></div></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Paid generation</b><span id="set-paid-help"></span></div><div class="sc"><div class="seg small" id="set-paid"><button data-v="ask" data-i18n>Ask me</button><button data-v="auto" data-i18n>Auto</button></div></div></div>
+        <div class="srow"><div class="st"><b data-i18n>At once</b><span id="set-parallel-help"></span></div><div class="sc"><div class="seg small" id="set-parallel"></div></div></div>
+        <div class="srow"><div class="st"><label for="set-model"><b data-i18n>Model</b></label><span data-i18n>Claude Code's default follows your plan.</span></div><div class="sc"><select id="set-model"><option value="" data-i18n>Claude Code's default</option><option value="opus">Opus</option><option value="sonnet">Sonnet</option><option value="haiku">Haiku</option></select></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Blender MCP server</b><span data-i18n>What drives Studio's own Blender.</span></div><div class="sc"><div class="seg small" id="set-mcp"><button data-v="ahujasid">ahujasid</button><button data-v="lab">Blender Lab</button></div></div></div>
+        <div class="srow"><div class="st"><label for="set-port"><b data-i18n>Studio's Blender port</b></label><span data-i18n>The next ones follow when several run at once. 9876 stays your own Blender's.</span></div><div class="sc"><input id="set-port" type="number" min="1024" max="65535" class="num"></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Open Blender behind</b><span data-i18n>Studio's Blender opens behind your windows and never takes the focus. Off, it comes to the front, to watch it work.</span></div><div class="sc"><button class="switch" id="set-behind" role="switch" aria-checked="true" aria-label="Open Blender behind" data-i18n-attr="aria-label"><i class="sw"></i></button></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Studio's Blender</b><span id="set-blender-state"></span></div><div class="sc"><button class="btn sm" id="set-stop-blender" data-i18n>Stop it</button></div></div>
+      </section>
+      <section class="set-pane" data-pane="account" role="tabpanel" hidden>
+        <p class="set-where" data-i18n>This computer, for every project: who pays for Claude's work.</p>
+        <div class="srow"><div class="st"><b data-i18n>Claude account</b><span id="set-acc-help"></span><span class="sstate" id="set-acc-state"></span></div><div class="sc"><div class="seg small" id="set-account"><button data-v="subscription" data-i18n>My subscription</button><button data-v="account" data-i18n>Another account</button><button data-v="api_key" data-i18n>API key</button></div></div></div>
+        <div class="sbox" id="set-acc"></div>
+        <div class="srow"><div class="st"><b data-i18n>Made for, by default</b><span data-i18n>For every project that does not choose.</span></div><div class="sc"><div class="seg small" id="set-target-default"><button data-v="web" data-i18n>Web</button><button data-v="desktop" data-i18n>Unity / Unreal</button><button data-v="print" data-i18n>3D print</button></div></div></div>
+        <div class="srow"><div class="st"><b data-i18n>Usage</b><span id="set-usage"></span></div><div class="sc"></div></div>
+      </section>
+      <section class="set-pane" data-pane="setup" role="tabpanel" hidden>
+        <p class="set-where" data-i18n>This computer: what kiln uses, found or not. Install with Claude runs kiln's setup for that part, and says its size and licence before downloading anything.</p>
+        <ul class="setup" id="set-setup"></ul>
+        <p class="small"><button class="btn sm" id="set-setup-again" data-i18n>Check again</button></p>
+      </section>
+      <p class="set-status dim small" id="set-status" aria-live="polite"></p>
+    </div>
+  </div>
+</dialog>
+<dialog id="palette" aria-label="Commands" data-i18n-attr="aria-label">
+  <div class="pal-in"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="pal-q" type="text" placeholder="Type a command or a model" autocomplete="off" spellcheck="false" aria-label="Filter commands" aria-controls="pal-list" data-i18n-attr="placeholder,aria-label"><kbd>Esc</kbd></div>
+  <ul id="pal-list" role="listbox" aria-label="Commands" data-i18n-attr="aria-label"></ul>
+  <div class="pal-foot dim"><span><kbd>↑</kbd> <kbd>↓</kbd> <span data-i18n>to move</span></span><span><kbd>↵</kbd> <span data-i18n>to run</span></span><span><kbd>?</kbd> <span data-i18n>all the keys</span></span></div>
+</dialog>
+<dialog id="decl" aria-labelledby="dc-title">
+  <header class="set-head"><div class="dc-head"><h3 id="dc-title"></h3><span class="dim" id="dc-sub"></span></div><form method="dialog"><button class="btn sm" data-i18n>Close</button></form></header>
+  <div class="dc-tabs" role="tablist" aria-label="What changes" data-i18n-attr="aria-label">
+    <button type="button" role="tab" data-dc-mode="copies"><b data-i18n>New models</b><span data-i18n>A file per variation. Anything can change: shape, size, colours, a version for printing.</span></button>
+    <button type="button" role="tab" data-dc-mode="finishes"><b data-i18n>Finishes of this model</b><span data-i18n>Only the materials change (wood, paint, metal), in the same file: a website switches from one to the other without loading again.</span></button>
+  </div>
+  <div class="dc-body">
+    <div class="dc-rows" id="dc-rows"></div>
+    <button type="button" class="dc-add" id="dc-add"></button>
+  </div>
+  <div class="dc-opts" id="dc-opts-copies">
+    <span class="lab" data-i18n>Start from</span><div class="dc-pills" id="dc-from"></div>
+    <span class="lab" data-i18n>Make the outputs again</span><div class="dc-pills" id="dc-outs"></div>
+    <span class="lab" data-i18n>Open notes</span><div class="dc-pills" id="dc-notes"></div>
+  </div>
+  <div class="dc-opts" id="dc-opts-finishes" hidden>
+    <span class="lab" data-i18n>In</span><span class="dc-in" id="dc-in"></span>
+  </div>
+  <footer class="dc-foot">
+    <div class="dc-sum"><div class="dc-facts" id="dc-facts"></div><span class="dc-est" id="dc-est"></span><span class="dc-err" id="dc-err" role="alert"></span></div>
+    <form method="dialog"><button class="btn" value="cancel" data-i18n>Cancel</button></form>
+    <button class="btn accent" id="dc-go" type="button"></button>
+  </footer>
+</dialog>
+<dialog id="phone" aria-labelledby="ph-title">
+  <header class="set-head"><h3 id="ph-title" data-i18n>See it on your phone</h3><form method="dialog"><button class="btn sm" data-i18n>Close</button></form></header>
+  <div class="ph-body">
+    <div class="ph-left">
+      <div class="ph-qr" id="ph-qr" aria-label="QR code" data-i18n-attr="aria-label"></div>
+      <div class="ph-time" id="ph-time" aria-live="off"><b id="ph-left">15:00</b><span class="ph-bar"><i id="ph-bar"></i></span></div>
+    </div>
+    <div class="ph-how">
+      <ol>
+        <li data-i18n>Your phone on the same Wi-Fi as this computer.</li>
+        <li data-i18n>Scan the code with its camera.</li>
+        <li data-i18n>Tap "View in AR", and place the model in the room.</li>
+      </ol>
+      <code id="ph-url"></code>
+      <p class="dim" id="ph-when"></p>
+      <div class="ph-lim" id="ph-lim" hidden></div>
+      <div class="ph-miss" id="ph-miss" hidden></div>
+      <p class="dim ph-note" data-i18n>Only this model's AR files are shared, read-only, for a few minutes. The first time, macOS may ask to let Python take incoming connections: allow it.</p>
+    </div>
+  </div>
+  <footer class="ph-foot"><button class="btn" id="ph-stop" data-i18n>Stop sharing</button></footer>
+</dialog>
+<dialog id="dl" aria-labelledby="dl-title">
+  <header class="set-head"><h3 id="dl-title" data-i18n>Download</h3><form method="dialog"><button class="btn sm" data-i18n>Close</button></form></header>
+  <div class="dl-body">
+    <div id="dl-list"></div>
+    <label class="dl-sheet"><input type="checkbox" id="dl-sheet" checked><span><b data-i18n>Add a sheet</b><span class="dim" data-i18n>What each file is for, its size, its triangles, the licences: to send with the files.</span></span></label>
+  </div>
+  <footer class="dl-foot"><span class="dim" id="dl-sum"></span><a class="btn accent" id="dl-go" download autofocus data-i18n>Download</a></footer>
+</dialog>
+<dialog id="confirm"><p></p><p class="cf-note dim small" hidden></p><form method="dialog"><button class="btn" value="cancel" data-i18n>Cancel</button><button class="btn accent" value="ok">OK</button></form></dialog>
+
+<script type="module" src="/static/app.js"></script>
+</body>
+</html>

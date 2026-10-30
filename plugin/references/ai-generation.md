@@ -13,7 +13,7 @@ user chooses, and a local install is never required.
 | 3 | **TripoSR Space** `stabilityai/TripoSR` | same | MIT |
 | 4 | **Local TRELLIS.2** — offline only, never required | 31 GB of weights, 24 GB of memory | MIT, two dependencies are not — see below |
 | — | **Hunyuan3D** (Space, local, MCP native) — **only on explicit request** | see its sections | **does not apply in the EU, the UK or South Korea** |
-| — | **Hyper3D Rodin / Tripo** (MCP native) | paid | rule 5 — never spend |
+| — | **Hyper3D Rodin / Tripo / Meshy / Premium** (MCP native) | paid | rule 5 — never spend |
 
 Stages read on 2026-10-09 through `https://huggingface.co/api/spaces/<id>`:
 `microsoft/TRELLIS.2` RUNNING, `trellis-community/TRELLIS` RUNNING,
@@ -34,39 +34,67 @@ asks for it, quote that line and wait for a yes before any call.
 
 ---
 
-## MCP-Native Backend — Hunyuan3D, Rodin: on request only
+## Contents
+- MCP-Native Backend — Hunyuan3D, Rodin, Tripo, Meshy: on request only
+- Local Backend — Hunyuan3D-2 Mini
+  - Requirements
+  - Available Models
+  - Local API Flow
+  - Error Handling (Local)
+- HF Spaces Backend — Hunyuan3D 2.x (on request only, licence above)
+  - Setup
+  - API — verified signature
+- Free cloud quota — the real ceiling
+  - Whose account pays the quota — say it, every session
+- TRELLIS.2 — locally on Apple Silicon (measured)
+  - Install — five fixes the project's `setup.sh` does not make
+  - Licences — run it MIT-only
+  - Its Space, for reference
+- Concept Art
+  - Default — FLUX.1-schnell HF Space
+  - When the quota is spent
+  - Not the default any more
 
-The Blender MCP addon ships 3D generation, but only for Hunyuan3D (Tencent Cloud
-keys or a local API, licence above) and Hyper3D Rodin (paid). It needs no Python
+## MCP-Native Backend — Hunyuan3D, Rodin, Tripo, Meshy: on request only
+
+The Blender MCP server ships 3D generation through providers that need the user's API keys
+or a paid plan: Hunyuan3D (Tencent Cloud keys or a local API, licence above), Hyper3D Rodin,
+Meshy, Tripo, and the server's own "Premium" generators (paid). It needs no Python
 environment — which does not make it the default.
 
-**Tencent Hunyuan3D**
+**`mcp-for-blender` 2.1.9 and later — one tool**
 
 ```
-get_hunyuan3d_status()                       → is the integration on?
-generate_hunyuan3d_model(...)               → returns a job
+get_addon_status()                         → "generators": {"hunyuan3d": "off", "hyper3d": "off", …}
+generate_3d(prompt=… | image=…, provider=…) → waits up to 45 s, imports; else a job handle
+generate_3d(job=…, name=…)                 → resume waiting (never re-request: it may pay again)
+```
+
+`provider="auto"` prefers the server's Premium generators, then the user's own keys: always
+name the provider. Never point the user to Premium (rule 5).
+
+**Older servers — one tool set per backend**
+
+```
+get_hunyuan3d_status()              → is the integration on?
+generate_hunyuan3d_model(...)       → returns a job
 poll_hunyuan_job_status(job_id)     → wait for completion
 import_generated_asset_hunyuan(...) → straight into the scene
+
+get_hyper3d_status()                     → Hyper3D Rodin, a second, independent backend
+generate_hyper3d_model_via_text(...)     → returns a job
+poll_rodin_job_status(job_id)            → wait for completion
+import_generated_asset(...)              → straight into the scene
 ```
 
-**Hyper3D Rodin** — a second, independent backend:
+**Rule 23 applies here too.** Generators are OFF in a default install. On the current server
+`get_addon_status()` says so in `generators`. On older ones the addon does not register their
+commands while off — the call answers `Unknown command type`, not "disabled": call
+`get_hunyuan3d_status()` / `get_hyper3d_status()` first and show the remediation from the
+`message` field. The checkboxes live in the MCP panel of the 3D Viewport sidebar (press N if
+hidden).
 
-```
-get_hyper3d_status()                    → is the integration on?
-generate_hyper3d_model_via_text(...)            → returns a job
-poll_rodin_job_status(job_id)  → wait for completion
-import_generated_asset(...)    → straight into the scene
-```
-
-**Rule 23 applies here too.** Both integrations are OFF in a default install,
-and while off the addon does not register their commands — the call answers
-`Unknown command type`, not "disabled". Always call `get_hunyuan3d_status()` /
-`get_hyper3d_status()` first and show the remediation from the `message` field: the
-checkboxes live in the BlenderMCP panel of the 3D Viewport sidebar (press N if
-hidden), labelled *Use Tencent Hunyuan 3D model generation* and *Use Hyper3D
-Rodin 3D model generation*.
-
-Rule 5 still binds: Rodin and some Hunyuan tiers are credit-based. Confirm with
+Rule 5 still binds: Rodin, Meshy, Tripo, Premium and some Hunyuan tiers are credit-based. Confirm with
 the user before spending anything, and prefer a free backend when one is set up.
 
 ---

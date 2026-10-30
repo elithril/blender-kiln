@@ -7,10 +7,11 @@ const M = L.milestones as number[];
 const stops = M.map((n) => V.find((x) => x.v === n)!);
 const pct = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(Math.round(n * 100))}%`;
 
-// the curve: all fifteen truth scores, one axis, 0.80 to 0.95
+// the curve: every version's truth score, one axis, 0.80 to 0.95
+const LAST = V[V.length - 1].v;
 const W = 1000, H = 260, PL = 44, PR = 16, PT = 18, PB = 34;
 const lo = 0.8, hi = 0.95;
-const X = (v: number) => PL + ((v - 1) / 14) * (W - PL - PR);
+const X = (v: number) => PL + ((v - 1) / (LAST - 1)) * (W - PL - PR);
 const Y = (s: number) => PT + (1 - (s - lo) / (hi - lo)) * (H - PT - PB);
 // v12 is not a measurement: the line goes from v11 straight to v13, v12 stands apart, hollow
 const measured = V.filter((x) => !x.contaminated);
@@ -48,7 +49,7 @@ const T = L.tradeoff;
 
     <figure class="curve">
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-labelledby="curve-t" data-svg data-scores={JSON.stringify(V.map((x) => [x.v, x.score, !!x.contaminated]))}>
-        <title id="curve-t">Shape score against the real lantern, versions 1 to 15; v12 contaminated, not a measurement</title>
+        <title id="curve-t">Shape score against the real lantern, versions 1 to {LAST}; v12 contaminated, not a measurement</title>
         {grid.map((g) => (
           <g>
             <line x1={PL} x2={W - PR} y1={Y(g)} y2={Y(g)} class="grid" data-g={g} />
@@ -102,11 +103,12 @@ const T = L.tradeoff;
   const svg = root.querySelector<SVGSVGElement>('[data-svg]')!;
   const data = JSON.parse(svg.dataset.scores!) as [number, number, boolean][];
   const all = svg.querySelector<SVGPathElement>('.line-all')!;
+  const last = data[data.length - 1][0];
   function layout() {
     const W = svg.clientWidth, H = svg.clientHeight;
     if (!W || !H) return;
     const narrow = W < 600, PL = narrow ? 8 : 44, PR = 10, PT = 12, PB = 26;
-    const X = (v: number) => PL + ((v - 1) / 14) * (W - PL - PR);
+    const X = (v: number) => PL + ((v - 1) / (last - 1)) * (W - PL - PR);
     const Y = (s: number) => PT + (1 - (s - 0.8) / 0.15) * (H - PT - PB);
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     svg.querySelectorAll<SVGLineElement>('[data-g]').forEach((l) => { const y = Y(Number(l.dataset.g)); l.setAttribute('x1', String(PL)); l.setAttribute('x2', String(W - PR)); l.setAttribute('y1', String(y)); l.setAttribute('y2', String(y)); });
@@ -133,9 +135,9 @@ const T = L.tradeoff;
   }
   function paint(p: number) {
     lastP = p;
-    // the cursor walks the fifteen versions; the reading holds the last turning point passed
-    const v = 1 + p * 14;
-    const x = xOf(1) + (xOf(15) - xOf(1)) * p;
+    // the cursor walks every version; the reading holds the last turning point passed
+    const v = 1 + p * (last - 1);
+    const x = xOf(1) + (xOf(last) - xOf(1)) * p;
     cursor.setAttribute('x1', String(x)); cursor.setAttribute('x2', String(x));
     drawn.style.strokeDashoffset = String(1 - p);
     let i = 0;

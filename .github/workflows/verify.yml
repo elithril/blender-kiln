@@ -14,6 +14,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+# read-only token: these jobs check the repository, they never write to it
+permissions:
+  contents: read
+
 jobs:
   docs:
     runs-on: ubuntu-latest
@@ -29,3 +33,18 @@ jobs:
 
       - name: Verify the verifier still catches regressions
         run: python3 plugin/tools/test_verify_docs.py
+
+      - name: Check the auto-rig's skeleton mapping and weight cleaning (no SkinTokens, no Blender)
+        run: python3 plugin/tools/test_autorig.py
+
+      - name: Check the humanoid presets' catalogue and licence trail (no Blender)
+        run: python3 plugin/tools/test_presets.py
+
+      - name: open_blender — what counts as a Blender already open
+        run: python3 plugin/tools/test_open_blender.py
+
+      - name: Kiln Studio — scan, stats, notes, history, HTTP API
+        run: python3 plugin/studio/test_studio.py
+
+      - name: Kiln Studio — the Claude worker (a fake claude, no Blender)
+        run: python3 plugin/studio/test_worker.py

@@ -14,6 +14,16 @@ name: blender
 #   - USDZ exports natively, but convert_world_material writes a non-conforming .exr
 #   - fidelity_check.py measures what it claims: seeded widths, views, refusals
 #   - template_profile.py reads known radii back, a wire pressed against the body included
+#   - print_check.py finds the seeded defects: holes, floating and inverted parts, slivers,
+#     lost volume, odd STL files (no PrusaSlicer on the runner: its cases are skipped)
+#   - fit_coupon.py writes the holes and pegs it says, diamond and round; review_renders.py
+#     frames every view on the subject and fails on an empty one
+#   - photo_project.py recovers a printed letter from a seeded photo, keeps what the photo cannot
+#     see, and refuses a camera that fits under 0.95 IoU
+#   - autorig.py turns a raw SkinTokens output into kiln's named rig, lids and ears included,
+#     and exits 1 on one with an arm missing (no SkinTokens on the runner: a stored raw output)
+#   - presets.py plays the shipped Kimodo clips on a seeded kiln-named humanoid: clips named as
+#     asked, the licence trail written, a rig missing a bone refused
 
 on:
   schedule:
@@ -29,6 +39,31 @@ on:
       - "plugin/tools/test_fidelity_check.py"
       - "plugin/tools/template_profile.py"
       - "plugin/tools/test_template_profile.py"
+      - "plugin/tools/print_check.py"
+      - "plugin/tools/test_print_check.py"
+      - "plugin/tools/flatten.py"
+      - "plugin/tools/test_flatten.py"
+      - "plugin/tools/fit_coupon.py"
+      - "plugin/tools/test_fit_coupon.py"
+      - "plugin/tools/review_renders.py"
+      - "plugin/tools/test_review_renders.py"
+      - "plugin/tools/uv_check.py"
+      - "plugin/tools/test_uv_check.py"
+      - "plugin/tools/photo_project.py"
+      - "plugin/tools/test_photo_project.py"
+      - "plugin/tools/autorig.py"
+      - "plugin/tools/test_autorig.py"
+      - "plugin/tools/presets.py"
+      - "plugin/tools/retarget.py"
+      - "plugin/tools/motion_measure.py"
+      - "plugin/tools/motion_loop.py"
+      - "plugin/tools/test_presets.py"
+      - "plugin/tools/motions/**"
+      - "plugin/tools/fixtures/**"
+
+# read-only token: these jobs check the repository, they never write to it
+permissions:
+  contents: read
 
 jobs:
   blender:
@@ -58,3 +93,35 @@ jobs:
       - name: Check the template profile against a seeded part
         run: |
           BLENDER=blender python3 plugin/tools/test_template_profile.py
+
+      - name: Check the print check against seeded meshes
+        run: |
+          BLENDER=blender python3 plugin/tools/test_print_check.py
+
+      - name: Check flattening against seeded meshes
+        run: |
+          BLENDER=blender python3 plugin/tools/test_flatten.py
+
+      - name: Check the joint test print
+        run: |
+          BLENDER=blender python3 plugin/tools/test_fit_coupon.py
+
+      - name: Check the headless review renders
+        run: |
+          BLENDER=blender python3 plugin/tools/test_review_renders.py
+
+      - name: Check the UV check against seeded unwraps
+        run: |
+          BLENDER=blender python3 plugin/tools/test_uv_check.py
+
+      - name: Check the photo projection against a seeded photo
+        run: |
+          BLENDER=blender python3 plugin/tools/test_photo_project.py
+
+      - name: Check the auto-rig against a stored SkinTokens output
+        run: |
+          BLENDER=blender python3 plugin/tools/test_autorig.py
+
+      - name: Check the humanoid presets on a seeded rig
+        run: |
+          BLENDER=blender python3 plugin/tools/test_presets.py

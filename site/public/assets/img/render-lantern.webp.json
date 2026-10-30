@@ -1,4 +1,4 @@
 {
-  "prompt": "Sourced: blender-kiln bench-results:ref-kiln-v15/ref-lantern-template/render-hurricane-lantern_final.webp (bench render of the shipped GLB), no-WebGL fallback.",
-  "createdAt": "2026-10-08T11:06:43.133Z"
+  "prompt": "Sourced: blender-kiln bench/runs/v300v18/ref-lantern/render-hurricane-lantern_final.png (bench render of the shipped GLB, kiln 3.0 with review rounds), resized to 1000 px, no-WebGL fallback.",
+  "createdAt": "2026-10-29T14:22:09.408Z"
 }

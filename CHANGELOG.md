@@ -6,7 +6,507 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0] — 2026-10-30
+
+kiln 3.0 gathers everything since 2.2.0: the sections below, and [2.3.0](#230--2026-10-12), which
+was never published. kiln now models **for a 3D printer** (closed solids at size, parts that fit,
+`print_check` and PrusaSlicer on every STL), opens every model of a project in **Kiln Studio**, a
+page on your own machine where a note pinned on a model goes to Claude, with **`kiln-studio`**, its
+MCP server, for the terminal; builds and animates **organic characters** (a learned auto-rig, 22
+ready-made humanoid moves, looped clips); and gives every asset **review rounds** read by a fresh
+reviewer. Measured by the full bench, 3.0 against 2.2.0: both prints pass the printability check
+(2.2.0: one of two), and the three rebuilds from a photo score 0.888, 0.948 and 0.729 against the
+real objects with review rounds. `SKILL.md` is now a router, and the server is
+`mcp-for-blender` 2.2.2, pinned.
+
+### Fixed — what the 3.0 bench found (3.0)
+
+The full bench (2.2.0 and 3.0 on `mcp-for-blender` 2.2.2, 3.0 on the Lab MCP too, October 2026)
+found these in 3.0; each brief it touched was run again after the fix.
+
+- **The photo's perspective is not a shape gap.** `fidelity_check` renders orthographic; on a
+  photo taken from above and close, the lower bands read wider than the photo. A 3.0 session
+  pulled the lantern's side tubes in to match and moved away from the real object (0.900 on
+  2.2.0 → 0.849). With `--elevation` > 0, a lower band up to 15 % wider is now listed last as
+  the photo's perspective, never to narrow; the three lantern briefs went to 0.885, 0.917 and
+  0.946 (`test_fidelity_check.py` 38/38).
+- **Decimation keeps a closed shell closed.** A repair of a TRELLIS GLB decimated with
+  `gltfpack -si -sa` and shipped 840 non-manifold edges. A worse edge count is now a failed
+  decimation; on a closed shell, Blender's Collapse; when it damages thin parts, decimate less
+  (up to 2× the tier) or rebuild them, never `-sa`. Measured on a 115,600-triangle shell:
+  Collapse 0 / 0, `-si -sa` 54 / 35. The repair now ships 9,000 triangles, 0 / 0.
+- **Rule 6: `read_factory_settings` only in a headless Blender kiln started** — through the
+  MCP it reset the live Blender and turned its add-on off.
+- **`tools/open_blender.py` opens no second Blender** beside a Blender whose add-on does not
+  answer: it says how to start the add-on and stops (`test_open_blender.py`, in CI).
+- **Kiln Studio: `gltf-transform`'s steps pass without an approval** — a session had skipped
+  the compression to avoid one (18.3 kB instead of 15.7 kB).
+
+### Added — what kiln's mascot taught (3.0)
+
+- **Review rounds for every asset** (`references/review-rounds.md`): the intent in the log before the
+  first primitive (a palette with roles, three materials at least, three finishes), then rounds —
+  **for a prop, until two new reviewers in a row find nothing blocking (8 at most); 6 at least (12 at
+  most) for a character or a showcase brief, then rounds on its motion**, auto mode included — each a
+  `tools/review_sheet.py` sheet looked at and a written critique of three defects or more with their
+  fixes; from a photo, reshaping to the photo keeps its two correction
+  rounds and the next ones work on the surface, the finish and the assembly — a part off-centre or out
+  of line is fixed at any round (a test ammo box read the cap as "no more geometry" and shipped its
+  latch plate off-centre after eight rounds of paint). The 3.0 bench's chibi, two looks and shipped, was
+  "pas très quali"; kiln's mascot, six rounds on the model, three on the motion and a design sheet, was
+  validated.
+- **A fresh reviewer each round** (`review-rounds.md` § The fresh reviewer): a new subagent given the
+  brief, the sheets and the lists — not the log or the scripts — reports every defect, blocking or
+  detail. The builder, reading its own sheets, had written "nothing found" over a chair's holed
+  rosette and a mascot's hair flame read as horns. Characters: twelve rounds at most. The rounds end
+  when a second new reviewer, on the same sheets, finds nothing blocking either.
+- **Knees that snapped** (`retarget.py` `SOFT_REACH`, `motion_measure.py` `knee_pops`): the foot lock
+  pulled a leg straight for one frame and bent it on the next, 1.4-2 times a second on both mascots;
+  a leg's reach now eases from 93 % of its length — none left, the slide still under 50 mm/s.
+- **Feet flat** (`retarget.py` `ease_swing_feet`, `motion_measure.py` `standing_foot_pitch`, `swing_foot_pitch`):
+  the ankle came across wrong from Kimodo's actor — kiln's mascot stood 30° toes-down, heel off the floor, and
+  pointed 68° down in the air, tiptoeing in big boots. The standing foot goes back to its rest pitch (the sole
+  flat) and a foot in the air is eased toward 22° past 10°, before the feet are locked: on the mascot 0.6°
+  standing, 32° in the air, no knee pop (3 before); `test_presets.py` 19/19. A prop held in the hand is taken
+  for part of the arm by the arms' clearance: the mascot is animated without its hammer, added back after.
+- **`tools/review_sheet.py`**: six views under a studio light, a close-up of the top, a rigged model in
+  its rest pose, framed on its vertices, the exposure moved one stop at most (pushed to a fixed
+  brightness, a dark lantern's colours shifted and a session made its glass opaque), and a second
+  sheet in clay for the assembly (`test_review_sheet.py`, 5/5).
+- **`characters.md` § Design sheet first**: role and signature shape, palette, costume in layers with
+  four materials, a prop, three finishes — shown to the user, or logged in auto mode.
+- **`tools/presets.py --blink`**: blinks in every clip on the eye bones (a squash and the highlights
+  shrinking); and its export now writes the meshes at the scene's root — no validator warning.
+- **The T-pose measure on a big head**: the slice at 0.75 × H was the head (−54° on a T-pose); the arm's
+  own axis instead (`pipeline-import-cleanup.md`).
+- **`tools/presets.py --calm`** (walk, walk_woman, run, sneak): Kimodo's walk swings the pelvis 18.8°
+  of roll and 13.5° of yaw, about twice a human walk — a waddle on a chibi. `retarget.calm` scales the
+  hips' roll and yaw, their side sway, the spine's turns and the head's roll and yaw together, before
+  the feet are locked (calming the hips alone made the head roll 12.2° instead of 4.3°). On the
+  mascot: hips 4.7° roll, head 1.1°, slide 1.1 mm/s. `test_presets.py` checks it (14/14).
+- **`references/characters.md` § A stylised humanoid**: hair as chunky locks over a thin cap, never a
+  shell; an open smile, a small nose, a flat palm with a thumb; clothes projected on the body, cuffs
+  sized from the front, one object per limb; skin weights for the parts autorig makes rigid (an
+  apron on `Spine2`, a hammer on the thumb's tip); a squash blink on flat eyes instead of a floating
+  lid; six review rounds at least, with the questions each of the mascot's six rounds answered.
+- **Export**: read the glTF validator's whole output — `NODE_SKINNED_MESH_NON_ROOT` was on every
+  skinned mesh (the bench's chibi logged "0 warnings" with 7): unparent the meshes before export; keep
+  a re-exported clip at its own frame rate (at 24 fps a 30 fps walk's locked feet slid 6.5 mm/s).
+
+### Changed — mcp-for-blender's current tools; the server pinned for real (3.0)
+
+- **ahujasid's server is `mcp-for-blender`** (renamed from `blender-mcp` in September 2026),
+  and since 2.1.9 it serves **nine tools instead of thirty-six**: `look` (framed views),
+  `get_scene_info` (now with sizes, ground contact and mesh health), `search_assets` /
+  `import_asset` (PolyHaven, Sketchfab, Poly Pizza), `generate_3d` (paid providers),
+  `get_addon_status` (which libraries and generators are on), `execute_blender_code`,
+  telemetry. kiln's rules named the old ones: rule 2's `get_viewport_screenshot`, rule 24's
+  `get_object_info`, rule 23's `get_polyhaven_status` — none exist on the current server.
+  Rules 2, 14, 22, 23 and 24 now name the current tools and what they demand is unchanged;
+  `references/blender-mcp.md` maps every need to the current tool, the old surface
+  (mcp-for-blender 2.1.3 and earlier, still installed by many — `blender-mcp` 1.x too) and
+  the Blender Lab MCP, and says how to tell them apart. Rule 24 no longer claims
+  `get_scene_info` carries no dimensions: on the current server it does.
+- **The pin pinned nothing.** `blender-mcp` 2.0.0 is a shim requiring `mcp-for-blender>=2.0.0`,
+  so the bench's and Kiln Studio's `blender-mcp==2.0.0` drove whichever version was current:
+  2.1.9 for the 2.2.0 baseline (2026-10-16), 2.2.2 on 2026-10-21, a different bundled add-on
+  each time. Both now pin `mcp-for-blender==2.2.2`, server and add-on, and each bench result
+  records it. **The 2.2.0 baseline must be run again on it** before comparing 3.0 against it.
+- References follow: the marketplace preflight (`get_addon_status()` → `libraries`), PolyHaven
+  textures through `import_asset(..., apply_to=...)`, Sketchfab through `import_asset(...,
+  target_size=...)`, MCP generation through `generate_3d` (never by default), batch preflight,
+  install commands (`uvx mcp-for-blender install-addon`). [4] IMPORT's sketch cited rule 23 for
+  the dimensions check: rule 24. Safe mode (`BLENDER_MCP_SAFE_MODE=1`) is named: it refuses
+  `exec(open(...))` and `sys`, which kiln's build scripts and live view use.
+
+### Changed — SKILL.md is a router; the detail is read when its phase starts (3.0)
+
+- **`SKILL.md`: 1,299 → ~440 lines, ~19k → ~6k tokens** (characters / 4), under the
+  Agent Skills guide's 500 lines. It keeps the commands and their routing, **the 26 Iron
+  Rules word for word and numbered as before**, and the pipeline's skeleton: per phase what
+  it produces, its gates and the rules it applies, the print branch, and the file to read in
+  full before it starts — with a checklist to copy and tick. Its body's first ~5,000 tokens,
+  what Claude Code re-attaches after a compaction, now hold the rules and the whole pipeline;
+  before, a long session lost everything past the first phases.
+- **Nine references, each linked from SKILL.md (one level)**: `pipeline-brief.md` ([1], [2]),
+  `pipeline-source.md` ([3]), `pipeline-import-cleanup.md` ([4], [5]),
+  `pipeline-rig-animate.md` ([5c], [5d]), `pipeline-optimize-export.md` ([6], [7]),
+  `commands.md` (the standalone commands), `blender-mcp.md` (the tool surface, the Blender Lab
+  MCP's equivalents), `setup.md` (dependencies, `/kiln setup`, `/kiln models`), `log-format.md`.
+  Their text is SKILL.md's, moved line for line: a comparison of every line of the old file
+  against the new set finds none missing but the three fixed below.
+- **A table of contents** at the head of every reference over 100 lines (20 files), sections
+  and subsections, as the guide asks: a partial read still sees the file's scope.
+- Fixed while moving: [7] EXPORT and `/kiln convert` said a USDZ comes from Reality Converter
+  or usdzconvert, against Dependencies and `export-targets.md` — it is `tools/glb_to_usdz.py`
+  in Blender; [5b] TEXTURING now sits in the diagram's order, before [5c]. Two "above/below"
+  pointers name their file.
+- The code's pointers follow: `studio/checks.py` (the log format), `studio/setup_status.py`
+  (the setup scan), `tools/verify_blender.py` (PHASE 5c's rig tiers). README's structure table
+  and layout list every reference with its size.
+
+### Added — ready-made humanoid moves (3.0)
+
+- **`tools/presets.py`**: `list` the 22 motions (43 clips: 21 in two takes, a woman's walk),
+  `animate --asset X_rigged.glb --motion walk,run,jump,dance [--loop] [--speed] [--take A|B]`
+  on a rig with kiln's names — one GLB with a clip per motion named as asked, a measures JSON,
+  a provenance record. The clips are image-to-3dlab's (AssetFurnace, Apache-2.0) presets made
+  with NVIDIA Kimodo (NVIDIA Open Model License, commercial use allowed), shipped in
+  `tools/motions/` (2.1 MB); `tools/retarget.py` adapts its retarget; both in `plugin/NOTICE`.
+- **Corrected before keying**, each measured on the kiln child and the Hunyuan3D humanoid
+  (`references/animation.md` § Humanoid presets): bones by name (Hunyuan's handless arm: arm
+  through body 4,285 → 1,548 mm² on the walk); feet planted (walk slide 293 → 2.7 mm/s and
+  568 → 10.6, under the floor 22.9 → 0 and 38.2 → 0.5 mm); arms out of the hips and belly, the
+  swing capped at 25° (child walk 2,638 → 377 mm²); `--loop` adds a closed in-place cycle,
+  `{motion}_loop` (walk seam 6.22 → 0.69× a step, 6.42 → 1.20), beside the whole take, which
+  keeps the run's start and stop; a near-straight knee bends toward the thigh's front while the
+  feet are planted (the child's walk had bent its knee backward 17-35° around heel strike).
+  The Hunyuan humanoid stays above 500 mm² of arm through
+  body on walk, jump and dance: its fused hand and its shoulder's skin; said, not hidden.
+- **PHASE 5d routes** a kiln-named humanoid and a move in the list to `presets.py`; another
+  move, a non-human biped or wings to UniMate, non-commercial; quadrupeds unchanged.
+- **`tools/motion_measure.py`**: the comparison's measure, for any route. **`tools/test_presets.py`**,
+  13 checks on a seeded humanoid (names, licences, feet, arms, loop), on every push without
+  Blender and in the Blender workflow.
+
+### Fixed — looped clips keep the hips' height, and carry one clip (3.0)
+
+- **`tools/motion_loop.py`** removed the root's drift and blended its height on the bone's
+  own location channels. On a `Hips` bone that leans (12.5° on the Hunyuan3D humanoid) that
+  is the wrong axes: the looped hips climbed up to 115.6 mm on a walk and 148.9 mm on a run.
+  Worked in world axes now: −2.5 and −6.9 mm against the source (8 clips, both humanoids).
+- The `.loop.glb` carried the un-looped source action as well, and on the Hunyuan rig the
+  importer made that one active. It now holds one clip, `Loop`, keyed 0..P with key P equal
+  to key 0 (animation rule 5) — its seam measured 0.55-1.6× a frame step on the 8 clips.
+- `verify_blender.py` loops a travelling root tilted 12.5°: one action, a closing key, the
+  height kept (the bone-local version: −131.4 mm, caught).
+
+### Added — the photo's own markings, projected (optional, 3.0)
+
+- **`tools/photo_project.py`**: after the last fidelity round, puts the reference photo's own
+  pixels on the base-colour textures where the photo sees the model squarely — for text, a
+  logo or precise wear a script copies as a lookalike. The camera is fidelity_check's, fitted
+  to the silhouette (bounded to 10°); under 0.95 IoU it refuses. Confidence per texel after
+  AssetFurnace's Pixel Match (image-to-3dlab, Apache-2.0 — `plugin/NOTICE`), facing ≥ 0.6;
+  the photo brought to the model's exposure by one median gain, never pasted raw; `--exclude`
+  for misplaced parts, `--erase-stencil` against a doubled marking. On the bench ammo box:
+  IoU 0.918 → 0.963, SSIM from the photo's view 0.551 → 0.597, ΔE76 17.46 → 16.84, GLB
+  186.6 → 175.4 kB; with handle and lever excluded and the stencil erased, 0.589 / 17.27 and
+  the double "7.62" gone. Those numbers are partly circular (the photo against itself), so
+  the tool renders two other angles to look at. One object tested.
+- **Offered, never run silently** (rule 6): the scripted-modelling row of PHASE 3 and
+  `references/reference-fidelity.md` § 5 propose it only when the photo carries markings and
+  the shape is final. `references/photo-projection.md` has the method, the table and the limits.
+- **`tools/test_photo_project.py`**, 12 checks in the Blender workflow: a printed letter
+  recovered from a seeded photo (correlation 0.17 → 0.95), the unseen back unchanged, an
+  excluded part kept, a stencil erased in view and kept unseen, a 40 % too long box refused.
+
+### Added — learned auto-rig (3.0)
+
+- **`tools/autorig.py`**: rigs a character with SkinTokens (VAST-AI, MIT, local) and hands
+  back kiln's skeleton — Mixamo names, weights cleaned (≤ 4 influences, normalised, specks
+  dropped), lid and ear bones added, the validator's checks run. On one bent pose it crossed
+  2,985 mm² of skin through skin against Rigify's 3,926 on a kiln-built child, and 20,917
+  against 50,680 on a generated humanoid with a hand fused to its hip. It fails naming the
+  bone when a limb comes back short (that humanoid's right hand), and refuses a model facing
+  +Y. `references/characters.md` § Learned auto-rig has the table, the method and the limits:
+  one pose, two humanoids, no humanoid walk, and runs that differ (2,193 on another run).
+- **PHASE 5c routes first**: a humanoid or a mesh kiln did not build → the learned rig when
+  installed; a quadruped kiln built → its own rig (SkinTokens walked kiln's cat worse, 527 mm²
+  mean against 359). A generated quadruped is rigged both ways.
+- **`/kiln setup`** detects it and offers it, asked first: ~5.6 GB, MIT, Apple Silicon through
+  kiln's patch (from image-to-3dlab, Apache-2.0 — `plugin/NOTICE`), 35-54 s and ~7 GB of
+  memory per mesh. Pinned commit, packages and checkpoint hashes.
+- **`tools/test_autorig.py`**, 31 checks without SkinTokens: the four measured raw skeletons
+  named as by hand, the fused hand and seeded breaks failing by name, cleaning, lids and ears;
+  on every push (no Blender) and in the Blender workflow.
+
+## [2.3.0] — 2026-10-12
+
+*Never published: tagged on the 3.0 branch only, it ships in 3.0.0.*
+
+kiln now models for a **3D printer** — simple objects only. Measured on sessions given the
+skill and a brief or a photo, nothing else: a dog house and a lighthouse from a brief, a
+pumpkin and a ghost from photos, a windmill (two parts) from a brief, a teapot from three
+museum photos — all printable, all but the ghost's cat looking like what was asked. That cat,
+then a real cat from its photo, passed every print check and were unacceptable to look at, so
+print mode says at CONFIG that a realistic likeness of a real animal or person is out of reach,
+and builds a stylised figure from metaball families and one voxel remesh — the method a v2.2
+session found by itself on a cartoon dragon, made from one flat drawing in four colours.
+
+### Added — 3D printing
+
+- **Print in CONFIG** (FDM or resin, height, the printer's colours) switches modelling,
+  cleanup and export to `references/print.md`: model at print size, closed solids, one
+  volume (exact union as you go, or overlap + one voxel remesh, last), minimum thickness,
+  a flat base, overhangs designed out where nobody looks and supported where the photo shows
+  them, relief as geometry, a smooth surface the printer will not facet, parts printed apart
+  when they would print in the air, STL in mm.
+- **`tools/print_check.py`**: a printability verdict, raw — open and non-manifold edges,
+  normals, held and floating parts, walls, overhangs, loss against the original (dimensions
+  and volume, closed cavities taken out exactly), and PrusaSlicer as a second arbiter
+  (`--slicer`, `--supports`). It says when it rescales. 44 seeded cases.
+- **Like the photo, for print**: openings read on their outer edge, details cut along the
+  photo's camera, a `face` measure in `fidelity_check`, and rounds until the gaps stop
+  closing — the two-round cap does not apply to print.
+- **`tools/cutout.swift`**: macOS Vision's subject lifting cuts a photo out, local and free,
+  where a background fill could not part a white ghost from a white wall.
+- **`tools/flatten.py`**, for a model you made: nearly flat faces made exactly flat, the model
+  laid level on the bed, nothing else touched — curves, folds, bevels, steps and real slopes
+  kept, no vertex past the tolerance, the input never overwritten, holes left to the slicer
+  (which closes small ones: an open-topped cube sliced fine in PrusaSlicer 2.9.6). On the
+  windmill turned 1° with 10 % of its vertices off, PrusaSlicer finished the gallery floor at
+  4 heights and held the print by one edge (629 mm of first layer); flattened, 1 height and
+  the whole base (3,317 mm). 22 seeded cases, each after the first added when a real model
+  broke the tool. `/kiln inspect` and `/kiln cleanup` gain a print variant.
+- **`print_check` gives the smallest scale** (`SCALE`, `min_scale`, `min_dims_mm`): makers
+  rescale in the slicer, an STL carries no unit, and the walls shrink with it. The scale
+  under which 1 % more of the area falls under the floor — the windmill's body 40 %, the
+  lighthouse 67 %, the teapot 67 %. The hand-over gives it with the size it was modelled for.
+  Always a scale of the FILE: measured on the mesh `--height-mm` had scaled, the walls already
+  thin there were excused and the floor moved with the model — the lighthouse read at 55 %
+  said 43 % instead of 67 %, a 2 mm plate read at 200 % said 20 % instead of 40 %. A height
+  under it is now a warning.
+- **`tools/fit_coupon.py`**: the test print for a joint — a plate with one diamond hole per
+  clearance (0.1 / 0.2 / 0.3 mm a face) and one with a 0.5 mm lead-in chamfer on the bed face,
+  and the peg on a wall, printed as on the model. About 20 minutes on PrusaSlicer's default
+  profile; both parts PASS `print_check`. 11 checks read the sizes back from the STLs.
+- print.md: a hole that opens on the bed gets a 45° lead-in chamfer (the first layer's
+  "elephant's foot" closes its mouth), and a mesh is for decorative objects, not mechanical
+  parts — a CAD tool is named for those.
+- **README § 3D printing**, with the windmill (preview and parts), the teapot against its
+  museum photo (CC BY 4.0), and the before/after drawn from PrusaSlicer's G-code by
+  `examples/print/flatten_demo.py`, which rebuilds it from the committed windmill.
+
+### Added — Kiln Studio: four more themes
+
+- Forge (warm charcoal, ember orange, a few embers drifting behind the model: CSS on the
+  compositor, none with reduced motion), Neon (deep violet, cyan, magenta), Studio (soft
+  light) and Minimal (greys and the accent picked in Settings), from the design boards.
+  "To check" has its own colour token, so it stays apart from the accent where a theme
+  wants it to. Every text pair in all seven themes reads at 4.5:1 or more (measured in the
+  browser; Dark's muted grey and Light's accent and chips were darkened to get there).
+
+### Fixed — Kiln Studio v1, after a first try
+
+- No blink when a side panel folds or unfolds: the view is drawn in the same callback as
+  the resize (screencast of six toggles: 43 of 118 frames blank before, 0 of 117 after).
+- The notes panel's fold chevron keeps its own 28 px; tab labels shrink first.
+- Sora and JetBrains Mono ship in `studio/static/fonts/` (78 kB, SIL OFL): the page's only
+  outside requests are three.js from jsDelivr.
+- The Create command is `/kiln …`, like every other command the page shows.
+- `SKILL.md`'s `allowed-tools` names the four kiln-studio MCP tools as Claude Code calls
+  them (`mcp__plugin_blender-kiln_kiln-studio__get_selection`, …), and says when to ask
+  `get_selection`.
+- The bottom bar fits the view: the shading buttons become one list, the display toggles
+  fold into Options, then the bar wraps; between 761 and 1100 px the side panels are 250 and
+  336 px. Measured at six widths, in English and French, in the three themes: 36 of 36 fit.
+
+### Added — kiln-studio, an MCP server: what the user is looking at
+
+- The plugin declares an MCP server, `kiln-studio` (`plugin/.mcp.json`, `studio/mcp_server.py`,
+  standard library, stdio). `get_selection`: the model, stage, camera (Blender frame) and
+  note the open Studio page shows, which the page now reports to the server. `get_notes`:
+  an asset's notes with the pinned point, the camera and the pictures' paths.
+  `reply_to_note`: answer a note, never "resolved". `set_camera`: turn the page's view to a
+  preset, a note's view or a Blender position and target, opening another model if asked.
+  Read-only otherwise. A seeded test drives it over stdio against a running Studio: 59 tests.
+
+### Added — Kiln Studio: Create and Import
+
+- **Import:** drop a GLB, glTF, FBX or OBJ anywhere on the page, or pick it: it is saved into
+  `imports/` (a glTF or OBJ with its buffer, materials or textures: `imports/<name>/`),
+  never over an existing file, and opens. `POST /api/import`, the file's bytes, 512 MB at most.
+- **Create:** a form (brief, type, target, style, optional reference photo, brought down to
+  2048 px) writes an open request into `.kiln-studio/requests.json` and gives the command to
+  paste: `/kiln <brief>, type …, for …, <style>, reference photo … (Studio
+  request q_…)`. `studio.py requests` lists them, `studio.py request ID --status done --asset
+  A` closes one. The welcome now offers Create, Import and See an example. 57 tests.
+
+### Added — Kiln Studio: a welcome for an empty project
+
+- An empty project opens on what to do first, and on what Studio can see of the setup:
+  Blender (found at PATH, `$BLENDER` or the usual folders, with its version), the Blender
+  MCP connection (always "unknown": Studio says whether Claude Code is set up for one and
+  whether the add-on answers on port 9876, and that only Claude can say it is connected),
+  and SkinTokens (`tools/autorig.py status --quick`, "unknown" in a kiln without it).
+  `GET /api/status`.
+- **See an example** copies kiln's own gallery barrel (2,202 triangles, 112 kB, MIT, built
+  by `examples/gallery/build.py`) into `kiln-example/barrel/` and opens it. 55 tests.
+
+### Added — Kiln Studio in French, numbers in the reader's format
+
+- Every word on the page goes through one dictionary: English, and French
+  (`static/i18n/fr.json`); Settings picks the language, the browser's by default. Numbers,
+  sizes and lengths follow it: `44 784 tris · 1,95 Mo · 0,40 m` in French. Note text and
+  Claude's replies are left as written.
+- `checks.py` now builds each finding from a code and its parameters (`MESSAGES`), so the
+  page writes the sentence in the user's language while `studio.py checks` keeps its
+  English, rendered from the same codes (unchanged on the seven test-project models and on
+  31 synthetic findings, but the dimensions line, now `0.21 m × 0.21 m × 0.43 m`).
+- `test_studio.py` fails when a string reaches the page without its French, or a check
+  code without its translation: 53 tests.
+
+### Added — Kiln Studio: themes, and states that do not rely on colour
+
+- Three themes in Settings: Dark (the approved design), Light and High contrast, and an
+  accent colour (cyan, blue, pink, lime) toned for each theme. Every colour on the page is
+  a custom property; the words over the 3D view follow its background, not the theme.
+- Each state reads by shape or word as well: a work dot is a ring, a disc with a halo or a
+  tick; a check is ✓, i or !; a pin is solid, ringed, hollow or dashed by status; counts to
+  check carry a ✓.
+
+### Added — Kiln Studio: settings, the user's and the project's
+
+- **Settings** (the gear under the list, or ⌘K), in two parts. *Personal*, kept in this
+  browser only: rows Normal or Compact, the shading and the view a model opens in,
+  lengths in metres or centimetres, fixed pins hidden or not. *Project*, in
+  `.kiln-studio/config.json`, shared with Claude: `live_view`, `auto_open`, `target`
+  (`web`, `desktop` for Unity/Unreal, `print`) and `exclude`. The skill reads them as
+  CONFIG's defaults (`references/studio.md` § 9); `studio.py open` leaves the browser
+  closed when `auto_open` is false; `studio.py config [KEY=VALUE ...]` prints or sets them.
+- The project's `target` sets the checks' limits for a model whose production log names
+  none: `desktop` raises the texture cap to 2048 and drops the compression warning,
+  `print` sets no triangle budget and makes textures and compression notes. A log's own
+  target still wins. Unknown keys and bad values are refused; keys Studio does not know
+  are kept. `test_studio.py`: 49 tests.
+
+### Added — Kiln Studio: every command by name (⌘K)
+
+- ⌘K (Ctrl+K), from anywhere on the page, even while typing: the commands that apply now,
+  each with its key (46 with a model open), filtered on every word typed; Enter runs the
+  one picked, ↑ ↓ move. Typing a model's name opens it. `?` still lists the keys.
+
+### Changed — Kiln Studio v1: the approved design
+
+- The page is the prototype approved for v1 (`kiln-3.0/studio-prototype`), on the real
+  project: side panels that resize the view and fold into 60 px rails (`[` `]` `\`), the
+  view fitted again after they move; on a narrow screen they lie over the view. The list
+  header holds in 90 px (measured, 1440 × 900): search, a View menu (Folders or State,
+  Normal or Compact), one row of tags, four counters that filter (To check, Open, Claude
+  works, Building), and the work line while a run shows. In Folders mode rows stay put and
+  flash when they change; in State mode they move (FLIP), deferred while the pointer is
+  over the list ("2 changes · re-sort").
+- **Compare** is a divider across one view (one camera) or side by side, with the change
+  in triangles, file size and height read from both files (cat, final against original:
+  +1.63 MB, +508%).
+- **Pins stick to the surface.** A pin on a skinned mesh is kept on the bone under it
+  (`anchor.node`, `anchor.local`, beside `point`) and follows the animation; on any other
+  mesh, on the mesh. Picking and "behind the model" ray-cast the mesh as posed (a posed
+  copy of each skinned mesh, refreshed a few times a second while it plays).
+- History is one feed, newest first; a note's **View** opens the before and after large
+  with a slider and both close-ups. Note pictures are widened to the card's 4:3.
+- Keys follow the prototype: `[` `]` fold the panels, so shading moves to `S` / `⇧S`;
+  `↑` `↓` change model (`J` / `K` are gone: `K` is the bones).
+
+### Changed — Kiln Studio: note pictures, a third of the size and sharper on the spot
+
+- A pinned note keeps two pictures instead of one: the view, cropped to the model and
+  the pin (1024 px at most), and a 640 px close-up rendered nearer the pin along the
+  line the user looked at it, so a detail pinned from far away is still readable. WebP,
+  JPEG where the browser cannot write WebP (Safari): 26 kB for both against 60 kB for the
+  old 1400 px JPEG, measured on the same view, and about half the image tokens when
+  Claude reads them. A whole-model note keeps the cropped view only (14 kB).
+- The pin is marked by four ticks around it, not a ringed dot on it: the spot stays visible.
+- The note stores the crop and the close-up's camera (`view`), so the "after" render
+  frames both pictures the same way. The card shows the close-ups; enlarged, each view
+  has its close-up in the corner, and a click swaps them. `studio.py show` prints the
+  close-up's path. Notes made before keep their single JPEG. `test_studio.py`: 44 tests.
+
+### Changed — Kiln Studio: Checks in plain words, with the fix
+
+- Every check says what it found and why it matters ("Floats 0.200 m above the ground:
+  it will hover when placed in a scene"), without kiln's rule numbers or phase names, then
+  **How to fix**: the command to run for that model (`/kiln optimize barrel`, copied on
+  click) or what to ask Claude. An **Ask Claude** button opens a note on the model with
+  the request written out; `/kiln studio` picks it up. `studio.py checks` prints the fix
+  under each line. Licence entries read "credit the author", "not for commercial use".
+- Compression is a note, not a warning, when the log's target is Unity, Unreal or PC:
+  the engine packs the file on import, and Draco and WebP are web formats.
+- `/kiln optimize` takes a Studio asset name and works on its `_final` file.
+  `test_studio.py`: 43 tests.
+
+### Added — Kiln Studio: what kiln is working on
+
+- **A dot per model while a command works on it.** `studio.py work start <asset>...
+  --label "…"` names the models a command will change, in order; `work next` moves on;
+  `work begin`, `work done` and `work end` cover out-of-order work and stopping early. The
+  run lives in `.kiln-studio/work.json`; the server streams it, and the page puts a dot
+  on each model in the list — a ring while it waits, breathing while kiln is on it, green
+  when done — with "Kiln · optimize · 1 of 3 · table" above the list and a toast at each
+  hand-over. A green dot goes once the user opens that model (or leaves the one they
+  watched finish); **Clear** takes them all; the run goes with the last one. A run with
+  no word for two hours stops showing work in progress. `/kiln studio` and the standalone
+  commands report their models when Studio is running; not in batch runs.
+  `test_studio.py`: 42 tests.
+
+### Added — Kiln Studio: watch it built, check it
+
+- **Live view.** While kiln builds, Kiln Studio opens the model and reloads it after each
+  phase. `studio/blender_live.py` runs inside Blender, appended to the phase's last
+  `execute_blender_code` call: it exports `<name>/<name>_live.glb` (hidden name, then moved
+  into place) and records the phase in `.kiln-studio/assets/<key>/live.json`.
+  `studio.py live <name> --end` closes the build and removes the export. The page shows
+  the phases above the model and a "building" mark in the list, follows the newest stage,
+  refits the view as the model grows, and files each live version in History under its
+  phase, with a render. Studio now starts once the brief is confirmed.
+- **Checks tab and `studio.py checks`**: triangles against the detail tier's soft range
+  (WARN only past twice the top, rule 4), size against the usual height of a chair, table,
+  door or character, ground contact and centring, texture sizes (read from the image
+  headers in the file) against the target's cap, Draco/meshopt and WebP/KTX2 on `_final`
+  only, and the licences in the production log (CC-BY: credit; NC: WARN). Without a log,
+  the tier and type are assumed and the check says so.
+- **Fidelity beside the model**: `tools/fidelity_check.py` also writes `fidelity.json`
+  (with the model's hash, the view, elevation and azimuth) and appends a line per run to
+  `fidelity_log.jsonl`. With `--out <name>/review/<view>/`, the Checks tab shows the IoU
+  and its rounds, whether the measured file is the current one, the overlay or the
+  side-by-side, the ranked gaps, the per-band widths, the joints, and a Photo's view
+  button. `test_fidelity_check.py`: 29/29.
+- **Batch token estimate**: in a batch folder, the wizard's formula read off
+  `batch-manifest.yaml`: the asset's, the batch's and what is left to run, ±50%; the
+  batch's range on its folder header in the list.
+- **Eye button for the pins**: the toolbar's Pins toggle is now an eye floating under the
+  model's name (crossed out while hidden, P still works), shown only when the model has at
+  least one pin in the notes being listed.
+- **Which pins**: hovering the eye unfurls two choices under it: *Hide fixed pins* hides
+  the blue pins Claude has addressed (and the grey ones when all notes are listed), *Hide
+  pins behind the model* hides those on its far side instead of fading them. A dot on the eye
+  while either is on; the note picked in the list keeps its pin.
+- `test_studio.py`: 36 tests (live stage order, build record, CLI target, image headers,
+  health on shipped and unshipped stages, fidelity by hash, manifest estimate, events).
+
+### Added — Kiln Studio
+
+- **`/kiln studio`: a local page to look at models, pin notes on them, and iterate with
+  Claude.** `studio/studio.py` starts it on the project's folder or reuses the one
+  already running, like `remotion studio`; Python standard library, three.js 0.186.1
+  from jsDelivr. Every `.glb .gltf .fbx .obj` under the folder shows up, and kiln's
+  `_original`…`_final` stages are one model with switchable stages; the output or batch
+  folder is the default category, and categories and tags can be set.
+- **Notes** pinned on a spot record the point and normal in glTF and Blender
+  coordinates, the object, mesh and material hit, a region in words, the camera and a
+  screenshot; whole-model notes record the view. `open` → `addressed` (Claude, through
+  `studio.py reply`) → `resolved` (the user only; the CLI refuses it) or `wontfix`.
+- **Before and after per note**: when a note is marked addressed, the page renders the
+  note's own view of the new version beside its screenshot. One previous copy of each
+  annotated model is kept (the version the review pass started from) for a side-by-side
+  Compare and an undoable revert — never a pile of copies. History lists every version
+  seen with its size and triangle count, the changelog, notes and replies.
+- **The page** follows the files live (server-sent events): a re-export reloads the
+  model in place, Claude's replies appear as they are written. Shading Lit, Unlit,
+  Clay, Normals, UV checker and Faces (back faces red); wireframe, grid with the front
+  marked, bounds in metres, bones, animation clips. Draco, meshopt and KTX2 decode.
+- `plugin/studio/test_studio.py` (20 tests: scan, stats, notes, history, baseline,
+  HTTP API including host and origin checks) runs in CI; `verify_docs.py` now checks
+  `studio/` paths too.
+
 ### Changed
+
+- `fidelity_check` refuses a reference with no transparent pixel: measured as it was, a
+  photo's table counted as object (0.62 instead of 0.93, exit 0).
+- The cleanup's 0.1 mm merge is skipped for a model built closed — it broke a printable one.
+- Rule 7: a phase is not done until its log says so — three runs had left it at BRIEF.
+- Rule 16: never save over the user's open Blender; build headless when it holds their work.
 
 - **The showcase chest is rebuilt** by its own script, `examples/animation/chest.py`: planks, a
   barrel lid of staves, iron corners, bands, rivets, handles, lock and hasp, a heap of gold inside,
@@ -26,6 +526,112 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The TRELLIS.2 Space removes backgrounds with RMBG-2.0 (CC BY-NC 4.0)** unless the
   image already has an alpha channel — read in its `app.py`. The reference says to send
   a cut-out, or to use the TRELLIS Space, whose `rembg`/U²-Net chain is MIT/Apache-2.0.
+- **What three isolated print sessions found unclear, contradictory or silent** (a 90 mm
+  windmill, a 50 mm lighthouse, a 70 mm forge from the logo, 2026-10-13), each fixed where it
+  was read:
+  - `print_check` no longer counts a face modelled at 45° as an overhang (it reads 45.0x° in
+    an STL: every overhang the windmill, its sails and the joint's peg reported was one), and
+    never says a bare "supports": the line says what the slice said — "sliced clean without
+    supports: none needed" on the lighthouse and the forge;
+  - auto mode does not wait for the measured clearance: 0.2 mm a face, the coupon next to the
+    model, said unmeasured in the hand-over;
+  - the height asked is the assembled object's — the windmill left its sails out and stood
+    ~120 mm for "~90 mm";
+  - a lathe is closed by flat caps, not axis points, when it is engraved after: an EXACT
+    engraving re-cut the pole and left a non-manifold edge;
+  - the peg goes on the steadier part (a flame on its own 4 × 4 mm peg: low bed adhesion);
+    an engraving's depth is its shallowest point's on a round wall; an object hidden from the
+    render exports an empty STL with no error; touching pairs count as self-intersections;
+    the face measure is blind on an illustration;
+  - rule 10's merge is skipped in print mode, as the checklist already said; the lighthouse
+    is no longer an example of architecture to send to AI; print has no `_original.glb`, its
+    `--reference` is one `{name}_{part}_parts.blend` per printed part; STLs are named
+    `{name}_{part}.stl`; the preflight points to rule 23.
+- **What the two sessions after those fixes still found** (the windmill again at 90 mm, now
+  sails included — 90.0 mm assembled; a mushroom house never named in the docs):
+  - **`tools/review_renders.py`**: the review renders when no Blender is connected — matcap
+    and colour, two opposite three-quarters, top and under, each view fitted to the vertices
+    as its camera sees them, close-ups at the check's thin spots; an empty frame is an error.
+    Every session had written its own; one framed on bound_box and misread 90 mm as 104.8;
+  - `print_check`'s JSON says where the thin walls are (`thickness.thin_at`: centre, wall
+    read, thinnest first) — print.md asked to look at them and nothing said where;
+  - `fit_coupon.py --shape round`: round holes and a round peg standing up, the joint a cap or
+    a flame makes, faceted so that the joint is never tighter than asked;
+  - one `--reference` per printed part (the tool reads every mesh of a .blend); `--height-mm`
+    scales, and is never the brief's height; a lathe is not JOINED on its own edges either;
+    paint regions are decided without a photo too; rules 1 and 24 say what to do headless;
+    the `.blend1` files are deleted, or `save_version = 0` (checked) stops them;
+  - the Blender workflow now also runs on a change to `flatten.py` and `fit_coupon.py`, which
+    it tested but did not watch.
+- **What a Christmas tree found after that** (two parts, the star in its own filament on a
+  peg, 70.0 mm assembled; the session used `review_renders.py` and one reference per part
+  unprompted):
+  - `print_check` no longer counts triangles that only TOUCH as self-intersecting — a shared
+    vertex, a vertex lying on a face: each is shrunk 0.1 % and tested again. The windmill's
+    sails read 32, a forge's flame 2, the joint coupon at a 2.5 mm peg 4; all now 0, and a
+    cube with a corner pushed through its bottom still crosses itself;
+  - `print_check --brim-mm`: a tall part on a narrow foot read *Low bed adhesion* (the flame,
+    the tree) and both sessions checked a brim in PrusaSlicer by hand; the warning now names
+    the option, and the tree passes clean with 5 mm;
+  - a region the brief does not name gets its paint edge too; a small cut proves little
+    against its reference; part names may be in the brief's language; the scripted print's
+    checkpoints.
+- **Fewer supports and no long bridges, as rules** (two boxes with lids, 2026-10-13): both
+  printed with no support, but one bridged a 20 mm flat ceiling and filled 10 mm of its own
+  cavity to keep the bridge that short, the other printed a raised pattern face-down. Rule 5:
+  each part's orientation is a logged decision — zero supports, then the fewest and shortest
+  bridges, then the visible faces off the bed. Rule 6: a flat ceiling past ~10 mm becomes a
+  45° cone or vault, never a filled cavity. Rule 7: relief goes on faces that print upright or
+  up. `print_check` turns PrusaSlicer's *Long bridging extrusions* into that instruction.
+  A session without context then made a bayonet box under those rules: no support, no long
+  bridge, every orientation logged. What it still met, now written: a ceiling too wide for the
+  part's height starts its 45° vault from a ring inside the wall; test pieces go in `test/` as
+  `test_{what}.stl` (a user took two test rings for parts of the box); `review_renders.py
+  --close` reads negative coordinates as a value.
+- **Stylised figures: metaballs, not a refusal.** Print mode had refused an animal, a person or a
+  character since two cats passed every check and were unacceptable to look at. Then a colleague, on v2.2 — no print mode at all — asked for a cartoon dragon from one
+  flat drawing, for a multi-colour printer: the session built it from metaball families and one
+  voxel remesh, cut it into four colour parts with flush inlays, and wrote how to slice it, in 23
+  minutes. The cats had metaball ellipsoids too, but cone ears, exact unions and a photo to
+  match; the dragon had one family per region, one remesh, and a drawing. So the line is drawn
+  between a stylised figure and a realistic likeness, not between subjects. `print.md` § Figures writes that
+  method down — ten times the size (metaball resolution stops at 5 mm, checked), one family per
+  region, an element's visible radius 0.574 × its radius (measured), thin parts as meshes, one
+  remesh, colours by priority — and the scope sends a stylised figure there.
+- **`print_check` checks an assembly**: several files, one per colour, are each checked closed,
+  their overlap measured, and their union checked as one object with the slicer. Each colour of
+  that dragon alone FAILed three times out of four; the assembly PASSes (union 68.4 cm³, 68.2
+  measured by its session with another library; overlap 0).
+- **A fresh session, given only the skill, made a cartoon fox** from a text brief: metaballs, four
+  colour parts, the assembly PASS (with supports and a 5 mm brim). What it found unclear is now
+  written: "remesh last" is about the shape, a figure's colours are cut after it; one voxel
+  range; scaling a ×10 model back before export; the figure's reference is the solid before the
+  colour cut; parts never meet vertex to vertex; metaballs in a row swell to 0.715 × r, not
+  0.574 (measured); colour renders need the GLB. `print_check` no longer says "none needed"
+  next to PrusaSlicer's *Floating bridge anchors*: it says to check with `--supports`. And the
+  hand-over of a colour figure is a `PRINT.md` next to the STLs — a user looking at the four
+  files asked how the scarf would get round the neck.
+  An assembly's `SCALE` is now its thinnest part's: the fox's union said 20 %, its orange part —
+  thin walls between the inlays — 80 %, and the line names the part.
+- **What eight web and animation sessions met everywhere** (owls, dogs, a corgi, 2026-10-14):
+  - the creation tree settled "cartoon → scripted" against "character → AI": a character's
+    style decides, and a stylised one is scripted as ONE skin, not parts glued on;
+  - a quadruped is rigged with a hand-built Mixamo-named skeleton: Rigify's quadruped metarig
+    has 34 bones named `spine`, `front_thigh.L`… (checked; the table said 46) and
+    `tools/quadruped.py` reads Mixamo names only. The T-pose rule is for bipeds;
+  - the detail tier sets the triangle budget, the platform table is only the default; a brief
+    that lifts the limit is not proposed a reduction; a reduction the brief asks for is logged;
+  - `uv-materials.md` passed `angle_limit=66.0  # degrees`: the operator takes radians (checked:
+    default 1.152, max 90°), so it asked for 66 rad;
+  - `review_renders.py` left out the 2 m sphere a rigged glTF brings for its bones (a dog was 2 %
+    of the frame) and shows textures in colour (a textured body rendered grey).
+
+### Measured — what did not make it
+
+- **Living subjects in print mode**: a cat held by a ghost, then a real cat from its photo,
+  both PASS and both rejected on sight. Primitives cannot make an animal; no rule closed it.
+- **A single recipe for bad edges after an export**: triangulating before export fixed it
+  twice and caused it once. The rule is to check the STL after each risky step.
 
 ## [2.2.0] — 2026-10-07
 
