@@ -2691,7 +2691,7 @@ function claudeEntry(e, results, job) {
       return `<div class="cl-msg cl"><div class="who"><b>Claude</b> · <span title="${esc(stamp(e.at))}">${esc(ago(e.at))}</span></div>${mdLite(e.text)}</div>`;
     case 'tool': {
       const r = results.get(e.id);
-      const name = String(e.tool || '').replace(/^mcp__(plugin_[^_]+(?:-[^_]+)*_)?/, '').replace(/__/g, ' · ');
+      const name = String(e.tool || '').replace(/^mcp__(plugin_[^_-]+(?:-[^_-]+)*_)?/, '').replace(/__/g, ' · ');
       const open = claude.open.has(e.id);
       return `<div class="cl-tool${open ? ' open' : ''}" data-tool="${esc(e.id)}"><button class="cl-tl"><span class="car">${open ? '▾' : '▸'}</span><b>${esc(name)}</b><span class="in">${esc(e.input)}</span><span class="r ${r ? (r.error ? 'err' : 'ok') : 'run'}">${r ? (r.error ? '✕' : '✓') : '…'}</span></button>${open ? `<pre class="cl-io">${esc(e.input)}${r ? `\n— \n${esc(r.text)}` : ''}</pre>` : ''}</div>`;
     }
@@ -2982,7 +2982,7 @@ let claudeTimer = 0;
 async function onClaude(ev) {
   // What Claude did last, per run: one line in the Notes tab while it works.
   const said = ev.type === 'claude-text' ? ev.text : ev.entry?.role === 'assistant' ? ev.entry.text
-    : ev.entry?.role === 'tool' ? String(ev.entry.tool || '').replace(/^mcp__(plugin_[^_]+(?:-[^_]+)*_)?/, '').replace(/__/g, ' · ') : null;
+    : ev.entry?.role === 'tool' ? String(ev.entry.tool || '').replace(/^mcp__(plugin_[^_-]+(?:-[^_-]+)*_)?/, '').replace(/__/g, ' · ') : null;
   if (said) { claude.activity.set(ev.type === 'claude-text' ? ev.job : ev.job?.id, said); renderNotesWork(); if (!state.id) renderMaking(); }
   if (ev.type === 'claude-text') {
     if (ev.key !== threadKey()) return;
