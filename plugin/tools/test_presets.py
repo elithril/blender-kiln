@@ -12,7 +12,9 @@ kiln child's joints, a skin of tubes and box feet, 100% to one bone each):
 - the GLB holds exactly the clips asked, named as asked;
 - the provenance names the motions' licence for every clip;
 - feet: the walk's standing feet slide < 50 mm/s and no skin goes 5 mm under the floor, where
-  the same clip with --no-fix feet slides and sinks (the regression direction);
+  the same clip with --no-fix feet slides and sinks (the regression direction); a standing foot
+  is within 5 deg of its rest pitch (kiln's mascot stood at 30), and a foot in the air turns at most 40 deg
+  off it, and no more than without the fix (the mascot: 68);
 - --loop: the walk comes back twice, whole (`walk`, the take as made) and as an in-place cycle
   (`walk_loop`), its last key equal to its first, the seam <= 1.2x a frame step, the speed to
   move it at recorded; the jump, a one-shot, kept whole and not looped;
@@ -246,6 +248,11 @@ def main():
               f"(without the fix: {raw and raw['foot_slide']['mm_s']} mm/s, {raw and raw['floor']['below_mm']} mm)",
               raw and w["foot_slide"]["mm_s"] < 50 and w["floor"]["below_mm"] < 5
               and (raw["foot_slide"]["mm_s"] > 50 or raw["floor"]["below_mm"] > 5))
+        st = w["standing_foot_pitch"]["max_abs_deg"]
+        check(f"standing feet flat: the walk's stand {st} deg off the rest pitch (the sole flat)", st <= 5)
+        sw, rsw = w["swing_foot_pitch"]["max_deg"], raw and raw["swing_foot_pitch"]["max_deg"]
+        check(f"a foot in the air: the walk's turns at most {sw} deg off its planted pitch (without the fix: {rsw})",
+              raw and sw <= 40 and sw <= rsw)
         keys, gap = glb_closing(out, "walk_loop")
         wkeys, _ = glb_closing(out, "walk")
         jkeys, _ = glb_closing(out, "jump")

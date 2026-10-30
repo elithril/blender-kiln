@@ -44,9 +44,27 @@ export function mountCreatures(canvas: HTMLCanvasElement, base: string) {
 
   const draco = new DRACOLoader().setDecoderPath(`${base}/draco/`);
   const loader = new GLTFLoader().setDRACOLoader(draco);
-  const cache = new Map<string, Promise<{ scene: THREE.Object3D; clip: THREE.AnimationClip | undefined }>>();
+  const cache = new Map<string, Promise<{ scene: THREE.Object3D; clips: THREE.AnimationClip[] }>>();
+  // Clips of one file can stand in different places (the mascot's walk sits 42 cm behind its idle):
+  // each clip's root bone is moved so its mean ground position is the model's origin, and a change of
+  // clip is then a crossfade on the spot, as for the villager. Height and the motion itself are untouched.
+  const centred = (scene: THREE.Object3D, clips: THREE.AnimationClip[]) => {
+    let root = '';
+    scene.traverse((o) => { if (!root && (o as THREE.SkinnedMesh).isSkinnedMesh) root = (o as THREE.SkinnedMesh).skeleton.bones[0]?.name ?? ''; });
+    if (!root || clips.length < 2) return clips;
+    for (const c of clips) {
+      const t = c.tracks.find((k) => k.name === `${root}.position`);
+      if (!t) continue;
+      const v = t.values, n = v.length / 3;
+      let mx = 0, mz = 0;
+      for (let i = 0; i < n; i++) { mx += v[i * 3]; mz += v[i * 3 + 2]; }
+      mx /= n; mz /= n;
+      for (let i = 0; i < n; i++) { v[i * 3] -= mx; v[i * 3 + 2] -= mz; }
+    }
+    return clips;
+  };
   const load = (url: string) => {
-    if (!cache.has(url)) cache.set(url, loader.loadAsync(url).then((g) => ({ scene: g.scene, clip: g.animations[0] })));
+    if (!cache.has(url)) cache.set(url, loader.loadAsync(url).then((g) => ({ scene: g.scene, clips: centred(g.scene, g.animations) })));
     return cache.get(url)!;
   };
 
@@ -56,9 +74,11 @@ export function mountCreatures(canvas: HTMLCanvasElement, base: string) {
 
   /** `model` names the rig: two clips of the same model (villager walk and jump, cat walk and idle)
    *  share their bones, so the change is a crossfade on the model already on stage, not a swap. */
-  async function show(url: string, model: string) {
+  async function show(url: string, model: string, name?: string) {
     const t = ++ticket;
-    const { scene: src, clip } = await load(url);
+    const { scene: src, clips } = await load(url);
+    // one GLB may carry several clips (the mascot's walk and idle): `name` picks one, else the first
+    const clip = (name && clips.find((c) => c.name === name)) || clips[0];
     if (t !== ticket) return;
     if (current && current.model === model && clip) {
       const next = current.mixer.clipAction(clip);
@@ -81,6 +101,9 @@ export function mountCreatures(canvas: HTMLCanvasElement, base: string) {
     for (let k = 0; k < steps; k++) {
       if (clip) mixer.setTime((clip.duration * k) / steps);
       obj.updateMatrixWorld(true);
+      // the skin's bone matrices are refreshed only at render: without this the envelope is the rest
+      // pose (the mascot's T-pose), and the model lands off its turning axis with its feet off the floor
+      obj.traverse((o) => { if ((o as THREE.SkinnedMesh).isSkinnedMesh) (o as THREE.SkinnedMesh).skeleton.update(); });
       env.union(new THREE.Box3().setFromObject(obj, true));
     }
     if (clip) mixer.setTime(0);

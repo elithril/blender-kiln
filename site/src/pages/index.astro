@@ -2,9 +2,11 @@
 import Base from '../layouts/Base.astro';
 import Header from '../components/Header.astro';
 import Theatre from '../components/Theatre.astro';
+import Studio from '../components/Studio.astro';
 import Method from '../components/Method.astro';
 import Lanterns from '../components/Lanterns.astro';
 import Animate from '../components/Animate.astro';
+import Print from '../components/Print.astro';
 import Close from '../components/Close.astro';
 import site from '../content/site.json';
 ---
@@ -18,9 +20,11 @@ import site from '../content/site.json';
   </div>
   <main>
     <Theatre />
+    <Studio />
     <Method />
     <Lanterns />
     <Animate />
+    <Print />
   </main>
   <Close />
 </Base>
@@ -32,5 +36,5 @@ import site from '../content/site.json';
   .forge-layer canvas, .forge-layer .fallback { width: 100%; height: 100%; display: block; }
   .forge-layer .fallback { object-fit: cover; object-position: 75% 60%; }
   /* everything that reads sits above the fixed forge layer */
-  main, :global(.briefs), :global(.close), :global(.foot) { position: relative; z-index: 1; }
+  main, :global(.briefs), :global(.built), :global(.close), :global(.foot) { position: relative; z-index: 1; }
 </style>

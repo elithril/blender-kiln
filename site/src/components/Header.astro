@@ -22,6 +22,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       <a href={`${base}/#method`}>Method</a>
       <a href={`${base}/bench/`} aria-current={current === 'bench' ? 'page' : undefined}>Bench</a>
       <a href={`${base}/#animate`}>Animate</a>
+      <a href={`${base}/#print`}>Print</a>
     </span>
     <a class="gh" href={site.repo} aria-label={stars != null ? `GitHub, ${stars} stars` : 'GitHub'}><span class="ghi" aria-hidden="true" set:html={ghIcon} /><span class="ghw">GitHub</span>{stars != null && <span class="stars measure" aria-hidden="true"><span class="star" set:html={starIcon} />{compact(stars)}</span>}<span class="ic" aria-hidden="true" set:html={arrowUpRight} /></a>
   </nav>

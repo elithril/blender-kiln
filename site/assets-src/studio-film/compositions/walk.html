@@ -1,0 +1,28 @@
+<template>
+  <style>
+    @font-face { font-family: "Sora"; font-weight: 400 700; src: url("assets/fonts/sora-latin.woff2") format("woff2"); }
+    @font-face { font-family: "JetBrains Mono"; font-weight: 400 600; src: url("assets/fonts/jetbrains-mono-latin.woff2") format("woff2"); }
+    #root { position: absolute; inset: 0; overflow: hidden; }
+    #wl-wrap { position: absolute; inset: 0; opacity: 0; background: #e2d3bf; }
+    #wl-video { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+    #wl-title { position: absolute; left: 150px; top: 380px; font: 700 92px/1.12 "Sora", sans-serif; letter-spacing: -0.015em; color: #2a1d14; }
+    #wl-title span { display: inline-block; opacity: 0; }
+    #wl-title .hot { color: #c85a1c; }
+  </style>
+  <div data-hf-id="hf-04fe" id="root" data-composition-id="walk" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-gyo9" id="wl-wrap">
+      <video data-hf-id="hf-g06p" id="wl-video" class="clip" data-start="0" data-duration="4.6" data-track-index="0"
+        src="assets/render/walk-loop.mp4" muted playsinline></video>
+    </div>
+    <div data-hf-id="hf-3rux" id="wl-title"><span data-hf-id="hf-ip68">Pin</span> <span data-hf-id="hf-zhz4">a</span> <span data-hf-id="hf-vi5x">note.</span><br data-hf-id="hf-x5px" /><span data-hf-id="hf-fncj">Claude</span> <span data-hf-id="hf-nkxd" class="hot">fixes</span> <span data-hf-id="hf-b2e6">it.</span></div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo("#wl-wrap", { opacity: 0, scale: 1.08 }, { opacity: 1, scale: 1, duration: 0.5, ease: "expo.out" }, 0);
+      tl.fromTo("#wl-title span", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.14, stagger: 0.09 }, 1.0);
+      tl.to("#wl-title span", { opacity: 0, filter: "blur(6px)", duration: 0.15, stagger: 0.03 }, 4.05);
+      window.__timelines["walk"] = tl;
+    })();
+  </script>
+</template>

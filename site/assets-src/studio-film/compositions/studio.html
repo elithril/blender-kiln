@@ -1,0 +1,95 @@
+<template>
+  <style>
+    @font-face { font-family: "Sora"; font-weight: 400 700; src: url("assets/fonts/sora-latin.woff2") format("woff2"); }
+    @font-face { font-family: "JetBrains Mono"; font-weight: 400 600; src: url("assets/fonts/jetbrains-mono-latin.woff2") format("woff2"); }
+    #root { position: absolute; inset: 0; overflow: hidden; background: #0b0d11; }
+    #st-cam { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
+    #st-cam img.screen { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+    #st-s3 { opacity: 0; }
+    #st-pin { position: absolute; left: 575px; top: 697px; width: 45px; height: 45px; opacity: 0;
+      clip-path: circle(15.5px at 22.5px 20px); }
+    #st-pin img { width: 45px; height: 45px; display: block; }
+    .st-card { position: absolute; transform-origin: 0 0; border-radius: 14px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45); }
+    #st-composer { left: 900px; top: 250px; width: 605px; height: 362px; opacity: 0; }
+    #st-composer img { width: 605px; height: 362px; display: block; border-radius: 14px; }
+    #st-cover { position: absolute; left: 30px; top: 150px; width: 540px; height: 110px; background: rgb(11, 13, 17); }
+    #st-typed { position: absolute; left: 39px; top: 158px; width: 540px; font: 400 28px/34px "Sora", sans-serif; color: #e6ebf2; }
+    #st-note { left: 900px; top: 150px; width: 612px; height: 756px; opacity: 0; }
+    #st-note img { width: 612px; height: 756px; display: block; border-radius: 14px; }
+    #st-fill { position: absolute; left: 1005px; top: 391px; width: 350px; height: 58px; border-radius: 18px;
+      background: #5ce1e6; opacity: 0; transform-origin: 50% 50%; }
+    #st-fill-label { position: absolute; left: 1005px; top: 391px; width: 350px; height: 58px; display: flex; align-items: center; justify-content: center;
+      font: 600 25px/1 "Sora", sans-serif; color: #062a2c; opacity: 0; transform-origin: 50% 50%; }
+    #st-title { position: absolute; left: 0; right: 0; top: 470px; text-align: center; opacity: 1;
+      font: 700 88px/1.1 "Sora", sans-serif; letter-spacing: -0.015em; color: #062a2c; }
+    #st-title span { display: inline-block; opacity: 0; }
+    #st-cursor { position: absolute; left: 0; top: 0; width: 44px; height: 64px; opacity: 0; transform-origin: 4px 4px; }
+  </style>
+  <div data-hf-id="hf-pi3p" id="root" data-composition-id="studio" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-yd8i" id="st-cam">
+      <img data-hf-id="hf-wr0v" class="screen" id="st-s1" src="assets/studio/s1-model.png" alt="" />
+      <img data-hf-id="hf-z5lt" class="screen" id="st-s3" src="assets/studio/s3-note-open.png" alt="" />
+      <div data-hf-id="hf-vt8y" id="st-pin"><img data-hf-id="hf-d170" src="assets/ui/pin-open.png" alt="" /></div>
+    </div>
+    <div data-hf-id="hf-doiy" class="st-card" id="st-composer">
+      <img data-hf-id="hf-z6ks" src="assets/ui/composer-empty.png" alt="" />
+      <div data-hf-id="hf-qdma" id="st-cover"></div>
+      <div data-hf-id="hf-39o3" id="st-typed"></div>
+    </div>
+    <div data-hf-id="hf-4lmw" class="st-card" id="st-note"><img data-hf-id="hf-9m15" src="assets/ui/note-open.png" alt="" /></div>
+    <div data-hf-id="hf-yu4a" id="st-fill"></div>
+    <div id="st-fill-label">Work on it with Claude</div>
+    <div data-hf-id="hf-gll9" id="st-title"><span data-hf-id="hf-fncj">Claude</span> <span data-hf-id="hf-pggz">takes</span> <span data-hf-id="hf-3tds">the</span> <span data-hf-id="hf-n16h">note</span></div>
+    <svg data-hf-id="hf-ojws" id="st-cursor" viewBox="0 0 22 32" xmlns="http://www.w3.org/2000/svg">
+      <path data-hf-id="hf-h1kd" d="M2 2 L2 26 L8 20 L12 30 L16 28 L12 18.5 L20 18.5 Z" fill="#ffffff" stroke="#000000" stroke-width="1.6" stroke-linejoin="round" />
+    </svg>
+  </div>
+  <script>
+    (function () {
+      const NOTE = "The hammer is too small to read at a glance — make it about 1.5x bigger, still held in the right hand.";
+      const typed = document.querySelector("#st-typed");
+      typed.innerHTML = [...NOTE].map((c) => `<span style="opacity:0">${c === " " ? " " : c}</span>`).join("");
+      const chars = typed.querySelectorAll("span");
+      const tl = gsap.timeline({ paused: true });
+      const cam = "#st-cam", cur = "#st-cursor";
+      // 01 — push onto the hammer; the cursor comes in and pins it
+      tl.fromTo(cam, { x: 0, y: 0, scale: 1 }, { x: -436, y: -400, scale: 1.45, duration: 0.9, ease: "power2.inOut" }, 0.5);
+      tl.fromTo(cur, { x: 1700, y: 1010, opacity: 0 }, { x: 1720, y: 1000, opacity: 1, duration: 0.2 }, 1.0);
+      tl.to(cur, { x: 426, y: 636, duration: 1.0, ease: "power3.inOut" }, 1.2);
+      tl.to(cur, { scale: 0.86, duration: 0.08, yoyo: true, repeat: 1 }, 2.22);
+      tl.fromTo("#st-pin", { opacity: 0, y: -46 }, { opacity: 1, y: 0, duration: 0.45, ease: "back.out(1.6)" }, 2.3);
+      // 02 — the note grows out of the pin and is typed
+      tl.fromTo("#st-composer", { opacity: 0, scale: 0.14, x: -470, y: 390, filter: "blur(6px)" },
+        { opacity: 1, scale: 1, x: 0, y: 0, filter: "blur(0px)", duration: 0.55, ease: "expo.out" }, 2.8);
+      tl.to(cur, { x: 1560, y: 820, duration: 0.6, ease: "power2.inOut" }, 2.9);
+      tl.to(chars, { opacity: 1, duration: 0.01, stagger: 0.029 }, 3.5);
+      tl.to(cur, { x: 1010, y: 567, duration: 0.55, ease: "power3.inOut" }, 6.85);
+      tl.to(cur, { scale: 0.86, duration: 0.08, yoyo: true, repeat: 1 }, 7.5);
+      // the composer becomes the saved, open note
+      tl.to("#st-composer", { opacity: 0, filter: "blur(8px)", duration: 0.18, ease: "power2.in" }, 7.62);
+      tl.fromTo("#st-note", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 7.66);
+      // 03 — back to the whole page; the note carried to its place in the panel
+      tl.to(cam, { x: 0, y: 0, scale: 1, duration: 0.85, ease: "power2.inOut" }, 8.5);
+      tl.to("#st-s3", { opacity: 1, duration: 0.45, ease: "none" }, 8.75);
+      tl.to("#st-note", { x: 670, y: 127.5, scale: 0.5556, duration: 0.85, ease: "power2.inOut" }, 8.5);
+      tl.to("#st-note", { opacity: 0, duration: 0.15, ease: "none" }, 9.36);
+      tl.to(cur, { x: 1500, y: 600, duration: 0.6, ease: "power2.inOut" }, 8.6);
+      // push onto "Work on it with Claude", click
+      tl.to(cam, { x: -3190, y: 26, scale: 2.4, duration: 0.75, ease: "power2.inOut" }, 9.55);
+      tl.to(cur, { x: 1196, y: 432, duration: 0.65, ease: "power3.inOut" }, 9.65);
+      tl.to(cur, { scale: 0.86, duration: 0.08, yoyo: true, repeat: 1 }, 10.35);
+      // the button's fill becomes the world
+      tl.set("#st-fill", { opacity: 1 }, 10.45);
+      tl.to(cur, { opacity: 0, duration: 0.12 }, 10.5);
+      // the label stays on the fill as it starts to grow, so it reads as the button, then gives way
+      tl.set("#st-fill-label", { opacity: 1 }, 10.45);
+      tl.to("#st-fill-label", { scale: 2.2, duration: 0.32, ease: "power2.in" }, 10.5);
+      tl.to("#st-fill-label", { opacity: 0, duration: 0.14, ease: "none" }, 10.68);
+      tl.fromTo("#st-fill", { scaleX: 1, scaleY: 1, borderRadius: 18 },
+        { scaleX: 7.4, scaleY: 25, borderRadius: 0, duration: 0.5, ease: "power2.in" }, 10.5);
+      tl.fromTo("#st-title span", { opacity: 0, filter: "blur(6px)" },
+        { opacity: 1, filter: "blur(0px)", duration: 0.14, stagger: 0.08 }, 11.0);
+      window.__timelines["studio"] = tl;
+    })();
+  </script>
+</template>

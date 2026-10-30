@@ -1,6 +1,7 @@
 ---
 import site from '../content/site.json';
 import Install from './Install.astro';
+import BuiltWith from './BuiltWith.astro';
 import { latestRelease } from '../lib/release';
 const release = await latestRelease();
 const B = site.briefs;
@@ -30,6 +31,9 @@ const mb = (n: number) => (n >= 10 ? n.toFixed(1) : n.toFixed(2)) + ' MB';
   </div>
   <p class="compressed">{B.compressed}</p>
 </section>
+
+<!-- what people built with it: the proof just before "Try it." -->
+<BuiltWith />
 
 <!-- the last screen: install and footer share one viewport, the footer pinned to its bottom -->
 <div class="end">
@@ -63,7 +67,7 @@ const mb = (n: number) => (n >= 10 ? n.toFixed(1) : n.toFixed(2)) + ' MB';
 </script>
 
 <style>
-  .briefs { padding: 180px var(--gutter) 140px; background: linear-gradient(rgb(11 9 8 / 0.86), rgb(11 9 8 / 0.6)); }
+  .briefs { padding: 180px var(--gutter) 64px; background: linear-gradient(rgb(11 9 8 / 0.86), rgb(11 9 8 / 0.6)); }
   .head { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 32px 64px; align-items: end; margin-bottom: 72px; }
   .head h2 { margin: 0; font-size: var(--h2); line-height: 0.95; letter-spacing: -0.025em; word-spacing: 0.05em; }
   .head p { margin: 0; color: var(--ash); max-width: 46ch; }
@@ -87,7 +91,7 @@ const mb = (n: number) => (n >= 10 ? n.toFixed(1) : n.toFixed(2)) + ' MB';
 
   /* the page ends at the real forge: the fixed WebGL fire flares again, right of the type */
   .end { min-height: 100svh; display: grid; grid-template-rows: minmax(0, 1fr) auto; }
-  .close { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-content: center; gap: 28px 64px; padding: 160px var(--gutter) 140px;
+  .close { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-content: center; gap: 28px 64px; padding: 80px var(--gutter) 140px;
     background: linear-gradient(90deg, rgb(11 9 8 / 0.88) 0%, rgb(11 9 8 / 0.55) 45%, transparent 70%); }
   .close > * { grid-column: 1; }
   .close h2 { margin: 0; font-size: clamp(3.5rem, 9vw, 9rem); font-weight: 600; line-height: 0.86; letter-spacing: -0.04em; color: var(--bone); }
@@ -107,10 +111,10 @@ const mb = (n: number) => (n >= 10 ? n.toFixed(1) : n.toFixed(2)) + ' MB';
     /* phones: the forge needs its own room between the links and the footer */
   }
   @media (max-width: 560px) {
-    .briefs { padding-block: 120px; }
+    .briefs { padding-block: 120px 48px; }
     /* phones: the last screen is the whole install block, the forge just under the links and the footer laid
        over its base, so a scroll to the end still shows how to install */
-    .close { padding-top: 104px; padding-bottom: 12px; gap: 16px; }
+    .close { padding-top: 64px; padding-bottom: 12px; gap: 16px; }
     .foot { gap: 4px; padding: 32px var(--gutter) 14px; line-height: 1.45; font-size: 0.75rem; background: linear-gradient(rgb(11 9 8 / 0), rgb(11 9 8 / 0.9) 22%, var(--night)); }
     .bar { grid-template-columns: 3.5rem minmax(0, 1fr); }
     .v { font-size: 0.75rem; }

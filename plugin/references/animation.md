@@ -170,8 +170,14 @@ humanoid whose right hand is fused to its hip:
 docstring): standing-foot slide (mm/s), deepest skin under the floor (mm), arm through body
 (mm² per frame, rest crossings subtracted), loop seam (× the mean frame step; walk and run:
 the `_loop` clips, jump and dance are one-shots, their seam is the take's own end), knee pops (a knee
-snapping straight, or bent, for one frame by 8° or more). Targets: < 50 mm/s,
-< 5 mm, < 500 mm², ≤ 1.2×, no knee pop. The pops came from the foot lock pulling a leg to full reach on
+snapping straight, or bent, for one frame by 8° or more), the feet's pitch (standing, off the sole
+flat; in the air, off standing). Targets: < 50 mm/s, < 5 mm, < 500 mm², ≤ 1.2×, no knee pop, ≤ 5° standing, ≤ 40° in the air.
+The ankle came across wrong from Kimodo's actor: on kiln's mascot the standing foot was 30° toes-down, heel
+off the floor, where its rest has the sole flat, and in the air it pointed 68° down — tiptoeing in big boots.
+`retarget.ease_swing_feet` brings the standing foot back to its rest pitch and eases a foot in the air toward
+22° past 10°, before the feet are locked: on the mascot 0.6° standing, 32° in the air, no knee pop (3 before).
+A prop held in the hand (the mascot's hammer, weighted to RightHand) is taken for part of the arm by the
+arms' clearance and the measure: animate the character without it, add it back after. The pops came from the foot lock pulling a leg to full reach on
 one frame — the knees of both mascots "tremblaient", 1.4-2 a second; `retarget.py` now eases a leg's
 reach from 93 % of its length (`SOFT_REACH`): none left on either. UniMate: the comparison study's samples (`--loop` for walk and run).
 

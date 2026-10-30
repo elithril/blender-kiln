@@ -4,7 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kiln Studio</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3c3 6 9 8 9 16a9 9 0 0 1-18 0c0-5 3-7 4-11 1 3 3 4 3 4s-1-5 2-9z' fill='%235CE1E6'/%3E%3C/svg%3E">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/icon-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="/static/icon-64.png">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <link rel="stylesheet" href="/static/style.css">
 <script>try { const p = JSON.parse(localStorage.getItem('kiln-studio:prefs') || '{}'); if (p.theme) document.documentElement.dataset.theme = p.theme; } catch (e) { /* storage blocked: Dark */ }</script>
 <script type="importmap">
@@ -20,7 +22,7 @@
   <div class="full">
     <header class="lhead">
       <div class="row1">
-        <span class="logo" id="logo" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M16 3c3 6 9 8 9 16a9 9 0 0 1-18 0c0-5 3-7 4-11 1 3 3 4 3 4s-1-5 2-9z"/></svg></span>
+        <span class="logo" id="logo" aria-hidden="true"><img src="/static/icon-64.png" alt=""></span>
         <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
           <input id="search" type="search" placeholder="Find a model" autocomplete="off" spellcheck="false" aria-label="Find a model (/)" data-i18n-attr="placeholder,aria-label"><kbd>/</kbd></label>
         <button id="view-btn" class="btn sm" aria-haspopup="true" aria-expanded="false" aria-controls="viewpop" title="Group, density, filter, sort" data-i18n data-i18n-attr="title">View</button>

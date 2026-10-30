@@ -6,13 +6,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — what the 3.0 bench found (3.0)
+
+The full bench (2.2.0 and 3.0 on `mcp-for-blender` 2.2.2, 3.0 on the Lab MCP too, October 2026)
+found these in 3.0; each brief it touched was run again after the fix.
+
+- **The photo's perspective is not a shape gap.** `fidelity_check` renders orthographic; on a
+  photo taken from above and close, the lower bands read wider than the photo. A 3.0 session
+  pulled the lantern's side tubes in to match and moved away from the real object (0.900 on
+  2.2.0 → 0.849). With `--elevation` > 0, a lower band up to 15 % wider is now listed last as
+  the photo's perspective, never to narrow; the three lantern briefs went to 0.885, 0.917 and
+  0.946 (`test_fidelity_check.py` 38/38).
+- **Decimation keeps a closed shell closed.** A repair of a TRELLIS GLB decimated with
+  `gltfpack -si -sa` and shipped 840 non-manifold edges. A worse edge count is now a failed
+  decimation; on a closed shell, Blender's Collapse; when it damages thin parts, decimate less
+  (up to 2× the tier) or rebuild them, never `-sa`. Measured on a 115,600-triangle shell:
+  Collapse 0 / 0, `-si -sa` 54 / 35. The repair now ships 9,000 triangles, 0 / 0.
+- **Rule 6: `read_factory_settings` only in a headless Blender kiln started** — through the
+  MCP it reset the live Blender and turned its add-on off.
+- **`tools/open_blender.py` opens no second Blender** beside a Blender whose add-on does not
+  answer: it says how to start the add-on and stops (`test_open_blender.py`, in CI).
+- **Kiln Studio: `gltf-transform`'s steps pass without an approval** — a session had skipped
+  the compression to avoid one (18.3 kB instead of 15.7 kB).
+
 ### Added — what kiln's mascot taught (3.0)
+
 - **Review rounds for every asset** (`references/review-rounds.md`): the intent in the log before the
   first primitive (a palette with roles, three materials at least, three finishes), then rounds —
   **for a prop, until two new reviewers in a row find nothing blocking (8 at most); 6 at least (12 at
   most) for a character or a showcase brief, then rounds on its motion**, auto mode included — each a
   `tools/review_sheet.py` sheet looked at and a written critique of three defects or more with their
-  fixes, until a round finds nothing; from a photo, reshaping to the photo keeps its two correction
+  fixes; from a photo, reshaping to the photo keeps its two correction
   rounds and the next ones work on the surface, the finish and the assembly — a part off-centre or out
   of line is fixed at any round (a test ammo box read the cap as "no more geometry" and shipped its
   latch plate off-centre after eight rounds of paint). The 3.0 bench's chibi, two looks and shipped, was
@@ -26,6 +50,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Knees that snapped** (`retarget.py` `SOFT_REACH`, `motion_measure.py` `knee_pops`): the foot lock
   pulled a leg straight for one frame and bent it on the next, 1.4-2 times a second on both mascots;
   a leg's reach now eases from 93 % of its length — none left, the slide still under 50 mm/s.
+- **Feet flat** (`retarget.py` `ease_swing_feet`, `motion_measure.py` `standing_foot_pitch`, `swing_foot_pitch`):
+  the ankle came across wrong from Kimodo's actor — kiln's mascot stood 30° toes-down, heel off the floor, and
+  pointed 68° down in the air, tiptoeing in big boots. The standing foot goes back to its rest pitch (the sole
+  flat) and a foot in the air is eased toward 22° past 10°, before the feet are locked: on the mascot 0.6°
+  standing, 32° in the air, no knee pop (3 before); `test_presets.py` 19/19. A prop held in the hand is taken
+  for part of the arm by the arms' clearance: the mascot is animated without its hammer, added back after.
 - **`tools/review_sheet.py`**: six views under a studio light, a close-up of the top, a rigged model in
   its rest pose, framed on its vertices, the exposure moved one stop at most (pushed to a fixed
   brightness, a dark lantern's colours shifted and a session made its glass opaque), and a second
@@ -45,7 +75,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   shell; an open smile, a small nose, a flat palm with a thumb; clothes projected on the body, cuffs
   sized from the front, one object per limb; skin weights for the parts autorig makes rigid (an
   apron on `Spine2`, a hammer on the thumb's tip); a squash blink on flat eyes instead of a floating
-  lid; three review rounds at least, with the questions each of the mascot's six rounds answered.
+  lid; six review rounds at least, with the questions each of the mascot's six rounds answered.
 - **Export**: read the glTF validator's whole output — `NODE_SKINNED_MESH_NON_ROOT` was on every
   skinned mesh (the bench's chibi logged "0 warnings" with 7): unparent the meshes before export; keep
   a re-exported clip at its own frame rate (at 24 fps a 30 fps walk's locked feet slid 6.5 mm/s).

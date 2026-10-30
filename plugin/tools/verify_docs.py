@@ -138,8 +138,14 @@ for i, line in enumerate(README.read_text().split("\n"), 1):
                               f"but rule {n} reads {body[:60]!r}")
 
 _rd = README.read_text()
-_sec = _rd[_rd.find("## Iron rules"):]
-_sec = _sec[:_sec.find("\n## ", 4)] if "\n## " in _sec[4:] else _sec
+# A heading, or a folded <details> block whose summary names it (README 3.0 folds its reference).
+_m = re.search(r"^## Iron rules\n|<summary><b>Iron rules</b></summary>", _rd, re.M)
+if not _m:
+    fail("semantics", "README.md has no Iron rules section (a `## Iron rules` heading or a <details> "
+                      "block summarised `Iron rules`): the key-rules checks would check nothing")
+_sec = _rd[_m.start():] if _m else ""
+_ends = [i for i in (_sec.find("\n## ", 4), _sec.find("</details>")) if i > 0]
+_sec = _sec[:min(_ends)] if _ends else _sec
 if re.search(r"^\d+\. ", _sec, re.M):
     fail("semantics", "README.md § Iron rules uses an ordered list — Markdown renumbers it "
                       "1, 2, 3 whatever the rule numbers; write '- **Rule N** — …'")
