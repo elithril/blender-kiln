@@ -717,5 +717,101 @@
       "label": "Built something with kiln? Share it",
       "url": "https://github.com/elithril/blender-kiln/issues/new?template=share-what-you-built.yml"
     }
+  },
+  "print": {
+    "headline": "Made to print. Printed.",
+    "lede": "Say it will be printed, with a height and your printer's colours, and kiln models for the printer from the first primitive: closed solids at size, walls thick enough, a flat base, parts that fit together, one file per colour.",
+    "sinceLabel": "New in 3.0: print mode",
+    "objects": [
+      {
+        "name": "Dutch windmill",
+        "meta": "2 parts, 90 mm",
+        "note": "The body upright, the lattice sails printed flat beside it.",
+        "views": [
+          {
+            "label": "Printed",
+            "src": "/assets/img/print/windmill-photo.webp",
+            "alt": "The windmill printed in white PLA, its lattice sails on the cap, on a desk"
+          },
+          {
+            "label": "Modelled",
+            "src": "/assets/img/print/windmill-model.webp",
+            "alt": "kiln's preview of the windmill: red brick body, green cap, wooden gallery, grey sails"
+          }
+        ]
+      },
+      {
+        "name": "The forge of the logo",
+        "meta": "3 parts, 70 mm",
+        "note": "Ring, body and flame, printed apart and stacked.",
+        "views": [
+          {
+            "label": "Printed",
+            "src": "/assets/img/print/forge-photo.webp",
+            "alt": "The forge printed in white PLA: the faceted stone body, the ring and the flame stacked"
+          },
+          {
+            "label": "Modelled",
+            "src": "/assets/img/print/forge-model.webp",
+            "alt": "kiln's preview of the forge: slate stones, an orange flame and its glow"
+          }
+        ]
+      },
+      {
+        "name": "Lighthouse",
+        "meta": "1 part, 50 mm",
+        "note": "From a one-line brief, the smallest of the four.",
+        "views": [
+          {
+            "label": "Printed",
+            "src": "/assets/img/print/lighthouse-photo.webp",
+            "alt": "The lighthouse printed in white PLA, 50 mm tall"
+          },
+          {
+            "label": "Modelled",
+            "src": "/assets/img/print/lighthouse-model.webp",
+            "alt": "kiln's preview of the lighthouse: white tower, red bands and lantern roof, black gallery"
+          }
+        ]
+      },
+      {
+        "name": "Art Deco box",
+        "meta": "2 parts, 62 mm across",
+        "note": "The bayonet lid turns, locks and holds with the box upside down.",
+        "views": [
+          {
+            "label": "Printed",
+            "src": "/assets/img/print/box-photo.webp",
+            "alt": "The Art Deco box printed in white PLA, closed, its sunburst relief all round"
+          },
+          {
+            "label": "Open",
+            "src": "/assets/img/print/box-open-photo.webp",
+            "alt": "The same box open, the bayonet lid lying against it, its lugs visible"
+          },
+          {
+            "label": "Modelled",
+            "src": "/assets/img/print/box-model.webp",
+            "alt": "kiln's preview of the box: navy body with the relief, a gold stepped lid"
+          }
+        ]
+      }
+    ],
+    "points": [
+      {
+        "title": "Checked before you slice",
+        "body": "print_check on every STL: open edges, walls, overhangs, floating parts, the smallest scale it survives in the slicer. PrusaSlicer reads it as a second opinion."
+      },
+      {
+        "title": "Both bench prints pass",
+        "body": "kiln 3.0 passed both print briefs of the bench; 2.2.0 had passed one of the two."
+      },
+      {
+        "title": "Printed as exported",
+        "body": "These four, on a Bambu Lab P1S in PLA, 0.2 mm layers, from the files kiln wrote, unchanged."
+      }
+    ],
+    "command": "/kiln A 90 mm windmill for my FDM printer",
+    "disclosure": "Photos of the real prints, cropped; beside them, the preview kiln rendered with the files. Nothing was sanded, filled or painted."
   }
 }

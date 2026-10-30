@@ -1,0 +1,112 @@
+---
+import site from '../content/site.json';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const P = site.print;
+---
+<section id="print" class="print" aria-labelledby="print-h" data-print>
+  <header class="head">
+    <h2 id="print-h">{P.headline}</h2>
+    <div class="side">
+      <p>{P.lede}</p>
+      <span class="since measure">{P.sinceLabel}</span>
+    </div>
+  </header>
+
+  <ul class="objects">
+    {P.objects.map((o) => (
+      <li class="object">
+        <div class="plate">
+          <!-- every view of one object is framed alike, so switching views keeps it in place -->
+          <div class="core">
+            {o.views.map((v, i) => (
+              <img src={`${base}${v.src}`} alt={v.alt} width="900" height="900" loading="lazy" decoding="async"
+                class:list={[{ on: i === 0 }]} data-view={i} aria-hidden={i === 0 ? undefined : 'true'} />
+            ))}
+          </div>
+        </div>
+        <div class="pick" role="group" aria-label={o.name}>
+          {o.views.map((v, i) => (
+            <button type="button" data-pick={i} aria-pressed={i === 0 ? 'true' : 'false'}>{v.label}</button>
+          ))}
+        </div>
+        <h3>{o.name}</h3>
+        <p class="meta measure">{o.meta}</p>
+        <p class="note">{o.note}</p>
+      </li>
+    ))}
+  </ul>
+
+  <div class="points">
+    {P.points.map((p) => (
+      <div class="point">
+        <h3>{p.title}</h3>
+        <p>{p.body}</p>
+      </div>
+    ))}
+  </div>
+  <p class="cmd measure" aria-label="The command"><code>{P.command}</code></p>
+  <p class="disclosure">{P.disclosure}</p>
+</section>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-print] .object').forEach((card) => {
+    const imgs = [...card.querySelectorAll<HTMLImageElement>('[data-view]')];
+    const buttons = [...card.querySelectorAll<HTMLButtonElement>('[data-pick]')];
+    buttons.forEach((b) => b.addEventListener('click', () => {
+      const i = Number(b.dataset.pick);
+      buttons.forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      imgs.forEach((im) => {
+        const on = Number(im.dataset.view) === i;
+        im.classList.toggle('on', on);
+        if (on) im.removeAttribute('aria-hidden'); else im.setAttribute('aria-hidden', 'true');
+      });
+    }));
+  });
+</script>
+
+<style>
+  /* the one section set on its own band: char instead of night, a hairline above and below and a faint
+     glow of molten at the top, so it reads apart from Animate and the close, both on night */
+  .print { position: relative; padding: 112px var(--gutter) 104px; border-block: 1px solid var(--line);
+    background: radial-gradient(80% 60% at 50% 0%, rgb(255 181 71 / 0.06), transparent 70%), var(--char); }
+  .head { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 32px 64px; align-items: end; margin-bottom: 48px; }
+  .head h2 { margin: 0; font-size: var(--h2); line-height: 0.95; letter-spacing: -0.025em; word-spacing: 0.05em; }
+  .side p { margin: 0 0 14px; color: var(--ash); max-width: 46ch; }
+  .since { font-size: 0.8125rem; color: var(--molten); }
+
+  .objects { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px 24px; }
+  /* evidence sits on a double-bezel plate: a 6px shell, a core whose radius is the shell's minus 6px */
+  .plate { border-radius: 1.5rem; padding: 6px; background: rgb(255 238 220 / 0.04); box-shadow: inset 0 0 0 1px var(--line); }
+  .core { position: relative; aspect-ratio: 1; border-radius: 18px; overflow: hidden; background: radial-gradient(60% 50% at 50% 70%, #2a1d14, #120e0b 70%); }
+  .core img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; transition: opacity 0.45s var(--ease-spring); }
+  .core img.on { opacity: 1; }
+
+  .pick { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 12px; }
+  .pick button { padding: 7px 14px; border-radius: 999px; border: 0; font: 500 0.8125rem var(--face-text); color: var(--ash); background: rgb(255 238 220 / 0.06); box-shadow: inset 0 0 0 1px var(--line); cursor: pointer; transition: background 0.3s var(--ease-spring), color 0.3s, transform 0.4s var(--ease-spring); }
+  .pick button:hover { color: var(--bone); background: rgb(255 238 220 / 0.1); }
+  .pick button:active { transform: scale(0.97); }
+  .pick button[aria-pressed='true'] { color: var(--ink); background: var(--molten); box-shadow: none; }
+  .object h3 { margin: 0 0 4px; font-size: 1.25rem; line-height: 1.15; }
+  .meta { margin: 0 0 8px; font-size: 0.8125rem; color: var(--molten); }
+  .note { margin: 0; color: var(--ash); font-size: 0.9375rem; max-width: 34ch; }
+
+  .points { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px 40px; margin-top: 72px; }
+  .point { padding-top: 18px; border-top: 1px solid var(--line); }
+  .point h3 { margin: 0 0 6px; font-size: 1.375rem; line-height: 1.15; }
+  .point p { margin: 0; color: var(--ash); font-size: 0.9375rem; max-width: 42ch; }
+  .cmd { margin: 32px 0 0; font-size: 0.9375rem; color: var(--ash); }
+  .cmd code { font: inherit; color: var(--bone); }
+  .cmd code::before { content: '>'; color: var(--molten); margin-right: 1ch; }
+  .disclosure { margin: 48px 0 0; font-size: 0.8125rem; color: var(--ash-dim); max-width: 100ch; }
+
+  @media (max-width: 960px) {
+    .head, .points { grid-template-columns: minmax(0, 1fr); }
+    .objects { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 14px; }
+    .plate { border-radius: 1.25rem; padding: 4px; }
+    .core { border-radius: 16px; }
+    .note { font-size: 0.875rem; }
+  }
+  @media (max-width: 560px) {
+    .print { padding-top: 88px; padding-bottom: 80px; }
+  }
+</style>
