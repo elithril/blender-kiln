@@ -3,6 +3,8 @@
 Fixes and additions are welcome. This document is short, and one rule shapes all
 of it: **claims must be measured, not reasoned.**
 
+Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## Contents
 
 - [The one rule](#the-one-rule)
