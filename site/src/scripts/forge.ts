@@ -6,6 +6,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { warm } from './warm';
 
 export interface Specimen { id: string; glb: string }
 
@@ -20,13 +21,15 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 export function mountForge(canvas: HTMLCanvasElement, base: string, specimens: Specimen[], windows: [number, number][]) {
   let renderer: THREE.WebGLRenderer;
   try {
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    // no antialias: the composer draws the scene into its own target, so the canvas's multisampling never touched it
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
   } catch {
     return null;
   }
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const dpr = Math.min(devicePixelRatio, 1.75);
+  let dpr = Math.min(devicePixelRatio, 1.75);
   renderer.setPixelRatio(dpr);
+  renderer.debug.checkShaderErrors = import.meta.env.DEV; // the check waits on the compiler: a 40 ms stall, measured
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -137,7 +140,8 @@ export function mountForge(canvas: HTMLCanvasElement, base: string, specimens: S
       o.position.set(-c.x, -b2.min.y, -c.z);
       const holder = new THREE.Group(); holder.add(o); holder.visible = false;
       stage.add(holder);
-      specs[i] = { obj: holder, h: b2.max.y - b2.min.y };
+      // on stage only once its shaders are ready, so its first appearance does not stall the scroll
+      warm(renderer, holder, camera, scene, composer.readBuffer).then(() => { specs[i] = { obj: holder, h: b2.max.y - b2.min.y }; });
     });
   });
 
@@ -154,7 +158,7 @@ export function mountForge(canvas: HTMLCanvasElement, base: string, specimens: S
     if (!w || !h) return;
     renderer.setSize(w, h, false);
     composer.setSize(w, h);
-    bloom.setSize(w * dpr, h * dpr);
+    bloom.setSize(w * dpr / 2, h * dpr / 2); // the glow is a blur: at half resolution it looks the same and costs a quarter
     camera.aspect = w / h;
     camera.fov = w < h ? 44 : 32; // phones: wider lens so the forge fits
     camera.updateProjectionMatrix();
@@ -165,9 +169,25 @@ export function mountForge(canvas: HTMLCanvasElement, base: string, specimens: S
   let visible = true;
   new IntersectionObserver(([e]) => { visible = e.isIntersecting; }).observe(canvas);
 
+  // a full-screen forge with bloom is heavy for a weak GPU: on a 120-144 Hz screen it draws on every other
+  // refresh, and if frames still run long once it is up it drops to one pixel per CSS pixel
+  const median = (a: number[]) => [...a].sort((x, y) => x - y)[a.length >> 1];
+  const ticks: number[] = [], gaps: number[] = [];
+  let every = 1, tick = 0, lastTick = 0, lastFrame = 0;
   const clock = new THREE.Clock();
-  renderer.setAnimationLoop(() => {
-    if (!visible) return;
+  renderer.setAnimationLoop((now) => {
+    if (!visible) { lastTick = lastFrame = 0; return; }
+    if (lastTick && ticks.length < 30) { ticks.push(now - lastTick); if (ticks.length === 30) every = median(ticks) < 10 ? 2 : 1; }
+    lastTick = now;
+    if (++tick % every) return;
+    if (isReady && lastFrame && dpr > 1) {
+      gaps.push(now - lastFrame);
+      if (gaps.length === 60) {
+        if (median(gaps) > 1000 / 45) { dpr = 1; renderer.setPixelRatio(1); composer.setPixelRatio(1); resize(); }
+        gaps.length = 0;
+      }
+    }
+    lastFrame = now;
     const dt = Math.min(0.05, clock.getDelta()), t = clock.elapsedTime;
     shown = reduce ? progress : lerp(shown, progress, 1 - Math.exp(-dt * 7));
     px = lerp(px, tx, 0.05); py = lerp(py, ty, 0.05);

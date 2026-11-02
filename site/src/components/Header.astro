@@ -24,9 +24,33 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       <a href={`${base}/#animate`}>Animate</a>
       <a href={`${base}/#print`}>Print</a>
     </span>
-    <a class="gh" href={site.repo} aria-label={stars != null ? `GitHub, ${stars} stars` : 'GitHub'}><span class="ghi" aria-hidden="true" set:html={ghIcon} /><span class="ghw">GitHub</span>{stars != null && <span class="stars measure" aria-hidden="true"><span class="star" set:html={starIcon} />{compact(stars)}</span>}<span class="ic" aria-hidden="true" set:html={arrowUpRight} /></a>
+    <a class="gh" data-gh href={site.repo} aria-label={stars != null ? `GitHub, ${stars} stars` : 'GitHub'}><span class="ghi" aria-hidden="true" set:html={ghIcon} /><span class="ghw">GitHub</span><span class="stars measure" aria-hidden="true" hidden={stars == null}><span class="star" set:html={starIcon} /><span data-stars>{stars != null ? compact(stars) : ''}</span></span><span class="ic" aria-hidden="true" set:html={arrowUpRight} /></a>
   </nav>
 </header>
+
+<script>
+  // the build's count goes stale between daily rebuilds: ask GitHub again on load, once per visit, and keep
+  // the built one if it does not answer (60 unauthenticated calls an hour per visitor is plenty)
+  const gh = document.querySelector<HTMLAnchorElement>('[data-gh]')!;
+  const show = (n: number) => {
+    const out = gh.querySelector<HTMLElement>('[data-stars]')!;
+    out.textContent = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: n < 10_000 ? 1 : 0 }).format(n).toLowerCase();
+    out.parentElement!.hidden = false;
+    gh.setAttribute('aria-label', `GitHub, ${n} stars`);
+  };
+  const KEY = 'kiln-stars';
+  let cached: number | null = null;
+  try { cached = Number(sessionStorage.getItem(KEY)) || null; } catch {}
+  if (cached) show(cached);
+  else fetch('https://api.github.com/repos/elithril/blender-kiln', { headers: { Accept: 'application/vnd.github+json' } })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((d) => {
+      if (typeof d?.stargazers_count !== 'number') return;
+      show(d.stargazers_count);
+      try { sessionStorage.setItem(KEY, String(d.stargazers_count)); } catch {}
+    })
+    .catch(() => {});
+</script>
 
 <style>
   .bar { position: fixed; top: 16px; left: 0; right: 0; z-index: 20; display: flex; justify-content: center; pointer-events: none; padding-inline: 12px; }

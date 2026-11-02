@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { warm } from './warm';
 
 /** kiln's animated GLBs, played live: one at a time on an ember-lit floor, crossfaded on change. */
 export function mountCreatures(canvas: HTMLCanvasElement, base: string) {
@@ -13,6 +14,7 @@ export function mountCreatures(canvas: HTMLCanvasElement, base: string) {
     return null;
   }
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+  renderer.debug.checkShaderErrors = import.meta.env.DEV; // the check waits on the compiler: a 40 ms stall, measured
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.shadowMap.enabled = true;
@@ -99,6 +101,8 @@ export function mountCreatures(canvas: HTMLCanvasElement, base: string) {
     const env = new THREE.Box3();
     const steps = clip ? 10 : 1;
     for (let k = 0; k < steps; k++) {
+      // one sample per frame: the ten skinned envelopes together stalled the scroll ~30 ms, measured
+      if (k) { await new Promise(requestAnimationFrame); if (t !== ticket) return; }
       if (clip) mixer.setTime((clip.duration * k) / steps);
       obj.updateMatrixWorld(true);
       // the skin's bone matrices are refreshed only at render: without this the envelope is the rest
@@ -107,6 +111,8 @@ export function mountCreatures(canvas: HTMLCanvasElement, base: string) {
       env.union(new THREE.Box3().setFromObject(obj, true));
     }
     if (clip) mixer.setTime(0);
+    await warm(renderer, obj, camera, scene);
+    if (t !== ticket) return;
     const size = env.getSize(new THREE.Vector3());
     const k = 1.6 / Math.max(size.y, size.x * 0.75, size.z * 0.75);
     obj.scale.setScalar(k);
