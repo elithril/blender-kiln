@@ -64,11 +64,17 @@ const S = m.scene;
   const mb = root.querySelector<HTMLElement>('[data-mb]')!;
   let scene: ReturnType<typeof import('../scripts/method3d').mountMethod> = null;
 
-  new IntersectionObserver(async ([e], io) => {
-    if (!e.isIntersecting) return;
-    io.disconnect();
+  let mounted = false;
+  const mount = async () => {
+    if (mounted) return;
+    mounted = true;
     try { const { mountMethod } = await import('../scripts/method3d'); scene = mountMethod(root.querySelector('[data-canvas]')!, base, cfg); scene?.setBand(measureBand(cur < 0 ? 0 : cur + 0.5)); } catch { scene = null; }
-  }, { rootMargin: '400px' }).observe(root);
+  };
+  new IntersectionObserver(([e], io) => { if (e.isIntersecting) { io.disconnect(); mount(); } }, { rootMargin: '400px' }).observe(root);
+  // mounted early, once the page is idle: its lighting and shaders then compile before anyone scrolls to it,
+  // not in the middle of the scroll (a 30-75 ms stall on a Mac, measured, as the Studio section went by)
+  const early = () => ('requestIdleCallback' in window ? requestIdleCallback(() => mount(), { timeout: 4000 }) : setTimeout(mount, 2000));
+  if (document.readyState === 'complete') early(); else addEventListener('load', early, { once: true });
 
   let cur = -1;
   // the free room the text leaves the model, in canvas pixels: under the heading and above the step card on

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { warm } from './warm';
 
 export interface MethodScene {
   glb: string; photo: string; mask: string; crops: string[];
@@ -22,6 +23,7 @@ export function mountMethod(canvas: HTMLCanvasElement, base: string, cfg: Method
   catch { return null; }
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+  renderer.debug.checkShaderErrors = import.meta.env.DEV; // the check waits on the compiler: a 40 ms stall, measured
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
@@ -72,7 +74,12 @@ export function mountMethod(canvas: HTMLCanvasElement, base: string, cfg: Method
       const name = m.name || m.parent?.name || '';
       cfg.joints.forEach((j) => { if (name.startsWith(j) && !joints.has(j)) joints.set(j, pc); });
     });
-    ready = true;
+    // the measure step turns the real materials transparent: their shaders for that are warmed too
+    const both = [warm(renderer, scene, camera, scene)];
+    realMats.forEach((m) => { m.transparent = true; });
+    both.push(warm(renderer, box, camera, scene));
+    realMats.forEach((m) => { m.transparent = false; });
+    Promise.all(both).then(() => { ready = true; });
   });
 
   // ---- the photo and the session's crops, as cards in the scene
