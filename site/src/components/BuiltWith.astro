@@ -82,40 +82,49 @@ const tilts = ['-12deg', '8deg', '-6deg', '10deg'];
   // iOS Safari paints only the part on screen when it starts, so plates sliding in stay blank and the loop
   // looks like it ends. Here each plate moves on its own and wraps around the two rows: small layers, a seamless loop
   const touch = matchMedia('(hover: none)').matches;
-  // touch screens: iOS Safari leaves moved plates unpainted whatever moves them (a CSS animation, or a transform
-  // per plate). A real scroller is what it does paint reliably, so the track scrolls natively: it drifts on its
-  // own through scrollLeft, the finger can drag it, and past one copy it steps back one copy, which looks the same
+  // touch screens: iOS Safari never paints the second copy of the row, however it moves (a CSS animation, a
+  // transform per plate, a native scroller), so the loop ran into blank space. Here there is no copy: the track
+  // scrolls natively over the real plates, and the plate that leaves one end is moved to the other end, the
+  // scroll shifted by one plate so nothing on screen moves. It drifts on its own and the finger can drag it
   if (!still && touch) {
     band.classList.add('native');
     const track = band.querySelector<HTMLElement>('.track')!;
-    let x = 0, half = 0, last = 0, raf = 0, visible = false, rest = 0;
-    const measure = () => { half = track.scrollWidth / 2; };
-    const wrap = () => {
-      if (!half) return;
-      if (track.scrollLeft >= half) track.scrollLeft -= half;
-      else if (track.scrollLeft <= 0) track.scrollLeft += half;
+    const [list, ...copies] = [...track.querySelectorAll<HTMLElement>('.row')];
+    copies.forEach((c) => c.remove());
+    let step = 0, x = 0, last = 0, raf = 0, visible = false, rest = 0;
+    const measure = () => {
+      const it = list.children;
+      step = it.length > 1 ? (it[1] as HTMLElement).offsetLeft - (it[0] as HTMLElement).offsetLeft : 0;
+    };
+    // keep one plate of room on each side: past it, the far plate changes ends
+    const recycle = () => {
+      if (!step) return;
+      while (track.scrollLeft > step * 1.5) { list.append(list.firstElementChild!); track.scrollLeft -= step; x -= step; }
+      while (track.scrollLeft < step * 0.5) { list.prepend(list.lastElementChild!); track.scrollLeft += step; x += step; }
     };
     // the finger wins: no drift from the touch until the throw settles
     const hold = () => { rest = performance.now() + 900; };
     track.addEventListener('touchstart', hold, { passive: true });
     track.addEventListener('touchmove', hold, { passive: true });
     track.addEventListener('touchend', hold, { passive: true });
-    track.addEventListener('scroll', () => { if (performance.now() < rest) { hold(); wrap(); } }, { passive: true });
+    track.addEventListener('scroll', () => { if (performance.now() < rest) hold(); recycle(); }, { passive: true });
     const tick = (t: number) => {
       const dt = last ? Math.min(t - last, 100) : 0;
       last = t;
-      if (t >= rest && half) {
+      if (t >= rest && step) {
         // own float accumulator: a scrollLeft read back may come rounded and stall a slow drift
         if (Math.abs(track.scrollLeft - x) > 2) x = track.scrollLeft;
         const pass = parseFloat(getComputedStyle(band).getPropertyValue('--pass')) * 1000;
-        x += (dt / pass) * half;
-        if (x >= half) x -= half;
+        x += (dt / pass) * step * list.children.length;
         track.scrollLeft = x;
+        recycle();
       }
       raf = visible ? requestAnimationFrame(tick) : 0;
     };
     new ResizeObserver(measure).observe(track);
     measure();
+    // start one plate in, so there is room to drag backwards from the first look
+    if (step) { list.prepend(list.lastElementChild!); track.scrollLeft = x = step; }
     new IntersectionObserver(([e]) => {
       visible = e.isIntersecting;
       band.classList.toggle('idle', !visible);
