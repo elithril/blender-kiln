@@ -50,6 +50,17 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       try { sessionStorage.setItem(KEY, String(d.stargazers_count)); } catch {}
     })
     .catch(() => {});
+
+  // the fade on the links only when they actually overflow, and gone once scrolled to the end
+  const links = document.querySelector<HTMLElement>('.bar .links')!;
+  const edge = () => {
+    const over = links.scrollWidth > links.clientWidth + 1;
+    links.toggleAttribute('data-overflow', over);
+    links.toggleAttribute('data-end', over && links.scrollLeft + links.clientWidth >= links.scrollWidth - 1);
+  };
+  new ResizeObserver(edge).observe(links);
+  new ResizeObserver(edge).observe(gh);
+  links.addEventListener('scroll', edge, { passive: true });
 </script>
 
 <style>
@@ -78,24 +89,28 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   .star { display: inline-flex; width: 12px; height: 12px; }
   .star :global(svg) { width: 100%; height: 100%; fill: currentColor; }
   @media (prefers-reduced-transparency: reduce) { .pill { background: var(--char); backdrop-filter: none; } }
-  @media (max-width: 560px) {
-    .word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-    .mark { margin-right: 2px; }
-    .links a, .gh { padding: 8px 8px; font-size: 0.875rem; }
-    .mark { flex: none; }
-    .pill { padding-left: 10px; max-width: 100%; }
-    .stars { padding: 2px 6px; }
-    /* phones: the arrow goes, the button gets its breathing room back */
-    .gh { padding: 8px 12px; }
-    .gh .ic { display: none; }
-  }
   .ghi { display: none; width: 18px; height: 18px; }
   .ghi :global(svg) { width: 100%; height: 100%; fill: currentColor; }
-  /* the narrowest phones: the GitHub mark replaces the word, the count stays */
-  @media (max-width: 400px) {
+  /* the pill never grows past the screen: the logo and the GitHub button keep their size, the links give way */
+  .pill { max-width: 100%; min-width: 0; }
+  .mark, .gh { flex: none; }
+  .links { min-width: 0; }
+  @media (max-width: 560px) {
+    .bar { padding-inline: 8px; }
+    .word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    .mark { margin-right: 2px; }
+    .pill { padding-left: 10px; }
+    .links a { padding: 8px 6px; font-size: 0.875rem; white-space: nowrap; }
+    /* phones: the GitHub mark replaces the word and the arrow goes, the count stays */
+    .gh { padding: 8px 10px; gap: 4px; font-size: 0.875rem; }
+    .gh .ic, .ghw { display: none; }
     .ghi { display: inline-flex; }
-    .ghw { display: none; }
-    .gh { gap: 4px; }
-    .gh .ic { display: none; }
+    .stars { padding: 2px 6px; }
+    /* the narrowest phones: whatever still does not fit scrolls sideways under a fade, rather than pushing
+       the button off screen (the count only ever gets wider) */
+    .links { overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+    .links::-webkit-scrollbar { display: none; }
+    .links[data-overflow] { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent); }
+    .links[data-overflow][data-end] { -webkit-mask-image: none; mask-image: none; }
   }
 </style>
