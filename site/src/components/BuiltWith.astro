@@ -82,49 +82,64 @@ const tilts = ['-12deg', '8deg', '-6deg', '10deg'];
   // iOS Safari paints only the part on screen when it starts, so plates sliding in stay blank and the loop
   // looks like it ends. Here each plate moves on its own and wraps around the two rows: small layers, a seamless loop
   const touch = matchMedia('(hover: none)').matches;
-  // touch screens: iOS Safari never paints the second copy of the row, however it moves (a CSS animation, a
-  // transform per plate, a native scroller), so the loop ran into blank space. Here there is no copy: the track
-  // scrolls natively over the real plates, and the plate that leaves one end is moved to the other end, the
-  // scroll shifted by one plate so nothing on screen moves. It drifts on its own and the finger can drag it
+  // touch screens: iOS Safari only painted the plates laid out in the first ~1200 px of the track, so the second
+  // copy of the row (the loop) stayed blank however it moved, and reordering plates under a native scroll fought
+  // the finger. Here the copy goes, the 4 real plates stay where they are laid out and each is moved by its own
+  // transform around a loop of their total width. The finger drives the same offset (with a throw), so nothing
+  // else touches the scroll position
   if (!still && touch) {
-    band.classList.add('native');
+    band.classList.add('drag');
     const track = band.querySelector<HTMLElement>('.track')!;
-    const [list, ...copies] = [...track.querySelectorAll<HTMLElement>('.row')];
-    copies.forEach((c) => c.remove());
-    let step = 0, x = 0, last = 0, raf = 0, visible = false, rest = 0;
+    track.querySelectorAll('.row').forEach((r, i) => { if (i) r.remove(); });
+    const items = [...track.querySelectorAll<HTMLElement>('.item')];
+    let home: number[] = [], total = 0, step = 0, offset = 0, last = 0, raf = 0, visible = false;
+    let finger: { x: number; y: number; t: number; axis: '' | 'x' | 'y' } | null = null, speed = 0;
     const measure = () => {
-      const it = list.children;
-      step = it.length > 1 ? (it[1] as HTMLElement).offsetLeft - (it[0] as HTMLElement).offsetLeft : 0;
+      items.forEach((it) => { it.style.transform = ''; });
+      home = items.map((it) => it.offsetLeft);
+      step = home.length > 1 ? home[1] - home[0] : 0;
+      total = step * items.length;
+      place();
     };
-    // keep one plate of room on each side: past it, the far plate changes ends
-    const recycle = () => {
-      if (!step) return;
-      while (track.scrollLeft > step * 1.5) { list.append(list.firstElementChild!); track.scrollLeft -= step; x -= step; }
-      while (track.scrollLeft < step * 0.5) { list.prepend(list.lastElementChild!); track.scrollLeft += step; x += step; }
+    const place = () => {
+      if (!total) return;
+      offset = ((offset % total) + total) % total;
+      items.forEach((it, i) => {
+        const at = ((((home[i] - offset + step) % total) + total) % total) - step;
+        it.style.transform = `translate3d(${at - home[i]}px,0,0)`;
+      });
     };
-    // the finger wins: no drift from the touch until the throw settles
-    const hold = () => { rest = performance.now() + 900; };
-    track.addEventListener('touchstart', hold, { passive: true });
-    track.addEventListener('touchmove', hold, { passive: true });
-    track.addEventListener('touchend', hold, { passive: true });
-    track.addEventListener('scroll', () => { if (performance.now() < rest) hold(); recycle(); }, { passive: true });
+    // a horizontal swipe is ours, a vertical one is the page's: decided on the first few pixels
+    band.addEventListener('touchstart', (e) => { const p = e.touches[0]; finger = { x: p.clientX, y: p.clientY, t: performance.now(), axis: '' }; speed = 0; }, { passive: true });
+    band.addEventListener('touchmove', (e) => {
+      if (!finger) return;
+      const p = e.touches[0], dx = p.clientX - finger.x, dy = p.clientY - finger.y, now = performance.now();
+      if (!finger.axis) { if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return; finger.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'; }
+      if (finger.axis !== 'x') return;
+      e.preventDefault();
+      offset -= dx;
+      speed = -dx / Math.max(now - finger.t, 1); // px per ms, for the throw
+      finger.x = p.clientX; finger.y = p.clientY; finger.t = now;
+      place();
+    }, { passive: false });
+    const release = () => { if (finger && finger.axis !== 'x') speed = 0; if (finger && performance.now() - finger.t > 80) speed = 0; finger = null; };
+    band.addEventListener('touchend', release, { passive: true });
+    band.addEventListener('touchcancel', release, { passive: true });
     const tick = (t: number) => {
       const dt = last ? Math.min(t - last, 100) : 0;
       last = t;
-      if (t >= rest && step) {
-        // own float accumulator: a scrollLeft read back may come rounded and stall a slow drift
-        if (Math.abs(track.scrollLeft - x) > 2) x = track.scrollLeft;
+      if (!finger?.axis || finger.axis === 'y') {
         const pass = parseFloat(getComputedStyle(band).getPropertyValue('--pass')) * 1000;
-        x += (dt / pass) * step * list.children.length;
-        track.scrollLeft = x;
-        recycle();
+        const drift = total / pass;
+        // the throw decays back into the drift
+        if (!finger && Math.abs(speed) > drift) { speed *= Math.pow(0.995, dt); offset += speed * dt; }
+        else { speed = 0; offset += drift * dt; }
+        place();
       }
       raf = visible ? requestAnimationFrame(tick) : 0;
     };
     new ResizeObserver(measure).observe(track);
     measure();
-    // start one plate in, so there is room to drag backwards from the first look
-    if (step) { list.prepend(list.lastElementChild!); track.scrollLeft = x = step; }
     new IntersectionObserver(([e]) => {
       visible = e.isIntersecting;
       band.classList.toggle('idle', !visible);
@@ -260,13 +275,10 @@ const tilts = ['-12deg', '8deg', '-6deg', '10deg'];
   /* the script drives the plates one by one (see below); the CSS drift stays as the no-script fallback */
   .band.js .track { animation: none; }
   .band.js .item { will-change: transform; }
-  /* touch screens: the track is a native scroller (the rail and the edge fades stay put on the band) */
-  .band.native .track { animation: none; width: auto; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; overscroll-behavior-x: contain; }
-  .band.native .track::-webkit-scrollbar { display: none; }
-  .band.native .row { flex: none; }
-  /* the plates' shadow room moves into the scroller, which clips what overflows it */
-  .band.native { padding-bottom: 0; }
-  .band.native .track { padding-bottom: 28px; }
+  /* touch screens: the script moves each plate and takes horizontal swipes, the page keeps vertical ones */
+  .band.drag { touch-action: pan-y; }
+  .band.drag .track { animation: none; }
+  .band.drag .item { will-change: transform; }
   /* off screen, the band stops: nothing to composite while the rest of the page scrolls */
   .band.idle .track, .band.idle .spokes { animation-play-state: paused; }
 </style>
