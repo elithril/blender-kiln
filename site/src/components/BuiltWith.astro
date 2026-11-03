@@ -78,7 +78,47 @@ const tilts = ['-12deg', '8deg', '-6deg', '10deg'];
     band.style.setProperty('--roll', `${(pass * 2 * Math.PI * 15) / row.offsetWidth}s`);
   };
   if (!still) { roll(); new ResizeObserver(roll).observe(row); }
-  if (!still) new IntersectionObserver(([e]) => band.classList.toggle('idle', !e.isIntersecting), { rootMargin: '200px 0px' }).observe(band);
+  // the drift, one plate at a time: a CSS animation of the whole track makes one layer about 2700 px wide, and
+  // iOS Safari paints only the part on screen when it starts, so plates sliding in stay blank and the loop
+  // looks like it ends. Here each plate moves on its own and wraps around the two rows: small layers, a seamless loop
+  if (!still) {
+    band.classList.add('js');
+    const track = band.querySelector<HTMLElement>('.track')!;
+    const items = [...track.querySelectorAll<HTMLElement>('.item')];
+    let home: number[] = [], total = 0, step = 0, offset = 0, last = 0, raf = 0, visible = false;
+    const measure = () => {
+      items.forEach((it) => { it.style.transform = ''; });
+      home = items.map((it) => it.offsetLeft);
+      total = track.scrollWidth;
+      step = home.length > 1 ? home[1] - home[0] : total;
+      place();
+    };
+    const place = () => {
+      items.forEach((it, i) => {
+        // where the plate should be on the loop, one step of slack on the left so it leaves the screen whole
+        const at = ((((home[i] - offset + step) % total) + total) % total) - step;
+        it.style.transform = `translate3d(${at - home[i]}px,0,0)`;
+      });
+    };
+    const held = () => band.matches(':hover, :focus-within');
+    const tick = (t: number) => {
+      const dt = last ? Math.min(t - last, 100) : 0;
+      last = t;
+      if (!held()) {
+        const pass = parseFloat(getComputedStyle(band).getPropertyValue('--pass')) * 1000;
+        offset = (offset + (dt / pass) * (total / 2)) % total;
+        place();
+      }
+      raf = visible ? requestAnimationFrame(tick) : 0;
+    };
+    new ResizeObserver(measure).observe(track);
+    measure();
+    new IntersectionObserver(([e]) => {
+      visible = e.isIntersecting;
+      band.classList.toggle('idle', !visible);
+      if (visible && !raf) { last = 0; raf = requestAnimationFrame(tick); }
+    }, { rootMargin: '200px 0px' }).observe(band);
+  }
   if (!still) root.querySelectorAll<HTMLVideoElement>('[data-video]').forEach((v) => {
     new IntersectionObserver(([e]) => { if (e.isIntersecting) v.play().catch(() => {}); else v.pause(); }, { threshold: 0.2 }).observe(v);
   });
@@ -167,6 +207,9 @@ const tilts = ['-12deg', '8deg', '-6deg', '10deg'];
     .band::after { right: 0; background: linear-gradient(270deg, rgb(11 9 8 / 0.86), transparent); }
     .band.still::before, .band.still::after { display: none; }
   }
+  /* the script drives the plates one by one (see below); the CSS drift stays as the no-script fallback */
+  .band.js .track { animation: none; }
+  .band.js .item { will-change: transform; }
   /* off screen, the band stops: nothing to composite while the rest of the page scrolls */
   .band.idle .track, .band.idle .spokes { animation-play-state: paused; }
 </style>
