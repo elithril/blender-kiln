@@ -78,6 +78,7 @@ const tilts = ['-12deg', '8deg', '-6deg', '10deg'];
     band.style.setProperty('--roll', `${(pass * 2 * Math.PI * 15) / row.offsetWidth}s`);
   };
   if (!still) { roll(); new ResizeObserver(roll).observe(row); }
+  if (!still) new IntersectionObserver(([e]) => band.classList.toggle('idle', !e.isIntersecting), { rootMargin: '200px 0px' }).observe(band);
   if (!still) root.querySelectorAll<HTMLVideoElement>('[data-video]').forEach((v) => {
     new IntersectionObserver(([e]) => { if (e.isIntersecting) v.play().catch(() => {}); else v.pause(); }, { threshold: 0.2 }).observe(v);
   });
@@ -156,4 +157,16 @@ const tilts = ['-12deg', '8deg', '-6deg', '10deg'];
   @media (prefers-reduced-motion: reduce) { .spokes, .item:hover .piece, .item:focus-within .piece { animation: none; } }
 
   @media (max-width: 560px) { .built { padding: 16px 0 32px; } .item { flex-basis: 260px; } }
+
+  /* touch screens (iOS Safari): a mask over a wide, always-moving layer that holds a video sometimes paints
+     nothing at all under it, only the rail. The edges fade with two overlays instead, and no mask is used */
+  @media (hover: none) {
+    .band { mask-image: none; -webkit-mask-image: none; }
+    .band::before, .band::after { content: ''; position: absolute; top: 0; bottom: 0; width: 5%; z-index: 4; pointer-events: none; }
+    .band::before { left: 0; background: linear-gradient(90deg, rgb(11 9 8 / 0.86), transparent); }
+    .band::after { right: 0; background: linear-gradient(270deg, rgb(11 9 8 / 0.86), transparent); }
+    .band.still::before, .band.still::after { display: none; }
+  }
+  /* off screen, the band stops: nothing to composite while the rest of the page scrolls */
+  .band.idle .track, .band.idle .spokes { animation-play-state: paused; }
 </style>
