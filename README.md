@@ -15,6 +15,8 @@
 
 **Describe an object, or show a photo of it, and get back a clean 3D model you can edit, ship in a game or on the web, animate, or print.**
 
+<p align="center"><a href="https://elithril.github.io/blender-kiln/">Site</a> · <a href="#quickstart">Quickstart</a> · <a href="#kiln-studio--look-at-your-models-pin-a-note-let-claude-fix-it">Kiln Studio</a> · <a href="FAQ.md">FAQ</a></p>
+
 kiln is a Claude Code skill on top of a Blender MCP server. The MCP server gives Claude
 hands in Blender; kiln gives it the production method — sourcing, modelling, cleanup,
 texturing from CC0 scans, optimization, validation, export — and measures the file it
