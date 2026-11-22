@@ -131,10 +131,12 @@ run it from git:
 `uvx --from "git+https://projects.blender.org/lab/blender_mcp.git#subdirectory=mcp" blender-mcp`.
 Register it under the MCP name `blender` so `mcp__blender__*` still matches.
 
-**In the Claude desktop app (Code tab)** the Blender connector is already there, registered as
-`Blender`, so its tools are `mcp__Blender__*` (capital B) — `SKILL.md` allows both spellings, no
-re-registration needed. The connector is the Lab server: use the table above, and skip the
-`blender`-named registration.
+**In the Claude desktop app (Code tab)** the desktop Blender connector's tools are not offered
+(checked 2026-11-22, app 6.28899.6): the session has only Claude Code's own servers. The
+connector installs this same Lab server; registered in Claude Code as `blender`, it drives a
+whole run (a desktop session shipped a valid GLB through it). `SKILL.md` also allows
+`mcp__Blender__*`, for a registration named `Blender`. Its add-on and ahujasid's both use port
+9876: one at a time.
 
 **Rule 2 needs saying twice on this server.** The bench's sessions knew the capture
 tool and called it right — then took **one screenshot per session** on 4 of 5

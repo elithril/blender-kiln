@@ -143,21 +143,37 @@ code is MIT.
 
 ### Does it work in the Claude desktop app?
 
-Yes — in the **Code** tab, with the same install (`/plugin marketplace add elithril/blender-kiln`,
-then `/plugin install blender-kiln@blender-kiln`) and the same `/kiln` commands.
+Yes, in the **Code** tab, with the same install (`/plugin marketplace add elithril/blender-kiln`,
+then `/plugin install blender-kiln@blender-kiln`) and the same `/kiln` commands. One step is not
+automatic: the Blender MCP.
 
-- **Blender connector.** The desktop app's built-in Blender connector is the official Blender Lab
-  MCP, registered as `Blender`, so its tools are `mcp__Blender__*`. `SKILL.md` allows both that and
-  ahujasid's `mcp__blender__*`; there is nothing to register. kiln maps the Lab tools itself
-  (`plugin/references/blender-mcp.md`, "On the official Blender Lab MCP"): no marketplace search
-  or generation there, so it sources through PolyHaven's public API and scripted modelling. The
-  add-on needs Blender 5.1+ with its server started and online access on.
-- **Checking the connection.** A connected connector answers `get_objects_summary`; that is the
-  check `/kiln setup` makes on it. Kiln Studio's welcome screen only reads Claude Code's settings
-  files, which do not list a connector, so it can say "no Blender MCP server in Claude Code's
-  settings for this project" while the connector works.
-- **Kiln Studio.** "Ask Claude from Studio" runs `claude -p`. An app-launched process often has a
-  minimal `PATH`, so Studio also looks in `~/.local/bin`, `~/.claude/local`, `/opt/homebrew/bin`,
+- **The desktop Blender connector does not reach the Code tab.** The connector you add under
+  Customize → Connectors serves the chat; a Code tab session does not get its tools (checked on
+  2026-11-22, desktop app 6.28899.6). The Code tab uses Claude Code's own MCP servers, the ones in
+  `~/.claude.json`, and its Connectors list shows them too: a "Blender" there is a server you
+  registered yourself.
+- **Register the connector's server in Claude Code**, under the name `blender` so kiln's
+  `mcp__blender__*` matches. The connector already installed it:
+
+  ```bash
+  claude mcp add blender -s user -- uv run --directory \
+    "$HOME/Library/Application Support/Claude/Claude Extensions/ant.dir.gh.blender.blender-mcp" blender-mcp
+  ```
+
+  Or run it from git (`plugin/references/blender-mcp.md`, "On the official Blender Lab MCP"),
+  or use ahujasid's server instead. kiln maps the Lab tools itself: no marketplace search or
+  generation there, so it sources through PolyHaven's public API and scripted modelling.
+- **In Blender**, the connector needs its add-on: Preferences → Get Extensions → Repositories →
+  add `https://lab.blender.org/`, install **MCP**, and tick Preferences → System → Network →
+  Allow Online Access. Blender 5.1 or later.
+- **One port for two add-ons.** The Lab add-on and ahujasid's both listen on 9876: run one at a
+  time. With ahujasid's server registered as `blender` and the Lab add-on serving, the server
+  times out ("connection timed out after 30000ms").
+- **Checking the connection.** The Lab server answers `get_objects_summary`; that is the check
+  `/kiln setup` makes on it. Kiln Studio's welcome screen only reads Claude Code's settings files
+  and the port, so it cannot say whether Claude is connected.
+- **Kiln Studio.** "Ask Claude from Studio" runs `claude -p`. If Studio is started with a minimal
+  `PATH`, it also looks in `~/.local/bin`, `~/.claude/local`, `/opt/homebrew/bin`,
   `/usr/local/bin` and nvm's Node versions; set `KILN_STUDIO_CLAUDE` to point at another install.
 
 ### Is this the same project as the other "Kiln"s?
