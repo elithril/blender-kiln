@@ -43,6 +43,10 @@ all three with <a href="#review-rounds--a-fresh-eye-on-every-model">review round
 /kiln A hanging iron lantern for a medieval inn, stylized, for the web
 ```
 
+**Claude desktop app (Code tab):** the same commands work. The desktop app's Blender connector
+does not reach the Code tab: register a Blender MCP in Claude Code as `blender` (the connector's
+own server works — see the [FAQ](FAQ.md#does-it-work-in-the-claude-desktop-app)).
+
 `/kiln setup` detects Blender, the MCP server and the optional tools, and says what is
 missing — see [Requirements](#requirements). Then, for example:
 
