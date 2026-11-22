@@ -1,6 +1,6 @@
 """What Studio can tell about the kiln setup on this machine, for its welcome screen.
 
-Standard library only. Each probe says what it found and how: "ok", "missing", or
+Standard library and Studio's own modules only. Each probe says what it found and how: "ok", "missing", or
 "unknown" when Studio cannot see it from here, never a guess (references/setup.md § /kiln setup is
 the full scan, run by Claude). Results are cached a minute: the probes run programs.
 """
@@ -113,7 +113,7 @@ def skintokens() -> dict:
 def claude_code() -> dict:
     how = "claude --version"
     from worker import find_claude   # same lookup the worker uses, PATH-poor launches included
-    exe = shutil.which(find_claude()) or None
+    exe = shutil.which(os.environ.get("KILN_STUDIO_CLAUDE") or find_claude()) or None   # as the worker
     if not exe:
         return _row("claude", "missing", "Claude Code is not on PATH", how)
     try:

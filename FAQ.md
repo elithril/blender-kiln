@@ -152,11 +152,13 @@ then `/plugin install blender-kiln@blender-kiln`) and the same `/kiln` commands.
   (`plugin/references/blender-mcp.md`, "On the official Blender Lab MCP"): no marketplace search
   or generation there, so it sources through PolyHaven's public API and scripted modelling. The
   add-on needs Blender 5.1+ with its server started and online access on.
-- **`/kiln setup`.** Its shell-side check cannot see a connector, so it can report "no Blender MCP
-  server configured". A connected connector answers `get_objects_summary`; that is the check.
+- **Checking the connection.** A connected connector answers `get_objects_summary`; that is the
+  check `/kiln setup` makes on it. Kiln Studio's welcome screen only reads Claude Code's settings
+  files, which do not list a connector, so it can say "no Blender MCP server in Claude Code's
+  settings for this project" while the connector works.
 - **Kiln Studio.** "Ask Claude from Studio" runs `claude -p`. An app-launched process often has a
-  minimal `PATH`, so Studio also looks in `~/.local/bin`, `~/.claude/local`, `/opt/homebrew/bin` and
-  `/usr/local/bin`; set `KILN_STUDIO_CLAUDE` to point at another install.
+  minimal `PATH`, so Studio also looks in `~/.local/bin`, `~/.claude/local`, `/opt/homebrew/bin`,
+  `/usr/local/bin` and nvm's Node versions; set `KILN_STUDIO_CLAUDE` to point at another install.
 
 ### Is this the same project as the other "Kiln"s?
 

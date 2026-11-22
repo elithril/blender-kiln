@@ -174,8 +174,10 @@ def find_claude() -> str:
     if found:
         return found
     home = Path.home()
+    nvm = sorted((home / ".nvm/versions/node").glob("*/bin/claude"), reverse=True,   # npm under nvm, newest first
+                 key=lambda c: [int(n) if n.isdigit() else 0 for n in c.parts[-3].lstrip("v").split(".")])
     for c in (home / ".local/bin/claude", home / ".claude/local/claude", Path("/opt/homebrew/bin/claude"),
-              Path("/usr/local/bin/claude")):
+              Path("/usr/local/bin/claude"), *nvm):
         if c.is_file() and os.access(c, os.X_OK):
             return str(c)
     return "claude"

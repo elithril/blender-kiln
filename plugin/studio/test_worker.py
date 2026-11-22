@@ -19,6 +19,7 @@ import tempfile
 import threading
 import time
 import unittest
+import unittest.mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -489,6 +490,49 @@ class Hook(unittest.TestCase):
         # An answer never turns a refusal into an allow, and a bad id reads no file.
         self.assertEqual(hook.decide({**ev, "tool_use_id": "../toolu_9"}, env)[0], "defer")
         shutil.rmtree(d)
+
+
+class FindClaude(unittest.TestCase):
+    """The claude executable when the launching app (the desktop app) gives a minimal PATH."""
+
+    def setUp(self) -> None:
+        self.home = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.home, True)
+        env = {"HOME": str(self.home), "PATH": "/nonexistent"}
+        env_patch = unittest.mock.patch.dict(os.environ, env)
+        env_patch.start()
+        self.addCleanup(env_patch.stop)
+        no_path = unittest.mock.patch.object(wk.shutil, "which", lambda name: None)
+        no_path.start()
+        self.addCleanup(no_path.stop)
+
+    def exe(self, rel: str, mode: int = 0o755) -> Path:
+        p = self.home / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("#!/bin/sh\n")
+        p.chmod(mode)
+        return p
+
+    def test_nothing_installed_falls_back_to_the_bare_name(self) -> None:
+        self.assertEqual(wk.find_claude(), "claude")
+
+    def test_the_native_installer_folder(self) -> None:
+        native = self.exe(".local/bin/claude")
+        self.assertEqual(wk.find_claude(), str(native))
+
+    def test_a_file_that_is_not_executable_is_skipped(self) -> None:
+        self.exe(".local/bin/claude", 0o644)
+        self.assertEqual(wk.find_claude(), "claude")
+
+    def test_nvm_newest_node_first(self) -> None:
+        self.exe(".nvm/versions/node/v9.11.2/bin/claude")
+        newest = self.exe(".nvm/versions/node/v25.2.1/bin/claude")
+        self.assertEqual(wk.find_claude(), str(newest))
+
+    def test_path_wins(self) -> None:
+        self.exe(".local/bin/claude")
+        with unittest.mock.patch.object(wk.shutil, "which", lambda name: "/on/path/claude"):
+            self.assertEqual(wk.find_claude(), "/on/path/claude")
 
 
 class Auth(unittest.TestCase):
