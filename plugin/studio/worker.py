@@ -167,6 +167,20 @@ def account_env(account: str, base: dict | None = None) -> dict:
     return e
 
 
+def find_claude() -> str:
+    """The `claude` executable. A GUI-launched process (the desktop app) often has a minimal PATH
+    that misses the installer's folder, so look in the usual places before giving up."""
+    found = shutil.which("claude")
+    if found:
+        return found
+    home = Path.home()
+    for c in (home / ".local/bin/claude", home / ".claude/local/claude", Path("/opt/homebrew/bin/claude"),
+              Path("/usr/local/bin/claude")):
+        if c.is_file() and os.access(c, os.X_OK):
+            return str(c)
+    return "claude"
+
+
 def auth_status(claude: str = "claude", env: dict | None = None, timeout: float = 20, account: str = "subscription") -> dict:
     """Whether the worker may run on the chosen account, and what to tell the user."""
     out = {"ok": False, "account": account, "method": None, "provider": None, "subscription": None, "message": ""}
@@ -642,7 +656,7 @@ class Worker:
                  blender: Blender | None = None, auth_ttl: float = 60.0):
         self.project = project
         self.emit = emit
-        self.claude = claude or os.environ.get("KILN_STUDIO_CLAUDE") or "claude"
+        self.claude = claude or os.environ.get("KILN_STUDIO_CLAUDE") or find_claude()
         # One Blender per slot (claude_parallel); a test passes one fake for all.
         self._fake_blender = blender
         self.blenders: dict[int, Blender] = {}

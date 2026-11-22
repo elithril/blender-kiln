@@ -141,6 +141,23 @@ kiln never downloads a non-commercial one for a commercial project without askin
 code is MIT.
 → [What you can ship](README.md#what-you-can-ship)
 
+### Does it work in the Claude desktop app?
+
+Yes — in the **Code** tab, with the same install (`/plugin marketplace add elithril/blender-kiln`,
+then `/plugin install blender-kiln@blender-kiln`) and the same `/kiln` commands.
+
+- **Blender connector.** The desktop app's built-in Blender connector is the official Blender Lab
+  MCP, registered as `Blender`, so its tools are `mcp__Blender__*`. `SKILL.md` allows both that and
+  ahujasid's `mcp__blender__*`; there is nothing to register. kiln maps the Lab tools itself
+  (`plugin/references/blender-mcp.md`, "On the official Blender Lab MCP"): no marketplace search
+  or generation there, so it sources through PolyHaven's public API and scripted modelling. The
+  add-on needs Blender 5.1+ with its server started and online access on.
+- **`/kiln setup`.** Its shell-side check cannot see a connector, so it can report "no Blender MCP
+  server configured". A connected connector answers `get_objects_summary`; that is the check.
+- **Kiln Studio.** "Ask Claude from Studio" runs `claude -p`. An app-launched process often has a
+  minimal `PATH`, so Studio also looks in `~/.local/bin`, `~/.claude/local`, `/opt/homebrew/bin` and
+  `/usr/local/bin`; set `KILN_STUDIO_CLAUDE` to point at another install.
+
 ### Is this the same project as the other "Kiln"s?
 
 No. Kiln is a common name: there is a 3D-printer MCP server, a Godot material baker, and other

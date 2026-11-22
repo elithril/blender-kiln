@@ -131,6 +131,11 @@ run it from git:
 `uvx --from "git+https://projects.blender.org/lab/blender_mcp.git#subdirectory=mcp" blender-mcp`.
 Register it under the MCP name `blender` so `mcp__blender__*` still matches.
 
+**In the Claude desktop app (Code tab)** the Blender connector is already there, registered as
+`Blender`, so its tools are `mcp__Blender__*` (capital B) — `SKILL.md` allows both spellings, no
+re-registration needed. The connector is the Lab server: use the table above, and skip the
+`blender`-named registration.
+
 **Rule 2 needs saying twice on this server.** The bench's sessions knew the capture
 tool and called it right — then took **one screenshot per session** on 4 of 5
 briefs, and framed once in five. At the end of every phase that changed geometry

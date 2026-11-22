@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Claude desktop app (Code tab)
+
+- `SKILL.md` allows the desktop Blender connector's `mcp__Blender__*` tools next to
+  `mcp__blender__*`, so the Lab MCP does not prompt on every call there.
+- Kiln Studio finds the `claude` executable in the usual install folders when the launching
+  process has a minimal `PATH` (`find_claude()`); `/kiln setup` uses the same lookup.
+- `FAQ.md`, `README.md`, `references/blender-mcp.md` and `references/setup.md` say how the
+  connector is named, how to check it (`get_objects_summary`) and what it lacks.
+
 ## [3.0.0] — 2026-10-30
 
 kiln 3.0 gathers everything since 2.2.0: the sections below, and [2.3.0](#230--2026-10-12), which

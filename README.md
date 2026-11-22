@@ -43,6 +43,10 @@ all three with <a href="#review-rounds--a-fresh-eye-on-every-model">review round
 /kiln A hanging iron lantern for a medieval inn, stylized, for the web
 ```
 
+**Claude desktop app (Code tab):** the same commands work. If you use the built-in Blender
+connector (the official Lab MCP, tools named `mcp__Blender__*`), nothing needs registering —
+kiln maps its tools itself (`plugin/references/blender-mcp.md`).
+
 `/kiln setup` detects Blender, the MCP server and the optional tools, and says what is
 missing — see [Requirements](#requirements). Then, for example:
 

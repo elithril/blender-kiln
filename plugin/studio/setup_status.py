@@ -112,7 +112,8 @@ def skintokens() -> dict:
 
 def claude_code() -> dict:
     how = "claude --version"
-    exe = shutil.which("claude")
+    from worker import find_claude   # same lookup the worker uses, PATH-poor launches included
+    exe = shutil.which(find_claude()) or None
     if not exe:
         return _row("claude", "missing", "Claude Code is not on PATH", how)
     try:
