@@ -145,13 +145,16 @@ code is MIT.
 
 Yes, in the **Code** tab, with the same install (`/plugin marketplace add elithril/blender-kiln`,
 then `/plugin install blender-kiln@blender-kiln`) and the same `/kiln` commands. One step is not
-automatic: the Blender MCP.
+automatic: the Blender MCP. Start by typing `/mcp` in a Code tab session.
 
-- **The desktop Blender connector does not reach the Code tab.** The connector you add under
-  Customize → Connectors serves the chat; a Code tab session does not get its tools (checked on
-  2026-11-22, desktop app 6.28899.6). The Code tab uses Claude Code's own MCP servers, the ones in
-  `~/.claude.json`, and its Connectors list shows them too: a "Blender" there is a server you
-  registered yourself.
+- **The desktop Blender connector may or may not reach the Code tab.** It depends on the install:
+  - **It is listed in `/mcp`** with the type **Desktop · App**: nothing to do. The desktop app
+    shares its servers with the Code tab, both the Blender extension (listed as `Blender`) and the
+    servers in `claude_desktop_config.json` (ahujasid's, usually `blender`). kiln allows both
+    `mcp__blender__*` and `mcp__Blender__*`.
+  - **It is not listed**: the Code tab session only has Claude Code's own MCP servers, the ones in
+    `~/.claude.json` (seen on 2026-11-22, desktop app 6.28899.6). Its Connectors list shows those
+    too, so a "Blender" there is a server you registered yourself. Register one, below.
 - **Register the connector's server in Claude Code**, under the name `blender` so kiln's
   `mcp__blender__*` matches. The connector already installed it:
 
@@ -168,7 +171,8 @@ automatic: the Blender MCP.
   Allow Online Access. Blender 5.1 or later.
 - **One port for two add-ons.** The Lab add-on and ahujasid's both listen on 9876: run one at a
   time. With ahujasid's server registered as `blender` and the Lab add-on serving, the server
-  times out ("connection timed out after 30000ms").
+  times out ("connection timed out after 30000ms"). With both `blender` and `Blender` in `/mcp`,
+  only the one whose add-on runs in Blender answers; kiln uses that one.
 - **Checking the connection.** The Lab server answers `get_objects_summary`; that is the check
   `/kiln setup` makes on it. Kiln Studio's welcome screen only reads Claude Code's settings files
   and the port, so it cannot say whether Claude is connected.

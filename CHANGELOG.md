@@ -13,9 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   process has a minimal `PATH` (`find_claude()`), npm installs under nvm included; Studio's
   welcome screen uses the same lookup and honours `KILN_STUDIO_CLAUDE` like the worker.
 - `FAQ.md`, `README.md`, `references/blender-mcp.md` and `references/setup.md` say how to use kiln
-  in the desktop app's Code tab: the desktop Blender connector does not reach it, so register its
-  server (or another Blender MCP) in Claude Code as `blender`; the Lab add-on's install; the
-  port it shares with ahujasid's; the connection check (`get_objects_summary`).
+  in the desktop app's Code tab: check `/mcp`, where the desktop Blender connector shows up as
+  Desktop · App on some installs (nothing to do) and is missing on others (register its server,
+  or another Blender MCP, in Claude Code as `blender`); the Lab add-on's install; the port it
+  shares with ahujasid's, and which server to use when both are listed; the connection check
+  (`get_objects_summary`).
 
 ## [3.0.0] — 2026-10-30
 
